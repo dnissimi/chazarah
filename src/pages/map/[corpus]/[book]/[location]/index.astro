@@ -2,23 +2,37 @@
 import { getCollection } from 'astro:content';
 import SiteLayout from '../../../../../layouts/SiteLayout.astro';
 import { strings, DEFAULT_LANG, type Lang } from '../../../../../i18n/strings';
+import {
+  DISPLAY_LANGS,
+  buildRequestUrl,
+  buildFeedbackUrl,
+  deriveAdjacents,
+  syntheticRefFromUrl,
+  type Corpus,
+  type MapEntrySummary,
+} from '../../../../../lib/map-info';
 
-export const prerender = true;
+export const prerender = false;
 
-export async function getStaticPaths() {
-  const maps = await getCollection('maps');
-  return maps.map((entry) => ({
-    params: {
-      corpus: entry.data.corpus,
-      book: entry.data.book,
-      location: entry.data.location,
-    },
-    props: { entry },
-  }));
+const VALID_CORPORA: readonly Corpus[] = ['talmud', 'mishnah', 'tanakh', 'halakhah', 'midrash'];
+const { corpus, book, location } = Astro.params as { corpus: string; book: string; location: string };
+
+if (!corpus || !book || !location || !(VALID_CORPORA as readonly string[]).includes(corpus)) {
+  return Astro.redirect('/404');
 }
 
-const { entry } = Astro.props;
-const { corpus, book, location, title, blurb, sefariaRef, languages, updated } = entry.data;
+const typedCorpus = corpus as Corpus;
+const allMaps = await getCollection('maps');
+const collectionEntries: MapEntrySummary[] = allMaps.map((entry) => ({
+  corpus: entry.data.corpus,
+  book: entry.data.book,
+  location: entry.data.location,
+  topic: entry.data.topic,
+}));
+
+const entry = allMaps.find(
+  (m) => m.data.corpus === typedCorpus && m.data.book === book && m.data.location === location,
+);
 
 const lang: Lang = DEFAULT_LANG;
 const t = strings[lang];
@@ -28,39 +42,112 @@ const VARIANT_LABEL_KEY = {
   en: 'mapInfoVariantLangEn',
   yi: 'mapInfoVariantLangYi',
 } as const;
+
+const sefariaRef = entry?.data.sefariaRef ?? syntheticRefFromUrl(book, location);
+const feedbackHref = buildFeedbackUrl(sefariaRef);
+const adjacents = deriveAdjacents(collectionEntries, book, location);
+const pageTitle = entry
+  ? `${entry.data.title.he} — Chazarah`
+  : `${sefariaRef} — Chazarah`;
 ---
-<SiteLayout title={`${title.he} — Chazarah`}>
+<SiteLayout title={pageTitle}>
   <article class="map-info container narrow">
-    <header class="map-info-header">
-      <h1 class="map-info-title" data-i18n-he={title.he} data-i18n-en={title.en}>{title.he}</h1>
-      <p class="map-info-ref">
-        <span class="label" data-i18n="mapInfoSefariaRefLabel">{t.mapInfoSefariaRefLabel}</span>
-        <span class="value">{sefariaRef}</span>
-      </p>
-      <p class="map-info-blurb" data-i18n-he={blurb.he} data-i18n-en={blurb.en}>{blurb.he}</p>
-    </header>
+    {entry ? (
+      <>
+        <header class="map-info-header">
+          <h1 class="map-info-title" data-i18n-he={entry.data.title.he} data-i18n-en={entry.data.title.en}>{entry.data.title.he}</h1>
+          <p class="map-info-ref">
+            <span class="label" data-i18n="mapInfoSefariaRefLabel">{t.mapInfoSefariaRefLabel}</span>
+            <span class="value">{entry.data.sefariaRef}</span>
+          </p>
+          <p class="map-info-blurb" data-i18n-he={entry.data.blurb.he} data-i18n-en={entry.data.blurb.en}>{entry.data.blurb.he}</p>
+        </header>
 
-    <section class="map-info-variants" aria-labelledby="map-info-variants-heading">
-      <h2 id="map-info-variants-heading" data-i18n="mapInfoVariantsHeading">{t.mapInfoVariantsHeading}</h2>
-      <ul class="map-info-variant-list">
-        {languages.map((variantLang) => {
-          const labelKey = VARIANT_LABEL_KEY[variantLang];
-          const href = `/map/${corpus}/${book}/${location}/${variantLang}`;
-          return (
-            <li class="map-info-variant">
-              <a class="map-info-variant-link" href={href}>
-                <span class="map-info-variant-lang" data-i18n={labelKey}>{t[labelKey]}</span>
-                <span class="map-info-variant-action" data-i18n="mapInfoOpenVariant">{t.mapInfoOpenVariant}</span>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+        <section class="map-info-variants" aria-labelledby="map-info-variants-heading">
+          <h2 id="map-info-variants-heading" data-i18n="mapInfoVariantsHeading">{t.mapInfoVariantsHeading}</h2>
+          <ul class="map-info-variant-list">
+            {DISPLAY_LANGS.map((variantLang) => {
+              const labelKey = VARIANT_LABEL_KEY[variantLang];
+              const hasVariant = entry.data.languages.includes(variantLang);
+              if (hasVariant) {
+                const href = `/map/${typedCorpus}/${book}/${location}/${variantLang}`;
+                return (
+                  <li class="map-info-variant">
+                    <a class="map-info-variant-link" href={href}>
+                      <span class="map-info-variant-lang" data-i18n={labelKey}>{t[labelKey]}</span>
+                      <span class="map-info-variant-action" data-i18n="mapInfoOpenVariant">{t.mapInfoOpenVariant}</span>
+                    </a>
+                  </li>
+                );
+              }
+              const requestHref = buildRequestUrl(entry.data.sefariaRef, variantLang);
+              return (
+                <li class="map-info-variant map-info-variant--missing">
+                  <a class="map-info-variant-link map-info-variant-link--missing" href={requestHref}>
+                    <span class="map-info-variant-lang" data-i18n={labelKey}>{t[labelKey]}</span>
+                    <span class="map-info-variant-missing-note" data-i18n="mapInfoVariantMissingNote">{t.mapInfoVariantMissingNote}</span>
+                    <span class="map-info-variant-action" data-i18n="mapInfoVariantRequest">{t.mapInfoVariantRequest}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
-    <footer class="map-info-meta">
-      <span class="label" data-i18n="mapInfoUpdated">{t.mapInfoUpdated}</span>
-      <time datetime={updated}>{updated}</time>
-    </footer>
+        <section class="map-info-adjacent" aria-labelledby="map-info-adjacent-heading">
+          <h2 id="map-info-adjacent-heading" data-i18n="mapInfoAdjacentHeading">{t.mapInfoAdjacentHeading}</h2>
+          <div class="map-info-adjacent-grid">
+            {(['previous', 'next'] as const).map((side) => {
+              const slot = adjacents[side];
+              const labelKey = side === 'previous' ? 'mapInfoAdjacentPrev' : 'mapInfoAdjacentNext';
+              if (!slot) {
+                return <div class="map-info-adjacent-card map-info-adjacent-card--end" aria-hidden="true"></div>;
+              }
+              if (slot.entry) {
+                const adjHref = `/map/${slot.entry.corpus}/${slot.entry.book}/${slot.entry.location}`;
+                return (
+                  <a class="map-info-adjacent-card" href={adjHref}>
+                    <span class="map-info-adjacent-kicker" data-i18n={labelKey}>{t[labelKey]}</span>
+                    <span class="map-info-adjacent-location">{slot.entry.location}</span>
+                    {slot.entry.topic ? (
+                      <span class="map-info-adjacent-topic" data-i18n-he={slot.entry.topic.he} data-i18n-en={slot.entry.topic.en}>{slot.entry.topic.he}</span>
+                    ) : null}
+                  </a>
+                );
+              }
+              const adjRef = syntheticRefFromUrl(book, slot.location);
+              const requestHref = buildRequestUrl(adjRef, lang);
+              return (
+                <a class="map-info-adjacent-card map-info-adjacent-card--missing" href={requestHref}>
+                  <span class="map-info-adjacent-kicker" data-i18n={labelKey}>{t[labelKey]}</span>
+                  <span class="map-info-adjacent-location">{slot.location}</span>
+                  <span class="map-info-adjacent-note" data-i18n="mapInfoAdjacentNoMap">{t.mapInfoAdjacentNoMap}</span>
+                  <span class="map-info-adjacent-action" data-i18n="mapInfoAdjacentRequest">{t.mapInfoAdjacentRequest}</span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+
+        <section class="map-info-feedback" aria-labelledby="map-info-feedback-heading">
+          <h2 id="map-info-feedback-heading" data-i18n="mapInfoFeedbackHeading">{t.mapInfoFeedbackHeading}</h2>
+          <p class="map-info-feedback-body" data-i18n="mapInfoFeedbackBody">{t.mapInfoFeedbackBody}</p>
+          <a class="btn btn-primary" href={feedbackHref} data-i18n="mapInfoFeedbackBtn">{t.mapInfoFeedbackBtn}</a>
+        </section>
+
+        <footer class="map-info-meta">
+          <span class="label" data-i18n="mapInfoUpdated">{t.mapInfoUpdated}</span>
+          <time datetime={entry.data.updated}>{entry.data.updated}</time>
+        </footer>
+      </>
+    ) : (
+      <div class="map-info-empty">
+        <p class="map-info-empty-kicker" data-i18n="mapInfoEmptyRefLabel">{t.mapInfoEmptyRefLabel}</p>
+        <h1 class="map-info-empty-ref">{sefariaRef}</h1>
+        <p class="map-info-empty-title" data-i18n="mapInfoEmptyTitle">{t.mapInfoEmptyTitle}</p>
+        <p class="map-info-empty-body" data-i18n="mapInfoEmptyBody">{t.mapInfoEmptyBody}</p>
+        <a class="btn btn-primary" href={buildRequestUrl(sefariaRef, lang)} data-i18n="mapInfoEmptyRequestBtn">{t.mapInfoEmptyRequestBtn}</a>
+      </div>
+    )}
   </article>
 </SiteLayout>
