@@ -59,6 +59,14 @@ const he = {
   requestSuccessBody:
     'הבקשה נכנסה לתור הבדיקה הידנית. אם הוספתם דוא״ל, ניצור קשר כשתהיה מפה. אין הבטחה ואין SLA — תודה על הסבלנות.',
   requestSubmitAnother: 'בקשה נוספת',
+
+  mapInfoSefariaRefLabel: 'מקור בספריא',
+  mapInfoVariantsHeading: 'גרסאות זמינות',
+  mapInfoOpenVariant: 'פתיחה',
+  mapInfoVariantLangHe: 'עברית',
+  mapInfoVariantLangEn: 'אנגלית',
+  mapInfoVariantLangYi: 'יידיש',
+  mapInfoUpdated: 'עודכן',
 } as const;
 
 export type StringKey = keyof typeof he;
@@ -113,6 +121,14 @@ const en: Partial<Record<StringKey, string>> = {
   requestSuccessBody:
     "Your request has joined the manual review queue. If you added an email, we'll be in touch when a map is ready. There's no SLA — thank you for your patience.",
   requestSubmitAnother: 'Submit another',
+
+  mapInfoSefariaRefLabel: 'Sefaria reference',
+  mapInfoVariantsHeading: 'Available variants',
+  mapInfoOpenVariant: 'Open',
+  mapInfoVariantLangHe: 'Hebrew',
+  mapInfoVariantLangEn: 'English',
+  mapInfoVariantLangYi: 'Yiddish',
+  mapInfoUpdated: 'Updated',
 };
 
 export const strings: { he: Record<StringKey, string>; en: Partial<Record<StringKey, string>> } = {

@@ -88,6 +88,14 @@ const stringsJson = JSON.stringify(strings);
           if (value != null) el.setAttribute('placeholder', value);
         });
 
+        // Bilingual per-page content (e.g. map title/blurb pulled from a YAML
+        // entry, not the strings table): values live on the element itself.
+        // Fall back to Hebrew when the active-language attribute is absent.
+        document.querySelectorAll('[data-i18n-he]').forEach((el) => {
+          const value = el.getAttribute('data-i18n-' + lang) ?? el.getAttribute('data-i18n-he');
+          if (value != null) el.textContent = value;
+        });
+
         document.querySelectorAll('.lang-switcher button[data-lang]').forEach((btn) => {
           if (btn.getAttribute('data-lang') === lang) {
             btn.classList.add('active');

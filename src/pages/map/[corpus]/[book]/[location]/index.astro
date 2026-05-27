@@ -1,0 +1,66 @@
+---
+import { getCollection } from 'astro:content';
+import SiteLayout from '../../../../../layouts/SiteLayout.astro';
+import { strings, DEFAULT_LANG, type Lang } from '../../../../../i18n/strings';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const maps = await getCollection('maps');
+  return maps.map((entry) => ({
+    params: {
+      corpus: entry.data.corpus,
+      book: entry.data.book,
+      location: entry.data.location,
+    },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { corpus, book, location, title, blurb, sefariaRef, languages, updated } = entry.data;
+
+const lang: Lang = DEFAULT_LANG;
+const t = strings[lang];
+
+const VARIANT_LABEL_KEY = {
+  he: 'mapInfoVariantLangHe',
+  en: 'mapInfoVariantLangEn',
+  yi: 'mapInfoVariantLangYi',
+} as const;
+---
+<SiteLayout title={`${title.he} — Chazarah`}>
+  <article class="map-info container narrow">
+    <header class="map-info-header">
+      <h1 class="map-info-title" data-i18n-he={title.he} data-i18n-en={title.en}>{title.he}</h1>
+      <p class="map-info-ref">
+        <span class="label" data-i18n="mapInfoSefariaRefLabel">{t.mapInfoSefariaRefLabel}</span>
+        <span class="value">{sefariaRef}</span>
+      </p>
+      <p class="map-info-blurb" data-i18n-he={blurb.he} data-i18n-en={blurb.en}>{blurb.he}</p>
+    </header>
+
+    <section class="map-info-variants" aria-labelledby="map-info-variants-heading">
+      <h2 id="map-info-variants-heading" data-i18n="mapInfoVariantsHeading">{t.mapInfoVariantsHeading}</h2>
+      <ul class="map-info-variant-list">
+        {languages.map((variantLang) => {
+          const labelKey = VARIANT_LABEL_KEY[variantLang];
+          const href = `/map/${corpus}/${book}/${location}/${variantLang}`;
+          return (
+            <li class="map-info-variant">
+              <a class="map-info-variant-link" href={href}>
+                <span class="map-info-variant-lang" data-i18n={labelKey}>{t[labelKey]}</span>
+                <span class="map-info-variant-action" data-i18n="mapInfoOpenVariant">{t.mapInfoOpenVariant}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+
+    <footer class="map-info-meta">
+      <span class="label" data-i18n="mapInfoUpdated">{t.mapInfoUpdated}</span>
+      <time datetime={updated}>{updated}</time>
+    </footer>
+  </article>
+</SiteLayout>
