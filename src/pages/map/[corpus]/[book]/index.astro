@@ -1,0 +1,163 @@
+---
+import { getCollection } from 'astro:content';
+import SiteLayout from '../../../../layouts/SiteLayout.astro';
+import { strings, DEFAULT_LANG, type Lang } from '../../../../i18n/strings';
+import {
+  buildDapim,
+  MASECHTOT,
+  type BrowseMapEntry,
+  type DafRow,
+  type MasechetInfo,
+} from '../../../../lib/browse';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  const allMaps = await getCollection('maps');
+  return MASECHTOT.map((masechet) => {
+    const entries: BrowseMapEntry[] = allMaps
+      .filter(
+        (entry) =>
+          entry.data.corpus === masechet.corpus && entry.data.book === masechet.book,
+      )
+      .map((entry) => ({
+        location: entry.data.location,
+        topic: entry.data.topic,
+        languages: entry.data.languages,
+      }));
+    const dapim = buildDapim(masechet.bounds, entries);
+    return {
+      params: { corpus: masechet.corpus, book: masechet.book },
+      props: { masechet, dapim },
+    };
+  });
+}
+
+interface Props {
+  masechet: MasechetInfo;
+  dapim: DafRow[];
+}
+const { masechet, dapim } = Astro.props as Props;
+
+const lang: Lang = DEFAULT_LANG;
+const t = strings[lang];
+
+const withCount = dapim.filter((d) => d.map !== null).length;
+const totalCount = dapim.length;
+const withoutCount = totalCount - withCount;
+
+const pageTitle = `${masechet.name.he} — Chazarah`;
+---
+<SiteLayout title={pageTitle}>
+  <article class="browse container">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/" data-i18n="brand">{t.brand}</a>
+      <span class="sep">/</span>
+      <span data-i18n="corpusTalmud">{t.corpusTalmud}</span>
+      <span class="sep">/</span>
+      <span data-i18n-he={masechet.name.he} data-i18n-en={masechet.name.en}>{masechet.name.he}</span>
+    </nav>
+
+    <header class="browse-header">
+      <h1 class="browse-title">
+        <span data-i18n="browseMasechetLabel">{t.browseMasechetLabel}</span>
+        <span data-i18n-he={masechet.name.he} data-i18n-en={masechet.name.en}>{masechet.name.he}</span>
+      </h1>
+      <p
+        class="browse-summary"
+        data-i18n-he={masechet.summary.he}
+        data-i18n-en={masechet.summary.en}
+      >{masechet.summary.he}</p>
+    </header>
+
+    <section class="browse-filter" aria-label={t.browseFilterLabel}>
+      <span class="kicker" data-i18n="browseFilterLabel">{t.browseFilterLabel}</span>
+      <div class="pills" role="tablist">
+        <button class="pill active" type="button" data-filter="all" role="tab" aria-selected="true">
+          <span data-i18n="browseFilterAll">{t.browseFilterAll}</span>
+          <span class="count">{totalCount}</span>
+        </button>
+        <button class="pill" type="button" data-filter="with" role="tab" aria-selected="false">
+          <span data-i18n="browseFilterWith">{t.browseFilterWith}</span>
+          <span class="count">{withCount}</span>
+        </button>
+        <button class="pill" type="button" data-filter="without" role="tab" aria-selected="false">
+          <span data-i18n="browseFilterWithout">{t.browseFilterWithout}</span>
+          <span class="count">{withoutCount}</span>
+        </button>
+      </div>
+    </section>
+
+    <ul class="browse-list">
+      {dapim.map((d) => {
+        const has = d.map !== null;
+        const filterKey = has ? 'with' : 'without';
+        const mapHref = has ? `/map/${masechet.corpus}/${masechet.book}/${d.map!.location}` : null;
+        const requestHref = `/request?ref=${encodeURIComponent(`${masechet.name.en} ${d.n}`)}`;
+        return (
+          <li
+            class={`browse-row ${has ? 'has-map' : 'no-map'}`}
+            data-filter={filterKey}
+          >
+            <div class="daf-num">
+              <span class="daf-num-he">{d.hebrewNum}</span>
+              <span class="daf-num-latin">{d.latin}</span>
+            </div>
+            <div class="daf-topic">
+              {has ? (
+                <a
+                  href={mapHref!}
+                  data-i18n-he={d.map!.topic.he}
+                  data-i18n-en={d.map!.topic.en}
+                >{d.map!.topic.he}</a>
+              ) : (
+                <span data-i18n="browseEmptyDaf">{t.browseEmptyDaf}</span>
+              )}
+            </div>
+            <div class="daf-langs">
+              {has ? (
+                d.map!.languages.map((l) => <span class="chip">{l.toUpperCase()}</span>)
+              ) : (
+                <span class="chip empty">—</span>
+              )}
+            </div>
+            <div class="daf-action">
+              {has ? (
+                <a href={mapHref!} data-i18n="browseOpenMap">{t.browseOpenMap}</a>
+              ) : (
+                <a href={requestHref} data-i18n="browseRequestThis">{t.browseRequestThis}</a>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  </article>
+
+  <script is:inline>
+    (function () {
+      const pills = document.querySelectorAll('.browse-filter .pill[data-filter]');
+      const rows = document.querySelectorAll('.browse-list .browse-row[data-filter]');
+      if (!pills.length || !rows.length) return;
+
+      function apply(filter) {
+        pills.forEach((p) => {
+          const on = p.getAttribute('data-filter') === filter;
+          p.classList.toggle('active', on);
+          p.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        rows.forEach((row) => {
+          const key = row.getAttribute('data-filter');
+          row.hidden = !(filter === 'all' || key === filter);
+        });
+      }
+
+      pills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+          const f = pill.getAttribute('data-filter');
+          if (f === 'all' || f === 'with' || f === 'without') apply(f);
+        });
+      });
+    })();
+  </script>
+</SiteLayout>

@@ -67,6 +67,16 @@ const he = {
   mapInfoVariantLangEn: 'אנגלית',
   mapInfoVariantLangYi: 'יידיש',
   mapInfoUpdated: 'עודכן',
+
+  corpusTalmud: 'תלמוד',
+  browseMasechetLabel: 'מסכת',
+  browseFilterLabel: 'סינון',
+  browseFilterAll: 'הכל',
+  browseFilterWith: 'עם מפה',
+  browseFilterWithout: 'ללא מפה',
+  browseEmptyDaf: 'אין מפה',
+  browseOpenMap: 'פתיחה',
+  browseRequestThis: 'בקשת הדף',
 } as const;
 
 export type StringKey = keyof typeof he;
@@ -129,6 +139,16 @@ const en: Partial<Record<StringKey, string>> = {
   mapInfoVariantLangEn: 'English',
   mapInfoVariantLangYi: 'Yiddish',
   mapInfoUpdated: 'Updated',
+
+  corpusTalmud: 'Talmud',
+  browseMasechetLabel: 'Masechet',
+  browseFilterLabel: 'Filter',
+  browseFilterAll: 'All',
+  browseFilterWith: 'Has map',
+  browseFilterWithout: 'No map',
+  browseEmptyDaf: 'No map yet',
+  browseOpenMap: 'Open',
+  browseRequestThis: 'Request this daf',
 };
 
 export const strings: { he: Record<StringKey, string>; en: Partial<Record<StringKey, string>> } = {
