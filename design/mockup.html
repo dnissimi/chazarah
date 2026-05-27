@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>חזרה — Design Mockup</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;500;700;900&family=Heebo:wght@300;400;500;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* Palette inherits from the gemara-map template and deepens one accent */
+    --parchment: #faf7f0;
+    --parchment-2: #f3ecdb;
+    --parchment-3: #fffbea;
+    --card: #ffffff;
+    --border: #e7e2d6;
+    --border-strong: #d6cdb8;
+    --ink: #1b1f2a;
+    --ink-soft: #374151;
+    --muted: #7a6e58;
+    --muted-2: #a89a82;
+
+    /* The one strong accent: "old book gold" — a deepened mishnah-line */
+    --gold: #7c3a12;
+    --gold-soft: #b45309;
+    --gold-wash: #fdf2dc;
+
+    /* Map node colors — used sparingly as tinted indicators */
+    --c-mishnah: #fde68a;     --c-mishnah-line: #b45309;
+    --c-statement: #e0e7ff;   --c-statement-line: #3730a3;
+    --c-question: #fecaca;    --c-question-line: #b91c1c;
+    --c-answer: #bbf7d0;      --c-answer-line: #15803d;
+    --c-proof: #ddd6fe;       --c-proof-line: #6d28d9;
+    --c-conclusion: #fef08a;  --c-conclusion-line: #a16207;
+
+    --rule: 1px solid var(--border);
+    --rule-strong: 1px solid var(--border-strong);
+    --shadow-card: 0 1px 0 rgba(124, 58, 18, .04), 0 1px 3px rgba(0, 0, 0, .04);
+    --shadow-card-hover: 0 1px 0 rgba(124, 58, 18, .08), 0 8px 24px rgba(124, 58, 18, .07);
+
+    --font-display: "Frank Ruhl Libre", Georgia, serif;
+    --font-body: "Heebo", "Segoe UI", Arial, sans-serif;
+    --font-latin: "EB Garamond", Georgia, serif;
+  }
+
+  /* ---------- reset & globals ---------- */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--parchment);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    /* Subtle paper grain — a printed-on-cream feel without becoming literal */
+    background-image:
+      radial-gradient(circle at 14% 8%, rgba(124, 58, 18, .025), transparent 40%),
+      radial-gradient(circle at 86% 18%, rgba(55, 48, 163, .02), transparent 35%),
+      radial-gradient(circle at 30% 92%, rgba(180, 83, 9, .025), transparent 35%);
+    background-attachment: fixed;
+  }
+
+  ::selection { background: var(--gold-wash); color: var(--gold); }
+
+  a { color: var(--gold); text-decoration: none; transition: color .15s ease; }
+  a:hover { color: var(--gold-soft); }
+
+  /* Latin text inside Hebrew copy uses the matched serif so refs look like
+     they belong in the same printed sefer */
+  .latin { font-family: var(--font-latin); font-feature-settings: "onum" 1; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(250, 247, 240, .88);
+    backdrop-filter: saturate(140%) blur(8px);
+    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    border-bottom: var(--rule);
+  }
+  .topbar-inner {
+    max-width: 1140px; margin: 0 auto;
+    padding: 14px 28px;
+    display: flex; align-items: center; gap: 28px;
+  }
+  /* Wordmark: "חזרה" with a hairline above — title-page-of-a-sefer feel */
+  .wordmark {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.6rem;
+    letter-spacing: .02em;
+    color: var(--ink);
+    line-height: 1;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding-top: 5px;
+    position: relative;
+  }
+  .wordmark::before {
+    content: "";
+    height: 1px; width: 100%;
+    background: var(--gold);
+    opacity: .7;
+  }
+  .wordmark .latin {
+    font-size: .58rem;
+    letter-spacing: .28em;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-feature-settings: "smcp" 1;
+  }
+  .nav {
+    display: flex; gap: 22px; font-size: .95rem; color: var(--ink-soft);
+    margin-inline-start: auto;
+  }
+  .nav a {
+    color: var(--ink-soft);
+    padding: 6px 2px;
+    border-bottom: 1px solid transparent;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .nav a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+  .nav a.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  .nav .request {
+    padding: 6px 14px;
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    color: var(--gold);
+    font-weight: 500;
+  }
+  .nav .request:hover { background: var(--gold-wash); border-color: var(--gold); }
+
+  /* ---------- page frame ---------- */
+  main { padding: 0 28px; }
+  .page {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 56px 0 96px;
+  }
+  .page.narrow { max-width: 740px; }
+
+  /* A repeating ornamental rule used to mark section transitions, echoing
+     the ruled frame around a daf */
+  .rule-orn {
+    display: flex; align-items: center; gap: 18px;
+    margin: 56px 0 36px;
+    color: var(--muted-2);
+  }
+  .rule-orn::before, .rule-orn::after {
+    content: ""; flex: 1; height: 1px;
+    background: var(--border-strong);
+  }
+  .rule-orn .mark {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    color: var(--gold);
+    letter-spacing: .3em;
+  }
+  /* a more refined ornament: gold double-dot diamond */
+  .rule-orn .mark::before { content: "◇"; opacity: .55; margin-inline-end: .55em; }
+  .rule-orn .mark::after  { content: "◇"; opacity: .55; margin-inline-start: .55em; }
+
+  /* ---------- hero / landing ---------- */
+  .hero {
+    text-align: center;
+    padding: 84px 0 36px;
+    position: relative;
+  }
+  .hero .eyebrow {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 18px;
+    letter-spacing: .04em;
+  }
+  .hero .eyebrow::before, .hero .eyebrow::after {
+    content: "·"; color: var(--gold); margin: 0 .8em;
+  }
+
+  .hero h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(4.5rem, 12vw, 8.5rem);
+    line-height: .9;
+    margin: 0;
+    letter-spacing: -.01em;
+    color: var(--ink);
+    position: relative;
+  }
+  /* The ornamental rules above and below the wordmark on the hero — like
+     a title page or the rule above a Mishnah heading in a printed gemara */
+  .hero h1::before, .hero h1::after {
+    content: "";
+    display: block;
+    width: 8em; height: 1px;
+    background: var(--gold);
+    opacity: .55;
+    margin: 24px auto;
+  }
+  .hero h1::before { margin-bottom: 28px; }
+  .hero h1::after  { margin-top: 28px; }
+
+  .hero .lede {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.45rem;
+    line-height: 1.55;
+    max-width: 640px;
+    margin: 12px auto 0;
+    color: var(--ink-soft);
+  }
+  .hero .lede em {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  /* ---------- section labels ---------- */
+  .section-head {
+    display: flex; align-items: baseline; gap: 18px;
+    margin-bottom: 22px;
+  }
+  .section-head .numeral {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gold);
+    letter-spacing: .04em;
+    /* Hebrew gematria letter — א ב ג — used as section markers */
+  }
+  .section-head h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.75rem;
+    margin: 0;
+    color: var(--ink);
+    letter-spacing: -.005em;
+  }
+  .section-head .more {
+    margin-inline-start: auto;
+    font-size: .88rem;
+    color: var(--muted);
+  }
+  .section-head .more a::after { content: " ←"; }
+
+  /* ---------- featured product card ---------- */
+  .featured {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 0;
+    background: var(--card);
+    border: var(--rule);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+  }
+  .featured .copy {
+    padding: 44px 40px;
+    border-inline-end: var(--rule);
+  }
+  .featured .label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--gold);
+    font-size: .95rem;
+    margin-bottom: 16px;
+  }
+  .featured .label::before {
+    content: ""; width: 22px; height: 1px; background: var(--gold);
+  }
+  .featured h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2.4rem;
+    line-height: 1.05;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+  .featured p {
+    font-size: 1.02rem;
+    color: var(--ink-soft);
+    margin: 0 0 28px;
+    max-width: 38ch;
+  }
+  .featured .cta {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--gold);
+    color: #fff;
+    padding: 11px 22px;
+    border-radius: 999px;
+    font-weight: 500;
+    font-size: .98rem;
+    transition: background .15s ease, transform .15s ease;
+  }
+  .featured .cta:hover { background: var(--gold-soft); transform: translateY(-1px); }
+  .featured .cta::after { content: "→"; transform: scaleX(-1); /* RTL arrow direction */ }
+
+  .featured .examples {
+    background: var(--parchment-3);
+    padding: 32px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+  }
+  .ex-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    background: var(--card);
+    border: var(--rule);
+    border-radius: 10px;
+    transition: box-shadow .15s ease, border-color .15s ease, transform .15s ease;
+    cursor: pointer;
+  }
+  .ex-card:hover {
+    border-color: var(--gold);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+  .ex-card .swatch {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid;
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+  }
+  .ex-card .meta { flex: 1; min-width: 0; }
+  .ex-card .name {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.15rem;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .ex-card .ref {
+    font-family: var(--font-latin);
+    color: var(--muted);
+    font-size: .95rem;
+    margin-top: 2px;
+  }
+  .ex-card .arrow { color: var(--muted-2); font-size: 1.1rem; }
+
+  /* tinted variants per ex-card slot — quietly hinting at map node colors */
+  .ex-card.t-mishnah    .swatch { background: var(--c-mishnah);    border-color: var(--c-mishnah-line);    color: var(--c-mishnah-line); }
+  .ex-card.t-statement  .swatch { background: var(--c-statement);  border-color: var(--c-statement-line);  color: var(--c-statement-line); }
+  .ex-card.t-question   .swatch { background: var(--c-question);   border-color: var(--c-question-line);   color: var(--c-question-line); }
+  .ex-card.t-answer     .swatch { background: var(--c-answer);     border-color: var(--c-answer-line);     color: var(--c-answer-line); }
+
+  /* ---------- recents row ---------- */
+  .recents-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .recent-card {
+    background: var(--card);
+    border: var(--rule);
+    border-right: 4px solid var(--gold);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+    cursor: pointer;
+    position: relative;
+  }
+  .recent-card.t-statement { border-right-color: var(--c-statement-line); }
+  .recent-card.t-question  { border-right-color: var(--c-question-line); }
+  .recent-card.t-mishnah   { border-right-color: var(--c-mishnah-line); }
+  .recent-card.t-answer    { border-right-color: var(--c-answer-line); }
+  .recent-card.t-proof     { border-right-color: var(--c-proof-line); }
+
+  .recent-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+
+  .recent-card .corpus {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--muted);
+    font-size: .85rem;
+    letter-spacing: .04em;
+  }
+  .recent-card .title {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.2rem;
+    margin: 4px 0 8px;
+    color: var(--ink);
+    line-height: 1.25;
+  }
+  .recent-card .blurb {
+    font-size: .92rem;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .recent-card .footer-line {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 14px;
+    font-size: .78rem;
+    color: var(--muted);
+  }
+  .recent-card .lang-chip {
+    display: inline-flex;
+    padding: 1px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    font-size: .72rem;
+    color: var(--muted);
+  }
+  .recent-card .lang-chip + .lang-chip { margin-inline-start: -4px; }
+
+  /* ---------- visitor recents ---------- */
+  .visitor-recents {
+    background: var(--parchment-3);
+    border: 1px dashed var(--border-strong);
+    border-radius: 12px;
+    padding: 24px 28px;
+  }
+  .visitor-recents .section-head { margin-bottom: 16px; }
+  .visitor-recents .section-head .numeral { color: var(--gold-soft); }
+
+  /* ---------- request banner ---------- */
+  .request-banner {
+    display: flex; align-items: center; gap: 28px;
+    background: var(--card);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 22px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .request-banner::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0; top: 0; bottom: 0; width: 6px;
+    background: var(--gold);
+  }
+  .request-banner .copy { flex: 1; }
+  .request-banner .copy h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.35rem;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  .request-banner .copy p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: .98rem;
+  }
+  .request-banner .btn {
+    background: var(--gold);
+    color: #fff;
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-size: .96rem;
+    transition: background .15s ease, transform .15s ease;
+    white-space: nowrap;
+  }
+  .request-banner .btn:hover { background: var(--gold-soft); transform: translateY(-1px); }
+
+  /* ---------- footer ---------- */
+  .site-footer {
+    border-top: var(--rule);
+    background: var(--parchment-2);
+    margin-top: 80px;
+    padding: 36px 28px 48px;
+    color: var(--muted);
+    font-size: .86rem;
+  }
+  .site-footer .inner {
+    max-width: 1140px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 36px;
+    align-items: start;
+  }
+  .site-footer h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: .82rem;
+    letter-spacing: .14em;
+    color: var(--ink);
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+  .site-footer .credit {
+    line-height: 1.7;
+  }
+  .site-footer .credit .latin { color: var(--ink-soft); }
+  .site-footer ul { list-style: none; padding: 0; margin: 0; }
+  .site-footer ul li { margin-bottom: 8px; }
+  .site-footer ul a { color: var(--muted); }
+  .site-footer ul a:hover { color: var(--gold); }
+  .site-footer .colophon {
+    grid-column: 1 / -1;
+    border-top: var(--rule);
+    margin-top: 26px;
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    font-size: .78rem;
+    color: var(--muted-2);
+  }
+  .site-footer .colophon .latin { font-style: italic; }
+
+  /* ===================================================================
+     MAP INFO PAGE
+     =================================================================== */
+  .info-head {
+    text-align: start;
+    padding-bottom: 32px;
+    border-bottom: var(--rule);
+    margin-bottom: 36px;
+  }
+  .info-head .crumbs {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--muted);
+    font-size: .98rem;
+    margin-bottom: 18px;
+    letter-spacing: .02em;
+  }
+  .info-head .crumbs a { color: var(--muted); }
+  .info-head .crumbs a:hover { color: var(--gold); }
+  .info-head .crumbs .sep { margin: 0 .6em; color: var(--muted-2); }
+
+  .info-head h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2.6rem, 5vw, 3.6rem);
+    line-height: 1.05;
+    margin: 0 0 8px;
+    color: var(--ink);
+    letter-spacing: -.01em;
+  }
+  .info-head .latin-ref {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--muted);
+    font-size: 1.15rem;
+    letter-spacing: .02em;
+  }
+  .info-head .blurb {
+    margin-top: 22px;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 60ch;
+  }
+
+  /* The info-page body uses a two-column editorial layout with a marginal column */
+  .info-body {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 64px;
+  }
+  .info-main h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin: 0 0 14px;
+    color: var(--gold);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  /* Language variants list */
+  .variants {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-bottom: 40px;
+  }
+  .variant {
+    display: flex; align-items: center; gap: 18px;
+    padding: 16px 20px;
+    background: var(--card);
+    border: var(--rule);
+    border-radius: 10px;
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+  }
+  .variant.available { cursor: pointer; }
+  .variant.available:hover {
+    border-color: var(--gold);
+    background: var(--gold-wash);
+    transform: translateX(4px); /* RTL: drifts toward the start (right) */
+  }
+  .variant .lang {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.3rem;
+    color: var(--ink);
+    min-width: 130px;
+  }
+  .variant .lang .latin {
+    display: block;
+    font-family: var(--font-latin);
+    font-style: italic;
+    font-size: .82rem;
+    color: var(--muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .variant .meta {
+    color: var(--muted);
+    font-size: .9rem;
+    flex: 1;
+  }
+  .variant .status {
+    color: var(--gold);
+    font-size: .92rem;
+    font-weight: 500;
+  }
+  .variant .status::after { content: " ←"; }
+
+  /* Missing-language variant — grayed-out with a request CTA */
+  .variant.missing {
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--border-strong);
+    color: var(--muted);
+  }
+  .variant.missing .lang { color: var(--muted); }
+  .variant.missing .meta { color: var(--muted-2); }
+  .variant.missing .request-translation {
+    color: var(--gold);
+    font-size: .88rem;
+    border: 1px solid var(--gold);
+    padding: 5px 14px;
+    border-radius: 999px;
+    transition: background .15s ease;
+  }
+  .variant.missing .request-translation:hover { background: var(--gold-wash); }
+
+  /* Feedback / contribute panel */
+  .feedback-panel {
+    background: var(--parchment-3);
+    border: var(--rule);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-top: 8px;
+  }
+  .feedback-panel h4 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.2rem;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .feedback-panel p {
+    color: var(--ink-soft);
+    font-size: .95rem;
+    margin: 0 0 14px;
+  }
+  .feedback-panel .btn-text {
+    color: var(--gold);
+    font-weight: 500;
+    font-size: .98rem;
+  }
+  .feedback-panel .btn-text::after { content: " ←"; }
+
+  /* Adjacent maps (prev/next within book) — feels like turning a daf */
+  .adjacent {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 40px;
+    padding-top: 32px;
+    border-top: var(--rule);
+  }
+  .adjacent .nav-card {
+    display: block;
+    padding: 18px 22px;
+    background: var(--card);
+    border: var(--rule);
+    border-radius: 10px;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .adjacent .nav-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-1px);
+  }
+  .adjacent .nav-card .dir {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--muted);
+    font-size: .9rem;
+    margin-bottom: 4px;
+  }
+  .adjacent .nav-card .label {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    color: var(--ink);
+  }
+  .adjacent .nav-card.prev .dir::after { content: " →"; transform: scaleX(-1); display: inline-block; }
+  .adjacent .nav-card.next { text-align: end; }
+  .adjacent .nav-card.next .dir::before { content: "← "; }
+
+  /* Margin column (right in LTR; left in RTL) */
+  .info-margin {
+    border-inline-start: var(--rule);
+    padding-inline-start: 28px;
+    font-size: .9rem;
+    color: var(--muted);
+  }
+  .info-margin .block { margin-bottom: 28px; }
+  .info-margin h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: .72rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin: 0 0 8px;
+  }
+  .info-margin .value {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .info-margin .value.latin {
+    font-family: var(--font-latin);
+    font-style: italic;
+  }
+  .info-margin .pill {
+    display: inline-flex;
+    background: var(--parchment-3);
+    border: var(--rule);
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: .82rem;
+    color: var(--ink);
+    margin-inline-end: 6px;
+  }
+  .info-margin .ornament {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--muted-2); font-size: .82rem;
+  }
+  .info-margin .ornament::before, .info-margin .ornament::after {
+    content: ""; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ===================================================================
+     BROWSE PAGE — Masechet (list of dapim covered)
+     =================================================================== */
+  .browse-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 36px;
+    align-items: end;
+    border-bottom: var(--rule);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+  .browse-head .crumbs {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--muted);
+    font-size: .98rem;
+    margin-bottom: 14px;
+  }
+  .browse-head .crumbs a { color: var(--muted); }
+  .browse-head .crumbs a:hover { color: var(--gold); }
+  .browse-head .crumbs .sep { margin: 0 .6em; color: var(--muted-2); }
+  .browse-head h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2.8rem, 6vw, 4rem);
+    line-height: 1;
+    margin: 0 0 8px;
+    color: var(--ink);
+    letter-spacing: -.01em;
+  }
+  .browse-head .latin-ref {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--muted);
+    font-size: 1.1rem;
+  }
+  .browse-head .summary {
+    color: var(--ink-soft);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    line-height: 1.5;
+    margin-top: 16px;
+    max-width: 50ch;
+  }
+  .browse-head .progress {
+    display: flex; flex-direction: column;
+    gap: 8px;
+    color: var(--muted);
+    font-size: .9rem;
+    text-align: end;
+  }
+  .browse-head .progress .count {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2.2rem;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  /* Daf grid — like a bookshelf of small leaves */
+  .daf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+  }
+  .daf-card {
+    background: var(--card);
+    border: var(--rule);
+    border-radius: 10px;
+    padding: 20px 18px 18px;
+    cursor: pointer;
+    transition: all .15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .daf-card::before {
+    /* Spine — thin colored bar along the start edge to evoke a book spine */
+    content: ""; position: absolute;
+    inset-inline-start: 0; top: 12px; bottom: 12px;
+    width: 3px;
+    background: var(--gold);
+    opacity: .6;
+    transition: opacity .15s ease, width .15s ease;
+  }
+  .daf-card:hover {
+    border-color: var(--gold);
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+  .daf-card:hover::before { opacity: 1; width: 4px; }
+
+  .daf-card .ord {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--muted);
+    font-size: .8rem;
+    letter-spacing: .04em;
+  }
+  .daf-card .num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2.4rem;
+    line-height: 1.05;
+    color: var(--ink);
+    margin: 4px 0 8px;
+  }
+  .daf-card .latin-num {
+    font-family: var(--font-latin);
+    color: var(--muted);
+    font-size: .92rem;
+    font-style: italic;
+  }
+  .daf-card .langs {
+    display: flex; gap: 4px;
+    margin-top: 12px;
+  }
+  .daf-card .langs span {
+    font-family: var(--font-latin);
+    font-size: .68rem;
+    letter-spacing: .14em;
+    color: var(--muted);
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 1px 5px;
+    text-transform: uppercase;
+  }
+  .daf-card .langs span.on {
+    color: var(--gold);
+    border-color: var(--gold);
+    background: var(--gold-wash);
+  }
+
+  .daf-card.empty {
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--border);
+  }
+  .daf-card.empty::before { display: none; }
+  .daf-card.empty .num { color: var(--muted-2); }
+  .daf-card.empty .ord, .daf-card.empty .latin-num { color: var(--muted-2); }
+  .daf-card.empty .request {
+    margin-top: 12px;
+    font-size: .82rem;
+    color: var(--gold);
+  }
+  .daf-card.empty .request::after { content: " ←"; }
+
+  /* ===================================================================
+     REQUEST FORM
+     =================================================================== */
+  .form-page {
+    max-width: 680px;
+  }
+  .form-head {
+    text-align: start;
+    border-bottom: var(--rule);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+  .form-head .eyebrow {
+    font-family: var(--font-latin);
+    font-style: italic;
+    color: var(--gold);
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  .form-head h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2.2rem, 4.5vw, 3rem);
+    margin: 0 0 12px;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+  .form-head p {
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    margin: 0;
+    max-width: 56ch;
+    line-height: 1.6;
+  }
+
+  .form {
+    display: flex; flex-direction: column;
+    gap: 24px;
+  }
+  .form-row { display: flex; flex-direction: column; gap: 8px; }
+  .form-row label {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1rem;
+    color: var(--ink);
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .form-row label .hint {
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: .84rem;
+    color: var(--muted);
+  }
+  .form-row label .optional {
+    font-family: var(--font-latin);
+    font-style: italic;
+    font-size: .82rem;
+    color: var(--muted-2);
+    margin-inline-start: auto;
+  }
+
+  .form-row input[type=text],
+  .form-row input[type=email],
+  .form-row select,
+  .form-row textarea {
+    width: 100%;
+    border: var(--rule);
+    background: var(--card);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--ink);
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .form-row input:focus,
+  .form-row select:focus,
+  .form-row textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+    background: var(--gold-wash);
+  }
+  .form-row textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+
+  .form-row .lookup-row {
+    display: flex; gap: 10px;
+  }
+  .form-row .lookup-row input { flex: 1; }
+  .form-row .lookup-row button {
+    background: var(--card);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    padding: 0 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 500;
+    transition: background .15s ease;
+  }
+  .form-row .lookup-row button:hover { background: var(--gold-wash); }
+
+  .resolved {
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: var(--parchment-3);
+    border: 1px solid var(--c-answer-line);
+    border-radius: 8px;
+    font-size: .92rem;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .resolved::before { content: "✓"; color: var(--c-answer-line); font-weight: 700; }
+  .resolved .latin { color: var(--muted); margin-inline-start: 4px; }
+
+  .pills {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;
+  }
+  .pills .pill {
+    padding: 8px 16px;
+    border: var(--rule);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: .95rem;
+    background: var(--card);
+    color: var(--ink-soft);
+    transition: all .15s ease;
+  }
+  .pills .pill:hover { border-color: var(--gold); color: var(--gold); }
+  .pills .pill.selected {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #fff;
+  }
+
+  .turnstile-placeholder {
+    border: 1px dashed var(--border-strong);
+    background: var(--parchment-3);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 18px;
+    text-align: center;
+    font-family: var(--font-latin);
+    font-style: italic;
+    font-size: .9rem;
+  }
+
+  .form-submit {
+    background: var(--gold);
+    color: #fff;
+    border: 0;
+    padding: 14px 32px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 1.02rem;
+    cursor: pointer;
+    align-self: start;
+    transition: background .15s ease, transform .15s ease;
+  }
+  .form-submit:hover { background: var(--gold-soft); transform: translateY(-1px); }
+
+  .form-note {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: .88rem;
+    line-height: 1.6;
+  }
+
+  /* ===================================================================
+     SURFACE SWITCHER (mockup-only dev tool, not real product chrome)
+     =================================================================== */
+  .switcher {
+    position: fixed;
+    bottom: 18px;
+    inset-inline-start: 18px;
+    z-index: 200;
+    background: var(--ink);
+    color: var(--parchment);
+    border-radius: 999px;
+    padding: 6px;
+    display: flex;
+    gap: 4px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .18);
+    direction: ltr; /* keep button order stable */
+    font-family: "EB Garamond", "Heebo", serif;
+    font-style: italic;
+    letter-spacing: .04em;
+  }
+  .switcher button {
+    background: transparent;
+    border: 0;
+    color: var(--parchment);
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: .88rem;
+    opacity: .72;
+    transition: all .15s ease;
+  }
+  .switcher button:hover { opacity: 1; }
+  .switcher button.active {
+    background: var(--gold);
+    color: #fff;
+    opacity: 1;
+  }
+  .switcher .label {
+    color: var(--muted-2);
+    font-size: .75rem;
+    padding: 8px 10px 8px 14px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    font-style: normal;
+    font-family: "Heebo", sans-serif;
+  }
+
+  /* Hide all surfaces by default; the active one is shown via .show */
+  .surface { display: none; }
+  .surface.show { display: block; }
+
+  /* Subtle entrance choreography per surface */
+  .surface.show .hero { animation: rise .9s ease both; }
+  .surface.show .hero h1 { animation: rise 1.05s ease both; animation-delay: .1s; }
+  .surface.show .hero .lede { animation: rise .9s ease both; animation-delay: .25s; }
+  .surface.show .featured { animation: rise .8s ease both; animation-delay: .15s; }
+  .surface.show .recents-row .recent-card { animation: rise .7s ease both; }
+  .surface.show .recents-row .recent-card:nth-child(1) { animation-delay: .15s; }
+  .surface.show .recents-row .recent-card:nth-child(2) { animation-delay: .22s; }
+  .surface.show .recents-row .recent-card:nth-child(3) { animation-delay: .29s; }
+  .surface.show .recents-row .recent-card:nth-child(4) { animation-delay: .36s; }
+  .surface.show .info-head h1 { animation: rise .9s ease both; }
+  .surface.show .info-head .blurb { animation: rise .9s ease both; animation-delay: .15s; }
+  .surface.show .variant { animation: rise .6s ease both; }
+  .surface.show .variant:nth-child(1) { animation-delay: .1s; }
+  .surface.show .variant:nth-child(2) { animation-delay: .18s; }
+  .surface.show .variant:nth-child(3) { animation-delay: .26s; }
+  .surface.show .browse-head { animation: rise .85s ease both; }
+  .surface.show .daf-grid .daf-card { animation: rise .55s ease both; }
+  .surface.show .daf-grid .daf-card:nth-child(1)  { animation-delay: .04s; }
+  .surface.show .daf-grid .daf-card:nth-child(2)  { animation-delay: .08s; }
+  .surface.show .daf-grid .daf-card:nth-child(3)  { animation-delay: .12s; }
+  .surface.show .daf-grid .daf-card:nth-child(4)  { animation-delay: .16s; }
+  .surface.show .daf-grid .daf-card:nth-child(5)  { animation-delay: .20s; }
+  .surface.show .daf-grid .daf-card:nth-child(6)  { animation-delay: .24s; }
+  .surface.show .daf-grid .daf-card:nth-child(7)  { animation-delay: .28s; }
+  .surface.show .daf-grid .daf-card:nth-child(8)  { animation-delay: .32s; }
+  .surface.show .daf-grid .daf-card:nth-child(9)  { animation-delay: .36s; }
+  .surface.show .daf-grid .daf-card:nth-child(10) { animation-delay: .40s; }
+  .surface.show .daf-grid .daf-card:nth-child(11) { animation-delay: .44s; }
+  .surface.show .daf-grid .daf-card:nth-child(12) { animation-delay: .48s; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      transition-duration: .01ms !important;
+    }
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 880px) {
+    .featured { grid-template-columns: 1fr; }
+    .featured .copy { border-inline-end: 0; border-bottom: var(--rule); }
+    .info-body { grid-template-columns: 1fr; gap: 32px; }
+    .info-margin { border-inline-start: 0; padding-inline-start: 0; border-top: var(--rule); padding-top: 28px; }
+    .site-footer .inner { grid-template-columns: 1fr; gap: 24px; }
+    .browse-head { grid-template-columns: 1fr; }
+    .browse-head .progress { text-align: start; }
+    .nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- =============================================================
+     TOPBAR (shared across surfaces)
+     ============================================================= -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <a href="#" class="wordmark">
+      <span>חזרה</span>
+      <span class="latin">Chazarah</span>
+    </a>
+    <nav class="nav">
+      <a href="#" class="active" data-route="landing">בית</a>
+      <a href="#" data-route="browse">ספריה</a>
+      <a href="#" data-route="info">דוגמת מפה</a>
+      <a href="#">אודות</a>
+      <a href="#" class="request" data-route="request">בקש סוגיה</a>
+    </nav>
+  </div>
+</div>
+
+<main>
+
+<!-- =============================================================
+     SURFACE 1 — LANDING
+     ============================================================= -->
+<section class="surface show" id="surface-landing">
+  <div class="page">
+    <div class="hero">
+      <div class="eyebrow"><span class="latin">a library for the structure of Torah study</span></div>
+      <h1>חזרה</h1>
+      <p class="lede">
+        מפות לימודיות לסוגיות הש״ס — מראות את <em>מבנה</em> ההלוך־ושוב,
+        את הקושיות והתירוצים, את המקום בו הסוגיה נחה.
+      </p>
+    </div>
+
+    <div class="rule-orn"><span class="mark"></span></div>
+
+    <div class="section-head">
+      <span class="numeral">א.</span>
+      <h2>המוצרים שלנו</h2>
+    </div>
+
+    <div class="featured">
+      <div class="copy">
+        <div class="label">המוצר הראשון</div>
+        <h3>מפת הסוגיא</h3>
+        <p>תרשים זרימה צבעוני בעברית של סוגיה — או של דף שלם — שמראה איך הגמרא נעה: מה השאלה, מי השיב, היכן ההתנגדות, ומה השורה התחתונה. בנויה כך שתלמיד בן 14 יוכל לעקוב, אבל מעמיקה מספיק גם למי שכבר חוזר על המסכת בפעם השלישית.</p>
+        <a href="#" class="cta" data-route="browse">לעיון בספריה</a>
+      </div>
+      <div class="examples">
+        <div class="ex-card t-mishnah">
+          <div class="swatch">מ</div>
+          <div class="meta">
+            <div class="name">מגילה כ״ו</div>
+            <div class="ref latin">Megillah 26 · קדושת בית הכנסת</div>
+          </div>
+          <div class="arrow">←</div>
+        </div>
+        <div class="ex-card t-question">
+          <div class="swatch">ק</div>
+          <div class="meta">
+            <div class="name">ברכות ב׳</div>
+            <div class="ref latin">Berakhot 2 · מאימתי קוראים את שמע</div>
+          </div>
+          <div class="arrow">←</div>
+        </div>
+        <div class="ex-card t-statement">
+          <div class="swatch">ד</div>
+          <div class="meta">
+            <div class="name">בבא מציעא ה׳</div>
+            <div class="ref latin">Bava Metzia 5 · שבועה במודה במקצת</div>
+          </div>
+          <div class="arrow">←</div>
+        </div>
+        <div class="ex-card t-answer">
+          <div class="swatch">ת</div>
+          <div class="meta">
+            <div class="name">שבת כ״ב</div>
+            <div class="ref latin">Shabbat 22 · נר חנוכה</div>
+          </div>
+          <div class="arrow">←</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-orn"><span class="mark"></span></div>
+
+    <div class="section-head">
+      <span class="numeral">ב.</span>
+      <h2>נוספו לאחרונה</h2>
+      <div class="more"><a href="#" data-route="browse">כל הספריה</a></div>
+    </div>
+
+    <div class="recents-row">
+      <div class="recent-card t-statement">
+        <div class="corpus latin">Talmud · Megillah</div>
+        <div class="title">מגילה כ״ו</div>
+        <div class="blurb">מה דין הכסף הנמכר מבית כנסת? ירידת המדרגות בקדושה ועלייתן.</div>
+        <div class="footer-line">
+          <span>לפני יומיים</span>
+          <span class="lang-chip">עב</span>
+          <span class="lang-chip">EN</span>
+        </div>
+      </div>
+      <div class="recent-card t-mishnah">
+        <div class="corpus latin">Talmud · Megillah</div>
+        <div class="title">מגילה כ״ז</div>
+        <div class="blurb">תשמישי מצוה ותשמישי קדושה — מה נזרק ומה נגנז.</div>
+        <div class="footer-line">
+          <span>לפני 4 ימים</span>
+          <span class="lang-chip">עב</span>
+        </div>
+      </div>
+      <div class="recent-card t-question">
+        <div class="corpus latin">Talmud · Megillah</div>
+        <div class="title">מגילה כ״ח</div>
+        <div class="blurb">לא יקל אדם ראשו כנגד שער המזרח — קושיא, אוקימתא, ויישוב.</div>
+        <div class="footer-line">
+          <span>שבוע שעבר</span>
+          <span class="lang-chip">עב</span>
+          <span class="lang-chip">EN</span>
+        </div>
+      </div>
+      <div class="recent-card t-proof">
+        <div class="corpus latin">Talmud · Berakhot</div>
+        <div class="title">ברכות ב׳</div>
+        <div class="blurb">מאימתי קוראים את שמע בערבית — וההסתמכות הראשונית של המשנה.</div>
+        <div class="footer-line">
+          <span>שבועיים</span>
+          <span class="lang-chip">עב</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-orn"><span class="mark"></span></div>
+
+    <div class="visitor-recents">
+      <div class="section-head">
+        <span class="numeral">ג.</span>
+        <h2>המשך משם שהפסקת</h2>
+      </div>
+      <div class="recents-row">
+        <div class="recent-card t-statement">
+          <div class="corpus latin">Talmud · Megillah</div>
+          <div class="title">מגילה כ״ו</div>
+          <div class="blurb">מה דין הכסף הנמכר מבית כנסת? ירידת המדרגות בקדושה ועלייתן.</div>
+          <div class="footer-line"><span>נצפה אתמול</span></div>
+        </div>
+        <div class="recent-card t-answer">
+          <div class="corpus latin">Talmud · Shabbat</div>
+          <div class="title">שבת כ״ב</div>
+          <div class="blurb">תשמישי מצוה ותשמישי קדושה — מה נזרק ומה נגנז.</div>
+          <div class="footer-line"><span>נצפה לפני שבוע</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rule-orn"><span class="mark"></span></div>
+
+    <div class="request-banner">
+      <div class="copy">
+        <h3>חסרה לכם סוגיה?</h3>
+        <p>שלחו בקשה — הרבה מהמפות נולדו ככה.</p>
+      </div>
+      <a href="#" class="btn" data-route="request">בקש סוגיה ←</a>
+    </div>
+  </div>
+</section>
+
+<!-- =============================================================
+     SURFACE 2 — MAP INFO PAGE
+     ============================================================= -->
+<section class="surface" id="surface-info">
+  <div class="page">
+
+    <div class="info-head">
+      <div class="crumbs">
+        <a href="#" data-route="landing">חזרה</a>
+        <span class="sep">/</span>
+        <a href="#">תלמוד</a>
+        <span class="sep">/</span>
+        <a href="#" data-route="browse">מגילה</a>
+        <span class="sep">/</span>
+        <span>כ״ו</span>
+      </div>
+      <h1>מפת הסוגיא — מגילה כ״ו</h1>
+      <div class="latin-ref">Megillah 26 · מקור: ספריא · William Davidson edition</div>
+      <p class="blurb">
+        המכירה של בית הכנסת ושל תשמישיו — האם הקדושה מתפוגגת, או יורדת לחפץ שנקנה?
+        סדרת המדרגות שמעלה תורה לעולם הזה: ארון, תיבה, מטפחת, ספרים.
+      </p>
+    </div>
+
+    <div class="info-body">
+      <div class="info-main">
+
+        <h3>גרסאות שפה</h3>
+        <div class="variants">
+          <a href="#" class="variant available">
+            <div class="lang">
+              עברית
+              <span class="latin">Hebrew · canonical</span>
+            </div>
+            <div class="meta">המקור הקאנוני · עודכן לפני יומיים</div>
+            <div class="status">פתח</div>
+          </a>
+          <a href="#" class="variant available">
+            <div class="lang">
+              English
+              <span class="latin">translated from Hebrew</span>
+            </div>
+            <div class="meta">תורגם מהמהדורה העברית · עודכן לפני שבוע</div>
+            <div class="status">פתח</div>
+          </a>
+          <div class="variant missing">
+            <div class="lang">
+              יידיש
+              <span class="latin">Yiddish · not yet</span>
+            </div>
+            <div class="meta">עדיין לא תורגם</div>
+            <a href="#" class="request-translation" data-route="request">בקשו תרגום</a>
+          </div>
+        </div>
+
+        <div class="feedback-panel">
+          <h4>נראית טעות? הערה?</h4>
+          <p>המפה תיבדק שוב על־ידי עיון בטקסט בספריא, ואם ההערה צודקת — היא תוטמע. תודה.</p>
+          <a href="#" class="btn-text" data-route="request">שלח הערה למפה הזו</a>
+        </div>
+
+        <div class="adjacent">
+          <a href="#" class="nav-card prev">
+            <div class="dir">המפה הקודמת</div>
+            <div class="label">מגילה כ״ה</div>
+          </a>
+          <a href="#" class="nav-card next">
+            <div class="dir">המפה הבאה</div>
+            <div class="label">מגילה כ״ז</div>
+          </a>
+        </div>
+      </div>
+
+      <aside class="info-margin">
+        <div class="ornament"><span>פרטים</span></div>
+
+        <div class="block">
+          <h4>אסופה</h4>
+          <div class="value">תלמוד בבלי</div>
+          <div class="value latin" style="margin-top:4px">Talmud Bavli</div>
+        </div>
+
+        <div class="block">
+          <h4>מסכת</h4>
+          <div class="value">מגילה</div>
+          <div class="value latin" style="margin-top:4px">Megillah</div>
+        </div>
+
+        <div class="block">
+          <h4>מיקום</h4>
+          <div class="value latin">26a — 26b</div>
+        </div>
+
+        <div class="block">
+          <h4>סוגיות במפה</h4>
+          <div class="value">4 סוגיות</div>
+        </div>
+
+        <div class="block">
+          <h4>עודכן</h4>
+          <div class="value latin">24 May 2026</div>
+        </div>
+
+        <div class="block">
+          <h4>מקור</h4>
+          <div>
+            <span class="pill">Sefaria</span>
+            <span class="pill latin">Wm. Davidson</span>
+          </div>
+        </div>
+
+        <div class="ornament"><span>◇</span></div>
+      </aside>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============================================================
+     SURFACE 3 — BROWSE (Masechet)
+     ============================================================= -->
+<section class="surface" id="surface-browse">
+  <div class="page">
+
+    <div class="browse-head">
+      <div>
+        <div class="crumbs">
+          <a href="#" data-route="landing">חזרה</a>
+          <span class="sep">/</span>
+          <a href="#">תלמוד</a>
+          <span class="sep">/</span>
+          <span>מגילה</span>
+        </div>
+        <h1>מסכת מגילה</h1>
+        <div class="latin-ref">Massechet Megillah · 32 dapim · Talmud Bavli</div>
+        <p class="summary">
+          ארבעה פרקים על מקרא מגילה, על קריאת התורה ועל קדושת בית הכנסת — קצרה אך עשירה.
+        </p>
+      </div>
+      <div class="progress">
+        <div class="count">7</div>
+        <div>דפים במפה</div>
+        <div style="margin-top: 14px; font-family: var(--font-latin); font-style: italic;">of 32 total</div>
+      </div>
+    </div>
+
+    <div class="daf-grid">
+      <div class="daf-card">
+        <div class="ord">דף</div>
+        <div class="num">ב׳</div>
+        <div class="latin-num">2a — 2b</div>
+        <div class="langs"><span class="on">HE</span><span>EN</span><span>YI</span></div>
+      </div>
+      <div class="daf-card">
+        <div class="ord">דף</div>
+        <div class="num">ג׳</div>
+        <div class="latin-num">3a — 3b</div>
+        <div class="langs"><span class="on">HE</span><span class="on">EN</span><span>YI</span></div>
+      </div>
+      <div class="daf-card empty">
+        <div class="ord">דף</div>
+        <div class="num">ד׳</div>
+        <div class="latin-num">4a — 4b</div>
+        <a href="#" class="request" data-route="request">בקשו דף זה</a>
+      </div>
+      <div class="daf-card">
+        <div class="ord">דף</div>
+        <div class="num">ה׳</div>
+        <div class="latin-num">5a — 5b</div>
+        <div class="langs"><span class="on">HE</span><span>EN</span><span>YI</span></div>
+      </div>
+      <div class="daf-card empty">
+        <div class="ord">דף</div>
+        <div class="num">ו׳</div>
+        <div class="latin-num">6a — 6b</div>
+        <a href="#" class="request" data-route="request">בקשו דף זה</a>
+      </div>
+      <div class="daf-card empty">
+        <div class="ord">דף</div>
+        <div class="num">ז׳</div>
+        <div class="latin-num">7a — 7b</div>
+        <a href="#" class="request" data-route="request">בקשו דף זה</a>
+      </div>
+      <div class="daf-card">
+        <div class="ord">דף</div>
+        <div class="num">כ״ה</div>
+        <div class="latin-num">25a — 25b</div>
+        <div class="langs"><span class="on">HE</span><span>EN</span><span>YI</span></div>
+      </div>
+      <div class="daf-card" style="border-color: var(--gold); background: var(--gold-wash);">
+        <div class="ord" style="color: var(--gold);">החדש ביותר</div>
+        <div class="num">כ״ו</div>
+        <div class="latin-num">26a — 26b</div>
+        <div class="langs"><span class="on">HE</span><span class="on">EN</span><span>YI</span></div>
+      </div>
+      <div class="daf-card">
+        <div class="ord">דף</div>
+        <div class="num">כ״ז</div>
+        <div class="latin-num">27a — 27b</div>
+        <div class="langs"><span class="on">HE</span><span>EN</span><span>YI</span></div>
+      </div>
+      <div class="daf-card">
+        <div class="ord">דף</div>
+        <div class="num">כ״ח</div>
+        <div class="latin-num">28a — 28b</div>
+        <div class="langs"><span class="on">HE</span><span class="on">EN</span><span>YI</span></div>
+      </div>
+      <div class="daf-card empty">
+        <div class="ord">דף</div>
+        <div class="num">כ״ט</div>
+        <div class="latin-num">29a — 29b</div>
+        <a href="#" class="request" data-route="request">בקשו דף זה</a>
+      </div>
+      <div class="daf-card empty">
+        <div class="ord">דף</div>
+        <div class="num">ל׳</div>
+        <div class="latin-num">30a — 30b</div>
+        <a href="#" class="request" data-route="request">בקשו דף זה</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============================================================
+     SURFACE 4 — REQUEST FORM
+     ============================================================= -->
+<section class="surface" id="surface-request">
+  <div class="page form-page narrow">
+
+    <div class="form-head">
+      <div class="eyebrow latin">Map Request</div>
+      <h1>בקשו סוגיה חדשה</h1>
+      <p>הבקשה תיכנס לרשימת ההמתנה ותיבחן ידנית. אם תאשרו דוא״ל אישלח כשהמפה תהיה מוכנה.</p>
+    </div>
+
+    <form class="form" onsubmit="event.preventDefault();">
+
+      <div class="form-row">
+        <label>
+          הפניה לספריא
+          <span class="hint">לדוגמה: מגילה כ״ו, או Megillah 26a:6-26b:2</span>
+        </label>
+        <div class="lookup-row">
+          <input type="text" placeholder="הזינו הפניה — בעברית או באנגלית" value="מגילה כ״ו">
+          <button type="button">בדיקה</button>
+        </div>
+        <div class="resolved">
+          <div>
+            <strong>נמצא:</strong> תלמוד בבלי · מסכת מגילה · דף כ״ו
+            <span class="latin">— Talmud Bavli, Megillah 26a–26b</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>שפה מבוקשת</label>
+        <div class="pills">
+          <span class="pill selected">עברית</span>
+          <span class="pill">English</span>
+          <span class="pill">יידיש</span>
+          <span class="pill">Français</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>
+          הערה
+          <span class="optional latin">optional</span>
+        </label>
+        <textarea placeholder="למה הסוגיה הזו? איך אתם מתכננים להשתמש במפה?"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label>
+          דוא״ל לעדכון
+          <span class="hint">לא יישמר ולא יישלח דבר אחר חוץ מהודעה אחת כשהמפה מוכנה</span>
+          <span class="optional latin">optional</span>
+        </label>
+        <input type="email" placeholder="you@example.com">
+      </div>
+
+      <div class="turnstile-placeholder">
+        Cloudflare Turnstile · widget renders here
+      </div>
+
+      <button type="submit" class="form-submit">שלח בקשה ←</button>
+
+      <p class="form-note">
+        השליחה כפופה ל<a href="#">תנאי השימוש</a>. הבקשות נסקרות ידנית; לא כל בקשה תאושר.
+        אין מחויבות לזמן ביצוע. <span class="latin">— By submitting you agree to our Terms.</span>
+      </p>
+
+    </form>
+
+  </div>
+</section>
+
+</main>
+
+<!-- =============================================================
+     SITE FOOTER (shared)
+     ============================================================= -->
+<footer class="site-footer">
+  <div class="inner">
+    <div class="credit">
+      <h4>חזרה</h4>
+      <p>
+        ספרייה של מפות לימודיות, חינמית ולא־מסחרית.
+        הטקסטים נשלפים מ<a href="https://www.sefaria.org" target="_blank" rel="noopener">ספריא</a>,
+        כולל מהדורת התלמוד של <span class="latin">William Davidson</span>,
+        תחת רישיון <span class="latin">CC BY-NC</span>.
+      </p>
+    </div>
+    <div>
+      <h4>תוכן</h4>
+      <ul>
+        <li><a href="#" data-route="browse">ספריית מפות</a></li>
+        <li><a href="#">המסכתות הזמינות</a></li>
+        <li><a href="#" data-route="request">בקשת מפה</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>אודות</h4>
+      <ul>
+        <li><a href="#">על הפרויקט</a></li>
+        <li><a href="#">קוד פתוח</a></li>
+        <li><a href="#">תרומה</a></li>
+      </ul>
+    </div>
+    <div class="colophon">
+      <span class="latin">© 2026 Chazarah · made with patience</span>
+      <span class="latin">sefaria · william davidson · cc by-nc</span>
+    </div>
+  </div>
+</footer>
+
+<!-- =============================================================
+     MOCKUP SWITCHER (not part of the real site)
+     ============================================================= -->
+<div class="switcher">
+  <span class="label">design review</span>
+  <button class="active" data-target="landing">landing</button>
+  <button data-target="info">map info</button>
+  <button data-target="browse">browse</button>
+  <button data-target="request">request</button>
+</div>
+
+<script>
+  // Surface switching (mockup only — real site uses Astro routes)
+  const surfaces = {
+    landing: document.getElementById('surface-landing'),
+    info:    document.getElementById('surface-info'),
+    browse:  document.getElementById('surface-browse'),
+    request: document.getElementById('surface-request'),
+  };
+  const navLinks = document.querySelectorAll('[data-route]');
+  const buttons  = document.querySelectorAll('.switcher button');
+
+  function show(target) {
+    Object.entries(surfaces).forEach(([key, el]) => {
+      el.classList.toggle('show', key === target);
+    });
+    buttons.forEach(b => b.classList.toggle('active', b.dataset.target === target));
+    document.querySelectorAll('.nav a').forEach(a => {
+      a.classList.toggle('active', a.dataset.route === target);
+    });
+    // Restart entrance animations
+    const showEl = surfaces[target];
+    if (showEl) {
+      showEl.querySelectorAll('*').forEach(el => {
+        // no-op; CSS handles via class addition
+      });
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  buttons.forEach(b => b.addEventListener('click', () => show(b.dataset.target)));
+  navLinks.forEach(a => a.addEventListener('click', (e) => {
+    if (!a.dataset.route) return;
+    e.preventDefault();
+    show(a.dataset.route);
+  }));
+
+  // Form: simulate pill selection
+  document.querySelectorAll('.pills').forEach(group => {
+    group.querySelectorAll('.pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        group.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+        pill.classList.add('selected');
+      });
+    });
+  });
+</script>
+
+</body>
+</html>
