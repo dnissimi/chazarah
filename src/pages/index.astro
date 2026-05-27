@@ -1,13 +1,140 @@
 ---
+import { getCollection } from 'astro:content';
 import SiteLayout from '../layouts/SiteLayout.astro';
-import { strings, DEFAULT_LANG } from '../i18n/strings';
+import { strings, DEFAULT_LANG, type Lang } from '../i18n/strings';
 
-const t = strings[DEFAULT_LANG];
+const lang: Lang = DEFAULT_LANG;
+const t = strings[lang];
+
+const allMaps = await getCollection('maps');
+const sortedMaps = allMaps
+  .slice()
+  .sort((a, b) => b.data.updated.localeCompare(a.data.updated));
+
+const dafYomi = allMaps.find(
+  (m) => m.data.book === 'megillah' && m.data.location === '26',
+);
 ---
 <SiteLayout title="חזרה — Chazarah">
   <section class="home-hero container">
-    <div class="wordmark" data-i18n="brand">{t.brand}</div>
-    <h1 class="tagline" data-i18n="homeTagline">{t.homeTagline}</h1>
-    <p class="intro" data-i18n="homeIntro">{t.homeIntro}</p>
+    <p class="home-hero-kicker" data-i18n="homeHeroKicker">{t.homeHeroKicker}</p>
+    <h1 class="home-hero-tagline" data-i18n="homeTagline">{t.homeTagline}</h1>
+    <p class="home-hero-intro" data-i18n="homeIntro">{t.homeIntro}</p>
+  </section>
+
+  {dafYomi && (
+    <section class="home-section home-section-tight">
+      <div class="container">
+        <article class="daf-yomi-card">
+          <div class="daf-yomi-text">
+            <p class="kicker accent" data-i18n="homeDafYomiKicker">{t.homeDafYomiKicker}</p>
+            <p class="daf-yomi-meta">
+              <span data-i18n="homeDafYomiToday">{t.homeDafYomiToday}</span>
+              <span aria-hidden="true">·</span>
+              <span class="latin">{dafYomi.data.sefariaRef}</span>
+            </p>
+            <h2 class="daf-yomi-topic"
+                data-i18n-he={dafYomi.data.topic.he}
+                data-i18n-en={dafYomi.data.topic.en}>{dafYomi.data.topic.he}</h2>
+            <p class="daf-yomi-sub" data-i18n="homeDafYomiSub">{t.homeDafYomiSub}</p>
+            <div class="daf-yomi-actions">
+              <a class="btn btn-primary"
+                 href={`/map/${dafYomi.data.corpus}/${dafYomi.data.book}/${dafYomi.data.location}/${dafYomi.data.languages[0]}`}
+                 data-i18n="homeOpenMapCta">{t.homeOpenMapCta}</a>
+              <a class="btn btn-ghost"
+                 href={`/map/${dafYomi.data.corpus}/${dafYomi.data.book}/`}
+                 data-i18n="homeBrowseCta">{t.homeBrowseCta}</a>
+            </div>
+          </div>
+          <div class="daf-yomi-art" aria-hidden="true">
+            <svg viewBox="0 0 480 340" width="100%" role="presentation">
+              <defs>
+                <pattern id="hero-dots" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+                  <circle cx="1" cy="1" r="0.7" fill="var(--rule-strong)" opacity="0.35" />
+                </pattern>
+              </defs>
+              <rect x="0" y="0" width="480" height="340" fill="url(#hero-dots)" />
+              <rect x="190" y="20" width="100" height="34" fill="var(--accent)" />
+              <line x1="240" y1="54" x2="90" y2="100" stroke="var(--rule-strong)" />
+              <line x1="240" y1="54" x2="240" y2="100" stroke="var(--rule-strong)" />
+              <line x1="240" y1="54" x2="390" y2="100" stroke="var(--rule-strong)" />
+              <rect x="40"  y="100" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" />
+              <rect x="190" y="100" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" />
+              <rect x="340" y="100" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" />
+              <line x1="90"  y1="134" x2="90"  y2="180" stroke="var(--rule-strong)" />
+              <line x1="240" y1="134" x2="240" y2="180" stroke="var(--rule-strong)" />
+              <line x1="390" y1="134" x2="390" y2="180" stroke="var(--rule-strong)" />
+              <rect x="40"  y="180" width="100" height="34" fill="var(--paper-warm)" stroke="var(--rule-strong)" />
+              <rect x="190" y="180" width="100" height="34" fill="var(--paper-warm)" stroke="var(--rule-strong)" />
+              <rect x="340" y="180" width="100" height="34" fill="var(--paper-warm)" stroke="var(--rule-strong)" />
+              <line x1="90"  y1="214" x2="90"  y2="260" stroke="var(--rule-strong)" />
+              <line x1="390" y1="214" x2="390" y2="260" stroke="var(--rule-strong)" />
+              <rect x="40"  y="260" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" stroke-dasharray="3 3" />
+              <rect x="340" y="260" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" stroke-dasharray="3 3" />
+            </svg>
+          </div>
+        </article>
+      </div>
+    </section>
+  )}
+
+  <section class="home-section">
+    <div class="container">
+      <div class="section-label">
+        <span data-i18n="homeMostPopularHeading">{t.homeMostPopularHeading}</span>
+        <span class="section-label-bar" aria-hidden="true"></span>
+      </div>
+      {sortedMaps.length === 0 ? (
+        <p class="muted" data-i18n="homeMostPopularEmpty">{t.homeMostPopularEmpty}</p>
+      ) : (
+        <div class="popular-scroll">
+          <table class="popular-table">
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="homeColTopic">{t.homeColTopic}</th>
+                <th scope="col" data-i18n="homeColRef">{t.homeColRef}</th>
+                <th scope="col" data-i18n="homeColUpdated">{t.homeColUpdated}</th>
+                <th scope="col" data-i18n="homeColLangs">{t.homeColLangs}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedMaps.map((m) => {
+                const href = `/map/${m.data.corpus}/${m.data.book}/${m.data.location}`;
+                return (
+                  <tr>
+                    <td class="popular-topic">
+                      <a href={href}
+                         data-i18n-he={m.data.topic.he}
+                         data-i18n-en={m.data.topic.en}>{m.data.topic.he}</a>
+                    </td>
+                    <td class="popular-ref latin">{m.data.sefariaRef}</td>
+                    <td class="popular-updated latin">
+                      <time datetime={m.data.updated}>{m.data.updated}</time>
+                    </td>
+                    <td class="popular-langs">
+                      {m.data.languages.map((l) => (
+                        <span class="chip">{l.toUpperCase()}</span>
+                      ))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section class="home-section">
+    <div class="container">
+      <aside class="request-banner">
+        <div class="request-banner-text">
+          <p class="request-banner-title" data-i18n="homeRequestBannerTitle">{t.homeRequestBannerTitle}</p>
+          <p class="request-banner-sub muted" data-i18n="homeRequestBannerSub">{t.homeRequestBannerSub}</p>
+        </div>
+        <a class="btn btn-primary" href="/request" data-i18n="homeRequestBannerCta">{t.homeRequestBannerCta}</a>
+      </aside>
+    </div>
   </section>
 </SiteLayout>
