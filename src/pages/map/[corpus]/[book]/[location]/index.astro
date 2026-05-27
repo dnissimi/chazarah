@@ -150,4 +150,33 @@ const pageTitle = entry
       </div>
     )}
   </article>
+  {entry && (
+    <script
+      is:inline
+      type="application/json"
+      id="visitor-recents-data"
+      set:html={JSON.stringify({
+        corpus: typedCorpus,
+        book,
+        location,
+        topic: entry.data.topic,
+        ref: entry.data.sefariaRef,
+      })}
+    />
+  )}
 </SiteLayout>
+
+<script>
+  import { record, type VisitorRecentInput } from '../../../../../lib/visitor-recents';
+
+  const blob = document.getElementById('visitor-recents-data');
+  if (blob && blob.textContent) {
+    try {
+      const data = JSON.parse(blob.textContent) as VisitorRecentInput;
+      const storage = typeof window !== 'undefined' ? window.localStorage : null;
+      record(data, storage);
+    } catch {
+      /* malformed blob — skip */
+    }
+  }
+</script>

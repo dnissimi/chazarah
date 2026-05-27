@@ -98,6 +98,8 @@ const he = {
   mapInfoEmptyRequestBtn: 'בקשת הדף',
   mapInfoEmptyRefLabel: 'הדף המבוקש',
 
+  homeRecentsHeading: 'הקריאות שלכם',
+
   corpusTalmud: 'תלמוד',
   browseMasechetLabel: 'מסכת',
   browseFilterLabel: 'סינון',
@@ -199,6 +201,8 @@ const en: Partial<Record<StringKey, string>> = {
     "The link is valid, but no map has been written for this passage yet. You can request it for manual review — not every request gets fulfilled, and there's no SLA.",
   mapInfoEmptyRequestBtn: 'Request this daf',
   mapInfoEmptyRefLabel: 'Requested daf',
+
+  homeRecentsHeading: 'Your recent maps',
 
   corpusTalmud: 'Talmud',
   browseMasechetLabel: 'Masechet',

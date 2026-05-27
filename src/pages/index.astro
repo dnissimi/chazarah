@@ -126,6 +126,21 @@ const dafYomi = allMaps.find(
     </div>
   </section>
 
+  <section
+    id="visitor-recents"
+    class="home-section"
+    hidden
+    aria-labelledby="visitor-recents-heading"
+  >
+    <div class="container">
+      <div class="section-label">
+        <span id="visitor-recents-heading" data-i18n="homeRecentsHeading">{t.homeRecentsHeading}</span>
+        <span class="section-label-bar" aria-hidden="true"></span>
+      </div>
+      <ul id="visitor-recents-list" class="recents-list"></ul>
+    </div>
+  </section>
+
   <section class="home-section">
     <div class="container">
       <aside class="request-banner">
@@ -138,3 +153,41 @@ const dafYomi = allMaps.find(
     </div>
   </section>
 </SiteLayout>
+
+<script>
+  import { list } from '../lib/visitor-recents';
+
+  const section = document.getElementById('visitor-recents');
+  const ul = document.getElementById('visitor-recents-list');
+  if (section && ul) {
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    const entries = list(storage);
+    if (entries.length > 0) {
+      const lang = document.documentElement.lang === 'en' ? 'en' : 'he';
+      for (const e of entries) {
+        const li = document.createElement('li');
+        li.className = 'recents-item';
+
+        const a = document.createElement('a');
+        a.className = 'recents-link';
+        a.href = `/map/${e.corpus}/${e.book}/${e.location}`;
+
+        const topic = document.createElement('span');
+        topic.className = 'recents-topic';
+        topic.setAttribute('data-i18n-he', e.topic.he);
+        topic.setAttribute('data-i18n-en', e.topic.en);
+        topic.textContent = lang === 'en' ? e.topic.en : e.topic.he;
+
+        const ref = document.createElement('span');
+        ref.className = 'recents-ref latin';
+        ref.textContent = e.ref;
+
+        a.appendChild(topic);
+        a.appendChild(ref);
+        li.appendChild(a);
+        ul.appendChild(li);
+      }
+      section.hidden = false;
+    }
+  }
+</script>
