@@ -28,6 +28,37 @@ const he = {
   notFoundBody:
     'הקישור שאליו הגעתם אינו קיים — אולי הוקלד לא נכון, או שהדף הוסר. אפשר לחזור הביתה ולנסות שוב.',
   notFoundHome: 'חזרה לדף הבית',
+
+  requestTitle: 'בקשת מפה',
+  requestIntro:
+    'הציעו סוגיא, פרק, או פרשה למפה חדשה. נבדוק את הבקשה ידנית — לא כל בקשה תיענה, ואין מועד יעד.',
+  requestRefLabel: 'מקור בספריא',
+  requestRefHint: 'אפשר בעברית (״מגילה כו״) או באנגלית (״Megillah 26״).',
+  requestRefPlaceholder: 'למשל: מגילה כו',
+  requestLookupBtn: 'אימות מול ספריא',
+  requestLookupResolved: 'אומת:',
+  requestLookupNotFound: 'לא נמצא — אפשר להגיש בכל זאת, נבדוק ידנית.',
+  requestLookupAmbiguous: 'יש כמה התאמות אפשריות — אפשר לבחור, או להגיש כפי שכתבתם.',
+  requestLookupNetwork: 'התקלה ברשת. אפשר להגיש בכל זאת — נבדוק ידנית.',
+  requestLookupEmpty: 'נא להזין מקור לבדיקה.',
+  requestLookupLoading: 'בודק…',
+  requestTargetLangLabel: 'שפת היעד',
+  requestTargetLangHe: 'עברית',
+  requestTargetLangEn: 'English',
+  requestTargetLangYi: 'יידיש',
+  requestNoteLabel: 'הערה (לא חובה)',
+  requestNotePlaceholder: 'הקשר, סוגיא מסוימת, מה חשוב שייכנס למפה.',
+  requestEmailLabel: 'דוא״ל (לא חובה)',
+  requestEmailPlaceholder: 'name@example.com',
+  requestEmailHint: 'נשלח עדכון כשהמפה מוכנה. לא נשתמש בכתובת לשום דבר אחר.',
+  requestSubmitBtn: 'שליחת בקשה',
+  requestBackHomeBtn: 'חזרה לדף הבית',
+  requestRefRequired: 'נא להזין מקור לפני השליחה.',
+  requestSuccessKicker: 'נשלח',
+  requestSuccessTitle: 'הבקשה התקבלה',
+  requestSuccessBody:
+    'הבקשה נכנסה לתור הבדיקה הידנית. אם הוספתם דוא״ל, ניצור קשר כשתהיה מפה. אין הבטחה ואין SLA — תודה על הסבלנות.',
+  requestSubmitAnother: 'בקשה נוספת',
 } as const;
 
 export type StringKey = keyof typeof he;
@@ -51,6 +82,37 @@ const en: Partial<Record<StringKey, string>> = {
   notFoundBody:
     "That link doesn't go anywhere — maybe a typo, or the page was removed. Head back home and try again.",
   notFoundHome: 'Back to home',
+
+  requestTitle: 'Request a map',
+  requestIntro:
+    "Propose a sugya, perek, or parsha for a new map. We review every request manually — not all requests get fulfilled, and there's no SLA.",
+  requestRefLabel: 'Sefaria reference',
+  requestRefHint: 'Hebrew ("מגילה כו") or Latin ("Megillah 26") both work.',
+  requestRefPlaceholder: 'e.g. Megillah 26',
+  requestLookupBtn: 'Lookup',
+  requestLookupResolved: 'Resolved:',
+  requestLookupNotFound: "Not found — you can still submit, we'll check manually.",
+  requestLookupAmbiguous: 'Several possible matches — pick one, or submit as-is.',
+  requestLookupNetwork: "Network hiccup. You can still submit — we'll check manually.",
+  requestLookupEmpty: 'Enter a reference to look up.',
+  requestLookupLoading: 'Looking up…',
+  requestTargetLangLabel: 'Target language',
+  requestTargetLangHe: 'Hebrew',
+  requestTargetLangEn: 'English',
+  requestTargetLangYi: 'Yiddish',
+  requestNoteLabel: 'Note (optional)',
+  requestNotePlaceholder: "Context, a specific sugya, what's important to include.",
+  requestEmailLabel: 'Email (optional)',
+  requestEmailPlaceholder: 'name@example.com',
+  requestEmailHint: "We'll let you know when the map is ready. No other use.",
+  requestSubmitBtn: 'Submit request',
+  requestBackHomeBtn: 'Back to home',
+  requestRefRequired: 'Please enter a reference before submitting.',
+  requestSuccessKicker: 'Submitted',
+  requestSuccessTitle: 'Request received',
+  requestSuccessBody:
+    "Your request has joined the manual review queue. If you added an email, we'll be in touch when a map is ready. There's no SLA — thank you for your patience.",
+  requestSubmitAnother: 'Submit another',
 };
 
 export const strings: { he: Record<StringKey, string>; en: Partial<Record<StringKey, string>> } = {

@@ -1,0 +1,307 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { strings, DEFAULT_LANG } from '../i18n/strings';
+import { TARGET_LANGS, DEFAULT_TARGET_LANG } from '../lib/request-form';
+
+const t = strings[DEFAULT_LANG];
+const TURNSTILE_TEST_SITEKEY = '1x00000000000000000000AA';
+const LANG_PILL_KEYS = {
+  he: 'requestTargetLangHe',
+  en: 'requestTargetLangEn',
+  yi: 'requestTargetLangYi',
+} as const;
+---
+<SiteLayout title="בקשת מפה — Chazarah">
+  <section class="request container narrow">
+    <div class="request-card" data-request-card>
+      <header class="request-header">
+        <h1 data-i18n="requestTitle">{t.requestTitle}</h1>
+        <p class="request-intro" data-i18n="requestIntro">{t.requestIntro}</p>
+      </header>
+
+      <form class="request-form" novalidate data-request-form>
+        <div class="field">
+          <label for="req-ref" data-i18n="requestRefLabel">{t.requestRefLabel}</label>
+          <div class="ref-row">
+            <input
+              type="text"
+              id="req-ref"
+              name="ref"
+              required
+              autocomplete="off"
+              spellcheck="false"
+              data-request-ref
+              data-i18n-placeholder="requestRefPlaceholder"
+              placeholder={t.requestRefPlaceholder}
+            />
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-request-lookup
+              data-i18n="requestLookupBtn"
+            >{t.requestLookupBtn}</button>
+          </div>
+          <p class="hint" data-i18n="requestRefHint">{t.requestRefHint}</p>
+          <p class="error" data-request-ref-error hidden data-i18n="requestRefRequired">{t.requestRefRequired}</p>
+          <div class="lookup-status" data-request-lookup-status hidden aria-live="polite"></div>
+        </div>
+
+        <fieldset class="field lang-field">
+          <legend data-i18n="requestTargetLangLabel">{t.requestTargetLangLabel}</legend>
+          <div class="lang-pills" role="radiogroup" data-i18n-aria-label="requestTargetLangLabel" aria-label={t.requestTargetLangLabel}>
+            {TARGET_LANGS.map((lang) => (
+              <button
+                type="button"
+                role="radio"
+                class={`lang-pill${lang === DEFAULT_TARGET_LANG ? ' active' : ''}`}
+                data-request-lang={lang}
+                aria-checked={lang === DEFAULT_TARGET_LANG ? 'true' : 'false'}
+                data-i18n={LANG_PILL_KEYS[lang]}
+              >{t[LANG_PILL_KEYS[lang]]}</button>
+            ))}
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label for="req-note" data-i18n="requestNoteLabel">{t.requestNoteLabel}</label>
+          <textarea
+            id="req-note"
+            name="note"
+            rows="4"
+            data-request-note
+            data-i18n-placeholder="requestNotePlaceholder"
+            placeholder={t.requestNotePlaceholder}
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <label for="req-email" data-i18n="requestEmailLabel">{t.requestEmailLabel}</label>
+          <input
+            type="email"
+            id="req-email"
+            name="email"
+            autocomplete="email"
+            data-request-email
+            data-i18n-placeholder="requestEmailPlaceholder"
+            placeholder={t.requestEmailPlaceholder}
+          />
+          <p class="hint" data-i18n="requestEmailHint">{t.requestEmailHint}</p>
+        </div>
+
+        <div class="field">
+          <div class="cf-turnstile turnstile" data-sitekey={TURNSTILE_TEST_SITEKEY}></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" data-i18n="requestSubmitBtn">{t.requestSubmitBtn}</button>
+          <a class="btn btn-ghost" href="/" data-i18n="requestBackHomeBtn">{t.requestBackHomeBtn}</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="request-success" data-request-success hidden>
+      <div class="kicker" data-i18n="requestSuccessKicker">{t.requestSuccessKicker}</div>
+      <h1 data-i18n="requestSuccessTitle">{t.requestSuccessTitle}</h1>
+      <p data-i18n="requestSuccessBody">{t.requestSuccessBody}</p>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" data-request-reset data-i18n="requestSubmitAnother">{t.requestSubmitAnother}</button>
+        <a class="btn btn-ghost" href="/" data-i18n="requestBackHomeBtn">{t.requestBackHomeBtn}</a>
+      </div>
+    </div>
+  </section>
+
+  <script
+    is:inline
+    async
+    defer
+    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  ></script>
+
+  <script>
+    import { lookup } from '../lib/sefaria';
+    import {
+      parseRequestPrefill,
+      buildRequestPayload,
+      TARGET_LANGS,
+      DEFAULT_TARGET_LANG,
+      type TargetLang,
+    } from '../lib/request-form';
+    import { strings, DEFAULT_LANG, LANG_STORAGE_KEY, type Lang } from '../i18n/strings';
+
+    type StatusKey =
+      | 'requestLookupResolved'
+      | 'requestLookupNotFound'
+      | 'requestLookupAmbiguous'
+      | 'requestLookupNetwork'
+      | 'requestLookupEmpty'
+      | 'requestLookupLoading';
+
+    function activeLang(): Lang {
+      try {
+        const stored = localStorage.getItem(LANG_STORAGE_KEY);
+        return stored === 'en' ? 'en' : 'he';
+      } catch {
+        return DEFAULT_LANG;
+      }
+    }
+
+    function tr(key: StatusKey | 'requestLookupResolved'): string {
+      const lang = activeLang();
+      const table = strings[lang] as Partial<Record<string, string>>;
+      return table[key] ?? strings.he[key as keyof typeof strings.he] ?? '';
+    }
+
+    const form = document.querySelector<HTMLFormElement>('[data-request-form]');
+    const card = document.querySelector<HTMLElement>('[data-request-card]');
+    const successPanel = document.querySelector<HTMLElement>('[data-request-success]');
+    const refInput = document.querySelector<HTMLInputElement>('[data-request-ref]');
+    const refError = document.querySelector<HTMLElement>('[data-request-ref-error]');
+    const noteInput = document.querySelector<HTMLTextAreaElement>('[data-request-note]');
+    const emailInput = document.querySelector<HTMLInputElement>('[data-request-email]');
+    const lookupBtn = document.querySelector<HTMLButtonElement>('[data-request-lookup]');
+    const lookupStatus = document.querySelector<HTMLElement>('[data-request-lookup-status]');
+    const langPills = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('[data-request-lang]'),
+    );
+    const resetBtn = document.querySelector<HTMLButtonElement>('[data-request-reset]');
+
+    let selectedLang: TargetLang = DEFAULT_TARGET_LANG;
+    let resolvedRef: string | null = null;
+    let resolvedOk = false;
+
+    function setSelectedLang(lang: TargetLang) {
+      selectedLang = lang;
+      for (const pill of langPills) {
+        const pillLang = pill.dataset.requestLang as TargetLang;
+        const isActive = pillLang === lang;
+        pill.classList.toggle('active', isActive);
+        pill.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      }
+    }
+
+    function applyPrefill() {
+      const prefill = parseRequestPrefill(new URLSearchParams(window.location.search));
+      if (refInput && prefill.ref) refInput.value = prefill.ref;
+      setSelectedLang(prefill.lang);
+    }
+
+    function clearLookupStatus() {
+      if (!lookupStatus) return;
+      lookupStatus.hidden = true;
+      lookupStatus.textContent = '';
+      lookupStatus.classList.remove('ok', 'soft', 'loading');
+    }
+
+    function showLookupStatus(variant: 'ok' | 'soft' | 'loading', text: string) {
+      if (!lookupStatus) return;
+      lookupStatus.hidden = false;
+      lookupStatus.classList.remove('ok', 'soft', 'loading');
+      lookupStatus.classList.add(variant);
+      lookupStatus.textContent = text;
+    }
+
+    async function runLookup() {
+      if (!refInput) return;
+      const query = refInput.value.trim();
+      resolvedRef = null;
+      resolvedOk = false;
+      if (query === '') {
+        showLookupStatus('soft', tr('requestLookupEmpty'));
+        return;
+      }
+      showLookupStatus('loading', tr('requestLookupLoading'));
+      const result = await lookup(query);
+      if (result.ok) {
+        resolvedRef = result.ref;
+        resolvedOk = true;
+        showLookupStatus('ok', `${tr('requestLookupResolved')} ${result.ref}`);
+        return;
+      }
+      switch (result.reason) {
+        case 'empty':
+          showLookupStatus('soft', tr('requestLookupEmpty'));
+          return;
+        case 'not-found':
+          showLookupStatus('soft', tr('requestLookupNotFound'));
+          return;
+        case 'network':
+          showLookupStatus('soft', tr('requestLookupNetwork'));
+          return;
+        case 'ambiguous':
+          showLookupStatus('soft', tr('requestLookupAmbiguous'));
+          return;
+      }
+    }
+
+    function showSuccess() {
+      if (card) card.hidden = true;
+      if (successPanel) {
+        successPanel.hidden = false;
+        successPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function resetForm() {
+      if (form) form.reset();
+      setSelectedLang(DEFAULT_TARGET_LANG);
+      resolvedRef = null;
+      resolvedOk = false;
+      clearLookupStatus();
+      if (refError) refError.hidden = true;
+      if (card) card.hidden = false;
+      if (successPanel) successPanel.hidden = true;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    for (const pill of langPills) {
+      pill.addEventListener('click', () => {
+        const lang = pill.dataset.requestLang;
+        if (lang && (TARGET_LANGS as readonly string[]).includes(lang)) {
+          setSelectedLang(lang as TargetLang);
+        }
+      });
+    }
+
+    lookupBtn?.addEventListener('click', () => {
+      void runLookup();
+    });
+
+    refInput?.addEventListener('input', () => {
+      if (refError && !refError.hidden && refInput.value.trim() !== '') {
+        refError.hidden = true;
+      }
+    });
+
+    form?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const rawRef = refInput?.value.trim() ?? '';
+      if (rawRef === '') {
+        if (refError) refError.hidden = false;
+        refInput?.focus();
+        return;
+      }
+      if (refError) refError.hidden = true;
+
+      const turnstileResponse =
+        (form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value) ?? '';
+
+      const payload = buildRequestPayload({
+        rawRef,
+        resolvedRef,
+        resolvedOk,
+        targetLanguage: selectedLang,
+        note: noteInput?.value ?? '',
+        email: emailInput?.value ?? '',
+        submittedAt: new Date().toISOString(),
+      });
+
+      // Slice 10: no backend yet — the Worker (slice 11) will POST this same shape.
+      console.log('[chazarah] map-request payload', { payload, turnstileResponse });
+      showSuccess();
+    });
+
+    resetBtn?.addEventListener('click', resetForm);
+
+    applyPrefill();
+  </script>
+</SiteLayout>
