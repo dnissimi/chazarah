@@ -75,6 +75,22 @@ const he = {
     'הבקשה נכנסה לתור הבדיקה הידנית. אם הוספתם דוא״ל, ניצור קשר כשתהיה מפה. אין הבטחה ואין SLA — תודה על הסבלנות.',
   requestSubmitAnother: 'בקשה נוספת',
 
+  feedbackTitle: 'משוב על מפה',
+  feedbackIntro:
+    'מצאתם טעות, חוסר, או משהו לא ברור במפה? כתבו לנו — נקרא כל פנייה ידנית.',
+  feedbackBannerLabel: 'המשוב נוגע למפה:',
+  feedbackNodeLabel: 'צומת או ציטוט מסוים (לא חובה)',
+  feedbackNodePlaceholder: 'למשל: צומת 3, או ״תנא דבי אליהו״',
+  feedbackObservationLabel: 'מה שמתם לב (חובה)',
+  feedbackObservationPlaceholder: 'מה לא נכון, חסר, או לא ברור במפה.',
+  feedbackObservationRequired: 'נא לכתוב את ההערה לפני השליחה.',
+  feedbackEmailHint: 'רק כדי לחזור אליכם על המשוב. לא נשתמש בכתובת לשום דבר אחר.',
+  feedbackSubmitBtn: 'שליחת משוב',
+  feedbackSuccessTitle: 'המשוב התקבל',
+  feedbackSuccessBody:
+    'תודה — המשוב נכנס לתור הבדיקה הידנית. אם הוספתם דוא״ל, ניצור קשר אם נצטרך הבהרה.',
+  feedbackSubmitAnother: 'משוב נוסף',
+
   mapInfoSefariaRefLabel: 'מקור בספריא',
   mapInfoVariantsHeading: 'גרסאות זמינות',
   mapInfoOpenVariant: 'פתיחה',
@@ -178,6 +194,22 @@ const en: Partial<Record<StringKey, string>> = {
   requestSuccessBody:
     "Your request has joined the manual review queue. If you added an email, we'll be in touch when a map is ready. There's no SLA — thank you for your patience.",
   requestSubmitAnother: 'Submit another',
+
+  feedbackTitle: 'Map feedback',
+  feedbackIntro:
+    'Found a mistake, a gap, or something unclear in the map? Tell us — every submission is read manually.',
+  feedbackBannerLabel: 'Feedback about the map:',
+  feedbackNodeLabel: 'Specific node or quote (optional)',
+  feedbackNodePlaceholder: 'e.g. node 3, or a quoted line',
+  feedbackObservationLabel: 'Your observation (required)',
+  feedbackObservationPlaceholder: "What's wrong, missing, or unclear in the map.",
+  feedbackObservationRequired: 'Please write your observation before submitting.',
+  feedbackEmailHint: "Only to follow up on this feedback. No other use.",
+  feedbackSubmitBtn: 'Send feedback',
+  feedbackSuccessTitle: 'Feedback received',
+  feedbackSuccessBody:
+    "Thank you — your feedback has joined the manual review queue. If you added an email, we'll reach out if we need clarification.",
+  feedbackSubmitAnother: 'Send more feedback',
 
   mapInfoSefariaRefLabel: 'Sefaria reference',
   mapInfoVariantsHeading: 'Available variants',
