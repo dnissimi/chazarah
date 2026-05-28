@@ -96,4 +96,14 @@ export const MASECHTOT: readonly MasechetInfo[] = [
       en: "All folios of Tractate Chullin (2 through 142). Browse what's mapped, request what isn't.",
     },
   },
+  {
+    corpus: 'talmud',
+    book: 'shabbat',
+    bounds: { firstDaf: 2, lastDaf: 157 },
+    name: { he: 'שבת', en: 'Shabbat' },
+    summary: {
+      he: 'כל דפי מסכת שבת (ב׳ עד קנ״ז). אפשר לסקור מה כבר מופה, או לבקש מה שעדיין לא.',
+      en: "All folios of Tractate Shabbat (2 through 157). Browse what's mapped, request what isn't.",
+    },
+  },
 ];

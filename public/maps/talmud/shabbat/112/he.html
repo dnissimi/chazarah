@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — שבת קי״ב</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --ink:#1f2937; --muted:#6b7280; --bg:#faf7f0; --card:#ffffff; --border:#e7e2d6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Heebo","Segoe UI",Arial,"Arial Hebrew",sans-serif; line-height:1.7;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 90px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:"Frank Ruhl Libre",Georgia,serif; font-size:2rem; margin:0 0 6px}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{
+    background:#fffbea; border:1px solid var(--conclusion-line); border-radius:12px;
+    padding:14px 18px; margin:18px 0; font-size:1.05rem;
+  }
+  .takeaway b{font-family:"Frank Ruhl Libre",serif}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:"Frank Ruhl Libre","Heebo",serif !important; direction:rtl}
+  .lang-toggle{position:absolute; top:10px; left:10px; z-index:2; cursor:pointer;
+    font-family:"Heebo",sans-serif; font-size:.78rem; color:var(--statement-line);
+    background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .lang-toggle:hover{background:#f3f4ff; border-color:var(--statement-line)}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:"Frank Ruhl Libre",serif; margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--statement-line); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:#374151; margin:8px 0 14px}
+  h3{font-family:"Frank Ruhl Libre",serif; color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-right:5px solid var(--statement-line); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--statement-line); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-left:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:"Frank Ruhl Libre",serif; font-size:1.15rem; margin:6px 0 4px}
+  .quote .trans{color:#374151}
+  .quote .trans:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>מפת הסוגיא — שבת קי״ב</h1>
+    <div class="subtitle">שבת קי״א ב:ח׳-קי״ג א:א׳ · Shabbat 111b:8-113a:1 · מקור: ספריא (William Davidson) · הסוגיה פותחת במשנה שבקי״א:</div>
+  </header>
+
+  <div class="takeaway"><b>שורה תחתונה:</b> כל הדף הוא הגמרא על משנת ״ואלו קשרים״ — אילו קשרים מותר לקשור בשבת. הגמרא עוברת סעיף-סעיף (מפתח חלוקה, חוטי סבכה, רצועות מנעל וסנדל, נודות, קדירה), ובאמצע נכנסת לשני דיונים גדולים סביב רצועת סנדל שנפסקה: האם סנדל פגום עדיין נחשב ״כלי״, ומה דעת ר' יוחנן והלכה כר' יהודה. הדף נחתם בהלכה כר' אליעזר בן יעקב ובמשפט ״גמרא גמור זמורתא תהא?!״ — שאף הלכה פסוקה צריך טעם.</div>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--mishnah)"></i>משנה</span>
+    <span><i class="swatch" style="background:var(--statement)"></i>מימרא / דעה</span>
+    <span><i class="swatch" style="background:var(--question)"></i>קושיא / מיתיבי</span>
+    <span><i class="swatch" style="background:var(--answer)"></i>תירוץ / יישוב</span>
+    <span><i class="swatch" style="background:var(--proof)"></i>ראיה / תא שמע</span>
+    <span><i class="swatch" style="background:var(--conclusion)"></i>מסקנה</span>
+  </div>
+
+  <section class="overview"><h2>מפת הדף — מבט-על</h2>
+    <div class="chart">
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,color:#1f2937;
+  O1(["1 · המשנה ופתיחת הגמרא — סתירה ויישוב"]):::mishnah
+  O2["2 · מפתח חלוקה — שני פתחים"]:::statement
+  O3["3 · חוטי סבכה — חסה על שערה"]:::statement
+  O4["4 · רצועות מנעל וסנדל — שלוש ברייתות"]:::statement
+  O5["5 · רצועה שנפסקה; וטומאת הסנדל"]:::statement
+  O6["6 · ומי אמר ר' יוחנן? — סתם משנה"]:::question
+  O7["7 · כלי שניקב — פנים חדשות"]:::statement
+  O8["8 · נודות וקדירה — פשיטא?"]:::statement
+  O9["9 · ראב״י; גמרא גמור זמורתא"]:::conclusion
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+      </script>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge">סוגיה 1</span> המשנה ופתיחת הגמרא <span class="ref">Shabbat 111b:8-112a:1</span></h2>
+    <div class="lead">המשנה מונה קשרים שמותר לקשור; הגמרא פותחת בקושיה שהמשנה סותרת את עצמה, ומיישבת שיש קשר אסור ויש מותר לכתחילה.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · משנה: קשרים שמותר לקשור — מפתח חלוקה, סבכה, רצועות, נודות…"]):::mishnah
+  Q1{"2 · קושיא: המשנה סותרת — קשר אסור או מותר לכתחילה?"}:::question
+  A1["3 · תירוץ: ״הכי קאמר״ — יש אסורים ויש מותרים"]:::answer
+  C1["4 · האסור: קשר זמם ואיסטרידא; המותר: מפתח חלוקה"]:::conclusion
+  M1 -->|הגמרא דנה| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|הגדרה| C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · ״יֵשׁ לְךָ קְשָׁרִין… קוֹשֶׁרֶת אִשָּׁה מִפְתַּח חֲלוּקָהּ״"]):::mishnah
+  Q1{"2 · ״הָא גּוּפַהּ קַשְׁיָא… אֲפִילּוּ לְכַתְּחִילָּה!״"}:::question
+  A1["3 · ״הָכִי קָאָמַר…״"]:::answer
+  C1["4 · ״קִיטְרָא דְּזְמָמָא… הָא אִיסּוּרָא אִיכָּא; קוֹשֶׁרֶת מִפְתְּחֵי חֲלוּקָהּ״"]:::conclusion
+  M1 -->|הגמרא דנה| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|הגדרה| C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״א ב — Shabbat 111b:8</span></div>
+      <div class="orig">מַתְנִי׳ יֵשׁ לְךָ קְשָׁרִין שֶׁאֵין חַיָּיבִין עֲלֵיהֶן כְּקֶשֶׁר הַגַּמָּלִין וּכְקֶשֶׁר הַסַּפָּנִין: קוֹשֶׁרֶת אִשָּׁה מִפְתַּח חֲלוּקָהּ, וְחוּטֵי סְבָכָה, וְשֶׁל פָּסִקְיָא, וּרְצוּעוֹת מִנְעָל וְסַנְדָּל, וְנוֹדוֹת יַיִן וָשֶׁמֶן, וּקְדֵירָה שֶׁל בָּשָׂר. רַבִּי אֱלִיעֶזֶר בֶּן יַעֲקֹב אוֹמֵר: קוֹשְׁרִין לִפְנֵי הַבְּהֵמָה בִּשְׁבִיל שֶׁלֹּא תֵּצֵא.</div>
+      <div class="trans">יש קשרים שאמנם אין חייבים עליהם חטאת (כקשר של גמלים וספנים), אבל אסורים; ולעומתם מותר לאשה לקשור לכתחילה: את פתח חולצתה, חוטי הסבכה (רשת השיער), חגורה (פסיקיא), רצועות נעל וסנדל, נודות יין ושמן, וקדירת בשר. ר' אליעזר בן יעקב מוסיף: קושרים חבל לפני הבהמה כדי שלא תצא.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״א ב — Shabbat 111b:9</span></div>
+      <div class="orig">גְּמָ׳ הָא גּוּפַהּ קַשְׁיָא: אָמְרַתְּ יֵשׁ קְשָׁרִין שֶׁאֵין חַיָּיבִין עֲלֵיהֶן… חִיּוּבָא הוּא דְּלֵיכָּא, הָא אִיסּוּרָא — אִיכָּא, וַהֲדַר תָּנֵי: קוֹשֶׁרֶת אִשָּׁה מִפְתַּח חֲלוּקָהּ: אֲפִילּוּ לְכַתְּחִילָּה!</div>
+      <div class="trans">המשנה עצמה קשה: בתחילה משמע שיש קשרים שרק פטורים מחטאת אבל אסורים, ומיד אחר כך נשנה ״קושרת אשה מפתח חלוקה״ — שמשמע מותר אפילו לכתחילה. כיצד שתי המשמעויות יחד?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">שבת קי״א ב — Shabbat 111b:9</span></div>
+      <div class="orig">הָכִי קָאָמַר: יֵשׁ קְשָׁרִין שֶׁאֵין חַיָּיבִין עֲלֵיהֶן כְּקֶשֶׁר הַגַּמָּלִין וּכְקֶשֶׁר הַסַּפָּנִין. וּמַאי נִיהוּ —</div>
+      <div class="trans">כך יש לקרוא את המשנה: יש קשרים שאין חייבים עליהם (אך אסורים), כקשר הגמלים והספנים. ומהם בדיוק —</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">שבת קי״ב א — Shabbat 112a:1</span></div>
+      <div class="orig">קִיטְרָא דְּקָטְרִי בִּזְמָמָא וְקִיטְרָא דְּקָטְרִי בְּאִיסְטְרִידָא, חִיּוּבָא הוּא דְּלֵיכָּא, הָא אִיסּוּרָא — אִיכָּא. וְיֵשׁ שֶׁמּוּתָּרִין לְכַתְּחִילָּה, וּמַאי נִיהוּ — קוֹשֶׁרֶת מִפְתְּחֵי חֲלוּקָהּ.</div>
+      <div class="trans">הקשר שקושרים בטבעת-האף של הבהמה (זמם) והקשר שבאיסטרידא — אלו ה״אסור אך פטור״. ויש קשרים מותרים לגמרי לכתחילה, והם: קשירת פתחי החלוק של האשה.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge">סוגיה 2</span> מפתח חלוקה — שני פתחים <span class="ref">Shabbat 112a:2</span></h2>
+    <div class="lead">למה צריך לומר שמותר? המקרה: חלוק עם שני פתחים — קמ״ל שאינו מבטל אחד מהם.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"1 · קושיא: ״פשיטא״ — למה צריך לומר?"}:::question
+  A1["2 · תירוץ: חלוק בעל שני פתחים — קמ״ל שאינו מבטל אחד"]:::answer
+  Q1 -->|תירוץ| A1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"1 · ״פְּשִׁיטָא!״"}:::question
+  A1["2 · ״דְּאִית לֵיהּ תְּרֵי דַשֵּׁי… בַּטּוֹלֵי מְבַטֵּיל? קָא מַשְׁמַע לַן״"]:::answer
+  Q1 -->|תירוץ| A1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״ב א — Shabbat 112a:2</span></div>
+      <div class="orig">מִפְתַּח חֲלוּקָהּ. פְּשִׁיטָא!</div>
+      <div class="trans">״מפתח חלוקה״ — פשוט שמותר, ולמה הוצרכה המשנה לומר זאת?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״ב א — Shabbat 112a:2</span></div>
+      <div class="orig">לָא צְרִיכָא, דְּאִית לֵיהּ תְּרֵי דַשֵּׁי. מַהוּ דְתֵימָא: חֲדָא מִינַּיְיהוּ בַּטּוֹלֵי מְבַטֵּיל לַהּ, קָא מַשְׁמַע לַן.</div>
+      <div class="trans">המקרה הוא חלוק בעל שני פתחים. היה מקום לומר שאחד מהפתחים בטל (אינו בשימוש), וקשירתו תיחשב קשר של קיימא — לכן השמיעה המשנה שאינו מבטלו, ומותר לקשור.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge">סוגיה 3</span> חוטי סבכה — חסה על שערה <span class="ref">Shabbat 112a:3</span></h2>
+    <div class="lead">שוב ״פשיטא״: המקרה הוא סבכה רחבה — קמ״ל שאשה חסה על שערה ולכן מתירה ואינה שולפת.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"1 · קושיא: ״פשיטא״"}:::question
+  A1["2 · תירוץ: סבכה רחבה — חסה על שערה, מתירה ולא שולפת"]:::answer
+  Q1 -->|תירוץ| A1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"1 · ״פְּשִׁיטָא!״"}:::question
+  A1["2 · ״דִּרְוִיחָא לַהּ… אִשָּׁה חָסָה עַל שְׂעָרָהּ וּמִישְׁרָא שָׁרְיָא לַהּ״"]:::answer
+  Q1 -->|תירוץ| A1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״ב א — Shabbat 112a:3</span></div>
+      <div class="orig">וְחוּטֵי סְבָכָה. פְּשִׁיטָא!</div>
+      <div class="trans">״וחוטי סבכה״ (רשת לשיער) — פשוט שמותר לקשור, ולמה הוצרך לומר?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״ב א — Shabbat 112a:3</span></div>
+      <div class="orig">לָא צְרִיכָא, דִּרְוִיחָא לַהּ. מַהוּ דְתֵימָא: מִישְׁלָף שָׁלְפָא לַהּ, קָא מַשְׁמַע לַן דְּאִשָּׁה חָסָה עַל שְׂעָרָהּ וּמִישְׁרָא שָׁרְיָא לַהּ.</div>
+      <div class="trans">המקרה: הסבכה רחבה. היה מקום לומר שהאשה שולפת אותה כמו שהיא בלי להתיר (וממילא הקשר קבוע ואסור) — קמ״ל שאשה חסה על שערה, ולכן מתירה את הקשר בזהירות ואינה שולפת; ועל כן אין זה קשר של קיימא.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge">סוגיה 4</span> רצועות מנעל וסנדל — שלוש ברייתות <span class="ref">Shabbat 112a:4-7</span></h2>
+    <div class="lead">על התרת רצועות נעל וסנדל שנינו שלוש ברייתות סותרות (חייב / פטור אבל אסור / מותר). הגמרא מיישבת לפי סוגי הקושרים, ומביאה מעשה ברב יהודה ואביי.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · איתמר: שלוש ברייתות — חייב / פטור אבל אסור / מותר"]:::statement
+  Q1{"2 · קושיא: סתירה — מנעל אמנעל, סנדל אסנדל"}:::question
+  A1["3 · תירוץ מנעל: חייב=של אומנים; פטור=של רבים; מותר=בני מחוזא"]:::answer
+  A2["4 · תירוץ סנדל: כיוצא בזה, לפי הקושר"]:::answer
+  S2["5 · מעשה רב יהודה: זוג סנדלים שלו ושל בנו — אביי: חייב חטאת"]:::statement
+  C1["6 · מסקנה: הואיל ובחול אף שניהם נועלים — מותר לכתחילה"]:::conclusion
+  S1 -->|קשיא| Q1
+  Q1 -->|תירוץ| A1
+  Q1 -->|תירוץ| A2
+  A2 --> S2
+  S2 -->|חזר בו| C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · ״אִיתְּמַר: הִתִּיר רְצוּעוֹת מִנְעָל… תָּנֵי חֲדָא חַיָּיב, אִידַּךְ פָּטוּר, אִידַּךְ מוּתָּר״"]:::statement
+  Q1{"2 · ״קַשְׁיָא מִנְעָל אַמִּנְעָל, קַשְׁיָא סַנְדָּל אַסַּנְדָּל״"}:::question
+  A1["3 · ״הָא בִּדְאוּשְׁכָּפֵי, הָא בְּדַרְבָּנַן, הָא בְּדִבְנֵי מָחוֹזָא״"]:::answer
+  A2["4 · ״בִּדְטַיָּיעֵי… בִּדְחוּמַרְתָּא… בְּסַנְדָּל דְּנָפְקִי בֵּיהּ בֵּי תְרֵי״"]:::answer
+  S2["5 · ״הָהוּא זוּגָא דְּסַנְדָּלֵי… אֲמַר לֵיהּ אַבָּיֵי: חַיָּיב חַטָּאת״"]:::statement
+  C1["6 · ״אִי הָכִי, מוּתָּר לְכַתְּחִילָּה״"]:::conclusion
+  S1 -->|קשיא| Q1
+  Q1 -->|תירוץ| A1
+  Q1 -->|תירוץ| A2
+  A2 --> S2
+  S2 -->|חזר בו| C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״ב א — Shabbat 112a:4</span></div>
+      <div class="orig">וּרְצוּעוֹת מִנְעָל וְסַנְדָּל. אִיתְּמַר: הִתִּיר רְצוּעוֹת מִנְעָל וְסַנְדָּל, תָּנֵי חֲדָא: חַיָּיב חַטָּאת, וְתַנְיָא אִידַּךְ: פָּטוּר אֲבָל אָסוּר, וְתַנְיָא אִידַּךְ: מוּתָּר לְכַתְּחִילָּה.</div>
+      <div class="trans">על המתיר (הקושר) רצועות של נעל וסנדל נאמרו שלוש ברייתות: אחת — חייב חטאת; שנייה — פטור אבל אסור; שלישית — מותר לכתחילה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״ב א — Shabbat 112a:4</span></div>
+      <div class="orig">קַשְׁיָא מִנְעָל אַמִּנְעָל, קַשְׁיָא סַנְדָּל אַסַּנְדָּל.</div>
+      <div class="trans">קשה: דין המנעל סותר את דין המנעל (בין הברייתות), וכן דין הסנדל סותר את דין הסנדל.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">שבת קי״ב א — Shabbat 112a:5</span></div>
+      <div class="orig">מִנְעָל אַמִּנְעָל לָא קַשְׁיָא: הָא דְּקָתָנֵי חַיָּיב חַטָּאת — בִּדְאוּשְׁכָּפֵי. פָּטוּר אֲבָל אָסוּר — בְּדַרְבָּנַן. מוּתָּר לְכַתְּחִלָּה — בְּדִבְנֵי מָחוֹזָא.</div>
+      <div class="trans">מנעל על מנעל אינו קשה: ״חייב חטאת״ — בקשר של אומני-נעליים (קשר קבוע); ״פטור אבל אסור״ — בקשר של שאר אנשים; ״מותר לכתחילה״ — בקשר של בני מחוזא (שמתירים וקושרים תמיד).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">שבת קי״ב א — Shabbat 112a:6</span></div>
+      <div class="orig">סַנְדָּל אַסַּנְדָּל לָא קַשְׁיָא: הָא דְּקָתָנֵי חַיָּיב חַטָּאת — בִּדְטַיָּיעֵי דְּקָטְרִי אוּשְׁכָּפֵי. פָּטוּר אֲבָל אָסוּר — בִּדְחוּמַרְתָּא דְּקָטְרִי אִינְהוּ. מוּתָּר לְכַתְּחִילָּה — בְּסַנְדָּל דְּנָפְקִי בֵּיהּ בֵּי תְרֵי.</div>
+      <div class="trans">סנדל על סנדל אינו קשה: ״חייב״ — בסנדלי הסוחרים הערבים (טייעים) שקושרים אותם קשר-אומן קבוע; ״פטור אבל אסור״ — בקשר רגיל שהם קושרים; ״מותר״ — בסנדל ששניים יוצאים בו לחילופין.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">שבת קי״ב א — Shabbat 112a:6-7</span></div>
+      <div class="orig">דְּרַב יְהוּדָה… הֲוָה לֵיהּ הָהוּא זוּגָא דְּסַנְדָּלֵי, זִמְנִין דְּנָפֵיק בֵּיהּ אִיהוּ, זִימְנִין נָפֵיק בֵּיהּ יָנוֹקֵיהּ. אֲתָא לְקַמֵּיהּ דְּאַבָּיֵי, אֲמַר לֵיהּ: כְּהַאי גַּוְנָא מַאי? אֲמַר לֵיהּ: חַיָּיב חַטָּאת.</div>
+      <div class="trans">לרב יהודה היה זוג סנדלים שלפעמים הוא יצא בהם ולפעמים בנו. בא לפני אביי ושאל: בכגון זה (אם התיר וקשר בשבת) מה הדין? ענה לו אביי תחילה: חייב חטאת.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">שבת קי״ב א — Shabbat 112a:7</span></div>
+      <div class="orig">אֲמַר לֵיהּ: הַשְׁתָּא פָּטוּר אֲבָל אָסוּר קָא קַשְׁיָא לִי, ״חַיָּיב חַטָּאת״ קָאָמְרַתְּ לִי?!… אֲמַר לֵיהּ: מִשּׁוּם דִּבְחוֹל נָמֵי זִימְנִין נָפֵיקְנָא בֵּיהּ אֲנָא, זִימְנִין נָפֵיק בֵּיהּ יָנוֹקָא. אֲמַר לֵיהּ: אִי הָכִי, מוּתָּר לְכַתְּחִילָּה.</div>
+      <div class="trans">אמר רב יהודה לאביי: אני התלבטתי אם בכלל ״פטור אבל אסור״, ואתה אומר לי ״חייב חטאת״?! נימק רב יהודה: שהרי גם בחול לפעמים אני יוצא בו ולפעמים בני — אין זה קשר קבוע. השיב אביי: אם כך, מותר אפילו לכתחילה.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+    <h2><span class="badge">סוגיה 5</span> רצועה שנפסקה; וטומאת הסנדל <span class="ref">Shabbat 112a:8-112b:1</span></h2>
+    <div class="lead">מעשה ברצועת סנדל שנפסקה — מתי מותר לתקנה. מכאן להלכה כר' יהודה, ולברייתא על סנדל שנפסקו אזניו: האם עדיין ״כלי״, ומה דעת ר' יוחנן (כמחלוקת בטומאה כך בשבת, אך לא בחליצה).</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · מעשה: נפסקה רצועה — ר' אבהו: כרוך גמי; רב יוסף: שבקיה"]:::statement
+  Q1{"2 · קושיא: מאי שנא?"}:::question
+  A1["3 · תירוץ: התם לא מינטר, הכא מינטר — ועדיין כלי"]:::answer
+  C1["4 · מסקנה: מדמתרץ ר' יוחנן אליבא דר' יהודה — הלכה כר' יהודה"]:::conclusion
+  P1["5 · ראיה (ברייתא): נפסקו אזני הסנדל — טהור/טמא; ר' יהודה: פנימית/חיצונה"]:::proof
+  S2["6 · ר' יוחנן: כמחלוקת בטומאה כך בשבת — אבל לא לחליצה"]:::statement
+  Q2{"7 · הוינן בה: אליבא דמאן? רבנן או ר' יהודה?"}:::question
+  A2["8 · תירוץ: אליבא דר' יהודה — חליצה שאני, למילתיה לאו כלי"]:::answer
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> C1
+  C1 -->|מאי היא| P1
+  P1 --> S2
+  S2 -->|הוינן בה| Q2
+  Q2 -->|יישוב| A2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · ״אִיפְּסִיק רְצוּעָה… שְׁקוֹל גֶּמִי… שִׁבְקֵיהּ״"]:::statement
+  Q1{"2 · ״מַאי שְׁנָא מִדְּרַבִּי יִרְמְיָה?״"}:::question
+  A1["3 · ״הָתָם לָא מִינְּטַר, הָכָא מִינְּטַר… מָנָא הוּא״"]:::answer
+  C1["4 · ״מִדְּקָמְתָרֵץ ר' יוֹחָנָן אַלִּיבָּא דְּר' יְהוּדָה — הֲלָכָה כְּרַבִּי יְהוּדָה״"]:::conclusion
+  P1["5 · ״סַנְדָּל שֶׁנִּפְסְקוּ שְׁתֵּי אׇזְנָיו… טָהוֹר… ר' יְהוּדָה: נִפְסְקָה פְּנִימִית טָמֵא״"]:::proof
+  S2["6 · ״כְּמַחֲלוֹקֶת לְטוּמְאָה כָּךְ לְשַׁבָּת, אֲבָל לֹא לַחֲלִיצָה״"]:::statement
+  Q2{"7 · ״וְהָוֵינַן בַּהּ: אַלִּיבָּא דְּמַאן?״"}:::question
+  A2["8 · ״לְעוֹלָם אַלִּיבָּא דְּר' יְהוּדָה… לְמִילְּתֵיהּ לָאו מָנָא הוּא״"]:::answer
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> C1
+  C1 -->|מאי היא| P1
+  P1 --> S2
+  S2 -->|הוינן בה| Q2
+  Q2 -->|יישוב| A2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״ב א — Shabbat 112a:8</span></div>
+      <div class="orig">רַבִּי יִרְמְיָה הֲוָה קָאָזֵיל בָּתְרֵיהּ דְּרַבִּי אֲבָהוּ בְּכַרְמְלִית. אִיפְּסִיק רְצוּעָה דְּסַנְדָּלֵיהּ… אֲמַר לֵיהּ: שְׁקוֹל גֶּמִי לַח דַּחֲזֵי לְמַאֲכַל בְּהֵמָה, וּכְרוֹךְ עִילָּוֵיהּ. אַבָּיֵי הֲוָה קָאֵי קַמֵּיהּ דְּרַב יוֹסֵף… אֲמַר לֵיהּ: שִׁבְקֵיהּ.</div>
+      <div class="trans">ר' ירמיה הלך אחר ר' אבהו בכרמלית ונפסקה רצועת סנדלו; אמר לו ר' אבהו: קח גמי לח הראוי למאכל בהמה וכרוך אותו על הסנדל. לעומת זאת כשנפסקה רצועתו של אביי בפני רב יוסף אמר לו רב יוסף: עזוב, אל תעשה דבר.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״ב א — Shabbat 112a:8</span></div>
+      <div class="orig">מַאי שְׁנָא מִדְּרַבִּי יִרְמְיָה?</div>
+      <div class="trans">מה ההבדל בין מקרהו של אביי למקרהו של ר' ירמיה, שלזה הותר לתקן ולזה נאמר ״עזוב״?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">שבת קי״ב א — Shabbat 112a:8</span></div>
+      <div class="orig">הָתָם לָא מִינְּטַר, הָכָא מִינְּטַר. וְהָא מָנָא הוּא, דְּאִי בָּעֵינָא הָפֵיכְנָא לֵיהּ מִיָּמִין לִשְׂמֹאל.</div>
+      <div class="trans">שם (אצל ר' ירמיה, בכרמלית) הסנדל אינו משתמר, ולכן התירו לתקנו כלאחר-יד; כאן (אצל אביי) הוא משתמר על רגלו. ואף שנפסקה רצועה — עדיין הוא ״כלי״, שאם ארצה אהפוך אותו מימין לשמאל ואלך בו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">שבת קי״ב א — Shabbat 112a:8</span></div>
+      <div class="orig">אֲמַר לֵיהּ: מִדְּקָמְתָרֵץ רַבִּי יוֹחָנָן אַלִּיבָּא דְּרַבִּי יְהוּדָה, שְׁמַע מִינַּהּ הֲלָכָה כְּרַבִּי יְהוּדָה.</div>
+      <div class="trans">מכך שר' יוחנן טורח ליישב את הברייתא לפי שיטת ר' יהודה — למד שהלכה כר' יהודה (שסנדל שנפסקה רצועתו הפנימית בלבד עדיין כלי).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">שבת קי״ב א — Shabbat 112a:9</span></div>
+      <div class="orig">דְּתַנְיָא: סַנְדָּל שֶׁנִּפְסְקוּ שְׁתֵּי אׇזְנָיו, אוֹ שְׁתֵּי תְרֵסִיּוֹתָיו, אוֹ שֶׁנִּיטַּל כׇּל הַכַּף שֶׁלּוֹ — טָהוֹר. אַחַת מֵאׇזְנָיו… — טָמֵא. רַבִּי יְהוּדָה אוֹמֵר: נִפְסְקָה פְּנִימִית — טָמֵא, הַחִיצוֹנָה — טָהוֹר.</div>
+      <div class="trans">ברייתא: סנדל שנפסקו שתי אזניו (או שתי לולאותיו, או ניטל כל בית-הכף) — בטל מתורת כלי וטהור מטומאה; נפסקה אחת בלבד — עדיין כלי וטמא. ר' יהודה מחלק: נפסקה האוזן הפנימית — עדיין טמא (כלי), נפסקה החיצונה — טהור.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">שבת קי״ב א — Shabbat 112a:9</span></div>
+      <div class="orig">וְאָמַר עוּלָּא, וְאִיתֵּימָא רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: כְּמַחֲלוֹקֶת לְעִנְיַן טוּמְאָה כָּךְ מַחֲלוֹקֶת לְעִנְיַן שַׁבָּת, אֲבָל לֹא לְעִנְיַן חֲלִיצָה.</div>
+      <div class="trans">אמר ר' יוחנן: כשם שנחלקו (ר' יהודה וחכמים) בשאלה אם הסנדל הפגום כלי לעניין טומאה, כך נחלקו אם הוא כלי לעניין שבת — אבל לעניין חליצה אין הם חלוקים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">שבת קי״ב א — Shabbat 112a:10</span></div>
+      <div class="orig">וְהָוֵינַן בַּהּ: [רַבִּי יוֹחָנָן] אַלִּיבָּא דְּמַאן? אִילֵימָא אַלִּיבָּא דְּרַבָּנַן… וְאֶלָּא אַלִּיבָּא דְּרַבִּי יְהוּדָה…</div>
+      <div class="trans">ודנו בדבר: לפי שיטת מי אמר ר' יוחנן את דבריו? אם לפי חכמים — קשה; ואם לפי ר' יהודה — קשה (מדין חליצה, שהרי ״חלצה של שמאל בימין כשרה״).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">שבת קי״ב א-ב — Shabbat 112a:11-112b:1</span></div>
+      <div class="orig">לְעוֹלָם אַלִּיבָּא דְּרַבִּי יְהוּדָה… הֵיכָא דִּלְמִילְּתֵיהּ מָנָא הוּא, אֲבָל הָכָא — לְמִילְּתֵיהּ לָאו מָנָא הוּא.</div>
+      <div class="trans">המסקנה: דברי ר' יוחנן הם לפי ר' יהודה. ״חלצה של שמאל בימין כשרה״ אמורה רק כשהנעל היא כלי לעניינה-שלה; אבל סנדל שנפסקה חיצונתו אינו כלי לעניינו, ולכן לחליצה פסול — ובזה אין מחלוקת.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-6">
+    <h2><span class="badge">סוגיה 6</span> ״ומי אמר ר' יוחנן הכי?״ — סתם משנה <span class="ref">Shabbat 112b:2-4</span></h2>
+    <div class="lead">קושיה על ר' יוחנן ממשנה סתומה (שמשמע אין חילוק פנימית/חיצונה); יישוב, ודיווח רבין שלכאורה סותר — שמתורץ ״אמוראי נינהו אליבא דר' יוחנן״.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"1 · מיתיבי: ר' יוחנן אמר 'הלכה כסתם משנה' — וסתם משנה משמע בלי חילוק!"}:::question
+  A1["2 · תירוץ: פנימית דווקא; ורב יצחק ב&quot;י: העמד בסנדל בעל ארבע אזנים"]:::answer
+  S1["3 · רבין: רב — הלכה כר' יהודה; ר' יוחנן — אין הלכה"]:::statement
+  Q2{"4 · קושיא: והא מדמתרץ אליביה — סבר כמותו?!"}:::question
+  A2["5 · תירוץ: אמוראי נינהו אליבא דר' יוחנן"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 --> S1
+  S1 -->|קושיא| Q2
+  Q2 -->|יישוב| A2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"1 · ״וּמִי אָמַר ר' יוֹחָנָן הָכִי? וְהָאָמַר: הֲלָכָה כִּסְתַם מִשְׁנָה״"}:::question
+  A1["2 · ״פְּנִימִית דַּוְקָא… תְּהֵא מִשְׁנָתֵנוּ בְּסַנְדָּל… אַרְבַּע אׇזְנַיִם״"]:::answer
+  S1["3 · ״כִּי אֲתָא רָבִין… הֲלָכָה כְּר' יְהוּדָה; ור' יוֹחָנָן: אֵין הֲלָכָה״"]:::statement
+  Q2{"4 · ״וְהָא מִדִּמְתָרֵץ אַלִּיבָּא דְּר' יְהוּדָה — כְּוָותֵיהּ סְבִירָא לֵיהּ!״"}:::question
+  A2["5 · ״אָמוֹרָאֵי נִינְהוּ וְאַלִּיבָּא דְּר' יוֹחָנָן״"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 --> S1
+  S1 -->|קושיא| Q2
+  Q2 -->|יישוב| A2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:2</span></div>
+      <div class="orig">וּמִי אָמַר רַבִּי יוֹחָנָן הָכִי? וְהָאָמַר רַבִּי יוֹחָנָן: הֲלָכָה כִּסְתַם מִשְׁנָה, וּתְנַן: סַנְדָּל שֶׁנִּפְסְקָה אַחַת מֵאׇזְנָיו וְתִיקְּנָהּ — טָמֵא מִדְרָס, נִפְסְקָה שְׁנִיָּה וְתִיקְּנָהּ — טָהוֹר מִלְּטַמֵּא מִדְרָס… מַאי לָאו לָא שְׁנָא פְּנִימִית וְלָא שְׁנָא חִיצוֹנָה!</div>
+      <div class="trans">וכי אמר ר' יוחנן כך (שהלכה כר' יהודה המחלק)? הרי הוא עצמו אמר ״הלכה כסתם משנה״, ושנינו משנה סתומה על סנדל שנפסקה אחת מאזניו ותיקנה — טמא מדרס, נפסקה השנייה ותיקנה — טהור; ומשמע בלי חילוק בין פנימית לחיצונה (דלא כר' יהודה)!</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:3</span></div>
+      <div class="orig">לָא, פְּנִימִית דַּוְקָא… אָמַר רַב יִצְחָק בֶּן יוֹסֵף: תְּהֵא מִשְׁנָתֵנוּ בְּסַנְדָּל שֶׁיֵּשׁ לוֹ אַרְבַּע אׇזְנַיִם וְאַרְבַּע תְּרֵסִיּוֹתַיִם, שֶׁלֹּא לִשְׁבּוֹר דְּבָרָיו שֶׁל רַבִּי יוֹחָנָן.</div>
+      <div class="trans">לא, המשנה עוסקת בפנימית דווקא. וכדי שהמשנה הסתומה לא תסתור את ר' יוחנן, אמר רב יצחק בן יוסף: נעמיד את משנתנו בסנדל בעל ארבע אזנים וארבע לולאות — כך מתיישבת עם שיטת ר' יהודה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:4</span></div>
+      <div class="orig">כִּי אֲתָא רָבִין אָמַר רַב חָנָן בַּר אַבָּא אָמַר רַב: הֲלָכָה כְּרַבִּי יְהוּדָה. וְרַבִּי יוֹחָנָן אָמַר: אֵין הֲלָכָה כְּרַבִּי יְהוּדָה.</div>
+      <div class="trans">כשעלה רבין מארץ ישראל מסר בשם רב: הלכה כר' יהודה; ואילו ר' יוחנן אמר: אין הלכה כר' יהודה — בניגוד למה שהובא קודם בשם רב יוסף.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:4</span></div>
+      <div class="orig">וּמִי אָמַר רַבִּי יוֹחָנָן הָכִי? וְהָא מִדִּמְתָרֵץ רַבִּי יוֹחָנָן אַלִּיבָּא דְּרַבִּי יְהוּדָה, שְׁמַע מִינַּהּ כְּרַבִּי יְהוּדָה סְבִירָא לֵיהּ!</div>
+      <div class="trans">וכי אמר ר' יוחנן כן (אין הלכה כר' יהודה)? הרי מכך שטרח ליישב את הברייתא לפי ר' יהודה משמע שהוא סובר כמותו!</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:4</span></div>
+      <div class="orig">אָמוֹרָאֵי נִינְהוּ וְאַלִּיבָּא דְּרַבִּי יוֹחָנָן.</div>
+      <div class="trans">שני אמוראים הם, ושניהם מוסרים מה אמר ר' יוחנן — זה אמר בשמו ״הלכה כר' יהודה״ וזה ״אין הלכה״; המחלוקת היא בדיווח דברי ר' יוחנן, ואין סתירה בדבריו עצמו.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-7">
+    <h2><span class="badge">סוגיה 7</span> כלי שניקב — ״פנים חדשות״ <span class="ref">Shabbat 112b:5-8</span></h2>
+    <div class="lead">בעיית ר' חזקיה על כלי שניקב ונסתם שוב ושוב; ר' יוחנן פותר מתוך מה שלמד ממנו בדין הסנדל — ״פנים חדשות באו לכאן״ — וזוכה לשבח.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,color:#1f2937;
+  Q1{"1 · בעיא (ר' חזקיה): כלי שניקב כזית ונסתם, שוב ושוב, עד רימון — מהו?"}:::question
+  A1["2 · ר' יוחנן: כדין הסנדל ששנית לנו — 'פנים חדשות באו לכאן'"]:::answer
+  C1["3 · שבח: 'כגון דין בר אינש'; ר' זירא: אם ראשונים בני מלאכים…"]:::conclusion
+  Q1 -->|תשובה| A1
+  A1 --> C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,color:#1f2937;
+  Q1{"1 · ״בָּעֵי ר' חִזְקִיָּה: נִיקַּב כְּמוֹצִיא זַיִת וּסְתָמוֹ… עַד מוֹצִיא רִימּוֹן, מַהוּ?״"}:::question
+  A1["2 · ״פָּנִים חֲדָשׁוֹת בָּאוּ לְכָאן… הָכָא נָמֵי פָּנִים חֲדָשׁוֹת״"]:::answer
+  C1["3 · ״כְּגוֹן דֵּין בַּר אִינָשׁ… אִם רִאשׁוֹנִים בְּנֵי מַלְאָכִים…״"]:::conclusion
+  Q1 -->|תשובה| A1
+  A1 --> C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:5</span></div>
+      <div class="orig">תְּנַן הָתָם: כׇּל כְּלֵי בַּעֲלֵי בָתִּים, שִׁיעוּרָן כְּרִמּוֹנִים. בָּעֵי רַבִּי חִזְקִיָּה: נִיקַּב כְּמוֹצִיא זַיִת וּסְתָמוֹ, וְחָזַר וְנִיקַּב כְּמוֹצִיא זַיִת וּסְתָמוֹ, עַד שֶׁהִשְׁלִימוֹ לְמוֹצִיא רִימּוֹן, מַהוּ?</div>
+      <div class="trans">שנינו במשנה: כלי בעלי בתים בטלים מתורת כלי רק כשניקבו בנקב גדול כרימון. שאל ר' חזקיה: ניקב הכלי כשיעור זית ונסתם, וחזר וניקב כזית ונסתם, וכן הלאה עד שהצטברו הנקבים לשיעור רימון — האם הוא טהור (בטל)?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:6-7</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַבִּי יוֹחָנָן: רַבִּי, שָׁנִיתָ לָנוּ סַנְדָּל שֶׁנִּפְסְקָה אַחַת מֵאׇזְנָיו וְתִיקְּנָהּ — טָמֵא מִדְרָס… וַאֲמַרְתְּ לַן עֲלֵיהּ: פָּנִים חֲדָשׁוֹת בָּאוּ לְכָאן. הָכָא נָמֵי פָּנִים חֲדָשׁוֹת בָּאוּ לְכָאן.</div>
+      <div class="trans">אמר לו ר' יוחנן: רבי, אתה עצמך לימדת אותנו את דין הסנדל שנפסקו אזניו ותוקנו, ואמרת עליו ״פנים חדשות באו לכאן״ (התיקון יוצר ישות חדשה). אם כן גם כאן — כל סתימה היא ״פנים חדשות״, והנקב הקודם בטל; לפיכך לעולם אינו מצטרף לשיעור רימון, והכלי טמא.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:8</span></div>
+      <div class="orig">קָרֵי עֲלֵיהּ: לֵית דֵּין בַּר אִינָשׁ. אִיכָּא דְאָמְרִי: כְּגוֹן דֵּין בַּר אִינָשׁ. אָמַר רַבִּי זֵירָא אָמַר רָבָא בַּר זִימּוּנָא: אִם רִאשׁוֹנִים בְּנֵי מַלְאָכִים — אָנוּ בְּנֵי אֲנָשִׁים…</div>
+      <div class="trans">קרא עליו (ר' חזקיה על ר' יוחנן) בשבח: ״אין זה בן-אנוש (אלא מלאך)״; ויש גורסים: ״כגון זה הוא בן-אנוש אמיתי״. אמר ר' זירא בשם רבא בר זימונא: אם הראשונים היו כמלאכים — אנו כבני אדם; ואם הראשונים כבני אדם — אנו כחמורים.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-8">
+    <h2><span class="badge">סוגיה 8</span> נודות יין ושמן; קדירה של בשר <span class="ref">Shabbat 112b:9-10</span></h2>
+    <div class="lead">חזרה לסעיפי המשנה: שוב ״פשיטא״ — והמקרה הוא שני אוזניים/אונקל, קמ״ל שאינו מבטל אחד מהם.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"1 · קושיא: נודות וקדירה — פשיטא?"}:::question
+  A1["2 · תירוץ: שני אוזניים — קמ״ל שאינו מבטל אחד מהם"]:::answer
+  Q1 -->|תירוץ| A1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"1 · ״פְּשִׁיטָא!״ (נוֹדוֹת… קְדֵירָה)"}:::question
+  A1["2 · ״דְּאִית לֵיהּ תַּרְתֵּי אוּנֵּי… בַּטּוֹלֵי מְבַטֵּל? קָא מַשְׁמַע לַן״"]:::answer
+  Q1 -->|תירוץ| A1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:9-10</span></div>
+      <div class="orig">וְנוֹדוֹת יַיִן וָשֶׁמֶן. פְּשִׁיטָא!… קְדֵירָה שֶׁל בָּשָׂר. פְּשִׁיטָא!</div>
+      <div class="trans">״נודות יין ושמן״, וכן ״קדירה של בשר״ — פשוט שמותר לקושרם, ולמה הוצרכה המשנה לפרטם?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:9-10</span></div>
+      <div class="orig">לָא צְרִיכָא, דְּאִית לֵיהּ תַּרְתֵּי אוּנֵּי, מַהוּ דְתֵימָא: חֲדָא מִינַּיְיהוּ בַּטּוֹלֵי מְבַטֵּל לַהּ, קָא מַשְׁמַע לַן.</div>
+      <div class="trans">המקרה: לנוד (וכן לקדירה) שתי אוזניים. היה מקום לומר שאחת מהן בטלה (אינה בשימוש), וקשירתה קשר של קיימא — קמ״ל שאינו מבטלה, ומותר לקשור.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-9">
+    <h2><span class="badge">סוגיה 9</span> ר' אליעזר בן יעקב; ״גמרא גמור זמורתא״ <span class="ref">Shabbat 112b:11-113a:1</span></h2>
+    <div class="lead">דין ראב״י (קושרים לפני הבהמה) — שוב ״פשיטא״ ויישוב; ולבסוף הלכה כראב״י, וחילופי אביי ורב יוסף החותמים בקריאה ״גמרא גמור זמורתא תהא?!״.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · קושיא: ראב״י קושרה — פשיטא?"}:::question
+  A1["2 · תירוץ: שתי רצועות — קמ״ל שאינו מבטל"]:::answer
+  S1["3 · שמואל: הלכה כראב״י"]:::statement
+  Q2{"4 · אביי: 'הלכה' — מכלל דפליגי? ומאי נפקא מינה?"}:::question
+  C1["5 · מסקנה: 'גמרא גמור זמורתא תהא?!' — אף הלכה צריך טעם"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 --> S1
+  S1 -->|דקדוק אביי| Q2
+  Q2 --> C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · ״פְּשִׁיטָא?״"}:::question
+  A1["2 · ״דְּאִית לַהּ תַּרְתֵּי אִיסָּרֵי… קָא מַשְׁמַע לַן״"]:::answer
+  S1["3 · ״הֲלָכָה כְּרַבִּי אֱלִיעֶזֶר בֶּן יַעֲקֹב״"]:::statement
+  Q2{"4 · ״הֲלָכָה, מִכְּלָל דִּפְלִיגִי… מַאי נָפְקָא לָךְ מִינַּהּ?״"}:::question
+  C1["5 · ״גְּמָרָא גְּמוֹר זְמוֹרְתָּא תְּהֵא?!״"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 --> S1
+  S1 -->|דקדוק אביי| Q2
+  Q2 --> C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">שבת קי״ב ב — Shabbat 112b:11</span></div>
+      <div class="orig">רַבִּי אֱלִיעֶזֶר בֶּן יַעֲקֹב אוֹמֵר קוֹשְׁרָהּ כּוּ׳. פְּשִׁיטָא?</div>
+      <div class="trans">ר' אליעזר בן יעקב אומר שקושרים חבל לפני הבהמה שלא תצא — פשוט שמותר, ולמה הוצרך לומר?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">שבת קי״ב ב-קי״ג א — Shabbat 112b:11-113a:1</span></div>
+      <div class="orig">לָא צְרִיכָא, דְּאִית לַהּ תַּרְתֵּי אִיסָּרֵי, מַהוּ דְּתֵימָא חֲדָא מִינַּיְיהוּ בַּטּוֹלֵי מְבַטֵּיל, קָא מַשְׁמַע לַן.</div>
+      <div class="trans">המקרה: לפתח יש שני חבלים/לולאות לקשירה. היה מקום לומר שאחד מהם בטל וקשירתו קבועה — קמ״ל שאינו מבטלו, ומותר לקשור.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">שבת קי״ג א — Shabbat 113a:1</span></div>
+      <div class="orig">אָמַר רַב יוֹסֵף אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: הֲלָכָה כְּרַבִּי אֱלִיעֶזֶר בֶּן יַעֲקֹב.</div>
+      <div class="trans">פסק שמואל (בשרשרת המסירה רב יוסף בשם רב יהודה): הלכה כר' אליעזר בן יעקב.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">שבת קי״ג א — Shabbat 113a:1</span></div>
+      <div class="orig">אֲמַר לֵיהּ אַבָּיֵי: הֲלָכָה, מִכְּלָל דִּפְלִיגִי. אֲמַר לֵיהּ: מַאי נָפְקָא לָךְ מִינַּהּ?</div>
+      <div class="trans">דקדק אביי: עצם לשון ״הלכה כראב״י״ מלמדת שיש מי שחולק עליו — ומי הוא? השיב לו רב יוסף: ומה אכפת לך מכך (לעניין מעשה)?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">שבת קי״ג א — Shabbat 113a:1</span></div>
+      <div class="orig">אֲמַר לֵיהּ: גְּמָרָא גְּמוֹר זְמוֹרְתָּא תְּהֵא?!</div>
+      <div class="trans">השיב אביי: וכי לימוד התורה ייעשה כזמר בעלמא?! — אין ללמוד הלכה כ״שיר״ בלי להבין את טעמה ואת מי שחולק; הבנת הסברה היא חלק מהלימוד.</div>
+    </div>
+  </section>
+
+  <footer>נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</footer>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: { fontFamily: 'Frank Ruhl Libre, Heebo, serif', fontSize: '15px' },
+    flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis', nodeSpacing: 45, rankSpacing: 55 }
+  });
+
+  let _seq = 0;
+  async function renderChart(chart, lang) {
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if (!holder || !target) return;
+    try {
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if (bindFunctions) bindFunctions(target);
+    } catch (e) {
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+  }
+
+  for (const chart of document.querySelectorAll('.chart')) {
+    await renderChart(chart, 'he');
+    const btn = chart.querySelector('.lang-toggle');
+    if (btn && chart.querySelector('.src-ar')) {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.lang === 'he' ? 'ar' : 'he';
+        await renderChart(chart, next);
+        btn.dataset.lang = next;
+        btn.textContent = next === 'he' ? 'הצג ארמית (מקור) ⇄' : 'הצג עברית ⇄';
+      });
+    } else if (btn) {
+      btn.remove();
+    }
+  }
+</script>
+</body>
+</html>
