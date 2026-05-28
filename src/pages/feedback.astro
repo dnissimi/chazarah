@@ -3,7 +3,10 @@ import SiteLayout from '../layouts/SiteLayout.astro';
 import { strings, DEFAULT_LANG } from '../i18n/strings';
 
 const t = strings[DEFAULT_LANG];
-const TURNSTILE_TEST_SITEKEY = '1x00000000000000000000AA';
+// Public sitekey, baked in at build time. Falls back to Turnstile's always-pass
+// test key for local dev / preview builds without the env var set.
+const TURNSTILE_SITEKEY =
+  import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '1x00000000000000000000AA';
 ---
 <SiteLayout title="משוב על מפה — Chazarah">
   <section class="feedback container narrow">
@@ -63,8 +66,10 @@ const TURNSTILE_TEST_SITEKEY = '1x00000000000000000000AA';
         </div>
 
         <div class="field">
-          <div class="cf-turnstile turnstile" data-sitekey={TURNSTILE_TEST_SITEKEY}></div>
+          <div class="cf-turnstile turnstile" data-sitekey={TURNSTILE_SITEKEY}></div>
         </div>
+
+        <p class="submit-error" data-feedback-error role="alert" hidden></p>
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary" data-i18n="feedbackSubmitBtn">{t.feedbackSubmitBtn}</button>
@@ -167,7 +172,31 @@ const TURNSTILE_TEST_SITEKEY = '1x00000000000000000000AA';
       }
     });
 
-    form?.addEventListener('submit', (event) => {
+    const submitError = document.querySelector<HTMLElement>('[data-feedback-error]');
+
+    function resetTurnstile() {
+      try {
+        (window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset();
+      } catch {
+        /* widget not ready — nothing to reset */
+      }
+    }
+
+    function showSubmitError(status: number, code?: string) {
+      const table = strings[activeLang()] as Partial<Record<string, string>>;
+      const key =
+        status === 429 || code === 'rate-limited'
+          ? 'submitErrorRateLimited'
+          : 'submitErrorGeneric';
+      const msg = table[key] ?? strings.he[key as keyof typeof strings.he];
+      if (submitError) {
+        submitError.hidden = false;
+        submitError.textContent = msg ?? '';
+      }
+      resetTurnstile();
+    }
+
+    form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const observation = observationInput?.value.trim() ?? '';
       if (observation === '') {
@@ -176,8 +205,9 @@ const TURNSTILE_TEST_SITEKEY = '1x00000000000000000000AA';
         return;
       }
       if (observationError) observationError.hidden = true;
+      if (submitError) submitError.hidden = true;
 
-      const turnstileResponse =
+      const turnstileToken =
         (form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value) ?? '';
 
       const payload = buildFeedbackPayload({
@@ -189,9 +219,28 @@ const TURNSTILE_TEST_SITEKEY = '1x00000000000000000000AA';
         submittedAt: new Date().toISOString(),
       });
 
-      // Slice 12: no backend yet — the Submission Worker (#13) will POST this same shape.
-      console.log('[chazarah] map-feedback payload', { payload, turnstileResponse });
-      showSuccess();
+      const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ payload, turnstileToken }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+        };
+        if (res.ok && data.ok) {
+          showSuccess();
+        } else {
+          showSubmitError(res.status, data.error);
+        }
+      } catch {
+        showSubmitError(0);
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
     });
 
     resetBtn?.addEventListener('click', resetForm);
