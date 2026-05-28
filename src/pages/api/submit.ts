@@ -89,7 +89,8 @@ async function createIssue(token: string, spec: IssueSpec): Promise<string> {
 }
 
 export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
-  const env = (locals as { runtime?: { env?: SubmitEnv } }).runtime?.env;
+  const runtime = (locals as { runtime?: { env?: SubmitEnv } }).runtime;
+  const env = runtime?.env;
   const missing: string[] = [];
   if (!env?.TURNSTILE_SECRET) missing.push('TURNSTILE_SECRET');
   if (!env?.GITHUB_TOKEN) missing.push('GITHUB_TOKEN');
@@ -97,7 +98,18 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
   // The explicit conjunction (rather than `missing.length`) lets TS narrow the
   // bindings to non-undefined for the rest of the handler.
   if (!env || !env.TURNSTILE_SECRET || !env.GITHUB_TOKEN || !env.RATE_LIMIT_KV) {
-    return json({ ok: false, error: 'server-misconfigured', missing }, 500);
+    // Diagnostic (names only — never values): tells us "can't see runtime"
+    // vs "bindings not on this environment".
+    return json(
+      {
+        ok: false,
+        error: 'server-misconfigured',
+        missing,
+        runtimePresent: Boolean(runtime),
+        envKeys: env ? Object.keys(env).sort() : [],
+      },
+      500,
+    );
   }
 
   let envelope: { payload?: unknown; turnstileToken?: unknown };
