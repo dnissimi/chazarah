@@ -90,8 +90,12 @@ async function createIssue(token: string, spec: IssueSpec): Promise<string> {
 
 export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
   const env = (locals as { runtime?: { env?: SubmitEnv } }).runtime?.env;
-  if (!env?.TURNSTILE_SECRET || !env?.GITHUB_TOKEN || !env?.RATE_LIMIT_KV) {
-    return json({ ok: false, error: 'server-misconfigured' }, 500);
+  const missing: string[] = [];
+  if (!env?.TURNSTILE_SECRET) missing.push('TURNSTILE_SECRET');
+  if (!env?.GITHUB_TOKEN) missing.push('GITHUB_TOKEN');
+  if (!env?.RATE_LIMIT_KV) missing.push('RATE_LIMIT_KV');
+  if (missing.length > 0 || !env) {
+    return json({ ok: false, error: 'server-misconfigured', missing }, 500);
   }
 
   let envelope: { payload?: unknown; turnstileToken?: unknown };
