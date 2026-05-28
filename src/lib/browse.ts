@@ -8,23 +8,29 @@
 
 const HE_ONES = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'] as const;
 const HE_TENS = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'] as const;
+const HE_HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת'] as const;
 
 const GERESH = '׳';
 const GERSHAYIM = '״';
 
+// Covers 1..499 — enough for every Talmud daf (the longest, Bava Batra, ends
+// at 176). Builds the bare letter sequence, then punctuates: gershayim before
+// the final letter, or a trailing geresh for a single letter.
 export function hebrewNumeral(n: number): string {
-  if (!Number.isInteger(n) || n < 1 || n > 99) {
-    throw new RangeError(`hebrewNumeral: out of range (1..99): ${n}`);
+  if (!Number.isInteger(n) || n < 1 || n > 499) {
+    throw new RangeError(`hebrewNumeral: out of range (1..499): ${n}`);
   }
-  // 15 → ט״ו, 16 → ט״ז: the י״ה / י״ו forms collide with the divine name.
-  if (n === 15) return 'ט' + GERSHAYIM + 'ו';
-  if (n === 16) return 'ט' + GERSHAYIM + 'ז';
+  const hundreds = Math.floor(n / 100);
+  const rem = n % 100;
 
-  const tens = Math.floor(n / 10);
-  const ones = n % 10;
-  if (tens === 0) return HE_ONES[ones] + GERESH;
-  if (ones === 0) return HE_TENS[tens] + GERESH;
-  return HE_TENS[tens] + GERSHAYIM + HE_ONES[ones];
+  let letters = HE_HUNDREDS[hundreds];
+  // 15 → ט״ו, 16 → ט״ז: the י-ה / י-ו forms collide with the divine name.
+  if (rem === 15) letters += 'טו';
+  else if (rem === 16) letters += 'טז';
+  else letters += HE_TENS[Math.floor(rem / 10)] + HE_ONES[rem % 10];
+
+  if (letters.length === 1) return letters + GERESH;
+  return letters.slice(0, -1) + GERSHAYIM + letters.slice(-1);
 }
 
 export type VariantLang = 'he' | 'en' | 'yi';
@@ -78,6 +84,16 @@ export const MASECHTOT: readonly MasechetInfo[] = [
     summary: {
       he: 'כל דפי מסכת מגילה (ב׳ עד ל״ב). אפשר לסקור מה כבר מופה, או לבקש מה שעדיין לא.',
       en: "All folios of Tractate Megillah (2 through 32). Browse what's mapped, request what isn't.",
+    },
+  },
+  {
+    corpus: 'talmud',
+    book: 'chullin',
+    bounds: { firstDaf: 2, lastDaf: 142 },
+    name: { he: 'חולין', en: 'Chullin' },
+    summary: {
+      he: 'כל דפי מסכת חולין (ב׳ עד קמ״ב). אפשר לסקור מה כבר מופה, או לבקש מה שעדיין לא.',
+      en: "All folios of Tractate Chullin (2 through 142). Browse what's mapped, request what isn't.",
     },
   },
 ];

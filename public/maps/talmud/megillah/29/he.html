@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — מגילה כ״ט</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --ink:#1f2937; --muted:#6b7280; --bg:#faf7f0; --card:#ffffff; --border:#e7e2d6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Heebo","Segoe UI",Arial,"Arial Hebrew",sans-serif; line-height:1.7;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 90px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:"Frank Ruhl Libre",Georgia,serif; font-size:2rem; margin:0 0 6px}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{
+    background:#fffbea; border:1px solid var(--conclusion-line); border-radius:12px;
+    padding:14px 18px; margin:18px 0; font-size:1.05rem;
+  }
+  .takeaway b{font-family:"Frank Ruhl Libre",serif}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:"Frank Ruhl Libre","Heebo",serif !important; direction:rtl}
+  .lang-toggle{position:absolute; top:10px; left:10px; z-index:2; cursor:pointer;
+    font-family:"Heebo",sans-serif; font-size:.78rem; color:var(--statement-line);
+    background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .lang-toggle:hover{background:#f3f4ff; border-color:var(--statement-line)}
+  /* overview block */
+  .overview h2{text-align:center}
+  /* per-sugya sections */
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:"Frank Ruhl Libre",serif; margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--statement-line); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:#374151; margin:8px 0 14px}
+  h3{font-family:"Frank Ruhl Libre",serif; color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-right:5px solid var(--statement-line); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--statement-line); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-left:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:"Frank Ruhl Libre",serif; font-size:1.15rem; margin:6px 0 4px}
+  .quote .trans{color:#374151}
+  .quote .trans:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>מפת הסוגיא — מגילה כ״ט</h1>
+    <div class="subtitle">מגילה כ״ט א:ד׳-ל׳ א:ט׳ · Megillah 29a:4-30a:9 · מקור: ספריא (William Davidson)</div>
+  </header>
+
+  <div class="takeaway"><b>שורה תחתונה:</b> הדף נחלק לשניים: בתחילתו אגדות על השכינה שגלתה עם ישראל ועל קדושת בתי הכנסת (המשך משנת בית הכנסת שחרב), ומ״ראש חודש אדר״ ואילך עוברים למשנת ארבע הפרשיות (שקלים, זכור, פרה, החודש) — ובמרכז הדיון: מהי ״פרשת שקלים״, מתי קוראים אותה, וכיצד מחלקים את הקריאה כשראש חודש אדר או טבת חלים בשבת.</div>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--mishnah)"></i>משנה</span>
+    <span><i class="swatch" style="background:var(--statement)"></i>מימרא / דעה</span>
+    <span><i class="swatch" style="background:var(--question)"></i>קושיא / מיתיבי</span>
+    <span><i class="swatch" style="background:var(--answer)"></i>תירוץ / יישוב</span>
+    <span><i class="swatch" style="background:var(--proof)"></i>ראיה / תא שמע</span>
+    <span><i class="swatch" style="background:var(--conclusion)"></i>מסקנה</span>
+  </div>
+
+  <section class="overview"><h2>מפת הדף — מבט-על</h2>
+    <div class="chart">
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · השכינה גולה עם ישראל וקדושת בתי הכנסת"]:::statement
+  O2["2 · קפנדריא (קיצור דרך) בבית כנסת שחרב"]:::mishnah
+  O3["3 · עשבים בבית כנסת חרב וכבוד המתים"]:::mishnah
+  O4(["4 · משנה: ארבע פרשיות אדר"]):::mishnah
+  O5["5 · למה משמיעים על השקלים באחד באדר"]:::statement
+  O6["6 · מהי פרשת שקלים — רב מול שמואל"]:::question
+  O7["7 · שלוש ספרי תורה בר״ח אדר בשבת"]:::statement
+  O8["8 · ר״ח טבת בחול — סדר הקריאה והלכה"]:::conclusion
+  O9["9 · כששקלים פוגש את ׳ואתה תצוה׳ / ׳כי תשא׳"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+      </script>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge">סוגיה 1</span> השכינה גולה עם ישראל וקדושת בתי הכנסת <span class="ref">Megillah 29a:4-10</span></h2>
+    <div class="lead">סדרת דרשות אגדה: בכל גלות השכינה עם ישראל, ובתי הכנסת ובתי המדרש הם ״מקדש מעט״ — ועתידים להיקבע בארץ ישראל.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · ברייתא: בכל מקום שגלו ישראל השכינה עמהם"]:::statement
+  Q2{"2 · קושיא: היכן השכינה בבבל?"}:::question
+  S3["3 · רב ששת לא יצא מפני השכינה ונענה"]:::statement
+  S4["4 · ׳מקדש מעט׳ — בתי כנסת ומדרש שבבבל"]:::statement
+  S5["5 · רבא: ׳מעון׳ הם בתי כנסת ומדרש"]:::statement
+  S6["6 · ר׳ אלעזר הקפר: עתידים להיקבע בארץ ישראל"]:::proof
+  C7["7 · דרשה: ההר היהיר נחשב בעל מום"]:::conclusion
+  S1 -->|הגמרא שואלת| Q2
+  Q2 -->|מעשה דומה| S3
+  S1 -->|דרשת פסוק| S4
+  S4 --> S5
+  S5 --> S6
+  S6 -->|קל וחומר ודרשה| C7
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · כַּמָּה חֲבִיבִין יִשְׂרָאֵל — שְׁכִינָה עִמָּהֶן"]:::statement
+  Q2{"2 · בְּבָבֶל הֵיכָא?"}:::question
+  S3["3 · רַב שֵׁשֶׁת… עָלוּב מִי נִדְחֶה מִפְּנֵי מִי"]:::statement
+  S4["4 · וָאֱהִי לָהֶם לְמִקְדָּשׁ מְעַט"]:::statement
+  S5["5 · ה׳ מָעוֹן אַתָּה הָיִיתָ לָּנוּ"]:::statement
+  S6["6 · עֲתִידִין… שֶׁיִּקָּבְעוּ בְּאֶרֶץ יִשְׂרָאֵל"]:::proof
+  C7["7 · הַאי מַאן דִּיהִיר — בַּעַל מוּם הוּא"]:::conclusion
+  S1 -->|הגמרא שואלת| Q2
+  Q2 -->|מעשה דומה| S3
+  S1 -->|דרשת פסוק| S4
+  S4 --> S5
+  S5 --> S6
+  S6 -->|קל וחומר ודרשה| C7
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט א — Megillah 29a:4</span></div>
+      <div class="orig">תַּנְיָא, רַבִּי שִׁמְעוֹן בֶּן יוֹחַי אוֹמֵר: בּוֹא וּרְאֵה כַּמָּה חֲבִיבִין יִשְׂרָאֵל לִפְנֵי הַקָּדוֹשׁ בָּרוּךְ הוּא, שֶׁבְּכָל מָקוֹם שֶׁגָּלוּ — שְׁכִינָה עִמָּהֶן… ״וְהֵשִׁיב״ לֹא נֶאֱמַר, אֶלָּא ״וְשָׁב״. מְלַמֵּד שֶׁהַקָּדוֹשׁ בָּרוּךְ הוּא שָׁב עִמָּהֶן מִבֵּין הַגָּלִיּוֹת.</div>
+      <div class="trans">ברייתא: רבי שמעון בן יוחאי אומר — ראו כמה אהובים ישראל לפני הקב״ה, שבכל מקום שגלו השכינה עמהם: למצרים, לבבל, וגם בגאולה העתידית. הפסוק כותב ״וְשָׁב ה׳״ (ולא ״והשיב״), ללמדנו שהקב״ה עצמו שב עמהם מהגלויות.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ט א — Megillah 29a:5</span></div>
+      <div class="orig">בְּבָבֶל הֵיכָא? אָמַר אַבָּיֵי: בְּבֵי כְּנִישְׁתָּא דְּהוּצָל, וּבְבֵי כְּנִישְׁתָּא דְּ״שַׁף וִיתֵיב״ בִּנְהַרְדְּעָא… זִמְנִין הָכָא וְזִמְנִין הָכָא.</div>
+      <div class="trans">קושיא: היכן בבבל שורה השכינה? אביי משיב: בבית הכנסת העתיק של הוּצָל ובבית הכנסת ״שׁף וְיָתֵיב״ שבנהרדעא — לא בשניהם בבת אחת, אלא לפעמים כאן ולפעמים כאן.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ט א — Megillah 29a:6</span></div>
+      <div class="orig">רַב שֵׁשֶׁת הֲוָה יָתֵיב בְּבֵי כְּנִישְׁתָּא דְּשַׁף וִיתֵיב בִּנְהַרְדְּעָא, אֲתַאי שְׁכִינָה] וְלָא נְפַק… אָמַר לְפָנָיו: רִבּוֹנוֹ שֶׁל עוֹלָם, עָלוּב וְשֶׁאֵינוֹ עָלוּב, מִי נִדְחֶה מִפְּנֵי מִי? אֲמַר לְהוּ: שִׁבְקוּהוּ.</div>
+      <div class="trans">מעשה: רב ששת (שהיה עיוור) ישב בבית הכנסת כשבאה השכינה ולא יצא. מלאכי השרת באו להבהילו, והוא אמר לפני ה׳: ריבונו של עולם, מי שאינו במצוקה ומי שכן — מי צריך לפנות מקום למי? והקב״ה אמר למלאכים: הניחו לו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ט א — Megillah 29a:7</span></div>
+      <div class="orig">״וָאֱהִי לָהֶם לְמִקְדָּשׁ מְעַט״, אָמַר רַבִּי יִצְחָק: אֵלּוּ בָּתֵּי כְנֵסִיּוֹת וּבָתֵּי מִדְרָשׁוֹת שֶׁבְּבָבֶל. וְרַבִּי אֶלְעָזָר אָמַר: זֶה בֵּית רַבֵּינוּ שֶׁבְּבָבֶל.</div>
+      <div class="trans">דרשה על הפסוק ״וָאֱהִי לָהֶם לְמִקְדָּשׁ מְעַט״ (מקדש קטן): רבי יצחק אומר אלו בתי הכנסת ובתי המדרש שבבבל, ורבי אלעזר אומר זה בית מדרשו של רב בבבל.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">מגילה כ״ט א — Megillah 29a:8</span></div>
+      <div class="orig">דָּרֵשׁ רָבָא, מַאי דִּכְתִיב: ״ה׳ מָעוֹן אַתָּה הָיִיתָ לָּנוּ״, אֵלּוּ בָּתֵּי כְנֵסִיּוֹת וּבָתֵּי מִדְרָשׁוֹת. אָמַר אַבָּיֵי… כֵּיוָן דִּשְׁמַעִית… ״ה׳ אָהַבְתִּי מְעוֹן בֵּיתֶךָ״, הֲוַאי גָּרֵיסְנָא בְּבֵי כְנִישְׁתָּא.</div>
+      <div class="trans">רבא דרש: ״ה׳ מָעוֹן (מקום מגורים) אַתָּה הָיִיתָ לָּנוּ״ — אלו בתי הכנסת והמדרש. אביי הוסיף: בתחילה למדתי בביתי והתפללתי בבית הכנסת; משהבנתי את דברי דוד ״אָהַבְתִּי מְעוֹן בֵּיתֶךָ״, התחלתי ללמוד תורה בבית הכנסת.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">מגילה כ״ט א — Megillah 29a:9</span></div>
+      <div class="orig">תַּנְיָא, רַבִּי אֶלְעָזָר הַקַּפָּר אוֹמֵר: עֲתִידִין בָּתֵּי כְנֵסִיּוֹת וּבָתֵּי מִדְרָשׁוֹת שֶׁבְּבָבֶל שֶׁיִּקָּבְעוּ בְּאֶרֶץ יִשְׂרָאֵל… וַהֲלֹא דְּבָרִים קַל וָחוֹמֶר…</div>
+      <div class="trans">ברייתא: רבי אלעזר הקפר אומר — עתידים בתי הכנסת והמדרש שבבבל להיעקר ולהיקבע בארץ ישראל. קל וחומר: ומה הר תבור והר כרמל שבאו רק לרגע ללמוד תורה ייקבעו בארץ ישראל — בתי כנסת ומדרש שמלמדים בהם תורה תמיד, על אחת כמה וכמה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">מגילה כ״ט א — Megillah 29a:10</span></div>
+      <div class="orig">דָּרֵשׁ בַּר קַפָּרָא… ״לָמָּה תְּרַצְּדוּן הָרִים גַּבְנוּנִּים״… לָמָּה תִּרְצוּ דִּין עִם סִינַי? כּוּלְּכֶם בַּעֲלֵי מוּמִים אַתֶּם אֵצֶל סִינַי… אָמַר רַב אָשֵׁי: שְׁמַע מִינַּהּ הַאי מַאן דִּיהִיר — בַּעַל מוּם הוּא.</div>
+      <div class="trans">בר קפרא דרש: ״לָמָּה תְּרַצְּדוּן (תריבו) הָרִים גַּבְנוּנִּים״ — בת קול אמרה להרים שדרשו שתינתן עליהם התורה: למה אתם רבים עם סיני? כולכם בעלי מומים לעומתו (גזירה שווה ״גבנונים״—״גִבֵּן״). רב אשי מסיק: למדנו מכאן שאדם יהיר (גאוותן) נחשב בעל מום.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge">סוגיה 2</span> קפנדריא — קיצור דרך בבית כנסת שחרב <span class="ref">Megillah 29a:11-13</span></h2>
+    <div class="lead">המשך משנת בית הכנסת שחרב: אסור לעשותו קַפֶּנְדַּרְיָא (קיצור דרך) — הגמרא מבררת מהו, ומתי מותר.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  M1(["1 · משנה: אין עושים בית כנסת חרב קפנדריא (קיצור דרך)"]):::mishnah
+  Q1{"1א · קושיא: מהו קפנדריא?"}:::question
+  S2["1ב · רבא: קיצור-דרך כמשמע השם"]:::statement
+  S3["2 · ר׳ אבהו: אם היה שביל מתחילה — מותר"]:::statement
+  S4["3 · הנכנס שלא לקצר דרך / להתפלל — מותר לצאת בצד השני"]:::statement
+  M1 -->|הגמרא מבררת| Q1
+  Q1 -->|תירוץ| S2
+  M1 -->|חריג| S3
+  S3 --> S4
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  M1(["1 · אֵין עוֹשִׂין אוֹתוֹ קַפֶּנְדַּרְיָא"]):::mishnah
+  Q1{"1א · מַאי קַפֶּנְדַּרְיָא?"}:::question
+  S2["1ב · קַפֶּנְדַּרְיָא כִּשְׁמָהּ"]:::statement
+  S3["2 · אִם הָיָה שְׁבִיל מֵעִיקָּרָא — מוּתָּר"]:::statement
+  S4["3 · הַנִּכְנָס עַל מְנָת שֶׁלֹּא לַעֲשׂוֹת… מוּתָּר"]:::statement
+  M1 -->|הגמרא מבררת| Q1
+  Q1 -->|תירוץ| S2
+  M1 -->|חריג| S3
+  S3 --> S4
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט א — Megillah 29a:11</span></div>
+      <div class="orig">אֵין עוֹשִׂין אוֹתוֹ קַפֶּנְדַּרְיָא מַאי ״קַפֶּנְדַּרְיָא״? אָמַר רָבָא: קַפֶּנְדַּרְיָא כִּשְׁמָהּ. מַאי כִּשְׁמָהּ? כְּמַאן דְּאָמַר: אַדְּמַקֵּיפְנָא אַדָּרֵי, אֵיעוּל בְּהָא.</div>
+      <div class="trans">המשנה אומרת שאין עושים בית כנסת שחרב קַפֶּנְדַּרְיָא. הגמרא שואלת: מהו ״קפנדריא״? רבא משיב: קיצור-דרך, כמו שמשמע מן השם — כמי שאומר: במקום להקיף את שורת הבתים, אכנס דרך בית זה (״מקיף—דרי״ נשמע כ״קפנדריא״).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ט א — Megillah 29a:12</span></div>
+      <div class="orig">אָמַר רַבִּי אֲבָהוּ: אִם הָיָה שְׁבִיל מֵעִיקָּרָא — מוּתָּר.</div>
+      <div class="trans">רבי אבהו אומר: אם כבר מתחילה (לפני שנבנה בית הכנסת) עבר שם שביל ציבורי — מותר להמשיך לעבור בו כקיצור דרך, שכן כבוד בית הכנסת אינו מבטל את זכות המעבר של הרבים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ט א — Megillah 29a:13</span></div>
+      <div class="orig">אָמַר רַב נַחְמָן בַּר יִצְחָק: הַנִּכְנָס עַל מְנָת שֶׁלֹּא לַעֲשׂוֹת קַפֶּנְדַּרְיָא — מוּתָּר לַעֲשׂוֹתוֹ קַפֶּנְדַּרְיָא. וְאָמַר רַבִּי חֶלְבּוֹ אָמַר רַב הוּנָא: הַנִּכְנָס לְבֵית הַכְּנֶסֶת לְהִתְפַּלֵּל — מוּתָּר…</div>
+      <div class="trans">רב נחמן בר יצחק: מי שנכנס לא לשם קיצור דרך — מותר לו לצאת בצד השני. רבי חלבו בשם רב הונא: מי שנכנס להתפלל — מותר לו לצאת בפתח אחר, וראוי לעשות כן, שנאמר (ביחזקאל) שהבא דרך שער צפון יֵצֵא דרך שער נגב.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge">סוגיה 3</span> עשבים בבית כנסת חרב וכבוד המתים <span class="ref">Megillah 29a:14-16</span></h2>
+    <div class="lead">המשנה: אם עלו עשבים — לא יתלוש מפני עגמת נפש. הגמרא מקשה מברייתא ומיישבת, ואז ברייתא על בית הקברות שמתבררת ״אהייא״.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["1 · משנה: עלו עשבים — לא יתלוש מפני עגמת נפש"]):::mishnah
+  Q1{"1א · מיתיבי: ברייתא — תולש ומניח, ולא מאכיל"}:::question
+  A1["1ב · תירוץ: גם המשנה אסרה רק לתלוש ולהאכיל"]:::answer
+  S2["2 · ברייתא: בבית הקברות אין קלות ראש… מפני כבוד מתים"]:::statement
+  Q2{"3 · קושיא: ׳כבוד מתים׳ מוסב על איזה דין?"}:::question
+  A2["3א · מסקנה: מוסב על הרישא"]:::answer
+  M1 -->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> S2
+  S2 -->|אהייא?| Q2
+  Q2 -->|דחיית הסיפא| A2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["1 · עָלוּ בּוֹ עֲשָׂבִים — לֹא יִתְלוֹשׁ, מִפְּנֵי עׇגְמַת נֶפֶשׁ"]):::mishnah
+  Q1{"1א · וְהָתַנְיָא: תּוֹלֵשׁ וּמַנִּיחַ"}:::question
+  A1["1ב · תּוֹלֵשׁ וּמַאֲכִיל תְּנַן"]:::answer
+  S2["2 · בֵּית הַקְּבָרוֹת… מִפְּנֵי כְּבוֹד מֵתִים"]:::statement
+  Q2{"3 · אַהֵיָיא?"}:::question
+  A2["3א · אֶלָּא אַרֵישָׁא"]:::answer
+  M1 -->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> S2
+  S2 -->|אהייא?| Q2
+  Q2 -->|דחיית הסיפא| A2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט א — Megillah 29a:14</span></div>
+      <div class="orig">עָלוּ בּוֹ עֲשָׂבִים — לֹא יִתְלוֹשׁ, מִפְּנֵי עׇגְמַת נֶפֶשׁ. וְהָתַנְיָא: אֵינוֹ תּוֹלֵשׁ וּמַאֲכִיל, אֲבָל תּוֹלֵשׁ וּמַנִּיחַ! כִּי תְּנַן נָמֵי מַתְנִיתִין — תּוֹלֵשׁ וּמַאֲכִיל תְּנַן.</div>
+      <div class="trans">המשנה: אם עלו עשבים בבית כנסת שחרב — לא יתלוש אותם, מפני עגמת הנפש (כדי שיזכרו לתקנו). הגמרא מקשה מברייתא: אסור לתלוש ולהאכיל לבהמה, אך מותר לתלוש ולהשאיר! ומתרצת: גם המשנה אסרה רק לתלוש ולהאכיל — אבל לתלוש ולהשאיר מותר.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ט א — Megillah 29a:15</span></div>
+      <div class="orig">תָּנוּ רַבָּנַן: בֵּית הַקְּבָרוֹת, אֵין נוֹהֲגִין בָּהֶן קַלּוּת רֹאשׁ… וְאֵין מְלַקְּטִין בָּהֶן עֲשָׂבִים. וְאִם לִיקֵּט — שׂוֹרְפָן בִּמְקוֹמָן, מִפְּנֵי כְּבוֹד מֵתִים.</div>
+      <div class="trans">ברייתא: בבית הקברות אין נוהגים קלות ראש, אין מרעים בהמה, אין מעבירים אמת מים, ואין מלקטים עשבים; ואם ליקט — שורפם במקומם, מפני כבוד המתים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ט א — Megillah 29a:16</span></div>
+      <div class="orig">אַהֵיָיא? אִילֵּימָא אַסֵּיפָא — כֵּיוָן שֶׁשּׂוֹרְפָן בִּמְקוֹמָן מַאי כְּבוֹד מֵתִים אִיכָּא? אֶלָּא אַרֵישָׁא.</div>
+      <div class="trans">קושיא: על איזה דין מוסב הטעם ״מפני כבוד מתים״? אם נאמר על הסיפא (ששורפם במקומם) — הרי כיוון ששורפים בצנעה במקום, איזה כבוד מתים יש בכך? אלא ודאי הטעם מוסב על הרישא (איסור קלות ראש).</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge">סוגיה 4</span> משנה: ארבע פרשיות אדר <span class="ref">Megillah 29a:17-19</span></h2>
+    <div class="lead">פתיחת פרק חדש: ראש חודש אדר שחל בשבת קוראים פרשת שקלים, ואחריה זכור, פרה, החודש — וכללי ההפסקה והקריאות המיוחדות.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["1 · משנה: ר״ח אדר בשבת — קוראים שקלים; חל באמצע השבוע — מקדימים"]):::mishnah
+  M2(["2 · בשנייה זכור, בשלישית פרה, ברביעית החודש, בחמישית חוזרים לסדר"]):::mishnah
+  M3(["3 · לכל אלו מפסיקים: ראשי חודשים, חנוכה, פורים, תעניות, מעמדות, יום הכיפורים"]):::mishnah
+  M1 --> M2 --> M3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["1 · רֹאשׁ חֹדֶשׁ אֲדָר שֶׁחָל… קוֹרִין בְּפָרָשַׁת שְׁקָלִים"]):::mishnah
+  M2(["2 · בַּשְּׁנִיָּה ׳זָכוֹר׳, בַּשְּׁלִישִׁית פָּרָה, בָּרְבִיעִית ׳הַחוֹדֶשׁ׳, בַּחֲמִישִׁית חוֹזְרִין"]):::mishnah
+  M3(["3 · לַכֹּל מַפְסִיקִין: בְּרָאשֵׁי חֳדָשִׁים, בַּחֲנוּכָּה וּבְפוּרִים…"]):::mishnah
+  M1 --> M2 --> M3
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט א — Megillah 29a:17</span></div>
+      <div class="orig">מַתְנִי׳ רֹאשׁ חֹדֶשׁ אֲדָר שֶׁחָל לִהְיוֹת בַּשַּׁבָּת, קוֹרִין בְּפָרָשַׁת שְׁקָלִים. חָל לִהְיוֹת בְּתוֹךְ הַשַּׁבָּת — מַקְדִּימִין לְשֶׁעָבַר, וּמַפְסִיקִין לְשַׁבָּת אַחֶרֶת.</div>
+      <div class="trans">משנה: כשראש חודש אדר חל בשבת — קוראים באותה שבת בפרשת שקלים. אם חל באמצע השבוע — מקדימים את הקריאה לשבת הקודמת, ומפסיקים (אין קריאה מיוחדת) בשבת שלאחריה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ט א — Megillah 29a:18</span></div>
+      <div class="orig">בַּשְּׁנִיָּה ״זָכוֹר״. בַּשְּׁלִישִׁית פָּרָה אֲדוּמָּה. בָּרְבִיעִית ״הַחוֹדֶשׁ הַזֶּה לָכֶם״. בַּחֲמִישִׁית חוֹזְרִין לִכְסִדְרָן.</div>
+      <div class="trans">בשבת השנייה (לפני פורים) קוראים ״זכור״ (פרשת מחיית עמלק); בשלישית פרשת פרה אדומה; ברביעית ״החודש הזה לכם״ (קרבן פסח); ובחמישית חוזרים לסדר הקריאה הרגיל.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ט א — Megillah 29a:19</span></div>
+      <div class="orig">לַכֹּל מַפְסִיקִין: בְּרָאשֵׁי חֳדָשִׁים, בַּחֲנוּכָּה וּבְפוּרִים, בְּתַעֲנִיּוֹת וּבְמַעֲמָדוֹת, וּבְיוֹם הַכִּפּוּרִים.</div>
+      <div class="trans">לכל הימים המיוחדים מפסיקים את סדר הקריאה הרגיל וקוראים קריאה של היום: בראשי חודשים, בחנוכה ובפורים, בתעניות ובמעמדות (משמרות אנשי המעמד), וביום הכיפורים.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+    <h2><span class="badge">סוגיה 5</span> למה משמיעים על השקלים באחד באדר <span class="ref">Megillah 29a:20-29b:6</span></h2>
+    <div class="lead">הגמרא מביאה משנה משקלים, שואלת מניין מקדימים את ההשמעה על השקלים, ובוררת לפי מי נשנתה משנתנו.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["1-2 · משנה (שקלים): באחד באדר משמיעים על השקלים ועל הכלאיים"]:::statement
+  Q1{"3 · קושיא: על הכלאיים מובן, אך על השקלים מניין?"}:::question
+  A1["4 · ר׳ טבי: ׳חדש והבא קרבן מתרומה חדשה׳ — מתחילים בניסן"]:::answer
+  A2["5 · ולכן מקדימים וקוראים באחד באדר כדי שיביאו שקלים"]:::answer
+  Q2{"6 · קושיא: כמאן? לא כרשב״ג שאמר שתי שבתות"}:::question
+  A3["7 · תירוץ: אפילו כרשב״ג — משום השולחנות שיושבים בט״ו"]:::answer
+  S1 -->|הגמרא שואלת| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> A2
+  A2 -->|קושיא: לפי מי| Q2
+  Q2 -->|תירוץ| A3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["1-2 · בְּאֶחָד בַּאֲדָר מַשְׁמִיעִין עַל הַשְּׁקָלִים… וְעַל הַכִּלְאַיִם"]:::statement
+  Q1{"3 · בִּשְׁלָמָא עַל הַכִּלְאַיִם… אֶלָּא עַל הַשְּׁקָלִים מְנָלַן?"}:::question
+  A1["4 · חַדֵּשׁ וְהָבֵא קׇרְבָּן מִתְּרוּמָה חֲדָשָׁה"]:::answer
+  A2["5 · קָדְמִינַן וְקָרֵינַן בְּאֶחָד בַּאֲדָר"]:::answer
+  Q2{"6 · כְּמַאן — דְּלָא כְּרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל"}:::question
+  A3["7 · אֲפִילּוּ תֵּימָא רשב״ג… מִשּׁוּם שׁוּלְחָנוֹת"]:::answer
+  S1 -->|הגמרא שואלת| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> A2
+  A2 -->|קושיא: לפי מי| Q2
+  Q2 -->|תירוץ| A3
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט א — Megillah 29a:20</span></div>
+      <div class="orig">גְּמָ׳ תְּנַן הָתָם: בְּאֶחָד בַּאֲדָר מַשְׁמִיעִין עַל הַשְּׁקָלִים,</div>
+      <div class="trans">גמרא: שנינו במשנה (במסכת שקלים): באחד באדר מַשְׁמיעים (מכריזים בציבור) על איסוף מחצית השקל, שממנו ממומנים קרבנות הציבור בשנה הבאה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:1</span></div>
+      <div class="orig">וְעַל הַכִּלְאַיִם.</div>
+      <div class="trans">(המשך המשנה:) ובאותו יום אף מכריזים על הצורך לעקור כלאיים שצמחו בשדות.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:2</span></div>
+      <div class="orig">בִּשְׁלָמָא עַל הַכִּלְאַיִם — דִּזְמַן זְרִיעָה הִיא, אֶלָּא עַל הַשְּׁקָלִים מְנָלַן?</div>
+      <div class="trans">קושיא: ניחא ההכרזה על הכלאיים, שכן תחילת אדר היא עונת הזריעה (וכבר ניכרים כלאיים). אבל ההכרזה על השקלים — מניין שיש לעשותה דווקא בזמן הזה?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:3</span></div>
+      <div class="orig">אָמַר רַבִּי טָבִי אָמַר רַבִּי יֹאשִׁיָּה, דְּאָמַר קְרָא: ״זֹאת עוֹלַת חוֹדֶשׁ בְּחׇדְשׁוֹ״, אָמְרָה תּוֹרָה: חַדֵּשׁ וְהָבֵא קׇרְבָּן מִתְּרוּמָה חֲדָשָׁה.</div>
+      <div class="trans">רבי טבי בשם רבי יאשיה: הפסוק אומר ״זֹאת עוֹלַת חוֹדֶשׁ בְּחׇדְשׁוֹ״ — התורה מורה: יש חודש שבו צריך לחדש ולהביא את הקרבנות מ״תרומה חדשה״ (כסף השקלים שנאסף לאותה שנה).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:4</span></div>
+      <div class="orig">וְכֵיוָן דִּבְנִיסָן בָּעֵי אַקְרוֹבֵי מִתְּרוּמָה חֲדָשָׁה, קָדְמִינַן וְקָרֵינַן בְּאֶחָד בַּאֲדָר, כִּי הֵיכִי דְּלַיְתוֹ שְׁקָלִים לַמִּקְדָּשׁ.</div>
+      <div class="trans">וכיוון שמניסן צריך כבר להקריב מהתרומה החדשה, מקדימים ומכריזים באחד באדר — חודש לפני כן — כדי שיספיקו להביא את השקלים למקדש בזמן.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:5</span></div>
+      <div class="orig">כְּמַאן — דְּלָא כְּרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל. דְּאִי רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל, הָאָמַר שְׁתֵּי שַׁבָּתוֹת… שׁוֹאֲלִין בְּהִלְכוֹת הַפֶּסַח קוֹדֶם לְפֶסַח שְׁלֹשִׁים יוֹם…</div>
+      <div class="trans">קושיא: לפי שיטת מי נשנתה המשנה? לא כרבן שמעון בן גמליאל; שכן אם כמותו — הרי הוא סובר שדי בשתי שבתות הכנה (כפי שאמר לגבי הלכות הפסח), ולא היה צריך להקדים עד אחד באדר.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:6</span></div>
+      <div class="orig">אֲפִילּוּ תֵּימָא רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל, כֵּיוָן דְּאָמַר מָר: בַּחֲמִשָּׁה עָשָׂר בּוֹ שׁוּלְחָנוֹת יוֹשְׁבִין בַּמְּדִינָה וּבְעֶשְׂרִים וַחֲמִשָּׁה יוֹשְׁבִין בַּמִּקְדָּשׁ — מִשּׁוּם שׁוּלְחָנוֹת קָדְמִינַן וְקָרֵינַן.</div>
+      <div class="trans">תירוץ: אפשר אפילו לומר שהמשנה כרשב״ג; שכן אמר מר שבט״ו באדר מציבים שולחנות לגביית השקלים במדינה (בערים) ובכ״ה במקדש — ומשום השולחנות שכבר מט״ו, מקדימים את הקריאה ומודיעים עליהם כבר באחד באדר.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-6">
+    <h2><span class="badge">סוגיה 6</span> מהי פרשת שקלים — רב מול שמואל <span class="ref">Megillah 29b:7-21</span></h2>
+    <div class="lead">מחלוקת רב (״צו את קרבני לחמי״) ושמואל (״כי תשא״) מהי פרשת שקלים; שורת קושיות ויישובים, ולבסוף ברייתא כשמואל.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · מאי פרשת שקלים?"}:::question
+  R["1א · רב: ׳צו… את קרבני לחמי׳"]:::statement
+  SH["1ב · שמואל: ׳כי תשא׳"]:::statement
+  Q2{"2 · קושיא לרב: שם לא כתובים שקלים"}:::question
+  A2["2א · תירוץ: כדר׳ טבי (השקלים לקרבנות)"]:::answer
+  Q3{"3 · קושיא לשמואל: שם לא כתובים קרבנות"}:::question
+  A3["4 · תירוץ: כדרב יוסף — שלוש תרומות"]:::answer
+  Q4{"5-6 · קושיא: מה שונה ר״ח זה משאר ראשי חודשים?"}:::question
+  A4["5א · לרב: ׳כי תשא׳ שונה מהרגיל"]:::answer
+  A5["6-8 · לרב: כולם בשל ר״ח / לסדר פרשיות או הפטרות — חלוקה שלוש-וארבע"]:::answer
+  Q5{"9 · מיתיבי: מפטירים ביהוידע הכהן"}:::question
+  A6["9-10 · תירוץ: לשתי הדעות מתאים"]:::answer
+  Q6{"11 · מיתיבי: קורין וכופלין כשהפרשה סמוכה"}:::question
+  A7["12-13 · תירוץ: לרב — לבני מערב בקריאת תלת שנין"]:::answer
+  C1["14 · ברייתא כשמואל: קורין ׳כי תשא׳"]:::conclusion
+  Q1 -->|מחלוקת| R
+  Q1 -->|מחלוקת| SH
+  R --> Q2
+  Q2 -->|תירוץ| A2
+  SH --> Q3
+  Q3 -->|תירוץ| A3
+  A2 --> Q4
+  A3 --> Q4
+  Q4 -->|לשמואל| A4
+  Q4 -->|לרב| A5
+  A4 --> Q5
+  A5 --> Q5
+  Q5 -->|תירוץ| A6
+  A6 --> Q6
+  Q6 -->|תירוץ| A7
+  A7 --> C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · מַאי פָּרָשַׁת שְׁקָלִים?"}:::question
+  R["1א · רַב אָמַר: ׳צַו… אֶת קׇרְבָּנִי לַחְמִי׳"]:::statement
+  SH["1ב · וּשְׁמוּאֵל אָמַר: ׳כִּי תִשָּׂא׳"]:::statement
+  Q2{"2 · הָכָא מִידֵּי שְׁקָלִים כְּתִיבִי?"}:::question
+  A2["2א · אִין, טַעְמָא… כִּדְרַבִּי טָבִי"]:::answer
+  Q3{"3 · קׇרְבָּנוֹת מִי כְּתִיבִי? לָאֲדָנִים כְּתִיבִי"}:::question
+  A3["4 · כִּדְתָנֵי רַב יוֹסֵף: שָׁלֹשׁ תְּרוּמוֹת הֵן"]:::answer
+  Q4{"5-6 · דְּשָׁנֵי הַאי ר״ח מִשְּׁאָר רָאשֵׁי חֳדָשִׁים?"}:::question
+  A4["5א · הַיְינוּ דְּשָׁנֵי הַאי רֹאשׁ חֹדֶשׁ"]:::answer
+  A5["6-8 · כּוּלְּהוּ בִּדְרֹאשׁ חוֹדֶשׁ / לְסֵדֶר פָּרָשִׁיּוֹת אוֹ הַפְטָרוֹת — תְּלָתָא וְאַרְבְּעָה"]:::answer
+  Q5{"9 · מֵיתִיבִי: וּמַפְטִירִין בִּיהוֹיָדָע הַכֹּהֵן"}:::question
+  A6["9-10 · דָּמֵי / כִּדְרַבִּי טָבִי"]:::answer
+  Q6{"11 · מֵיתִיבִי: קוֹרִין אוֹתָהּ וְכוֹפְלִין אוֹתָהּ"}:::question
+  A7["12-13 · לִבְנֵי מַעְרְבָא דְּמַסְּקִי בִּתְלָת שְׁנִין"]:::answer
+  C1["14 · תַּנְיָא כְּווֹתֵיהּ דִּשְׁמוּאֵל: קוֹרִין ׳כִּי תִשָּׂא׳"]:::conclusion
+  Q1 -->|מחלוקת| R
+  Q1 -->|מחלוקת| SH
+  R --> Q2
+  Q2 -->|תירוץ| A2
+  SH --> Q3
+  Q3 -->|תירוץ| A3
+  A2 --> Q4
+  A3 --> Q4
+  Q4 -->|לשמואל| A4
+  Q4 -->|לרב| A5
+  A4 --> Q5
+  A5 --> Q5
+  Q5 -->|תירוץ| A6
+  A6 --> Q6
+  Q6 -->|תירוץ| A7
+  A7 --> C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:7</span></div>
+      <div class="orig">מַאי פָּרָשַׁת שְׁקָלִים? רַב אָמַר: ״צַו אֶת בְּנֵי יִשְׂרָאֵל וְאָמַרְתָּ אֲלֵיהֶם אֶת קׇרְבָּנִי לַחְמִי״. וּשְׁמוּאֵל אָמַר: ״כִּי תִשָּׂא״.</div>
+      <div class="trans">מהי פרשת שקלים הנקראת? מחלוקת: רב אומר שזו פרשת ״צַו… אֶת קׇרְבָּנִי לַחְמִי״ (פרשת התמיד והמוספים), ושמואל אומר שזו פרשת ״כִּי תִשָּׂא״ (שבה מצוות מחצית השקל).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:8</span></div>
+      <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר ״כִּי תִשָּׂא״, הַיְינוּ דְּקָרֵי לַהּ פָּרָשַׁת שְׁקָלִים… אֶלָּא לְמַאן דְּאָמַר ״אֶת קׇרְבָּנִי לַחְמִי״, הָכָא מִידֵּי ״שְׁקָלִים״ כְּתִיבִי הָתָם? אִין, טַעְמָא מַאי — כִּדְרַבִּי טָבִי.</div>
+      <div class="trans">קושיא לרב: לשמואל מובן שקוראים לה ״פרשת שקלים״, שהרי בה כתובים שקלים. אך לרב — בפרשת ״קרבני לחמי״ אין כלל אזכור של שקלים! ומיישבים: אכן נכון, אך הטעם לקראה הוא כדברי רבי טבי (שהשקלים נאספים לצורך אותם קרבנות).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:9</span></div>
+      <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר ״צַו אֶת בְּנֵי יִשְׂרָאֵל״ — מִשּׁוּם דִּכְתִיבִי ״קׇרְבָּנוֹת״ הָתָם… אֶלָּא לְמַאן דְּאָמַר ״כִּי תִשָּׂא״, ״קׇרְבָּנוֹת״ מִי כְּתִיבִי? שְׁקָלִים לָאֲדָנִים כְּתִיבִי!</div>
+      <div class="trans">קושיא לשמואל: לרב מובן שקוראים ״צו… קרבני״, שהרי שם כתובים הקרבנות (כדר׳ טבי). אך לשמואל — בפרשת ״כי תשא״ אין כלל קרבנות; השקלים שם הם שקלי האדנים (לבניין המשכן), ולא שקלים לקרבנות!</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:10</span></div>
+      <div class="orig">כִּדְתָנֵי רַב יוֹסֵף: שָׁלֹשׁ תְּרוּמוֹת הֵן. שֶׁל מִזְבֵּחַ לַמִּזְבֵּחַ, וְשֶׁל אֲדָנִים לָאֲדָנִים, וְשֶׁל בֶּדֶק הַבַּיִת לְבֶדֶק הַבַּיִת.</div>
+      <div class="trans">תירוץ כדברי רב יוסף: שלוש תרומות (גביות שקלים) נזכרות בפרשה — של מזבח (לקרבנות), של אדנים (לבניין), ושל בדק הבית (לתחזוקה). לכן גם פרשת ״כי תשא״ מתאימה כפרשת שקלים, שכן מדובר בה במפורש בגביית השקלים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:11</span></div>
+      <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר ״כִּי תִשָּׂא״, הַיְינוּ דְּשָׁנֵי הַאי רֹאשׁ חֹדֶשׁ מִשְּׁאָר רָאשֵׁי חֳדָשִׁים,</div>
+      <div class="trans">קושיא: לשמואל מובן מה שונה ראש חודש אדר זה משאר ראשי חודשים שחלים בשבת — שכן קוראים בו פרשה אחרת (״כי תשא״) ולא את פרשת ראש חודש הרגילה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:12</span></div>
+      <div class="orig">אֶלָּא לְמַאן דְּאָמַר ״צַו אֶת קׇרְבָּנִי״, מַאי שָׁנֵי? שָׁנֵי, דְּאִילּוּ רָאשֵׁי חֳדָשִׁים קָרוּ שִׁיתָּא בְּעִנְיָינָא דְיוֹמָא וְחַד בִּדְרֹאשׁ חוֹדֶשׁ, וְאִילּוּ הָאִידָּנָא — כּוּלְּהוּ בִּדְרֹאשׁ חוֹדֶשׁ.</div>
+      <div class="trans">לרב יש לשאול: מה שונה? (הרי קוראים אותה פרשה תמיד). תירוץ: כן יש הבדל — בשאר ראשי חודשים ששה קוראים בפרשת השבוע ואחד בפרשת ראש חודש, ואילו עכשיו (בר״ח אדר) כל השבעה קוראים בפרשת ראש חודש.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:13</span></div>
+      <div class="orig">הָנִיחָא לְמַאן דְּאָמַר לְסֵדֶר פָּרָשִׁיּוֹת הוּא חוֹזֵר.</div>
+      <div class="trans">תירוץ זה מתאים לדעה שהמשנה ״בחמישית חוזרים לכסדרן״ מתכוונת שחוזרים לסדר פרשיות התורה הרגיל — כלומר שבארבע השבתות לא קראו כלל את פרשת השבוע, ולכן כל השבעה קראו בפרשה המיוחדת.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:14</span></div>
+      <div class="orig">אֶלָּא לְמַאן דְּאָמַר לְסֵדֶר הַפְטָרוֹת הוּא חוֹזֵר, וּפָרַשְׁתָּא דְיוֹמָא קָרֵינַן, מַאי שָׁנֵי?</div>
+      <div class="trans">קושיא: אבל לדעה שחוזרים רק לסדר ההפטרות (ובארבע השבתות כן קראו גם את פרשת השבוע) — מה ההבדל בין ר״ח אדר לשאר ראשי חודשים?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:15</span></div>
+      <div class="orig">שָׁנֵי, דְּאִילּוּ רָאשֵׁי חֳדָשִׁים קָרוּ שִׁיתָּא בְּעִנְיָינָא דְיוֹמָא וְחַד קָרֵי בִּדְרֹאשׁ חוֹדֶשׁ, וְאִילּוּ הָאִידָּנָא — קָרוּ תְּלָתָא בְּעִנְיָינָא דְיוֹמָא, וְאַרְבְּעָה קָרוּ בִּדְרֹאשׁ חוֹדֶשׁ.</div>
+      <div class="trans">תירוץ: יש הבדל — בשאר ראשי חודשים ששה קוראים בפרשת השבוע ואחד בשל ראש חודש, ואילו עכשיו (בר״ח אדר) שלושה קוראים בפרשת השבוע וארבעה בשל ראש חודש.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:16</span></div>
+      <div class="orig">מֵיתִיבִי: רֹאשׁ חֹדֶשׁ אֲדָר שֶׁחָל לִהְיוֹת בַּשַּׁבָּת קוֹרִין בְּפָרָשַׁת שְׁקָלִים, וּמַפְטִירִין בִּיהוֹיָדָע הַכֹּהֵן. בִּשְׁלָמָא לְמַאן דְּאָמַר ״כִּי תִשָּׂא״… דְּדָמֵי לֵיהּ, דִּכְתִיב: ״כֶּסֶף נַפְשׁוֹת עֶרְכּוֹ״,</div>
+      <div class="trans">מיתיבי (קושיא מברייתא): כשר״ח אדר חל בשבת קוראים פרשת שקלים ומפטירים בעניין יהוידע הכהן. לשמואל מובן — שכן ההפטרה (העוסקת בכספי המקדש, ״כֶּסֶף נַפְשׁוֹת עֶרְכּוֹ״) דומה בתוכנה לקריאת ״כי תשא״.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:17</span></div>
+      <div class="orig">אֶלָּא לְמַאן דְּאָמַר ״אֶת קׇרְבָּנִי לַחְמִי״, מִי דָּמֵי? דָּמֵי, כִּדְרַבִּי טָבִי.</div>
+      <div class="trans">אבל לרב, שהפרשה היא ״קרבני לחמי״ — האם ההפטרה דומה לה? תשובה: כן דומה, כדברי רבי טבי (שהקרבנות נקנים מכספי השקלים, וכך גם ההפטרה עוסקת בכסף המקדש).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:18</span></div>
+      <div class="orig">מֵיתִיבִי: חָל לִהְיוֹת בַּפָּרָשָׁה הַסְּמוּכָה לָהּ, בֵּין מִלְּפָנֶיהָ וּבֵין מִלְּאַחֲרֶיהָ — קוֹרִין אוֹתָהּ וְכוֹפְלִין אוֹתָהּ.</div>
+      <div class="trans">מיתיבי: אם ר״ח אדר חל בשבת שפרשת השבוע סמוכה לפרשת שקלים (בין לפניה בין לאחריה) — קוראים אותה (כפרשת שקלים) וגם כופלים אותה (פעם נוספת כפרשת השבוע).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:19-20</span></div>
+      <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר ״כִּי תִשָּׂא״ הַיְינוּ דְּמִתְרְמֵי בְּהָהוּא זִימְנָא. אֶלָּא לְמַאן דְּאָמַר ״צַו ... אֶת קׇרְבָּנִי״, מִי מִתְרְמֵי בְּהָהוּא זִימְנָא? אִין — לִבְנֵי מַעְרְבָא דְּמַסְּקִי לִדְאוֹרָיְיתָא בִּתְלָת שְׁנִין.</div>
+      <div class="trans">לשמואל מובן — ״כי תשא״ אכן נקראת בערך בזמן הזה בסדר הרגיל, ולכן יכולה ״להזדמן״ סמוכה. אבל לרב — האם ״קרבני לחמי״ נקראת אז? תשובה: כן, אצל בני ארץ ישראל (״בני מערבא״) שמשלימים את התורה במחזור של שלוש שנים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:21</span></div>
+      <div class="orig">תַּנְיָא כְּווֹתֵיהּ דִּשְׁמוּאֵל: רֹאשׁ חֹדֶשׁ אֲדָר שֶׁחָל לִהְיוֹת בְּשַׁבָּת, קוֹרִין ״כִּי תִשָּׂא״ וּמַפְטִירִין בִּיהוֹיָדָע הַכֹּהֵן.</div>
+      <div class="trans">מסקנה: שנינו ברייתא כדעת שמואל — ר״ח אדר שחל בשבת, קוראים ״כי תשא״ ומפטירים בעניין יהוידע הכהן.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-7">
+    <h2><span class="badge">סוגיה 7</span> שלוש ספרי תורה בר״ח אדר/טבת בשבת <span class="ref">Megillah 29b:22-24</span></h2>
+    <div class="lead">ר׳ יצחק נפחא: מוציאים שלוש ספרי תורה; הגמרא מסבירה למה צריך ללמד את שני המקרים (אדר וטבת).</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["1 · ר׳ יצחק נפחא: ר״ח אדר/טבת בשבת — שלוש ספרי תורה"]:::statement
+  S2["2 · וצריכא — צריך ללמד את שני המקרים"]:::statement
+  Q1{"3 · קושיא: יאמר רק אדר ויילמד טבת מאליו"}:::question
+  A1["3א · תירוץ: אחד נלמד מכלל חבירו"]:::answer
+  S1 --> S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["1 · מוֹצִיאִין שָׁלֹשׁ תּוֹרוֹת"]:::statement
+  S2["2 · וּצְרִיכָא"]:::statement
+  Q1{"3 · וְלֵימָא הָא וְלָא בָּעֲיָא הָךְ"}:::question
+  A1["3א · חֲדָא מִכְּלַל חֲבֶירְתָּהּ אִיתְּמַר"]:::answer
+  S1 --> S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:22</span></div>
+      <div class="orig">אָמַר רַבִּי יִצְחָק נַפָּחָא: רֹאשׁ חֹדֶשׁ אֲדָר שֶׁחָל לִהְיוֹת בַּשַּׁבָּת — מוֹצִיאִין שָׁלֹשׁ תּוֹרוֹת… אֶחָד בְּעִנְיָינוֹ שֶׁל יוֹם, וְאֶחָד בְּשֶׁל רֹאשׁ חֹדֶשׁ, וְאֶחָד בְּ״כִי תִשָּׂא״… [וכן] רֹאשׁ חֹדֶשׁ טֵבֵת… אֶחָד… בַּחֲנוּכָּה.</div>
+      <div class="trans">רבי יצחק נפחא: ר״ח אדר שחל בשבת — מוציאים שלוש ספרי תורה: באחת פרשת השבוע, בשנייה פרשת ראש חודש, ובשלישית ״כי תשא״ (שקלים). וכן ר״ח טבת (שחל בחנוכה) בשבת — שלוש: פרשת השבוע, ראש חודש, וחנוכה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:23</span></div>
+      <div class="orig">וּצְרִיכָא, דְּאִי אִיתְּמַר בְּהָא — בְּהָא קָאָמַר רַבִּי יִצְחָק, אֲבָל בְּהָךְ — כְּרַב סְבִירָא לֵיהּ… וּבִשְׁתֵּי תוֹרוֹת סַגִּי, קָא מַשְׁמַע לַן.</div>
+      <div class="trans">וצריך את שני המקרים: אילו נאמר רק על טבת, היינו חושבים שדווקא שם צריך שלוש, אבל באדר אולי סובר ר׳ יצחק כרב (שפרשת שקלים היא ״קרבני לחמי״) — ואז די בשתי ספרי תורה (כי אותה פרשה משמשת גם לראש חודש וגם לשקלים). לכן השמיענו שגם באדר צריך שלוש.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:24</span></div>
+      <div class="orig">וְלֵימָא הָא וְלָא בָּעֲיָא הָךְ! חֲדָא מִכְּלַל חֲבֶירְתָּהּ אִיתְּמַר.</div>
+      <div class="trans">קושיא: אם כך, שיאמר רק את מקרה אדר ומקרה טבת יילמד ממילא! תירוץ: אכן כך — ר׳ יצחק אמר במפורש רק על אדר, ומקרה טבת נלמד ממנו בדרך הסקה (״מכלל״ — מתוך כלל דבריו).</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-8">
+    <h2><span class="badge">סוגיה 8</span> ראש חודש טבת בחול — סדר הקריאה והלכה <span class="ref">Megillah 29b:25-28</span></h2>
+    <div class="lead">מחלוקת ר׳ יצחק נפחא ורב דימי בסדר הקריאה כשר״ח טבת חל בחול; שני נימוקים תומכים, ולבסוף נפסקת הלכה.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · ר״ח טבת בחול — סדר הקריאה?"}:::question
+  O1["1א · ר׳ יצחק: שלושה בר״ח ואחד בחנוכה"]:::statement
+  O2["1ב · רב דימי: שלושה בחנוכה ואחד בר״ח"]:::statement
+  P1["2 · ר׳ מני: כר׳ יצחק — תדיר קודם"]:::proof
+  P2["3 · ר׳ אבין: כרב דימי — הר״ח גרם לרביעי"]:::proof
+  C1["4 · מסקנה: הלכה — ראש חודש עיקר"]:::conclusion
+  Q1 -->|מחלוקת| O1
+  Q1 -->|מחלוקת| O2
+  O1 -->|מסתבר| P1
+  O2 -->|מסתבר| P2
+  P1 --> C1
+  P2 --> C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · ר״ח טֵבֵת שֶׁחָל לִהְיוֹת בַּחוֹל"}:::question
+  O1["1א · ר׳ יצחק: תְּלָתָא בְּרֹאשׁ חֹדֶשׁ וְחַד בַּחֲנוּכָּה"]:::statement
+  O2["1ב · רב דימי: תְּלָתָא בַּחֲנוּכָּה וְחַד בְּרֹאשׁ חֹדֶשׁ"]:::statement
+  P1["2 · תָּדִיר וְשֶׁאֵינוֹ תָּדִיר — תָּדִיר קוֹדֵם"]:::proof
+  P2["3 · מִי גָּרַם לָרְבִיעִי — רֹאשׁ חֹדֶשׁ"]:::proof
+  C1["4 · וְהִלְכְתָא… וְרֹאשׁ חֹדֶשׁ עִיקָּר"]:::conclusion
+  Q1 -->|מחלוקת| O1
+  Q1 -->|מחלוקת| O2
+  O1 -->|מסתבר| P1
+  O2 -->|מסתבר| P2
+  P1 --> C1
+  P2 --> C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:25</span></div>
+      <div class="orig">אִיתְּמַר: רֹאשׁ חֹדֶשׁ טֵבֵת שֶׁחָל לִהְיוֹת בַּחוֹל, אָמַר רַבִּי יִצְחָק: קָרוּ תְּלָתָא בְּרֹאשׁ חֹדֶשׁ, וְחַד בַּחֲנוּכָּה. וְרַב דִּימִי דְּמִן חֵיפָא אֲמַר: קָרוּ תְּלָתָא בַּחֲנוּכָּה, וְחַד בְּרֹאשׁ חֹדֶשׁ.</div>
+      <div class="trans">נאמרה מחלוקת אמוראים: ר״ח טבת שחל ביום חול (בחנוכה) — כיצד קוראים? רבי יצחק נפחא: שלושה קוראים בפרשת ראש חודש ואחד בחנוכה. ורב דימי מחיפה: שלושה בחנוכה ואחד בראש חודש.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:26</span></div>
+      <div class="orig">אָמַר רַבִּי מָנִי: כְּווֹתֵיהּ דְּרַבִּי יִצְחָק נַפָּחָא מִסְתַּבְּרָא, דְּתָדִיר וְשֶׁאֵינוֹ תָּדִיר תָּדִיר קוֹדֵם.</div>
+      <div class="trans">רבי מני: מסתבר כר׳ יצחק נפחא, על פי הכלל ״תדיר ושאינו תדיר — תדיר קודם״: קריאת ראש חודש (התדירה יותר) קודמת ולכן זוכה לרוב הקוראים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:27</span></div>
+      <div class="orig">אָמַר רַבִּי אָבִין: כְּווֹתֵיהּ דְּרַב דִּימִי מִסְתַּבְּרָא, מִי גָּרַם לָרְבִיעִי שֶׁיָּבֹא — רֹאשׁ חֹדֶשׁ, הִלְכָּךְ רְבִיעִי בְּרֹאשׁ חֹדֶשׁ בָּעֵי מִיקְרֵי.</div>
+      <div class="trans">רבי אבין: מסתבר כרב דימי — מה גרם שיקרא קורא רביעי (שהרי בשאר ימי חנוכה קוראים רק שלושה)? ראש החודש. לכן ראוי שדווקא הרביעי יקרא בפרשת ראש חודש.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:28</span></div>
+      <div class="orig">מַאי הָוֵי עֲלַהּ? רַב יוֹסֵף אָמַר: אֵין מַשְׁגִּיחִין בְּרֹאשׁ חוֹדֶשׁ, וְרַבָּה אָמַר: אֵין מַשְׁגִּיחִין בַּחֲנוּכָּה, וְהִלְכְתָא: אֵין מַשְׁגִּיחִין בַּחֲנוּכָּה, וְרֹאשׁ חֹדֶשׁ עִיקָּר.</div>
+      <div class="trans">מה נפסק בעניין? רב יוסף: אין רואים בראש חודש את העיקר (שלושה בחנוכה); ורבה: אין רואים בחנוכה את העיקר (שלושה בראש חודש). מסקנה: הלכה — אין רואים בחנוכה את העיקר, וראש חודש עיקר (שלושה בראש חודש ואחד בחנוכה).</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-9">
+    <h2><span class="badge">סוגיה 9</span> כששקלים פוגש את ׳ואתה תצוה׳ / ׳כי תשא׳ <span class="ref">Megillah 29b:29-30a:9</span></h2>
+    <div class="lead">כשפרשת שקלים חלה בשבוע ״ואתה תצוה״ או ב״כי תשא״ עצמה: מחלוקת ר׳ יצחק נפחא ואביי כיצד מחלקים את הקריאה, מיתיבי וברייתא כאביי.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · חל ב׳ואתה תצוה׳: ר׳ יצחק — ששה עד ׳כי תשא׳, אחד משם"]:::statement
+  Q1{"2 · אביי: ייראה כמותחים את הקריאה (אוקומי)"}:::question
+  A1["2א · אביי: ששה עד ׳ועשית׳, ואחד חוזר וקורא שקלים"]:::answer
+  Q2{"3 · מיתיבי: קורין וכופלין — לאביי ניחא, לר׳ יצחק קשה"}:::question
+  A2["3א · ר׳ יצחק: גם לאביי קשה ׳לאחריה׳ — אלא כופלה בשבתות"]:::answer
+  S2["4 · חל ב׳כי תשא׳ עצמה: ר׳ יצחק — ששה מ׳ועשית׳, אחד שקלים"]:::statement
+  Q3{"5 · אביי: ייראה כקורא למפרע"}:::question
+  A3["5א · אביי: ששה עד ׳ויקהל׳, ואחד חוזר וקורא שקלים"]:::answer
+  C1["6 · ברייתא כאביי: קורין אותה וכופלין אותה"]:::conclusion
+  S1 -->|מתקיף אביי| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> Q2
+  Q2 -->|דחיית הקושיא| A2
+  A2 --> S2
+  S2 -->|מתקיף אביי| Q3
+  Q3 -->|תירוץ| A3
+  A3 --> C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · חָל בִּ׳וְאַתָּה תְּצַוֶּה׳: קָרוּ שִׁיתָּא… עַד ׳כִּי תִשָּׂא׳"]:::statement
+  Q1{"2 · אוֹקוֹמֵי הוּא דְּקָא מוֹקְמִי הָתָם"}:::question
+  A1["2א · אֶלָּא… קָרוּ שִׁיתָּא… וְחַד תָּנֵי וְקָרֵי"]:::answer
+  Q2{"3 · מֵיתִיבִי: קוֹרִין אוֹתָהּ וְכוֹפְלִין אוֹתָהּ"}:::question
+  A2{"3א · לְאַחֲרֶיהָ הֵיכִי מַשְׁכַּחַתְּ לַהּ? כּוֹפְלָהּ בְּשַׁבָּתוֹת"}:::answer
+  S2["4 · חָל בְּ׳כִי תִשָּׂא׳ עַצְמָהּ: קָרוּ שִׁיתָּא מִן ׳וְעָשִׂיתָ׳"]:::statement
+  Q3{"5 · מַתְקֵיף אַבָּיֵי: לְמַפְרֵעַ הוּא דְּקָרֵי"}:::question
+  A3["5א · אֶלָּא… קָרוּ שִׁיתָּא עַד ׳וַיַּקְהֵל׳, וְחַד תָּנֵי וְקָרֵי"]:::answer
+  C1["6 · תַּנְיָא כְּווֹתֵיהּ דְּאַבָּיֵי: קוֹרִין אוֹתָהּ וְכוֹפְלִין"]:::conclusion
+  S1 -->|מתקיף אביי| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> Q2
+  Q2 -->|דחיית הקושיא| A2
+  A2 --> S2
+  S2 -->|מתקיף אביי| Q3
+  Q3 -->|תירוץ| A3
+  A3 --> C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ט ב — Megillah 29b:29</span></div>
+      <div class="orig">אִיתְּמַר: חָל לִהְיוֹת בִּ״וְאַתָּה תְּצַוֶּה״, אָמַר רַבִּי יִצְחָק נַפָּחָא: קָרוּ שִׁיתָּא מִ״וְּאַתָּה תְּצַוֶּה״ עַד ״כִּי תִשָּׂא״, וְחַד מִ״כִּי תִשָּׂא״ עַד ״וְעָשִׂיתָ״. אָמַר אַבָּיֵי:</div>
+      <div class="trans">נאמרה מחלוקת: כשפרשת שקלים חלה בשבת שפרשת השבוע היא ״ואתה תצוה״ — ר׳ יצחק נפחא אומר: ששה קוראים מ״ואתה תצוה״ עד ״כי תשא״, ואחד קורא את שקלים מ״כי תשא״ עד ״ועשית״. אמר אביי (להקשות)...</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה ל׳ א — Megillah 30a:1-2</span></div>
+      <div class="orig">אָמְרִי: אוֹקוֹמֵי הוּא דְּקָא מוֹקְמִי הָתָם… אֶלָּא אָמַר אַבָּיֵי: קָרוּ שִׁיתָּא מִ״וְּאַתָּה תְּצַוֶּה״ עַד ״וְעָשִׂיתָ״, וְחַד תָּנֵי וְקָרֵי מִ״כִּי תִשָּׂא״ עַד ״וְעָשִׂיתָ״.</div>
+      <div class="trans">קושיית אביי: לפי ר׳ יצחק יאמרו שרק ״עצרו והעמידו״ (אוקומי) את הקריאה שם, ולא יבינו שהקריאה האחרונה היא לשם שקלים. אלא אמר אביי: ששה קוראים מ״ואתה תצוה״ עד ״ועשית״, ואחד שב וקורא את שקלים מ״כי תשא״ עד ״ועשית״ — והכפילות מדגישה שזו קריאת שקלים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה ל׳ א — Megillah 30a:3-4</span></div>
+      <div class="orig">מֵיתִיבִי: חָל לִהְיוֹת בַּפָּרָשָׁה הַסְּמוּכָה לָהּ, בֵּין מִלְּפָנֶיהָ בֵּין מִלְּאַחֲרֶיהָ — קוֹרִין אוֹתָהּ וְכוֹפְלִין אוֹתָהּ. בִּשְׁלָמָא לְאַבָּיֵי נִיחָא, אֶלָּא לְרַבִּי יִצְחָק נַפָּחָא קַשְׁיָא!</div>
+      <div class="trans">מיתיבי: אם חל בשבת שפרשתה סמוכה לשקלים (לפניה או אחריה) — קוראים אותה וכופלים אותה. לאביי ניחא (שכן הוא מצריך כפילה), אך לר׳ יצחק נפחא — שאינו כופל — קשה!</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה ל׳ א — Megillah 30a:5-6</span></div>
+      <div class="orig">אָמַר לָךְ רַבִּי יִצְחָק נַפָּחָא: וּלְאַבָּיֵי מִי נִיחָא? תִּינַח לְפָנֶיהָ, לְאַחֲרֶיהָ הֵיכִי מַשְׁכַּחַתְּ לַהּ?… אֶלָּא מַאי אִית לָךְ לְמֵימַר: כּוֹפְלָהּ בְּשַׁבָּתוֹת, הָכָא נָמֵי כּוֹפְלָהּ בְּשַׁבָּתוֹת.</div>
+      <div class="trans">תשובת ר׳ יצחק: גם לאביי קשה — ״לפניה״ מובן, אך ״לאחריה״ כיצד תיתכן? אלא בעל כורחך תפרש שמדובר בכפילה בשתי שבתות נפרדות; וכך גם לדעתי (ר׳ יצחק) ״קורין וכופלין״ פירושו בשתי שבתות, ולא בשבת אחת.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">מגילה ל׳ א — Megillah 30a:7</span></div>
+      <div class="orig">חָל לִהְיוֹת בְּ״כִי תִשָּׂא״ עַצְמָהּ, אָמַר רַבִּי יִצְחָק נַפָּחָא: קָרוּ שִׁיתָּא מִן ״וְעָשִׂיתָ״ עַד ״וַיַּקְהֵל״, וְחַד קָרֵי מִ״כִּי תִשָּׂא״ עַד ״וְעָשִׂיתָ״.</div>
+      <div class="trans">מקרה דומה: כשפרשת שקלים חלה בשבת שפרשתה היא ״כי תשא״ עצמה — ר׳ יצחק נפחא: ששה קוראים מ״ועשית״ עד ״ויקהל״ (כל הפרשה בלי הפתיחה), ואחד קורא את שקלים מ״כי תשא״ עד ״ועשית״.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">מגילה ל׳ א — Megillah 30a:8-9</span></div>
+      <div class="orig">מַתְקֵיף לַהּ אַבָּיֵי: הַשְׁתָּא אָמְרִי לְמַפְרֵעַ הוּא דְּקָרֵי! אֶלָּא אָמַר אַבָּיֵי: קָרוּ שִׁיתָּא עַד ״וַיַּקְהֵל״, וְחַד תָּנֵי וְקָרֵי… תַּנְיָא כְּווֹתֵיהּ דְּאַבָּיֵי: חָל לִהְיוֹת בְּ״כִי תִשָּׂא״ עַצְמָהּ — קוֹרִין אוֹתָהּ וְכוֹפְלִין אוֹתָהּ.</div>
+      <div class="trans">אביי מקשה: לפי ר׳ יצחק יאמרו שקוראים למפרע (מהסוף להתחלה)! אלא אביי אומר: ששה קוראים עד ״ויקהל״, ואחד שב וקורא את שקלים מ״כי תשא״ עד ״ועשית״. ומסקנה: ברייתא כדעת אביי — חל ב״כי תשא״ עצמה, קוראים אותה וכופלים אותה.</div>
+    </div>
+  </section>
+
+  <footer>נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</footer>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: { fontFamily: 'Frank Ruhl Libre, Heebo, serif', fontSize: '15px' },
+    flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis', nodeSpacing: 45, rankSpacing: 55 }
+  });
+
+  let _seq = 0;
+  async function renderChart(chart, lang) {
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if (!holder || !target) return;
+    try {
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if (bindFunctions) bindFunctions(target);
+    } catch (e) {
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+  }
+
+  for (const chart of document.querySelectorAll('.chart')) {
+    await renderChart(chart, 'he');
+    const btn = chart.querySelector('.lang-toggle');
+    if (btn && chart.querySelector('.src-ar')) {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.lang === 'he' ? 'ar' : 'he';
+        await renderChart(chart, next);
+        btn.dataset.lang = next;
+        btn.textContent = next === 'he' ? 'הצג ארמית (מקור) ⇄' : 'הצג עברית ⇄';
+      });
+    } else if (btn) {
+      btn.remove();
+    }
+  }
+</script>
+</body>
+</html>

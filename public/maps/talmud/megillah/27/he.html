@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — מגילה כ״ז</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --ink:#1f2937; --muted:#6b7280; --bg:#faf7f0; --card:#ffffff; --border:#e7e2d6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Heebo","Segoe UI",Arial,"Arial Hebrew",sans-serif; line-height:1.7;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 90px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:"Frank Ruhl Libre",Georgia,serif; font-size:2rem; margin:0 0 6px}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{
+    background:#fffbea; border:1px solid var(--conclusion-line); border-radius:12px;
+    padding:14px 18px; margin:18px 0; font-size:1.05rem;
+  }
+  .takeaway b{font-family:"Frank Ruhl Libre",serif}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:"Frank Ruhl Libre","Heebo",serif !important; direction:rtl}
+  .lang-toggle{position:absolute; top:10px; left:10px; z-index:2; cursor:pointer;
+    font-family:"Heebo",sans-serif; font-size:.78rem; color:var(--statement-line);
+    background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .lang-toggle:hover{background:#f3f4ff; border-color:var(--statement-line)}
+  /* overview block */
+  .overview h2{text-align:center}
+  /* per-sugya sections */
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:"Frank Ruhl Libre",serif; margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--statement-line); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:#374151; margin:8px 0 14px}
+  h3{font-family:"Frank Ruhl Libre",serif; color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-right:5px solid var(--statement-line); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--statement-line); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-left:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:"Frank Ruhl Libre",serif; font-size:1.15rem; margin:6px 0 4px}
+  .quote .trans{color:#374151}
+  .quote .trans:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>מפת הסוגיא — מגילה כ״ז</h1>
+    <div class="subtitle">מגילה כ״ז א:ב׳-כ״ח א:כ״א · Megillah 27a:2-28a:21 · מקור: ספריא (William Davidson)</div>
+  </header>
+
+  <div class="takeaway"><b>שורה תחתונה:</b> הדף עוסק בקדושת תשמישי קודש ובכבודם: האם מותר למכור ספר תורה או בית כנסת ולמה צריך להיזהר בכספם, וכיצד נוהגים בכספי צדקה. בסופו מגיעה שרשרת ארוכה של חכמים שמסבירים בזכות מה זכו לאריכות ימים — רובם בזכות יחס של כבוד לבית הכנסת, לחבריהם ולתורה.</div>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--mishnah)"></i>משנה</span>
+    <span><i class="swatch" style="background:var(--statement)"></i>מימרא / דעה</span>
+    <span><i class="swatch" style="background:var(--question)"></i>קושיא / מיתיבי</span>
+    <span><i class="swatch" style="background:var(--answer)"></i>תירוץ / יישוב</span>
+    <span><i class="swatch" style="background:var(--proof)"></i>ראיה / תא שמע</span>
+    <span><i class="swatch" style="background:var(--conclusion)"></i>מסקנה</span>
+  </div>
+
+  <section class="overview"><h2>מפת הדף — מבט-על</h2>
+  <div class="chart">
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  O1["1 · ״בית גדול״ — מקום תורה או תפילה? (מגילה כ״ז.)"]:::statement
+  O2["2 · האם מוכרים ספר תורה ישן לקנות חדש? (מגילה כ״ז.)"]:::question
+  O3["3 · בני העיר שפסקו עליהם צדקה בעיר אחרת (מגילה כ״ז.)"]:::statement
+  O4(["4 · משנה: אין מוכרים של רבים ליחיד (מגילה כ״ז:)"]):::mishnah
+  O5["5 · גמרא: מחלוקת ר׳ מאיר וחכמים (מגילה כ״ז:)"]:::statement
+  O6(["6 · משנה: מכירת בית כנסת על תנאי (מגילה כ״ז:)"]):::mishnah
+  O7["7 · גמרא: ריבית ו״צד אחד בריבית״ (מגילה כ״ז:)"]:::statement
+  O8["8 · הרחקה מארבע אמות של תפילה (מגילה כ״ז:)"]:::statement
+  O9["9 · בזכות מה האריכו חכמים ימים (מגילה כ״ז:-כ״ח.)"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge">סוגיה 1</span> ״בית גדול״ — מקום תורה או מקום תפילה? <span class="ref">Megillah 27a:2-4</span></h2>
+    <div class="lead">בר קפרא דורש את הפסוק על שריפת ירושלים; שני חכמים נחלקים מהו ״בית גדול״, והגמרא מכריעה מי אמר מה.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · בר קפרא: מהו ״בית גדול״ שנשרף?"]:::statement
+  O1["1 · דעה א: מקום שמגדלים בו תורה"]:::statement
+  O2["1 · דעה ב: מקום שמגדלים בו תפילה"]:::statement
+  S2["2 · נימוקי שתי הדעות מן הפסוקים"]:::proof
+  C1["3 · מסקנה: ריב״ל הוא שאמר ״תורה״ (תסתיים)"]:::conclusion
+  S1 -->|מחלוקת| O1
+  S1 -->|מחלוקת| O2
+  O1 --> S2
+  O2 --> S2
+  S2 -->|הכרעה| C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · דָּרַשׁ בַּר קַפָּרָא… ״בֵּית גָּדוֹל״"]:::statement
+  O1["1 · מָקוֹם שֶׁמְּגַדְּלִין בּוֹ תּוֹרָה"]:::statement
+  O2["1 · מָקוֹם שֶׁמְּגַדְּלִין בּוֹ תְּפִלָּה"]:::statement
+  S2["2 · ״יַגְדִּיל תּוֹרָה״ / ״הַגְּדוֹלוֹת אֲשֶׁר עָשָׂה אֱלִישָׁע״"]:::proof
+  C1["3 · תִּסְתַּיֵּים דְּריב״ל… שְׁמַע מִינַּהּ"]:::conclusion
+  S1 -->|מחלוקת| O1
+  S1 -->|מחלוקת| O2
+  O1 --> S2
+  O2 --> S2
+  S2 -->|הכרעה| C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז א — Megillah 27a:2</span></div>
+      <div class="orig">דָּרַשׁ בַּר קַפָּרָא, מַאי דִּכְתִיב: ״וַיִּשְׂרֹף אֶת בֵּית ה׳…״. ״וְאֶת כׇּל בֵּית גָּדוֹל שָׂרַף בָּאֵשׁ״ — רַבִּי יוֹחָנָן וְרַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי, חַד אָמַר: מָקוֹם שֶׁמְּגַדְּלִין בּוֹ תּוֹרָה, וְחַד אָמַר: מָקוֹם שֶׁמְּגַדְּלִין בּוֹ תְּפִלָּה.</div>
+      <div class="trans">בר קפרא דרש את הפסוק שמתאר את שריפת ירושלים. על המילים ״ואת כל בית גדול שרף באש״ נחלקו ר׳ יוחנן ור׳ יהושע בן לוי: אחד אמר שזהו מקום שבו ה״גדל״ — כלומר מתגדלת — תורה (בית המדרש), והשני אמר שזהו מקום שבו מתגדלת תפילה (בית הכנסת).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ז א — Megillah 27a:3</span></div>
+      <div class="orig">מַאן דְּאָמַר תּוֹרָה, דִּכְתִיב: ״ה׳ חָפֵץ לְמַעַן צִדְקוֹ יַגְדִּיל תּוֹרָה וְיַאְדִּיר״. וּמַאן דְּאָמַר תְּפִלָּה, דִּכְתִיב: ״סַפְּרָה נָּא הַגְּדוֹלוֹת אֲשֶׁר עָשָׂה אֱלִישָׁע״, וֶאֱלִישָׁע דַּעֲבַד — בְּרַחֲמֵי הוּא דַּעֲבַד.</div>
+      <div class="trans">הגמרא מבארת את שני הצדדים: מי שאמר ״תורה״ למד מן הפסוק שבו התורה מתוארת כ״גדולה״ (״יגדיל תורה ויאדיר״). ומי שאמר ״תפילה״ למד מן הפסוק על ״הגדולות אשר עשה אלישע״ — והרי מה שעשה אלישע (החיאת הנער) עשה דרך תפילה ורחמים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ז א — Megillah 27a:4</span></div>
+      <div class="orig">תִּסְתַּיֵּים דְּרַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי הוּא דְּאָמַר מָקוֹם שֶׁמְּגַדְּלִין בּוֹ תּוֹרָה, דְּאָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: בֵּית הַכְּנֶסֶת מוּתָּר לַעֲשׂוֹתוֹ בֵּית הַמִּדְרָשׁ. שְׁמַע מִינַּהּ.</div>
+      <div class="trans">מסקנה: אפשר להוכיח שדווקא ר׳ יהושע בן לוי הוא שאמר ״מקום שמגדלים בו תורה״, שהרי הוא אמר במקום אחר שמותר להפוך בית כנסת לבית מדרש — סימן שלדעתו בית המדרש קדוש יותר. אם כן למד מכאן (״שמע מינה״) שהוא בעל הדעה הזו.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge">סוגיה 2</span> האם מוכרים ספר תורה ישן כדי לקנות חדש? <span class="ref">Megillah 27a:5-22</span></h2>
+    <div class="lead">המשנה אסרה למכור דבר קדוש כדי לקנות פחות קדוש; הגמרא שואלת על מכירת ספר תורה ישן בשביל חדש (קדושה שווה), ומביאה שורת ראיות שנדחות, ועד שמגיעה למסקנה. בסופה דין ״מותרי״ הכספים וברייתת דוכסוסיא.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · בעיה (ספק): למכור ס״ת ישן לקנות חדש?"}:::question
+  P1["2 · ראיה מהמשנה: ספרים לא — אבל תורה בתורה כן"]:::proof
+  A1["2 · דחייה: המשנה בדיעבד, השאלה לכתחילה"]:::answer
+  P2["3 · ראיה: כורכים ס״ת במטפחות חומשים"]:::proof
+  P3["4 · דיוק: מטפחות חומשין כן, מטפחות ס״ת לא"]:::proof
+  A2["5 · דחייה: מן הסיפא יוצא ההפך — אין ללמוד"]:::answer
+  P4["6 · ראיה: מניחים ס״ת על גבי ס״ת"]:::proof
+  A3["7 · דחייה: הנחה שונה — אי אפשר אחרת"]:::answer
+  P5["8 · ראיה: רשב״ג — לא ימכור ס״ת ישן לחדש"]:::proof
+  A4["9 · דחייה: שם מחשש פשיעה; כאן החדש כבר כתוב"]:::answer
+  P6["10 · ראיה: ר׳ מאיר — מוכרים ס״ת רק ללמוד וליישא אשה"]:::proof
+  A5["11 · דחייה: תלמוד ואשה שאני; תורה בתורה — לא"]:::answer
+  C1["12 · ברייתא: לא ימכור כלל; רשב״ג — אינו רואה סימן ברכה"]:::conclusion
+  S1["13 · רבא: מותרי מכירה קדושים; מותרי גבייה — מותר"]:::statement
+  Q2{"14 · מיתיבי (אביי): התנו — מותר אף לדוכסוסיא"}:::question
+  Q3{"15 · ניתוח: באיזה מקרה התנאי מועיל?"}:::question
+  A6["16 · יישוב רבא: מכרו והותירו, שבעה טובי העיר התנו"]:::answer
+  S2["17 · מהו ״דוכסוסיא״? (פרשא דמתא — פרש העיר)"]:::statement
+  C2["18 · לקח אביי: השומע ולא יודע פירוש — ישאל"]:::conclusion
+  Q1 -->|תא שמע| P1
+  P1 -.->|דחייה| A1
+  Q1 -->|תא שמע| P2
+  P2 --> P3
+  P3 -.->|דחייה| A2
+  Q1 -->|תא שמע| P4
+  P4 -.->|דחייה| A3
+  Q1 -->|תא שמע| P5
+  P5 -.->|דחייה| A4
+  Q1 -->|תא שמע| P6
+  P6 -.->|דחייה| A5
+  A5 --> C1
+  C1 --> S1
+  S1 -.->|מיתיבי| Q2
+  Q2 --> Q3
+  Q3 -->|תירוץ| A6
+  A6 --> S2
+  S2 --> C2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · אִיבַּעְיָא לְהוּ: מַהוּ לִמְכּוֹר סֵפֶר תּוֹרָה יָשָׁן לִיקַּח חָדָשׁ?"}:::question
+  P1["2 · תָּא שְׁמַע: לֹא יִקְחוּ סְפָרִים — הָא תּוֹרָה בְּתוֹרָה שַׁפִּיר דָּמֵי"]:::proof
+  A1["2 · מַתְנִיתִין דִּיעֲבַד, מִיבַּעְיָא לְכַתְּחִלָּה"]:::answer
+  P2["3 · תָּא שְׁמַע: גּוֹלְלִין סֵפֶר תּוֹרָה בְּמִטְפְּחוֹת חוּמָּשִׁין"]:::proof
+  P3["4 · מִטְפְּחוֹת חוּמָּשִׁין — אִין, מִטְפְּחוֹת ס״ת — לָא"]:::proof
+  A2["5 · אֵימָא סֵיפָא… אֶלָּא לֵיכָּא לְמִישְׁמַע מִינַּהּ"]:::answer
+  P4["6 · תָּא שְׁמַע: מַנִּיחִין סֵפֶר תּוֹרָה עַל גַּבֵּי תּוֹרָה"]:::proof
+  A3["7 · שָׁאנֵי הַנָּחָה, דְּלָא אֶפְשָׁר"]:::answer
+  P5["8 · תָּא שְׁמַע: רשב״ג — לֹא יִמְכּוֹר ס״ת יָשָׁן לִיקַּח חָדָשׁ"]:::proof
+  A4["9 · הָתָם מִשּׁוּם פְּשִׁיעוּתָא; דִּכְתִיב וּמַנַּח לְאִיפְּרוֹקֵי"]:::answer
+  P6["10 · תָּא שְׁמַע: ר׳ מאיר — אֵין מוֹכְרִין ס״ת אֶלָּא לִלְמוֹד וְלִישָּׂא אִשָּׁה"]:::proof
+  A5["11 · שָׁאנֵי תַּלְמוּד… אֲבָל תּוֹרָה בְּתוֹרָה — לָא"]:::answer
+  C1["12 · תָּנוּ רַבָּנַן: לֹא יִמְכּוֹר… אֵינוֹ רוֹאֶה סִימַן בְּרָכָה"]:::conclusion
+  S1["13 · אָמַר רָבָא: מָכְרוּ וְהוֹתִירוּ אֲבָל גָּבוּ וְהוֹתִירוּ — מוּתָּר"]:::statement
+  Q2{"14 · אֵיתִיבֵיהּ אַבָּיֵי: הִתְנוּ — אֲפִילּוּ לְדוּכְסוּסְיָא מוּתָּר"}:::question
+  Q3{"15 · הֵיכִי דָמֵי? טַעְמָא דְּהִתְנוּ, הָא לֹא הִתְנוּ — לָא!"}:::question
+  A6["16 · לְעוֹלָם שֶׁמָּכְרוּ וְהוֹתִירוּ; שִׁבְעָה טוֹבֵי הָעִיר הִתְנוּ"]:::answer
+  S2["17 · מַאי ״דּוּכְסוּסְיָא״? פָּרָשָׁא דְמָתָא"]:::statement
+  C2["18 · הַאי צוּרְבָּא מֵרַבָּנַן… לִישַׁיְּילַהּ"]:::conclusion
+  Q1 -->|תא שמע| P1
+  P1 -.->|דחייה| A1
+  Q1 -->|תא שמע| P2
+  P2 --> P3
+  P3 -.->|דחייה| A2
+  Q1 -->|תא שמע| P4
+  P4 -.->|דחייה| A3
+  Q1 -->|תא שמע| P5
+  P5 -.->|דחייה| A4
+  Q1 -->|תא שמע| P6
+  P6 -.->|דחייה| A5
+  A5 --> C1
+  C1 --> S1
+  S1 -.->|מיתיבי| Q2
+  Q2 --> Q3
+  Q3 -->|תירוץ| A6
+  A6 --> S2
+  S2 --> C2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז א — Megillah 27a:5</span></div>
+      <div class="orig">אֲבָל מָכְרוּ תּוֹרָה לֹא יִקְחוּ סְפָרִים וְכוּ׳. אִיבַּעְיָא לְהוּ: מַהוּ לִמְכּוֹר סֵפֶר תּוֹרָה יָשָׁן לִיקַּח בּוֹ חָדָשׁ? כֵּיוָן דְּלָא מְעַלֵּי לֵיהּ — אָסוּר, אוֹ דִלְמָא: כֵּיוָן דְּלֵיכָּא לְעַלּוֹיֵי עִילּוּיָיא אַחֲרִינָא — שַׁפִּיר דָּמֵי?</div>
+      <div class="trans">המשנה אמרה: אם מכרו ספר תורה אסור לקנות בכסף ספרי נביאים וכתובים (שקדושתם פחותה). נשאלה שאלה (״איבעיא להו״): מה הדין במכירת ספר תורה ישן כדי לקנות בו חדש? מצד אחד, אין כאן העלאה בקדושה — אז אולי אסור; ומצד שני, כיוון שאי אפשר להעלות את ספר התורה לדבר קדוש יותר — אולי מותר.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ז א — Megillah 27a:6</span></div>
+      <div class="orig">תָּא שְׁמַע: אֲבָל מָכְרוּ תּוֹרָה לֹא יִקְחוּ סְפָרִים. סְפָרִים הוּא דְּלָא, הָא תּוֹרָה בְּתוֹרָה — שַׁפִּיר דָּמֵי. מַתְנִיתִין דִּיעֲבַד. כִּי קָא מִיבַּעְיָא לַן, לְכַתְּחִלָּה.</div>
+      <div class="trans">בוא ושמע הוכחה מן המשנה: ״מכרו ספר תורה לא יקחו ספרים״ — דווקא ספרים (נביאים וכתובים) אסור, אבל ספר תורה תמורת ספר תורה מותר. דחייה: המשנה מדברת בדיעבד (אחרי שכבר נמכר), ואילו שאלתנו היא לכתחילה — האם מותר למכור מראש.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ז א — Megillah 27a:7</span></div>
+      <div class="orig">תָּא שְׁמַע: גּוֹלְלִין סֵפֶר תּוֹרָה בְּמִטְפְּחוֹת חוּמָּשִׁין, וְחוּמָּשִׁין בְּמִטְפְּחוֹת נְבִיאִים וּכְתוּבִים. אֲבָל לֹא נְבִיאִים וּכְתוּבִים בְּמִטְפְּחוֹת חוּמָּשִׁין, וְלֹא חוּמָּשִׁין בְּמִטְפְּחוֹת סֵפֶר תּוֹרָה.</div>
+      <div class="trans">בוא ושמע מברייתא: מותר לגלול ספר תורה בבד שמשמש לחומשים (ספר אחד מחמישה חומשי תורה), וחומשים בבד שמשמש לנביאים וכתובים — כי מעלים בקדושה. אבל אסור לגלול נביאים וכתובים בבד של חומשים, וחומשים בבד של ספר תורה — כי זה הורדה בקדושה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ז א — Megillah 27a:8</span></div>
+      <div class="orig">קָתָנֵי מִיהַת: גּוֹלְלִים סֵפֶר תּוֹרָה בְּמִטְפְּחוֹת חוּמָּשִׁין, מִטְפְּחוֹת חוּמָּשִׁין — אִין, מִטְפְּחוֹת סֵפֶר תּוֹרָה — לָא.</div>
+      <div class="trans">בכל אופן הברייתא מלמדת: ״גוללים ספר תורה בבד של חומשים״ — דווקא בבד של חומשים כן, אבל בבד של ספר תורה אחר — לא. מכאן שאסור להשתמש בספר תורה לצורך ספר תורה אחר, וקל וחומר שאסור למכרו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">מגילה כ״ז א — Megillah 27a:9</span></div>
+      <div class="orig">אֵימָא סֵיפָא: וְלֹא חוּמָּשִׁין בְּמִטְפְּחוֹת סֵפֶר תּוֹרָה. הָא תּוֹרָה בְּתוֹרָה — שַׁפִּיר דָּמֵי! אֶלָּא מֵהָא לֵיכָּא לְמִישְׁמַע מִינַּהּ.</div>
+      <div class="trans">דחייה: אמור את הסיפא של הברייתא — ״ולא חומשים בבד של ספר תורה״ — מכאן משמע שדווקא חומשים אסור, אבל ספר תורה תמורת ספר תורה מותר! מכיוון שהדיוקים סותרים זה את זה, אין ללמוד מן הברייתא כלום.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">מגילה כ״ז א — Megillah 27a:10</span></div>
+      <div class="orig">תָּא שְׁמַע: מַנִּיחִין סֵפֶר תּוֹרָה עַל גַּבֵּי תּוֹרָה, וְתוֹרָה עַל גַּבֵּי חוּמָּשִׁין, וְחוּמָּשִׁין עַל גַּבֵּי נְבִיאִים וּכְתוּבִים. אֲבָל לֹא נְבִיאִים וּכְתוּבִים עַל גַּבֵּי חוּמָּשִׁין, וְלֹא חוּמָּשִׁין עַל גַּבֵּי תוֹרָה.</div>
+      <div class="trans">בוא ושמע: מותר להניח ספר תורה על גבי ספר תורה אחר, וספר תורה על גבי חומשים, וחומשים על גבי נביאים וכתובים. אבל לא להפך. מכאן שמשתמשים בספר תורה לצורך ספר תורה אחר — אז גם מכירה צריכה להיות מותרת.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">מגילה כ״ז א — Megillah 27a:11</span></div>
+      <div class="orig">הַנָּחָה קָאָמְרַתְּ? שָׁאנֵי הַנָּחָה, דְּלָא אֶפְשָׁר. דְּאִי לָא תֵּימָא הָכִי, מִיכְרָךְ הֵיכִי כָּרְכִינַן? וְהָא קָא יָתֵיב דַּפָּא אַחַבְרֵיהּ! אֶלָּא כֵּיוָן דְּלָא אֶפְשָׁר — שְׁרֵי. הָכָא נָמֵי, כֵּיוָן דְּלָא אֶפְשָׁר — שְׁרֵי.</div>
+      <div class="trans">דחייה: וכי מהנחה אתה מביא ראיה? הנחה שונה, כי אי אפשר אחרת. שאם לא תאמר כך — איך בכלל גוללים ספר תורה? הרי דף אחד מונח על חברו! אלא כיוון שאין דרך אחרת — מותר. וגם כאן, כיוון שאי אפשר להניח אחרת בארון — מותר. (ולכן אין ללמוד מהנחה לעניין מכירה.)</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">מגילה כ״ז א — Megillah 27a:12</span></div>
+      <div class="orig">תָּא שְׁמַע: דְּאָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן מִשּׁוּם רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל: לֹא יִמְכּוֹר אָדָם סֵפֶר תּוֹרָה יָשָׁן לִיקַּח בּוֹ חָדָשׁ.</div>
+      <div class="trans">בוא ושמע מברייתא: רבה בר בר חנה אמר בשם ר׳ יוחנן בשם רבן שמעון בן גמליאל — אסור לאדם למכור ספר תורה ישן כדי לקנות בו חדש. (כלומר ראיה שהדבר אסור.)</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">מגילה כ״ז א — Megillah 27a:13</span></div>
+      <div class="orig">הָתָם — מִשּׁוּם פְּשִׁיעוּתָא. כִּי קָאָמְרִינַן: כְּגוֹן דִּכְתִיב וּמַנַּח לְאִיפְּרוֹקֵי, מַאי?</div>
+      <div class="trans">דחייה: שם האיסור הוא מחשש פשיעה (רשלנות) — שמא ימכור את הישן ולא יקנה חדש לעולם. אבל אנו שואלים על מקרה שבו החדש כבר כתוב ומונח מוכן להיפדות מיד בכסף — מה הדין אז? (השאלה נשארת.)</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">מגילה כ״ז א — Megillah 27a:14</span></div>
+      <div class="orig">תָּא שְׁמַע, דְּאָמַר רַבִּי יוֹחָנָן מִשּׁוּם רַבִּי מֵאִיר: אֵין מוֹכְרִין סֵפֶר תּוֹרָה אֶלָּא לִלְמוֹד תּוֹרָה וְלִישָּׂא אִשָּׁה.</div>
+      <div class="trans">בוא ושמע: ר׳ יוחנן אמר בשם ר׳ מאיר — אין מוכרים ספר תורה אלא כדי ללמוד תורה או כדי לשאת אישה. (ומדויק: דבר שבקדושה תמורת דבר שבקדושה כתורה מותר — אז גם תורה תמורת תורה.)</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">מגילה כ״ז א — Megillah 27a:15</span></div>
+      <div class="orig">שְׁמַע מִינַּהּ תּוֹרָה בְּתוֹרָה שַׁפִּיר דָּמֵי. דִּלְמָא שָׁאנֵי תַּלְמוּד, שֶׁהַתַּלְמוּד מֵבִיא לִידֵי מַעֲשֶׂה. אִשָּׁה נָמֵי: ״לָא תֹהוּ בְרָאָהּ לָשֶׁבֶת יְצָרָהּ״, אֲבָל תּוֹרָה בְּתוֹרָה — לָא.</div>
+      <div class="trans">לכאורה למד מכאן שתורה תמורת תורה מותר. דחייה: שמא תלמוד תורה שונה, שהרי הלימוד מביא לידי מעשה (קיום המצוות); וגם נישואין מיוחדים, שנאמר ״לא תוהו בראה לשבת יצרה״ (העולם נברא כדי שיהיה מיושב). אבל מכירת ספר תורה סתם תמורת ספר תורה — אולי לא.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">מגילה כ״ז א — Megillah 27a:16</span></div>
+      <div class="orig">תָּנוּ רַבָּנַן: לֹא יִמְכּוֹר אָדָם סֵפֶר תּוֹרָה אַף עַל פִּי שֶׁאֵינוֹ צָרִיךְ לוֹ. יָתֵר עַל כֵּן אָמַר רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל: אֲפִילּוּ אֵין לוֹ מַה יֹּאכַל וּמָכַר סֵפֶר תּוֹרָה אוֹ בִּתּוֹ — אֵינוֹ רוֹאֶה סִימַן בְּרָכָה לְעוֹלָם.</div>
+      <div class="trans">שנו חכמים בברייתא: אל ימכור אדם ספר תורה אפילו אם אינו צריך אותו. יתרה מזו אמר רבן שמעון בן גמליאל: אפילו אין לו מה לאכול ומכר ספר תורה או את בתו (לשפחה) — לעולם אינו רואה סימן ברכה מן הכסף הזה. (מסקנת הסוגיה: ראוי מאוד להישמר ממכירת ספר תורה.)</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">מגילה כ״ז א — Megillah 27a:17</span></div>
+      <div class="orig">וְכֵן בְּמוֹתְרֵיהֶן. אָמַר רָבָא: לֹא שָׁנוּ אֶלָּא שֶׁמָּכְרוּ וְהוֹתִירוּ, אֲבָל גָּבוּ וְהוֹתִירוּ — מוּתָּר.</div>
+      <div class="trans">המשנה אמרה: וכן הדין ביתרת הכסף (״מותריהן״). אמר רבא: לא לימדה המשנה שהמותר קדוש אלא כשמכרו דבר קדוש ונשתייר כסף, אבל אם גבו כסף מבני הקהילה כדי לקנות דבר קדוש ונשתייר ממנו — היתרה מותרת לכל שימוש, כי מעולם לא נתקדשה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">מגילה כ״ז א — Megillah 27a:18</span></div>
+      <div class="orig">אֵיתִיבֵיהּ אַבָּיֵי: בַּמָּה דְּבָרִים אֲמוּרִים — שֶׁלֹּא הִתְנוּ, אֲבָל הִתְנוּ — אֲפִילּוּ לְדוּכְסוּסְיָא מוּתָּר.</div>
+      <div class="trans">הקשה אביי על רבא מברייתא: במה דברים אמורים (שיתרת המכירה קדושה)? כשלא התנו תנאי במפורש; אבל אם התנו — מותר להשתמש בכסף אפילו ל״דוכסוסיא״ (מונח שיתבאר בהמשך).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">מגילה כ״ז א — Megillah 27a:19</span></div>
+      <div class="orig">הֵיכִי דָמֵי? אִילֵּימָא שֶׁמָּכְרוּ וְהוֹתִירוּ, כִּי הִתְנוּ מַאי הָוֵי? אֶלָּא שֶׁגָּבוּ וְהוֹתִירוּ. טַעְמָא דְּהִתְנוּ, הָא לֹא הִתְנוּ — לָא!</div>
+      <div class="trans">ניתוח הקושיה: באיזה מקרה מדובר? אם במכרו והותירו — מה מועיל התנאי? (הכסף כבר התקדש.) אלא בהכרח מדובר בגבו והותירו — ושם הטעם שמותר הוא שהתנו, משמע שאם לא התנו אסור! וזה סותר את רבא שאמר שגבו והותירו מותר בכל מקרה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">מגילה כ״ז א — Megillah 27a:20</span></div>
+      <div class="orig">לְעוֹלָם שֶׁמָּכְרוּ וְהוֹתִירוּ, וְהָכִי קָאָמַר: בַּמָּה דְּבָרִים אֲמוּרִים — שֶׁלֹּא הִתְנוּ שִׁבְעָה טוֹבֵי הָעִיר בְּמַעֲמַד אַנְשֵׁי הָעִיר, אֲבָל הִתְנוּ שִׁבְעָה טוֹבֵי הָעִיר בְּמַעֲמַד אַנְשֵׁי הָעִיר — אֲפִילּוּ לְדוּכְסוּסְיָא נָמֵי מוּתָּר.</div>
+      <div class="trans">יישוב רבא: לעולם מדובר במכרו והותירו, וכך כוונת הברייתא: במה דברים אמורים (שהמותר קדוש)? כששבעת טובי העיר (נציגי הציבור) לא התנו בנוכחות אנשי העיר; אבל אם שבעת טובי העיר התנו בנוכחות אנשי העיר — מותר אף לדוכסוסיא. (כך אין סתירה לרבא.)</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">מגילה כ״ז א — Megillah 27a:21</span></div>
+      <div class="orig">אֲמַר לֵיהּ אַבָּיֵי לְהָהוּא מֵרַבָּנַן דַּהֲוָה מְסַדַּר מַתְנְיָתָא קַמֵּיהּ דְּרַב שֵׁשֶׁת: מִי שְׁמִיעַ לָךְ מֵרַב שֵׁשֶׁת מַאי ״דּוּכְסוּסְיָא״? אֲמַר לֵיהּ, הָכִי אָמַר רַב שֵׁשֶׁת: פָּרָשָׁא דְמָתָא.</div>
+      <div class="trans">אמר אביי לאחד מן החכמים שהיה מסדר ברייתות לפני רב ששת: האם שמעת מרב ששת מהו ״דוכסוסיא״? אמר לו: כך אמר רב ששת — ״פרשא דמתא״, פרש (רוכב) של העיר שמשמש את הציבור.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">מגילה כ״ז א — Megillah 27a:22</span></div>
+      <div class="orig">אָמַר אַבָּיֵי: הִלְכָּךְ, הַאי צוּרְבָּא מֵרַבָּנַן דִּשְׁמִיעַ לֵיהּ מִילְּתָא וְלָא יָדַע פֵּירוּשַׁאּ, לִישַׁיְּילַהּ לְמַאן דִּשְׁכִיחַ קַמֵּי רַבָּנַן, דְּלָא אֶפְשָׁר דְּלָא שְׁמִיעַ לֵיהּ מִן גַּבְרָא רַבָּה.</div>
+      <div class="trans">לקח מן הסיפור: אמר אביי — לכן תלמיד חכם צעיר ששמע דבר ואינו יודע את פירושו, ישאל את מי שמצוי לפני החכמים, שהרי אי אפשר שאדם כזה לא שמע על כך מאיש גדול.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge">סוגיה 3</span> בני העיר שפסקו עליהם צדקה בעיר אחרת <span class="ref">Megillah 27a:23-27b:1</span></h2>
+    <div class="lead">דין כספי צדקה של בני עיר שהתחייבו בעיר אחרת — האם הכסף נשאר שם או חוזר עמם. מימרא, ברייתא תומכת, וסיפור על רב הונא.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · ר׳ מאיר: בני עיר שפסקו עליהם צדקה — מחזירים לעירם"]:::statement
+  P1["2 · ברייתא תומכת; יחיד — נותן לעניי אותה עיר"]:::proof
+  S2["3 · סיפור: בני עירו של רב חנא ביקשו כספם בחזרה"]:::statement
+  C1["4 · רב הונא: יש כאן ׳חבר עיר׳ — יישאר אצלי"]:::conclusion
+  S1 -->|תניא נמי הכי| P1
+  P1 --> S2
+  S2 -->|הכרעה| C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · בְּנֵי הָעִיר שֶׁהָלְכוּ… וּפָסְקוּ עֲלֵיהֶן צְדָקָה — נוֹתְנִין… וּמְפַרְנְסִין עֲנִיֵּי עִירָן"]:::statement
+  P1["2 · תַּנְיָא נָמֵי הָכִי; וְיָחִיד — תִּנָּתֵן לַעֲנִיֵּי אוֹתָהּ הָעִיר"]:::proof
+  S2["3 · רַב הוּנָא גְּזַר תַּעֲנִיתָא… נִותְּבַהּ לַן מָר"]:::statement
+  C1["4 · יֵשׁ שָׁם חֲבֵר עִיר — תִּינָּתֵן לַחֲבֵר עִיר"]:::conclusion
+  S1 -->|תניא נמי הכי| P1
+  P1 --> S2
+  S2 -->|הכרעה| C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז א — Megillah 27a:23</span></div>
+      <div class="orig">אָמַר רַבִּי יוֹחָנָן מִשּׁוּם רַבִּי מֵאִיר: בְּנֵי הָעִיר שֶׁהָלְכוּ לְעִיר אַחֶרֶת וּפָסְקוּ עֲלֵיהֶן צְדָקָה — נוֹתְנִין, וּכְשֶׁהֵן בָּאִין, מְבִיאִין אוֹתָהּ עִמָּהֶן וּמְפַרְנְסִין בָּהּ עֲנִיֵּי עִירָן.</div>
+      <div class="trans">אמר ר׳ יוחנן בשם ר׳ מאיר: בני עיר שהלכו לעיר אחרת, וגבאי הצדקה שם חייבו אותם בסכום צדקה — נותנים אותו (כדי שלא ייחשדו שמתחמקים), אבל כשהם חוזרים לביתם, מביאים את הכסף עמם ומפרנסים בו את עניי עירם.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ז א — Megillah 27a:24</span></div>
+      <div class="orig">תַּנְיָא נָמֵי הָכִי: בְּנֵי הָעִיר שֶׁהָלְכוּ לְעִיר אַחֶרֶת וּפָסְקוּ עֲלֵיהֶן צְדָקָה — נוֹתְנִין, וּכְשֶׁהֵן בָּאִין, מְבִיאִין אוֹתָהּ עִמָּהֶן. וְיָחִיד שֶׁהָלַךְ לְעִיר אַחֶרֶת וּפָסְקוּ עָלָיו צְדָקָה — תִּנָּתֵן לַעֲנִיֵּי אוֹתָהּ הָעִיר.</div>
+      <div class="trans">כך גם שנוי בברייתא (״תניא נמי הכי״): בני עיר שהלכו לעיר אחרת ופסקו עליהם צדקה — נותנים, וכשחוזרים מביאים עמם. אבל יחיד שהלך לעיר אחרת ופסקו עליו צדקה — תינתן לעניי אותה עיר (ואינו לוקח אותה עמו).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ז א — Megillah 27a:25-26</span></div>
+      <div class="orig">רַב הוּנָא גְּזַר תַּעֲנִיתָא. עָל לְגַבֵּיהּ רַב חָנָא בַּר חֲנִילַאי וְכֹל בְּנֵי מָתֵיהּ, רְמוֹ עֲלַיְיהוּ צְדָקָה וִיהַבוּ. כִּי בָּעוּ לְמֵיתֵי, אֲמַרוּ לֵיהּ: נִותְּבַהּ לַן מָר וְנֵיזִיל וּנְפַרְנֵס בַּהּ עַנְיֵי מָאתִין.</div>
+      <div class="trans">סיפור: רב הונא גזר תענית. בא אליו רב חנא בר חנילאי וכל בני עירו, הטילו עליהם צדקה והם נתנו. כשרצו לחזור, אמרו לרב הונא: יחזיר לנו אדוננו את הכסף, ונלך ונפרנס בו את עניי עירנו (כדין בני העיר).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ז א-ב — Megillah 27a:26-27b:1</span></div>
+      <div class="orig">אֲמַר לְהוּ, תְּנֵינָא: בַּמָּה דְּבָרִים אֲמוּרִים — בְּשֶׁאֵין שָׁם חֲבֵר עִיר, אֲבָל יֵשׁ שָׁם חֲבֵר עִיר — תִּינָּתֵן לַחֲבֵר עִיר. וְכׇל שֶׁכֵּן דְּעַנְיֵי דִּידִי וְדִידְכוּ עֲלַי סְמִיכִי.</div>
+      <div class="trans">אמר להם רב הונא: שנינו — במה דברים אמורים (שהכסף חוזר עמם)? כשאין שם ״חבר עיר״ (תלמיד חכם הממונה על ענייני הציבור); אבל אם יש שם חבר עיר — הכסף יינתן לו. וכל שכן כאן, שגם עניי עירי וגם עניי עירכם סמוכים עליי, ולכן ראוי שהכסף יישאר אצלי.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge">סוגיה 4</span> משנה: אין מוכרים של רבים ליחיד <span class="ref">Megillah 27b:2</span></h2>
+    <div class="lead">משנה: ר׳ מאיר אוסר למכור דבר של ציבור ליחיד מפני שמורידים מקדושתו; חכמים משיבים לו בקל וחומר.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · משנה: ר׳ מאיר — אין מוכרים של רבים ליחיד"]):::mishnah
+  O1["1 · חכמים: אם כן גם לא מעיר גדולה לקטנה"]:::statement
+  M1 -->|השיבו לו| O1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · מַתְנִי׳ אֵין מוֹכְרִין אֶת שֶׁל רַבִּים לְיָחִיד — דִּבְרֵי ר׳ מֵאִיר"]):::mishnah
+  O1["1 · אָמְרוּ לוֹ: אִם כֵּן אַף לֹא מֵעִיר גְּדוֹלָה לְעִיר קְטַנָּה"]:::statement
+  M1 -->|השיבו לו| O1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:2</span></div>
+      <div class="orig">מַתְנִי׳ אֵין מוֹכְרִין אֶת שֶׁל רַבִּים לְיָחִיד, מִפְּנֵי שֶׁמּוֹרִידִין אוֹתוֹ מִקְּדוּשָּׁתוֹ, דִּבְרֵי רַבִּי מֵאִיר. אָמְרוּ לוֹ: אִם כֵּן אַף לֹא מֵעִיר גְּדוֹלָה לְעִיר קְטַנָּה.</div>
+      <div class="trans">משנה: אין מוכרים דבר קדוש של ציבור (״רבים״) ליחיד, מפני שמורידים אותו מקדושתו — דבר ששימש רבים קדוש יותר מדבר של יחיד; אלו דברי ר׳ מאיר. אמרו לו חכמים: אם כך, גם אסור למכור מעיר גדולה לעיר קטנה (כי גם שם פוחת מספר המשתמשים) — והרי זה מותר, ולכן גם מכירה ליחיד מותרת.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+    <h2><span class="badge">סוגיה 5</span> גמרא: מחלוקת ר׳ מאיר וחכמים <span class="ref">Megillah 27b:3-4</span></h2>
+    <div class="lead">הגמרא מבררת את מחלוקת המשנה: כיצד יענה ר׳ מאיר לחכמים, וכיצד ישיבו חכמים על דבריו.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · קושיא: חכמים טוענים יפה — מה ישיב ר׳ מאיר?"}:::question
+  A1["1 · תירוץ: גדולה לקטנה עדיין של ציבור; רבים ליחיד אין קדושה"]:::answer
+  A2["2 · השבת חכמים: גם בגדולה לקטנה יש חשש (ברוב עם הדרת מלך)"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 -.->|ורבנן| A2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · גְּמָ׳ שַׁפִּיר קָאָמְרִי לֵיהּ רַבָּנַן לְר׳ מֵאִיר!"}:::question
+  A1["1 · מֵעִיקָּרָא קַדִּישָׁא הַשְׁתָּא נָמֵי קַדִּישָׁא; מֵרַבִּים לְיָחִיד לֵיכָּא קְדוּשָּׁה"]:::answer
+  A2["2 · וְרַבָּנַן… ״בְּרוֹב עָם הַדְרַת מֶלֶךְ״"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 -.->|ורבנן| A2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:3</span></div>
+      <div class="orig">גְּמָ׳ שַׁפִּיר קָאָמְרִי לֵיהּ רַבָּנַן לְרַבִּי מֵאִיר! וְרַבִּי מֵאִיר, מֵעִיר גְּדוֹלָה לְעִיר קְטַנָּה — מֵעִיקָּרָא קַדִּישָׁא, הַשְׁתָּא נָמֵי קַדִּישָׁא. מֵרַבִּים לְיָחִיד לֵיכָּא קְדוּשָּׁה.</div>
+      <div class="trans">גמרא: חכמים טוענים כראוי כנגד ר׳ מאיר! וכיצד ישיב ר׳ מאיר? לדעתו, במכירה מעיר גדולה לקטנה אין ירידה משמעותית בקדושה — מתחילה היה קדוש לציבור ועכשיו עדיין קדוש לציבור. אבל בהעברה מציבור ליחיד אין עוד קדושה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:4</span></div>
+      <div class="orig">וְרַבָּנַן — אִי אִיכָּא לְמֵיחַשׁ, כִּי הַאי גַוְונָא נָמֵי אִיכָּא לְמֵיחַשׁ, מִשּׁוּם ״בְּרוֹב עָם הַדְרַת מֶלֶךְ״.</div>
+      <div class="trans">וכיצד ישיבו חכמים? אם יש מקום לחשוש לירידה בקדושה כשעוברים מרבים ליחיד, אזי גם במעבר לעיר קטנה יש לחשוש — מפני ״ברוב עם הדרת מלך״ (ככל שרבים יותר משתתפים במצווה, כך גדל כבוד שמים). וכיוון שמכירה לעיר קטנה מותרת בכל זאת, גם מכירה ליחיד מותרת.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-6">
+    <h2><span class="badge">סוגיה 6</span> משנה: מכירת בית כנסת ועל מה אסור למכרו <span class="ref">Megillah 27b:5</span></h2>
+    <div class="lead">משנה: ר׳ מאיר מתיר למכור בית כנסת רק על תנאי; חכמים מתירים מכירת עולם חוץ מארבעה שימושי גנאי; ר׳ יהודה מקל יותר.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · משנה: מכירת בית כנסת"]):::mishnah
+  O1["1 · ר׳ מאיר: רק על תנאי שיחזירוהו"]:::statement
+  O2["1 · חכמים: מכר עולם חוץ מארבעה (מרחץ, בורסקי, טבילה, בית הכסא)"]:::statement
+  O3["1 · ר׳ יהודה: מוכרים לשם חצר, והקונה יעשה כרצונו"]:::statement
+  M1 --> O1
+  M1 --> O2
+  M1 --> O3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · מַתְנִי׳ אֵין מוֹכְרִין בֵּית הַכְּנֶסֶת אֶלָּא עַל תְּנַאי"]):::mishnah
+  O1["1 · ר׳ מֵאִיר: עַל תְּנַאי שֶׁאִם יִרְצוּ יַחְזִירוּהוּ"]:::statement
+  O2["1 · חֲכָמִים: מִמְכַּר עוֹלָם חוּץ מֵאַרְבָּעָה דְּבָרִים"]:::statement
+  O3["1 · ר׳ יְהוּדָה: לְשֵׁם חָצֵר, וְהַלּוֹקֵחַ מַה שֶּׁיִּרְצֶה יַעֲשֶׂה"]:::statement
+  M1 --> O1
+  M1 --> O2
+  M1 --> O3
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:5</span></div>
+      <div class="orig">מַתְנִי׳ אֵין מוֹכְרִין בֵּית הַכְּנֶסֶת אֶלָּא עַל תְּנַאי, שֶׁאִם יִרְצוּ יַחְזִירוּהוּ, דִּבְרֵי רַבִּי מֵאִיר. וַחֲכָמִים אוֹמְרִים: מוֹכְרִין אוֹתוֹ מִמְכַּר עוֹלָם, חוּץ מֵאַרְבָּעָה דְּבָרִים: לְמֶרְחָץ, וּלְבוּרְסְקִי, לִטְבִילָה, וּלְבֵית הַמַּיִם. רַבִּי יְהוּדָה אוֹמֵר: מוֹכְרִין אוֹתָהּ לְשֵׁם חָצֵר, וְהַלּוֹקֵחַ — מַה שֶּׁיִּרְצֶה יַעֲשֶׂה.</div>
+      <div class="trans">משנה: ר׳ מאיר אומר שמוכרים בית כנסת רק על תנאי שאם ירצו המוכרים — הקונים יחזירוהו. חכמים אומרים: מוכרים אותו מכירה גמורה (״ממכר עולם״) לכל שימוש, חוץ מארבעה דברים מבזים: מרחץ (שעומדים בו ערומים), בורסקי (מפעל עורות מסריח), טבילה (מקווה), ובית הכסא (״בית המים״). ר׳ יהודה אומר: מוכרים אותו סתם ״לשם חצר״, והקונה יעשה בו מה שירצה — אפילו אחד מארבעת השימושים.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-7">
+    <h2><span class="badge">סוגיה 7</span> גמרא: ריבית ו״צד אחד בריבית״ <span class="ref">Megillah 27b:6-11</span></h2>
+    <div class="lead">הגמרא מקשה על ר׳ מאיר: אם מחזירים את בית הכנסת, מדוע אין הקונים נכשלים בריבית? ר׳ יוחנן מסביר שר׳ מאיר אזיל בשיטת ר׳ יהודה ש״צד אחד בריבית מותר״, ומובאת ברייתא ושני ניתוחים למחלוקת.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · קושיא: לר׳ מאיר — איך גרים שם? הרי ריבית!"}:::question
+  A1["2 · ר׳ יוחנן: ר׳ מאיר כר׳ יהודה — צד אחד בריבית מותר"]:::answer
+  P1["3 · ברייתא: מכר על תנאי — מוכר אוכל פירות מותר, לוקח אסור"]:::proof
+  P2["4 · ר׳ יהודה: אף לוקח אוכל פירות מותר; מעשה בייתוס בן זונן"]:::proof
+  Q2{"5 · מאי בינייהו? צד אחד בריבית"}:::question
+  A2["6 · רבא: לכ״ע צד אחד אסור; כאן ריבית על מנת להחזיר"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 --> P1
+  P1 --> P2
+  P2 --> Q2
+  Q2 -->|רבא אמר| A2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · גְּמָ׳ וּלְר׳ מֵאִיר הֵיכִי דָּיְירִי בַּהּ? הָא הָוְיָא לַהּ רִבִּית!"}:::question
+  A1["2 · אָמַר ר׳ יוֹחָנָן: ר׳ מֵאִיר בְּשִׁיטַת ר׳ יְהוּדָה — צַד אֶחָד בְּרִבִּית מוּתָּר"]:::answer
+  P1["3 · דְּתַנְיָא: מוֹכֵר אוֹכֵל פֵּירוֹת מוּתָּר, לוֹקֵחַ אוֹכֵל פֵּירוֹת אָסוּר"]:::proof
+  P2["4 · ר׳ יְהוּדָה: אֲפִילּוּ לוֹקֵחַ אוֹכֵל פֵּירוֹת מוּתָּר; מַעֲשֶׂה בְּבַיְתוֹס בֶּן זוֹנִן"]:::proof
+  Q2{"5 · מַאי בֵּינַיְיהוּ? צַד אֶחָד בְּרִבִּית אִיכָּא בֵּינַיְיהוּ"}:::question
+  A2["6 · רָבָא אָמַר: דְּכוּלֵּי עָלְמָא… רִבִּית עַל מְנָת לְהַחֲזִיר אִיכָּא בֵּינַיְיהוּ"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 --> P1
+  P1 --> P2
+  P2 --> Q2
+  Q2 -->|רבא אמר| A2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:6</span></div>
+      <div class="orig">גְּמָ׳ וּלְרַבִּי מֵאִיר, הֵיכִי דָּיְירִי בַּהּ? הָא הָוְיָא לַהּ רִבִּית!</div>
+      <div class="trans">גמרא: לפי ר׳ מאיר, שהמכירה היא רק על תנאי שיחזירו את בית הכנסת — כיצד מותר לקונים לגור בו? הרי אם בסוף יחזירוהו, הכסף שנתנו נחשב כהלוואה, וההנאה מן הדירה היא ריבית אסורה!</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:7</span></div>
+      <div class="orig">אָמַר רַבִּי יוֹחָנָן: רַבִּי מֵאִיר בְּשִׁיטַת רַבִּי יְהוּדָה אֲמָרָהּ, דְּאָמַר: צַד אֶחָד בְּרִבִּית מוּתָּר.</div>
+      <div class="trans">אמר ר׳ יוחנן: ר׳ מאיר אמר את דבריו לפי שיטת ר׳ יהודה, שאמר ש״צד אחד בריבית״ מותר — כלומר עסקה שאינה ודאית שתסתיים בריבית (כאן: ייתכן שהמכירה לא תבוטל כלל ולא תהיה הלוואה).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:8</span></div>
+      <div class="orig">דְּתַנְיָא: הֲרֵי שֶׁהָיָה נוֹשֶׁה בַּחֲבֵירוֹ מָנֶה, וְעָשָׂה לוֹ שָׂדֵהוּ מֶכֶר, בִּזְמַן שֶׁמּוֹכֵר אוֹכֵל פֵּירוֹת — מוּתָּר, לוֹקֵחַ אוֹכֵל פֵּירוֹת — אָסוּר.</div>
+      <div class="trans">כפי ששנינו בברייתא: מי שחברו חייב לו מנה, והלווה ״מכר״ לו את שדהו על תנאי (שאם ישיג כסף, השדה תחזור אליו) — כל זמן שהמוכר (הלווה) אוכל את פירות השדה, מותר; אבל אם הקונה (המלווה) אוכל את הפירות — אסור, שמא תתבטל המכירה ותיעשה הלוואה, ונמצא שנהנה מן ההלוואה (ריבית).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:9</span></div>
+      <div class="orig">רַבִּי יְהוּדָה אוֹמֵר: אֲפִילּוּ לוֹקֵחַ אוֹכֵל פֵּירוֹת — מוּתָּר. וְאָמַר רַבִּי יְהוּדָה: מַעֲשֶׂה בְּבַיְתוֹס בֶּן זוֹנִן שֶׁעָשָׂה שָׂדֵהוּ מֶכֶר עַל פִּי רַבִּי אֶלְעָזָר בֶּן עֲזַרְיָה, וְלוֹקֵחַ אוֹכֵל פֵּירוֹת הָיָה. אָמְרוּ לוֹ: מִשָּׁם רְאָיָה?! מוֹכֵר אוֹכֵל פֵּירוֹת הָיָה וְלֹא לוֹקֵחַ.</div>
+      <div class="trans">ר׳ יהודה אומר: אפילו אם הקונה אוכל את הפירות — מותר (כי המכירה אולי לא תתבטל, ואין כאן ריבית ודאית). ואמר ר׳ יהודה: מעשה בביתוס בן זונן שמכר את שדהו על תנאי לפי הוראת ר׳ אלעזר בן עזריה, והקונה אכל את הפירות. אמרו לו חכמים: וכי משם ראיה? באמת המוכר אכל את הפירות ולא הקונה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:10</span></div>
+      <div class="orig">מַאי בֵּינַיְיהוּ? צַד אֶחָד בְּרִבִּית אִיכָּא בֵּינַיְיהוּ. מָר סָבַר: צַד אֶחָד בְּרִבִּית מוּתָּר, וּמָר סָבַר: צַד אֶחָד בְּרִבִּית אָסוּר.</div>
+      <div class="trans">מה ההבדל המעשי ביניהם (ר׳ יהודה וחכמים)? ״צד אחד בריבית״ הוא ההבדל: ר׳ יהודה סובר שצד אחד בריבית מותר (ריבית שאינה ודאית), וחכמים סוברים שצד אחד בריבית אסור.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:11</span></div>
+      <div class="orig">רָבָא אָמַר: דְּכוּלֵּי עָלְמָא צַד אֶחָד בְּרִבִּית אָסוּר, וְהָכָא רִבִּית עַל מְנָת לְהַחֲזִיר אִיכָּא בֵּינַיְיהוּ. מָר סָבַר: רִבִּית עַל מְנָת לְהַחֲזִיר מוּתָּר, וּמָר סָבַר: אָסוּר.</div>
+      <div class="trans">רבא אמר הסבר אחר: לכל הדעות צד אחד בריבית אסור, וכאן ההבדל הוא ב״ריבית על מנת להחזיר״ — שהקונה התחייב להחזיר את שווי הפירות אם תתבטל המכירה. ר׳ יהודה סובר שריבית על מנת להחזיר מותרת (כי לבסוף לא נהנה), וחכמים סוברים שאסורה.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-8">
+    <h2><span class="badge">סוגיה 8</span> הרחקה מארבע אמות של תפילה <span class="ref">Megillah 27b:12-17</span></h2>
+    <div class="lead">מימרת שמואל שמותר להטיל מים בתוך ארבע אמות של מקום תפילה; קושיית רב יוסף שכבר שנינו זאת; ברייתא שנשנתה לפני רב נחמן, קושיה והגהתה.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · שמואל: מותר להטיל מים בתוך ד׳ אמות של תפילה"]:::statement
+  Q1{"2 · רב יוסף: מאי קמ״ל? כבר שנינו במשנה!"}:::question
+  S2["3 · ברייתא לפני רב נחמן: המתפלל מרחיק ד׳ אמות ומשתין, והמשתין להפך"]:::statement
+  A1["4 · רב נחמן: סיפא מובן (כבר שנינו), אבל רישא — קדשת כל שבילי נהרדעא! תני: ׳ישהה׳"]:::answer
+  Q2{"5 · קושיא: ישהה אצל המתפלל — למה?"}:::question
+  A2["6 · רב אשי: כל ד׳ אמות תפילתו עוד סדורה בפיו"]:::answer
+  S1 -.->|מאי קמ״ל| Q1
+  Q1 --> S2
+  S2 -->|הגהה| A1
+  A1 --> Q2
+  Q2 -->|תירוץ| A2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: מוּתָּר לְהַשְׁתִּין מַיִם בְּתוֹךְ ד׳ אַמּוֹת שֶׁל תְּפִלָּה"]:::statement
+  Q1{"2 · אָמַר רַב יוֹסֵף: מַאי קָא מַשְׁמַע לַן? תְּנֵינָא!"}:::question
+  S2["3 · תָּנֵי תַּנָּא קַמֵּיהּ דְּרַב נַחְמָן: הַמִּתְפַּלֵּל מַרְחִיק… וְהַמַּשְׁתִּין מַרְחִיק…"]:::statement
+  A1["4 · קַדֵּשְׁתִּינְהוּ לְכוּלְּהוּ שְׁבִילֵי דִנְהַרְדְּעָא! תְּנִי: יִשְׁהֶה"]:::answer
+  Q2{"5 · מִתְפַּלֵּל יִשְׁהֶה כְּדֵי הִילּוּךְ ד׳ אַמּוֹת לְמָה לִי?"}:::question
+  A2["6 · אָמַר רַב אָשֵׁי: שֶׁכֹּל ד׳ אַמּוֹת תְּפִלָּתוֹ סְדוּרָה בְּפִיו"]:::answer
+  S1 -.->|מאי קמ״ל| Q1
+  Q1 --> S2
+  S2 -->|הגהה| A1
+  A1 --> Q2
+  Q2 -->|תירוץ| A2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:12</span></div>
+      <div class="orig">וַחֲכָמִים אוֹמְרִים מוֹכְרִין אוֹתוֹ מִמְכַּר עוֹלָם וְכוּ׳. אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: מוּתָּר לָאָדָם לְהַשְׁתִּין מַיִם בְּתוֹךְ אַרְבַּע אַמּוֹת שֶׁל תְּפִלָּה.</div>
+      <div class="trans">אגב דיני קדושת המקום, אמר רב יהודה בשם שמואל: מותר לאדם להטיל מים (להשתין) בתוך ארבע אמות מן המקום שבו זה עתה התפלל — אין למקום התפילה קדושה קבועה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:13</span></div>
+      <div class="orig">אָמַר רַב יוֹסֵף: מַאי קָא מַשְׁמַע לַן? תְּנֵינָא, רַבִּי יְהוּדָה אוֹמֵר: מוֹכְרִין אוֹתָהּ לְשׁוּם חָצֵר, וְלוֹקֵחַ — מַה שֶּׁיִּרְצֶה יַעֲשֶׂה. וַאֲפִילּוּ רַבָּנַן לָא קָאָמְרִי אֶלָּא בֵּית הַכְּנֶסֶת, דִּקְבִיעַ קְדוּשְׁתֵּיהּ. אֲבָל אַרְבַּע אַמּוֹת, דְּלָא קְבִיעַ קְדוּשְׁתַּיְיהוּ — לָא.</div>
+      <div class="trans">קושיית רב יוסף: מה חידש לנו שמואל? כבר שנינו זאת במשנה — ר׳ יהודה אמר שמוכרים בית כנסת ״לשם חצר״ והקונה עושה כרצונו; ואפילו חכמים החמירו רק בבית כנסת שקדושתו קבועה, אבל בארבע אמות של תפילה שאין קדושתן קבועה — לא החמירו. אם כן אין כאן חידוש.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:14</span></div>
+      <div class="orig">תָּנֵי תַּנָּא קַמֵּיהּ דְּרַב נַחְמָן: הַמִּתְפַּלֵּל — מַרְחִיק אַרְבַּע אַמּוֹת וּמַשְׁתִּין, וְהַמַּשְׁתִּין — מַרְחִיק אַרְבַּע אַמּוֹת וּמִתְפַּלֵּל.</div>
+      <div class="trans">שנה תנא ברייתא לפני רב נחמן: מי שהתפלל — ירחיק ארבע אמות ואז ישתין; ומי שהשתין — ירחיק ארבע אמות ואז יתפלל.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:15-16</span></div>
+      <div class="orig">אֲמַר לֵיהּ: בִּשְׁלָמָא הַמַּשְׁתִּין מַרְחִיק אַרְבַּע אַמּוֹת וּמִתְפַּלֵּל — תְּנֵינָא… אֶלָּא: הַמִּתְפַּלֵּל מַרְחִיק אַרְבַּע אַמּוֹת וּמַשְׁתִּין לְמָה לִי? אִי הָכִי, קַדֵּשְׁתִּינְהוּ לְכוּלְּהוּ שְׁבִילֵי דִנְהַרְדְּעָא. תְּנִי: יִשְׁהֶה.</div>
+      <div class="trans">אמר לו רב נחמן: בשלמא הסיפא — שהמשתין מרחיק ד׳ אמות ואז מתפלל — מובנת, שכבר שנינו שמרחיקים ד׳ אמות מצואה וממי רגליים. אבל הרישא — שהמתפלל מרחיק ד׳ אמות לפני שמשתין — למה? אם כך, ״קידשת״ את כל שבילי נהרדעא (שהרי התפללו בכולם)! אלא תקן ושְׁנֵה: לא ״ירחיק״ אלא ״ישהה״ — ימתין כדי הילוך ד׳ אמות.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:17</span></div>
+      <div class="orig">בִּשְׁלָמָא מַשְׁתִּין יִשְׁהֶה כְּדֵי הִילּוּךְ אַרְבַּע אַמּוֹת, מִשּׁוּם נִיצוֹצוֹת. אֶלָּא: מִתְפַּלֵּל יִשְׁהֶה כְּדֵי הִילּוּךְ אַרְבַּע אַמּוֹת, לְמָה לִי?</div>
+      <div class="trans">לפי הנוסח המתוקן: בשלמא המשתין ימתין כדי הילוך ד׳ אמות לפני שמתפלל — מובן, מפני הניצוצות (טיפות המתמשכות). אבל המתפלל שימתין כדי הילוך ד׳ אמות לפני שמשתין — למה צריך זאת?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:17</span></div>
+      <div class="orig">אָמַר רַב אָשֵׁי: שֶׁכֹּל אַרְבַּע אַמּוֹת תְּפִלָּתוֹ סְדוּרָה בְּפִיו, וְרַחוֹשֵׁי מְרַחֲשָׁן שִׂפְווֹתֵיהּ.</div>
+      <div class="trans">תירוץ רב אשי: כל זמן הילוך ארבע אמות תפילתו עדיין סדורה בפיו ושפתיו עוד נעות בה, ולכן אין זה ראוי שישתין מיד.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-9">
+    <h2><span class="badge">סוגיה 9</span> בזכות מה האריכו חכמים ימים <span class="ref">Megillah 27b:18-28a:21</span></h2>
+    <div class="lead">שרשרת ארוכה של חכמים שנשאלו בזכות מה האריכו ימים, פותחת בסימן ״זלפ״ן״. כל אחד מונה מעשים טובים — בעיקר כבוד לבית הכנסת, לחברים ולתורה — ומשולבים סיפורים, בירורי הלכה ופסוקים.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S0["1 · סימן: זלפ״ן (סדר החכמים)"]:::statement
+  S1["2 · ר׳ זכאי: לא השתין סמוך לתפילה, לא כינה שם, קידוש היום"]:::statement
+  S2["3 · ברייתא: אמו השאירה לו ג׳ מאות גרבי יין, והוא לבניו ג׳ אלפים"]:::statement
+  S3["4 · רב הונא משכן חגורתו לקידוש; רב בירכו שיתעטף בשירא"]:::statement
+  S4["5 · בחתונת רבה התקיימה הברכה; רב הקפיד שלא ענה ׳וכן למר׳"]:::statement
+  S5["6 · ר׳ אלעזר בן שמוע: לא עשה קפנדריא, לא פסע על ראשי עם, נשיאת כפיים בברכה"]:::statement
+  S6["7 · ר׳ פרידא: לא הקדימו לבית המדרש; לא בירך לפני כהן; לא אכל מבהמה שלא הורמו מתנותיה"]:::statement
+  S7["8 · דין: אסור לאכול מבהמה שלא הורמו מתנותיה — ואין הלכה כן"]:::statement
+  Q1{"9 · קושיא: וכי לברך לפני כהן מעלה? והרי ת״ח שמברך לפניו חייב מיתה!"}:::question
+  A1["10 · תירוץ: כשהכהן שווה לו (גם ת״ח)"]:::answer
+  S8["11 · ר׳ נחוניא בן הקנה: לא נתכבד בקלון חברי, לא עלתה קללת חברי, ותרן בממוני"]:::statement
+  S9["12 · ביאורים: רב הונא והמרא; מר זוטרא מוחל; איוב ותרן"]:::statement
+  S10["13 · ר׳ עקיבא שואל את ר׳ נחוניא הגדול; שאלה על ׳כבש אחד׳"]:::statement
+  S11["14 · ר׳ נחוניא: לא קיבלתי מתנות, לא עמדתי על מדותי, ותרן"]:::statement
+  S12["15 · ביאורים: ר׳ אלעזר וזירא במתנות; המעביר על מדותיו"]:::statement
+  S13["16 · ר׳ יהושע בן קרחה לרבי: לא נסתכלתי בדמות אדם רשע"]:::statement
+  Q2{"17 · קושיא: מה גרם עיוורון יצחק — הסתכלות בעשו או קללת אבימלך?"}:::question
+  A2["18 · תירוץ: הא והא גרמא ליה; רבא — ׳שאת פני רשע לא טוב׳"]:::answer
+  S14["19 · בפטירתו ברכו שיגיע לחצי ימיו (כדי שבניו ינהיגו)"]:::statement
+  S15["20 · אבוה ומנימין בר איהי: לא הסתכל בגוי / לא עשה שותפות"]:::statement
+  S16["21 · ר׳ זירא: לא הקפיד בביתו, לא צעד לפני גדול, לא הלך ד׳ אמות בלא תורה ותפילין ועוד"]:::statement
+  S0 --> S1
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+  S5 --> S6
+  S6 --> S7
+  S6 --> Q1
+  Q1 -->|תירוץ| A1
+  S7 --> S8
+  A1 --> S8
+  S8 --> S9
+  S9 --> S10
+  S10 --> S11
+  S11 --> S12
+  S12 --> S13
+  S13 --> Q2
+  Q2 -->|תירוץ| A2
+  A2 --> S14
+  S14 --> S15
+  S15 --> S16
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S0["1 · זַלְפָ״ן סִימָן"]:::statement
+  S1["2 · ר׳ זַכַּאי: מִיָּמַי לֹא הִשְׁתַּנְתִּי… וְלֹא כִּנִּיתִי שֵׁם… וְלֹא בִּיטַּלְתִּי קִידּוּשׁ הַיּוֹם"]:::statement
+  S2["3 · תָּנָא: הַנִּיחָה לוֹ ש׳ גַּרְבֵי יַיִן… הִנִּיחַ לְבָנָיו ג׳ אֲלָפִים"]:::statement
+  S3["4 · רַב הוּנָא מַשְׁכַּנְתֵּיהּ לְהֶמְיָינַאי… יְהֵא רַעֲוָא דְּתִיטּוּם בְּשִׁירָאֵי"]:::statement
+  S4["5 · כִּי אִיכַּלַּל רַבָּה… לָא אֲמַרְתְּ לִי ׳וְכֵן לְמָר׳"]:::statement
+  S5["6 · ר׳ אֶלְעָזָר בֶּן שַׁמּוּעַ: לֹא עָשִׂיתִי קַפֶּנְדַּרְיָא… וְלֹא פָּסַעְתִּי עַל רָאשֵׁי עַם קָדוֹשׁ… וְלֹא נָשָׂאתִי כַּפַּי בְּלֹא בְּרָכָה"]:::statement
+  S6["7 · ר׳ פְּרִידָא: לֹא קְדָמַנִי אָדָם לְבֵית הַמִּדְרָשׁ… וְלֹא אָכַלְתִּי מִבְּהֵמָה שֶׁלֹּא הוּרְמוּ מַתְּנוֹתֶיהָ"]:::statement
+  S7["8 · אָסוּר לֶאֱכוֹל… כְּאִילּוּ אוֹכֵל טְבָלִים. וְלֵית הִלְכְתָא כְּווֹתֵיהּ"]:::statement
+  Q1{"9 · לְמֵימְרָא דִּמְעַלְּיוּתָא הִיא? וְהָא… חַיָּיב מִיתָה!"}:::question
+  A1["10 · כִּי קָאָמַר אִיהוּ, בְּשָׁוִין"]:::answer
+  S8["11 · ר׳ נְחוּנְיָא בֶּן הַקָּנָה: לֹא נִתְכַּבַּדְתִּי בִּקְלוֹן חֲבֵרִי… וּוַתְּרָן בְּמָמוֹנִי הָיִיתִי"]:::statement
+  S9["12 · רַב הוּנָא דָּרֵי מָרָא; מַר זוּטְרָא שְׁרֵי לֵיהּ; אִיּוֹב וַותְּרָן"]:::statement
+  S10["13 · שָׁאַל ר׳ עֲקִיבָא אֶת ר׳ נְחוּנְיָא הַגָּדוֹל… אִם נֶאֱמַר ׳כֶּבֶשׂ׳ לָמָּה ׳אֶחָד׳?"]:::statement
+  S11["14 · לֹא קִבַּלְתִּי מַתָּנוֹת, וְלֹא עָמַדְתִּי עַל מִדּוֹתַי, וּוַתְּרָן"]:::statement
+  S12["15 · ר׳ אֶלְעָזָר וְר׳ זֵירָא בְּמַתָּנוֹת; כׇּל הַמַּעֲבִיר עַל מִדּוֹתָיו"]:::statement
+  S13["16 · ר׳ יְהוֹשֻׁעַ בֶּן קׇרְחָה: לֹא נִסְתַּכַּלְתִּי בִּדְמוּת אָדָם רָשָׁע"]:::statement
+  Q2{"17 · וְהָא גְּרַמָא לֵיהּ? וְהָאָמַר ר׳ יִצְחָק… קִלֵּל אֶת שָׂרָה"}:::question
+  A2["18 · הָא וְהָא גְּרַמָא לֵיהּ; רָבָא: ׳שְׂאֵת פְּנֵי רָשָׁע לֹא טוֹב׳"]:::answer
+  S14["19 · בִּשְׁעַת פְּטִירָתוֹ… שֶׁתַּגִּיעַ לַחֲצִי יָמַי; הַבָּאִים אַחֲרֶיךָ בְּהֵמָה יִרְעוּ?!"]:::statement
+  S15["20 · אֲבוּהּ וּמִנְיָמִן בַּר אִיהִי: לֹא אִסְתַּכַּלִי בְּגוֹי / לֹא עֲבַדִי שׁוּתָּפוּת"]:::statement
+  S16["21 · ר׳ זֵירָא: לֹא הִקְפַּדְתִּי בְּתוֹךְ בֵּיתִי… וְלֹא הָלַכְתִּי ד׳ אַמּוֹת בְּלֹא תּוֹרָה וּבְלֹא תְּפִילִּין"]:::statement
+  S0 --> S1
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+  S5 --> S6
+  S6 --> S7
+  S6 --> Q1
+  Q1 -->|תירוץ| A1
+  S7 --> S8
+  A1 --> S8
+  S8 --> S9
+  S9 --> S10
+  S10 --> S11
+  S11 --> S12
+  S12 --> S13
+  S13 --> Q2
+  Q2 -->|תירוץ| A2
+  A2 --> S14
+  S14 --> S15
+  S15 --> S16
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:18</span></div>
+      <div class="orig">זַלְפָ״‎ן סִימָן.</div>
+      <div class="trans">סימן (ראשי תיבות לזכירת סדר החכמים): ז־ל־פ־ן — זכאי, (אל)עזר, פרידא, נחוניא.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:19</span></div>
+      <div class="orig">שָׁאֲלוּ תַּלְמִידָיו אֶת רַבִּי זַכַּאי: בַּמָּה הֶאֱרַכְתָּ יָמִים? אָמַר לָהֶם: מִיָּמַי לֹא הִשְׁתַּנְתִּי מַיִם בְּתוֹךְ אַרְבַּע אַמּוֹת שֶׁל תְּפִלָּה, וְלֹא כִּנִּיתִי שֵׁם לַחֲבֵירִי, וְלֹא בִּיטַּלְתִּי קִידּוּשׁ הַיּוֹם. אִמָּא זְקֵינָה הָיְתָה לִי, פַּעַם אַחַת מָכְרָה כִּפָּה שֶׁבְּרֹאשָׁהּ וְהֵבִיאָה לִי קִידּוּשׁ הַיּוֹם.</div>
+      <div class="trans">שאלו תלמידיו את ר׳ זכאי: בזכות מה הארכת ימים? אמר להם: מימי לא הטלתי מים בתוך ארבע אמות של מקום תפילה, ולא כיניתי את חברי בכינוי גנאי, ולא ביטלתי קידוש היום (על היין). אמא זקנה הייתה לי, ופעם אחת מכרה את הכיפה שעל ראשה כדי להביא לי יין לקידוש.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:20</span></div>
+      <div class="orig">תָּנָא: כְּשֶׁמֵּתָה, הַנִּיחָה לוֹ שְׁלוֹשׁ מֵאוֹת גַּרְבֵי יַיִן. כְּשֶׁמֵּת הוּא, הִנִּיחַ לְבָנָיו שְׁלֹשֶׁת אֲלָפִים גַּרְבֵי יַיִן.</div>
+      <div class="trans">שנינו על ר׳ זכאי: כשמתה אמו השאירה לו שלוש מאות חביות יין, וכשמת הוא השאיר לבניו שלושת אלפים חביות יין — שכר על הקפדתם במצוות קידוש היום.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:21</span></div>
+      <div class="orig">רַב הוּנָא הֲוָה אָסַר רִיתָא וְקָאֵי קַמֵּיהּ דְּרַב, אָמַר לֵיהּ: מַאי הַאי? אֲמַר לֵיהּ: לָא הֲוָה לִי קִידּוּשָׁא, וּמַשְׁכַּנְתֵּיהּ לְהֶמְיָינַאי וְאֵתַאי בֵּיהּ קִידּוּשָׁא. אֲמַר לֵיהּ: יְהֵא רַעֲוָא דְּתִיטּוּם בְּשִׁירָאֵי.</div>
+      <div class="trans">רב הונא היה חגור בחבל קש ועמד לפני רב. אמר לו רב: מה זה? אמר לו: לא היה לי יין לקידוש, אז משכנתי את חגורתי וקניתי בכסף יין לקידוש. אמר לו רב: יהי רצון שתתעטף במשי (כשכר על מסירותך).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:22</span></div>
+      <div class="orig">כִּי אִיכַּלַּל רַבָּה בְּרֵיהּ, רַב הוּנָא אִינִישׁ גּוּצָא הֲוָה, גְּנָא אַפּוּרְיָא. אָתְיָין בְּנָתֵיהּ וְכַלָּתֵיהּ שָׁלְחָן וְשָׁדְיָין מָנַיְיהוּ עֲלֵיהּ עַד דְּאִיטּוּם בְּשִׁירָאֵי. שְׁמַע רַב וְאִיקְּפַד, אֲמַר: מַאי טַעְמָא לָא אֲמַרְתְּ לִי כִּי בָּרֵכְתָּיךְ: ״וְכֵן לְמָר״.</div>
+      <div class="trans">כשנשא רבה בנו אישה, רב הונא (שהיה איש נמוך קומה) שכב על המיטה ולא הבחינו בו. באו בנותיו וכלותיו ופשטו את בגדי המשי שלהן וזרקו עליו עד שנתכסה במשי — וכך התקיימה ברכת רב. שמע רב והקפיד, אמר: מדוע כשבירכתי אותך לא ענית לי ״וכן למר״ (שגם אני אזכה)?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">מגילה כ״ז ב — Megillah 27b:23</span></div>
+      <div class="orig">שָׁאֲלוּ תַּלְמִידָיו אֶת רַבִּי אֶלְעָזָר בֶּן שַׁמּוּעַ: בַּמָּה הֶאֱרַכְתָּ יָמִים? אָמַר לָהֶם: מִיָּמַי לֹא עָשִׂיתִי קַפֶּנְדַּרְיָא לְבֵית הַכְּנֶסֶת, וְלֹא פָּסַעְתִּי עַל רָאשֵׁי עַם קָדוֹשׁ, וְלֹא נָשָׂאתִי כַּפַּי בְּלֹא בְּרָכָה.</div>
+      <div class="trans">שאלו תלמידיו את ר׳ אלעזר בן שמוע: בזכות מה הארכת ימים? אמר להם: מימי לא עשיתי ״קפנדריא״ (קיצור דרך) דרך בית הכנסת, ולא פסעתי על ראשי עם קדוש (לא דרכתי על היושבים בבית המדרש כדי להגיע למקומי), ולא נשאתי כפיי בברכת כהנים בלי לברך תחילה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">מגילה כ״ז ב-כ״ח א — Megillah 27b:24-28a:1</span></div>
+      <div class="orig">שָׁאֲלוּ תַּלְמִידָיו אֶת רַבִּי פְּרִידָא: בַּמָּה הֶאֱרַכְתָּ יָמִים? אָמַר לָהֶם: מִיָּמַי לֹא קְדָמַנִי אָדָם לְבֵית הַמִּדְרָשׁ, וְלֹא בֵּרַכְתִּי לִפְנֵי כֹהֵן, וְלֹא אָכַלְתִּי מִבְּהֵמָה שֶׁלֹּא הוּרְמוּ מַתְּנוֹתֶיהָ.</div>
+      <div class="trans">שאלו תלמידיו את ר׳ פרידא: בזכות מה הארכת ימים? אמר להם: מימי לא הקדים אותי אדם לבית המדרש (תמיד הגעתי ראשון), ולא בירכתי ברכת המזון לפני כהן (נתתי לו לברך), ולא אכלתי מבהמה שלא הופרשו ממנה המתנות לכהן (זרוע לחיים וקיבה).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">מגילה כ״ח א — Megillah 28a:2</span></div>
+      <div class="orig">דְּאָמַר רַבִּי יִצְחָק אָמַר רַבִּי יוֹחָנָן: אָסוּר לֶאֱכוֹל מִבְּהֵמָה שֶׁלֹּא הוּרְמוּ מַתְּנוֹתֶיהָ. וְאָמַר רַבִּי יִצְחָק: כׇּל הָאוֹכֵל מִבְּהֵמָה שֶׁלֹּא הוּרְמוּ מַתְּנוֹתֶיהָ, כְּאִילּוּ אוֹכֵל טְבָלִים. וְלֵית הִלְכְתָא כְּווֹתֵיהּ.</div>
+      <div class="trans">ביאור הנהגתו: ר׳ יצחק אמר בשם ר׳ יוחנן — אסור לאכול מבהמה שלא הופרשו ממנה מתנות הכהונה; וכל האוכל מבהמה כזו כאילו אוכל ״טבלים״ (תבואה שלא הופרשו ממנה תרומות ומעשרות). ומסקנת הגמרא: אין הלכה כדבריו (מותר), ואף על פי כן ר׳ פרידא החמיר על עצמו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">מגילה כ״ח א — Megillah 28a:4</span></div>
+      <div class="orig">לְמֵימְרָא דִּמְעַלְּיוּתָא הִיא? וְהָא אָמַר רַבִּי יוֹחָנָן: כׇּל תַּלְמִיד חָכָם שֶׁמְּבָרֵךְ לְפָנָיו, אֲפִילּוּ כֹּהֵן גָּדוֹל עַם הָאָרֶץ — אוֹתוֹ תַּלְמִיד חָכָם חַיָּיב מִיתָה, שֶׁנֶּאֱמַר: ״כׇּל מְשַׂנְאַי אָהֲבוּ מָוֶת״. אַל תִּקְרֵי ״מְשַׂנְאַי״, אֶלָּא ״מַשְׂנִיאַי״.</div>
+      <div class="trans">קושיה על דברי ר׳ פרידא (״לא בירכתי לפני כהן״): וכי זו מעלה? והרי אמר ר׳ יוחנן — כל תלמיד חכם שמניח לאחר לברך לפניו, אפילו אם הוא כהן גדול עם הארץ, אותו תלמיד חכם חייב מיתה (על שמזלזל בכבוד התורה), שנאמר ״כל משנאי אהבו מוות״ — אל תקרא ״מְשַׂנְאַי״ אלא ״מַשְׂנִיאַי״ (גורמים שישנאו את ה׳)?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">מגילה כ״ח א — Megillah 28a:5</span></div>
+      <div class="orig">כִּי קָאָמַר אִיהוּ, בְּשָׁוִין.</div>
+      <div class="trans">תירוץ: כשר׳ פרידא אמר שכיבד את הכהן, מדובר במצב שהם שווים — כשהכהן עצמו גם תלמיד חכם, ואז ראוי לכבדו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">מגילה כ״ח א — Megillah 28a:6</span></div>
+      <div class="orig">שָׁאֲלוּ תַּלְמִידָיו אֶת רַבִּי נְחוּנְיָא בֶּן הַקָּנָה: בַּמֶּה הֶאֱרַכְתָּ יָמִים? אָמַר לָהֶם: מִיָּמַי לֹא נִתְכַּבַּדְתִּי בִּקְלוֹן חֲבֵרִי, וְלֹא עָלְתָה עַל מִטָּתִי קִלְלַת חֲבֵרִי, וּוַתְּרָן בְּמָמוֹנִי הָיִיתִי.</div>
+      <div class="trans">שאלו תלמידיו את ר׳ נחוניא בן הקנה: בזכות מה הארכת ימים? אמר להם: מימי לא התכבדתי על חשבון בזיון חברי, ולא עלתה אתי למיטתי קללת חברי (תמיד פייסתי בו ביום), ותרן בממוני הייתי.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">מגילה כ״ח א — Megillah 28a:7-9</span></div>
+      <div class="orig">לֹא נִתְכַּבַּדְתִּי בִּקְלוֹן חֲבֵרִי — כִּי הָא דְּרַב הוּנָא דָּרֵי מָרָא אַכַּתְפֵּיהּ… וְלֹא עָלְתָה עַל מִטָּתִי קִלְלַת חֲבֵרִי — כִּי הָא דְּמַר זוּטְרָא… אֲמַר: שְׁרֵי לֵיהּ לְכׇל מַאן דְּצַעֲרָן. וּוַתְּרָן בְּמָמוֹנִי הָיִיתִי — דְּאָמַר מָר: אִיּוֹב וַותְּרָן בְּמָמוֹנֵיהּ הֲוָה.</div>
+      <div class="trans">הגמרא מבארת כל הנהגה בדוגמה: ״לא התכבדתי בקלון חברי״ — כמו רב הונא שנשא מעדר על כתפו ולא נתן לרב חנא לשאתו במקומו; ״לא עלתה קללת חברי״ — כמו מר זוטרא שלפני שעלה למיטתו היה אומר ״מחול לכל מי שציערני״; ״ותרן בממוני״ — כפי שאמרו על איוב שהיה ותרן בממונו (היה משאיר פרוטה אצל החנווני ולא תובע עודף).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">מגילה כ״ח א — Megillah 28a:10</span></div>
+      <div class="orig">שָׁאַל רַבִּי עֲקִיבָא אֶת רַבִּי נְחוּנְיָא הַגָּדוֹל (אָמַר לוֹ): בַּמֶּה הֶאֱרַכְתָּ יָמִים? אֲתוֹ גַּוּוֹזֵי וְקָא מָחוּ לֵיהּ. סְלֵיק, יְתֵיב אַרֵישָׁא דְּדִיקְלָא. אֲמַר לֵיהּ, רַבִּי: אִם נֶאֱמַר ״כֶּבֶשׂ״ לָמָּה נֶאֱמַר ״אֶחָד״? אָמַר לְהוּ: צוּרְבָּא מִדְּרַבָּנַן הוּא, שִׁבְקוּהוּ.</div>
+      <div class="trans">שאל ר׳ עקיבא את ר׳ נחוניא הגדול: בזכות מה הארכת ימים? באו משרתיו והכוהו (כי חשבו שזלזל בזקנתו). ברח ר׳ עקיבא וטיפס וישב בראש דקל, ומשם שאל שאלה לימודית: אם כבר נאמר ״כבש״ (בקרבן התמיד) למה נאמר גם ״אחד״? כשמע ר׳ נחוניא, אמר למשרתיו: תלמיד חכם הוא, הניחו לו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">מגילה כ״ח א — Megillah 28a:11-12</span></div>
+      <div class="orig">אֲמַר לֵיהּ: ״אֶחָד״ — מְיוּחָד שֶׁבְּעֶדְרוֹ. אֲמַר לֵיהּ: מִיָּמַי לֹא קִבַּלְתִּי מַתָּנוֹת, וְלֹא עָמַדְתִּי עַל מִדּוֹתַי, וּוַתְּרָן בְּמָמוֹנִי הָיִיתִי.</div>
+      <div class="trans">השיב לו ר׳ נחוניא תחילה על השאלה: ״אחד״ מלמד שהכבש יהיה המיוחד והמשובח שבעדר. ואז ענה על השאלה הראשונה: מימי לא קיבלתי מתנות, ולא עמדתי על מידותיי (לא נקמתי במי שפגע בי), ותרן בממוני הייתי.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">מגילה כ״ח א — Megillah 28a:13-14</span></div>
+      <div class="orig">לֹא קִבַּלְתִּי מַתָּנוֹת, כִּי הָא דְּרַבִּי אֶלְעָזָר… לָא הֲוָה שָׁקֵיל… ״שׂוֹנֵא מַתָּנוֹת יִחְיֶה״. רַבִּי זֵירָא… כִּי הֲוָה מְזַמְּנִי לֵיהּ — אָזֵיל… וְלֹא עָמַדְתִּי עַל מִדּוֹתַי — דְּאָמַר רָבָא: כׇּל הַמַּעֲבִיר עַל מִדּוֹתָיו — מַעֲבִירִין מִמֶּנּוּ כׇּל פְּשָׁעָיו.</div>
+      <div class="trans">ביאורים: ״לא קיבלתי מתנות״ — כמו ר׳ אלעזר שלא קיבל מתנות מבית הנשיא ואף לא הזמנות, על פי הפסוק ״שונא מתנות יחיה״; אך ר׳ זירא היה הולך כשהזמינוהו, כי אמר שהם מתכבדים בו. ״לא עמדתי על מידותיי״ — כמו שאמר רבא: כל המעביר על מידותיו (מוחל ואינו נוקם), מעבירים ממנו כל פשעיו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">מגילה כ״ח א — Megillah 28a:15</span></div>
+      <div class="orig">שָׁאַל רַבִּי אֶת רַבִּי יְהוֹשֻׁעַ בֶּן קׇרְחָה: בַּמָּה הֶאֱרַכְתָּ יָמִים?… אָמַר לוֹ: מִיָּמַי לֹא נִסְתַּכַּלְתִּי בִּדְמוּת אָדָם רָשָׁע. דְּאָמַר רַבִּי יוֹחָנָן: אָסוּר לְאָדָם לְהִסְתַּכֵּל בְּצֶלֶם דְּמוּת אָדָם רָשָׁע.</div>
+      <div class="trans">שאל רבי (יהודה הנשיא) את ר׳ יהושע בן קרחה: בזכות מה הארכת ימים? (ולאחר שהבטיח לו שהוא שואל לשם לימוד תורה) אמר לו: מימי לא הסתכלתי בדמותו של אדם רשע — כדברי ר׳ יוחנן: אסור לאדם להסתכל בצלם דמותו של אדם רשע.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">מגילה כ״ח א — Megillah 28a:16-17</span></div>
+      <div class="orig">רַבִּי אֶלְעָזָר אָמַר: עֵינָיו כֵּהוֹת… מִשּׁוּם דְּאִסְתַּכַּל בְּעֵשָׂו הָרָשָׁע. וְהָא גְּרַמָא לֵיהּ? וְהָאָמַר רַבִּי יִצְחָק: לְעוֹלָם אַל תְּהִי קִלְלַת הֶדְיוֹט קַלָּה בְּעֵינֶיךָ, שֶׁהֲרֵי אֲבִימֶלֶךְ קִלֵּל אֶת שָׂרָה, וְנִתְקַיֵּים בְּזַרְעָהּ!</div>
+      <div class="trans">ר׳ אלעזר אמר: המסתכל ברשע — עיניו כהות, שנאמר ביצחק ״ותכהינה עיניו מראות״, מפני שהסתכל בעשו הרשע. קושיה: וכי זה גרם לעיוורון יצחק? והרי אמר ר׳ יצחק שאין לזלזל בקללת הדיוט — שאבימלך קילל את שרה (״כסות עיניים״) והקללה התקיימה בבנה יצחק שהתעוור!</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">מגילה כ״ח א — Megillah 28a:18</span></div>
+      <div class="orig">הָא וְהָא גְּרַמָא לֵיהּ. רָבָא אָמַר, מֵהָכָא: ״שְׂאֵת פְּנֵי רָשָׁע לֹא טוֹב״.</div>
+      <div class="trans">תירוץ: גם זה (ההסתכלות בעשו) וגם זה (קללת אבימלך) יחד גרמו לעיוורונו. רבא אמר שאת האיסור להסתכל ברשע לומדים מפסוק אחר: ״שאת פני רשע לא טוב״.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">מגילה כ״ח א — Megillah 28a:19</span></div>
+      <div class="orig">בִּשְׁעַת פְּטִירָתוֹ, אָמַר לוֹ: [רַבִּי] בָּרְכֵנִי! אָמַר לוֹ: יְהִי רָצוֹן שֶׁתַּגִּיעַ לַחֲצִי יָמַי. וּלְכוּלְּהוּ לָא? אָמַר לוֹ: הַבָּאִים אַחֲרֶיךָ — בְּהֵמָה יִרְעוּ?!</div>
+      <div class="trans">בשעת פטירת ר׳ יהושע בן קרחה ביקש ממנו רבי: ברך אותי! אמר לו: יהי רצון שתגיע לחצי ימיי. שאל רבי בתמיהה: ולכל ימיך לא אגיע? השיב לו: אם תאריך ימים כמוני, האם הבאים אחריך (בניך) ירעו בהמה? — כלומר לא יזכו להנהיג ולעלות בתורה; מוטב שלא יאריכו ימיך יותר מדי.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">20</span> <span class="ref">מגילה כ״ח א — Megillah 28a:20</span></div>
+      <div class="orig">אֲבוּהּ בַּר אִיהִי וּמִנְיָמִן בַּר אִיהִי, חַד אָמַר: תֵּיתֵי לִי דְּלָא אִסְתַּכַּלִי בְּגוֹי, וְחַד אָמַר: תֵּיתֵי לִי דְּלָא עֲבַדִי שׁוּתָּפוּת בַּהֲדֵי גּוֹי.</div>
+      <div class="trans">אבוה בר איהי ומנימין בר איהי: אחד אמר — תבוא עליי ברכה שלא הסתכלתי בגוי (רשע), והשני אמר — תבוא עליי ברכה שלא עשיתי שותפות עם גוי (רשע), כדי לא להתחבר עם אדם רע.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">21</span> <span class="ref">מגילה כ״ח א — Megillah 28a:21</span></div>
+      <div class="orig">שָׁאֲלוּ תַּלְמִידָיו אֶת רַבִּי זֵירָא: בַּמָּה הֶאֱרַכְתָּ יָמִים? אָמַר לָהֶם: מִיָּמַי לֹא הִקְפַּדְתִּי בְּתוֹךְ בֵּיתִי, וְלֹא צָעַדְתִּי בִּפְנֵי מִי שֶׁגָּדוֹל מִמֶּנִּי, וְלֹא הִרְהַרְתִּי בִּמְבוֹאוֹת הַמְטוּנָּפוֹת, וְלֹא הָלַכְתִּי אַרְבַּע אַמּוֹת בְּלֹא תּוֹרָה וּבְלֹא תְּפִילִּין, וְלֹא יָשַׁנְתִּי בְּבֵית הַמִּדְרָשׁ לֹא שֵׁינַת קֶבַע וְלֹא שֵׁינַת עֲרַאי, וְלֹא שַׂשְׂתִּי בְּתַקָּלַת חֲבֵירִי, וְלֹא קָרָאתִי לַחֲבֵירִי בַּחֲנִיכָתוֹ.</div>
+      <div class="trans">שאלו תלמידיו את ר׳ זירא: בזכות מה הארכת ימים? אמר להם: מימי לא הקפדתי (כעסתי) בתוך ביתי, ולא צעדתי לפני מי שגדול ממני, ולא הרהרתי בדברי תורה במבואות מלוכלכים, ולא הלכתי ארבע אמות בלי תורה ובלי תפילין, ולא ישנתי בבית המדרש לא שינת קבע ולא שינת עראי, ולא שמחתי בתקלת (במכשול) חברי, ולא קראתי לחברי בכינוי הגנאי שלו.</div>
+    </div>
+  </section>
+
+  <footer>נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</footer>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: { fontFamily: 'Frank Ruhl Libre, Heebo, serif', fontSize: '15px' },
+    flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis', nodeSpacing: 45, rankSpacing: 55 }
+  });
+
+  let _seq = 0;
+  async function renderChart(chart, lang) {
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if (!holder || !target) return;
+    try {
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if (bindFunctions) bindFunctions(target);
+    } catch (e) {
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+  }
+
+  for (const chart of document.querySelectorAll('.chart')) {
+    await renderChart(chart, 'he');
+    const btn = chart.querySelector('.lang-toggle');
+    if (btn && chart.querySelector('.src-ar')) {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.lang === 'he' ? 'ar' : 'he';
+        await renderChart(chart, next);
+        btn.dataset.lang = next;
+        btn.textContent = next === 'he' ? 'הצג ארמית (מקור) ⇄' : 'הצג עברית ⇄';
+      });
+    } else if (btn) {
+      btn.remove();
+    }
+  }
+</script>
+</body>
+</html>

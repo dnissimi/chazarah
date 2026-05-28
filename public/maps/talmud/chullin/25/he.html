@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין כ״ה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --ink:#1f2937; --muted:#6b7280; --bg:#faf7f0; --card:#ffffff; --border:#e7e2d6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Heebo","Segoe UI",Arial,"Arial Hebrew",sans-serif; line-height:1.7;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 90px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:"Frank Ruhl Libre",Georgia,serif; font-size:2rem; margin:0 0 6px}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{
+    background:#fffbea; border:1px solid var(--conclusion-line); border-radius:12px;
+    padding:14px 18px; margin:18px 0; font-size:1.05rem;
+  }
+  .takeaway b{font-family:"Frank Ruhl Libre",serif}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:"Frank Ruhl Libre","Heebo",serif !important; direction:rtl}
+  .lang-toggle{position:absolute; top:10px; left:10px; z-index:2; cursor:pointer;
+    font-family:"Heebo",sans-serif; font-size:.78rem; color:var(--statement-line);
+    background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .lang-toggle:hover{background:#f3f4ff; border-color:var(--statement-line)}
+  /* overview block */
+  .overview h2{text-align:center}
+  /* per-sugya sections */
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:"Frank Ruhl Libre",serif; margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--statement-line); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:#374151; margin:8px 0 14px}
+  h3{font-family:"Frank Ruhl Libre",serif; color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-right:5px solid var(--statement-line); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--statement-line); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-left:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:"Frank Ruhl Libre",serif; font-size:1.15rem; margin:6px 0 4px}
+  .quote .trans{color:#374151}
+  .quote .trans:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>מפת הסוגיא — חולין כ״ה</h1>
+    <div class="subtitle">חולין כ״ה א:י״א-כ״ו א:א׳ · Chullin 25a:11-26a:1 · מקור: ספריא (William Davidson)</div>
+  </header>
+
+  <div class="takeaway"><b>שורה תחתונה:</b> הדף עובר בין שלוש משניות והגמרא שעליהן: תחילה טומאת כלי עץ ומתכת ו"גולמי כלים" (כלים לא־גמורים), אחר כך שקדים מרים ומתוקים (חיוב תרומה ומעשר), ולבסוף התֶּמֶד (משקה משאריות ענבים) — מתי הוא נחשב יין; הסוגיה האחרונה מבררת כשיטת מי נשנתה המשנה.</div>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--mishnah)"></i>משנה</span>
+    <span><i class="swatch" style="background:var(--statement)"></i>מימרא / דעה</span>
+    <span><i class="swatch" style="background:var(--question)"></i>קושיא / מיתיבי</span>
+    <span><i class="swatch" style="background:var(--answer)"></i>תירוץ / יישוב</span>
+    <span><i class="swatch" style="background:var(--proof)"></i>ראיה / תא שמע</span>
+    <span><i class="swatch" style="background:var(--conclusion)"></i>מסקנה</span>
+  </div>
+
+  <section class="overview"><h2>מפת הדף — מבט-על</h2>
+    <div class="chart">
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1(["1 · משנה: טהור בעץ — טמא במתכת"]):::mishnah
+  O2["2 · גמרא: גולמי כלי עץ ומתכת — מה טמא?"]:::statement
+  O3(["3 · משנה: שקדים מרים ומתוקים — חיוב מעשר"]):::mishnah
+  O4["4 · גמרא: קטנים או גדולים — מתי חייבים?"]:::statement
+  O5(["5 · משנה: תֶּמֶד שהחמיץ — נחשב יין"]):::mishnah
+  O6["6 · גמרא: כשיטת מי נשנתה המשנה?"]:::conclusion
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+      </script>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge">סוגיה 1</span> משנה: טהרת כלי עץ מול כלי מתכת <span class="ref">Chullin 25a:11</span></h2>
+    <div class="lead">המשנה פותחת בכלל מנוגד: מה שטהור בכלי עץ — טמא בכלי מתכת, ולהפך.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["1 משנה: מה שטהור בכלי עץ — טמא בכלי מתכת"]):::mishnah
+  M2(["1 ולהפך: טהור בכלי מתכת — טמא בכלי עץ"]):::mishnah
+  M1 -->|הכלל ההפוך| M2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["1 טָהוֹר בִּכְלֵי עֵץ, טָמֵא בִּכְלֵי מַתָּכוֹת"]):::mishnah
+  M2(["1 טָהוֹר בִּכְלֵי מַתָּכוֹת, טָמֵא בִּכְלֵי עֵץ"]):::mishnah
+  M1 -->|הכלל ההפוך| M2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ה א — Chullin 25a:11</span></div>
+      <div class="orig">מַתְנִי׳ טָהוֹר בִּכְלֵי עֵץ, טָמֵא בִּכְלֵי מַתָּכוֹת; טָהוֹר בִּכְלֵי מַתָּכוֹת, טָמֵא בִּכְלֵי עֵץ.</div>
+      <div class="trans">משנה: דבר שאינו מקבל טומאה כשהוא עשוי כלי עץ — מקבל טומאה כשהוא כלי מתכת; ואותו דבר עצמו שאינו מקבל טומאה בכלי מתכת — מקבל טומאה בכלי עץ. (המשנה רומזת לכלל שיתבאר בגמרא.)</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge">סוגיה 2</span> גולמי כלי עץ ומתכת — מתי מקבלים טומאה <span class="ref">Chullin 25a:12-25b:4</span></h2>
+    <div class="lead">הגמרא מבארת את המשנה: גולמי כלי עץ (לא־גמורים) כבר טמאים, אך גולמי מתכת עדיין טהורים — ושואלת מדוע, ומה ההבדל המעשי בין הטעמים.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["2 ברייתא: גולם כלי עץ (כלי לא-גמור) — טמא; של מתכת — טהור"]:::statement
+  S2["3 אלו גולמי עץ: חסר ליטוש או רגל — ובכל זאת טמא"]:::statement
+  Q1{"4 קושיא: 'חסר חטיטה — טהור' — פשיטא?"}:::question
+  A1["4 תירוץ: חָקַק קְפִיזָא בְּקַבָּא (חלל חלקי בלבד)"]:::answer
+  S3["5-6 אלו גולמי מתכת: חסר ליטוש — טהור; חסר כיסוי — טמא"]:::statement
+  Q2{"7 קושיא: מַאי שְׁנָא? למה עץ ומתכת שונים?"}:::question
+  O1["7 ר׳ יוחנן: כלי מתכת נעשים לכבוד"]:::statement
+  O2["7 רב נחמן: דמי המתכת יקרים"]:::statement
+  Q3{"8 מַאי בֵּינַיְיהוּ? מה ההבדל המעשי?"}:::question
+  A2["8 כלי עצם (קרן): יקרים אך לא לכבוד → רב נחמן: ככלי מתכת"]:::answer
+  Q4{"9 וכי כלי עצם מקבלים טומאה?"}:::question
+  P1["9 תא שמע (ברייתא): 'וכל מעשה עזים' — לרבות כלי קרן וטלף"]:::proof
+  C1["9 מסקנה: כלי עצם מקבלים טומאה (ופרט לעופות)"]:::conclusion
+  S1 --> S2
+  S2 -->|הגמרא מדייקת| Q1
+  Q1 -->|תירוץ| A1
+  S2 --> S3
+  S3 -->|הגמרא שואלת| Q2
+  Q2 -->|מחלוקת| O1
+  Q2 -->|מחלוקת| O2
+  O1 --> Q3
+  O2 --> Q3
+  Q3 -->|תירוץ| A2
+  A2 --> Q4
+  Q4 -->|ראיה| P1
+  P1 --> C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["2 גּוֹלְמֵי כְּלִי עֵץ טְמֵאִין, גּוֹלְמֵי מַתָּכוֹת טְהוֹרִין"]:::statement
+  S2["3 וְאֵלּוּ הֵן גּוֹלְמֵי כְּלֵי עֵץ: כֹּל שֶׁעָתִיד לָשׁוּף…"]:::statement
+  Q1{"4 מְחוּסָּר חֲטִיטָה — פְּשִׁיטָא!"}:::question
+  A1["4 לָא צְרִיכָא, דְּחַק קְפִיזָא בְּקַבָּא"]:::answer
+  S3["5-6 וְאֵלּוּ גּוֹלְמֵי מַתָּכוֹת… מְחוּסָּר כְּסוּי — טָמֵא"]:::statement
+  Q2{"7 מַאי שְׁנָא הָנֵי וּמַאי שְׁנָא הָנֵי?"}:::question
+  O1["7 רַבִּי יוֹחָנָן: הוֹאִיל וּלְכָבוֹד עֲשׂוּיִין"]:::statement
+  O2["7 רַב נַחְמָן: הוֹאִיל וּדְמֵיהֶן יְקָרִים"]:::statement
+  Q3{"8 מַאי בֵּינַיְיהוּ?"}:::question
+  A2["8 אִיכָּא בֵּינַיְיהוּ כְּלֵי עֶצֶם, כִּכְלֵי מַתָּכוֹת דָּמוּ"]:::answer
+  Q4{"9 מִכְּלָל דִּכְלֵי עֶצֶם מְקַבְּלִי טוּמְאָה?"}:::question
+  P1["9 דְּתַנְיָא: ׳וְכׇל מַעֲשֵׂה עִזִּים תִּתְחַטָּאוּ׳"]:::proof
+  C1["9 אִין, לְהָבִיא דָּבָר הַבָּא מִן הַקַּרְנַיִם; פְּרָט לְעוֹפוֹת"]:::conclusion
+  S1 --> S2
+  S2 -->|הגמרא מדייקת| Q1
+  Q1 -->|תירוץ| A1
+  S2 --> S3
+  S3 -->|הגמרא שואלת| Q2
+  Q2 -->|מחלוקת| O1
+  Q2 -->|מחלוקת| O2
+  O1 --> Q3
+  O2 --> Q3
+  Q3 -->|תירוץ| A2
+  A2 --> Q4
+  Q4 -->|ראיה| P1
+  P1 --> C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ה א — Chullin 25a:12</span></div>
+      <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן: גּוֹלְמֵי כְּלִי עֵץ טְמֵאִין, פְּשׁוּטֵיהֶן טְהוֹרִין; גּוֹלְמֵי כְּלֵי מַתָּכוֹת טְהוֹרִין, פְּשׁוּטֵיהֶן טְמֵאִין. נִמְצָא טָהוֹר בִּכְלֵי עֵץ – טָמֵא בִּכְלֵי מַתָּכוֹת, טָהוֹר בִּכְלֵי מַתָּכוֹת – טָמֵא בִּכְלֵי עֵץ.</div>
+      <div class="trans">גמרא: שנו חכמים בברייתא: כלי עץ לא־גמורים ("גולם") כבר מקבלים טומאה, אבל כלי עץ שטוחים (בלי בית קיבול) טהורים; ובמתכת הפוך — גולמי מתכת עדיין טהורים, וכלי מתכת שטוחים טמאים. נמצא הכלל של המשנה: מה שטהור בעץ טמא במתכת ולהפך.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ה א — Chullin 25a:13</span></div>
+      <div class="orig">וְאֵלּוּ הֵן גּוֹלְמֵי כְּלֵי עֵץ: כֹּל שֶׁעָתִיד לָשׁוּף, לְשַׁבֵּץ, לְגָרֵר, לְכַרְכֵּב, לְהָטִיחַ בְּטוּנָס, מְחוּסָּר כַּן אוֹ אוֹגֶן אוֹ אוֹזֶן – טָמֵא, מְחוּסָּר חֲטִיטָה – טָהוֹר.</div>
+      <div class="trans">ואלו נחשבים "גולמי" כלי עץ: כל כלי שעדיין עתידים ללטשו, לשבץ בו קישוט, להחליקו, לעטרו, או לשפשפו בעור דג (טונא) — ואפילו חסר לו בסיס, שפה או ידית — בכל זאת כבר מקבל טומאה. אך אם חסר לו את החקיקה שתעשה ממנו בית קיבול — עדיין טהור.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין כ״ה א — Chullin 25a:14</span></div>
+      <div class="orig">מְחוּסָּר חֲטִיטָה, פְּשִׁיטָא! לָא צְרִיכָא, דְּחַק קְפִיזָא בְּקַבָּא.</div>
+      <div class="trans">הגמרא מקשה: "חסר חקיקה — טהור" — הרי זה פשוט, שהרי אין כאן כלי כלל! ומתרצת: לא נצרכה ההלכה אלא למקרה שחקק חלל קטן (קפיזא, כשלושה לוג) בתוך כלי שנועד להכיל מידה גדולה (קב, שישה לוג) — יש כבר בית קיבול חלקי, ובכל זאת טהור כי לא הושלם.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין כ״ה א — Chullin 25a:15</span></div>
+      <div class="orig">וְאֵלּוּ הֵן גּוֹלְמֵי כְּלֵי מַתָּכוֹת: כֹּל שֶׁעָתִיד</div>
+      <div class="trans">ואלו נחשבים "גולמי" כלי מתכת: כל כלי שעדיין עתידים… (המשך הרשימה בקטע הבא).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין כ״ה ב — Chullin 25b:1</span></div>
+      <div class="orig">לָשׁוּף, לְשַׁבֵּץ, לְגָרֵר, לְכַרְכֵּר, לְהַקִּישׁ בְּקוּרְנָס. מְחוּסָּר כַּן אוֹ אוֹגֶן אוֹ אוֹזֶן – טָהוֹר, מְחוּסָּר כְּסוּי – טָמֵא.</div>
+      <div class="trans">…ללטש, לשבץ, להחליק, לעטר, או להכותו בפטיש (קורנס). אם חסר לו בסיס, שפה או ידית — עדיין טהור (בניגוד לעץ!). אבל אם הכלי שלם וחסר לו רק כיסוי — כבר טמא.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין כ״ה ב — Chullin 25b:2</span></div>
+      <div class="orig">מַאי שְׁנָא הָנֵי וּמַאי שְׁנָא הָנֵי? רַבִּי יוֹחָנָן אָמַר: הוֹאִיל וּלְכָבוֹד עֲשׂוּיִין. רַב נַחְמָן אָמַר: הוֹאִיל וּדְמֵיהֶן יְקָרִים.</div>
+      <div class="trans">הגמרא שואלת: מה ההבדל — מדוע גולמי עץ כבר טמאים אך גולמי מתכת עדיין טהורים? ר׳ יוחנן: מפני שכלי מתכת נעשים לכבוד, ואינם נחשבים כלי עד שיושלמו. רב נחמן: מפני שדמיהם (מחירם) יקרים, ואין מוכרים אותם עד שייגמרו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין כ״ה ב — Chullin 25b:3</span></div>
+      <div class="orig">מַאי בֵּינַיְיהוּ? אִיכָּא בֵּינַיְיהוּ כְּלֵי עֶצֶם, וְאַזְדָּא רַב נַחְמָן לְטַעְמֵיהּ, דְּאָמַר רַב נַחְמָן: כְּלֵי עֶצֶם כִּכְלֵי מַתָּכוֹת דָּמוּ.</div>
+      <div class="trans">מה ההבדל המעשי בין שני הטעמים? כלי עצם (העשויים מקרן): הם יקרים אך אינם נעשים לכבוד. לפי ר׳ יוחנן (לכבוד) דינם כעץ, ולפי רב נחמן (יקרים) דינם כמתכת. ואכן רב נחמן הולך לשיטתו, שאמר: דין כלי עצם כדין כלי מתכת.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין כ״ה ב — Chullin 25b:4</span></div>
+      <div class="orig">מִכְּלָל דִּכְלֵי עֶצֶם מְקַבְּלִי טוּמְאָה? אִין, דְּתַנְיָא: רַבִּי יִשְׁמָעֵאל בְּנוֹ שֶׁל רַבִּי יוֹחָנָן בֶּן בְּרוֹקָה אוֹמֵר: מָה תַּלְמוּד לוֹמַר ״וְכׇל מַעֲשֵׂה עִזִּים תִּתְחַטָּאוּ״? לְהָבִיא דָּבָר הַבָּא מִן הָעִזִּים, מִן הַקַּרְנַיִם וּמִן הַטְּלָפַיִם. שְׁאָר בְּהֵמָה וְחַיָּה מִנַּיִן? תַּלְמוּד לוֹמַר ״וְכׇל מַעֲשֵׂה״. אִם כֵּן, מָה תַּלְמוּד לוֹמַר ״עִזִּים״? פְּרָט לְעוֹפוֹת.</div>
+      <div class="trans">וכי משמע מכאן שכלי עצם בכלל מקבלים טומאה? כן! שהרי שנינו בברייתא: ר׳ ישמעאל בנו של ר׳ יוחנן בן ברוקה דורש את הפסוק "וכל מעשה עזים תתחטאו" — לרבות דברים הבאים מן העיזים: מן הקרניים ומן הטלפיים (שמקבלים טומאה). ומניין לשאר בהמה וחיה? מן הריבוי "וכל מעשה". ואם כן למה נאמר דווקא "עזים"? להוציא כלי עצם של עופות, שאינם מקבלים טומאה.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge">סוגיה 3</span> משנה: שקדים מרים ומתוקים <span class="ref">Chullin 25b:5</span></h2>
+    <div class="lead">המשנה קובעת כלל מנוגד נוסף: השלב שחייב במעשר בשקדים המרים — פטור במתוקים, ולהפך.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["10 משנה: השלב החייב במעשר בשקדים המרים — פטור במתוקים"]):::mishnah
+  M2(["10 ולהפך: השלב החייב במתוקים — פטור במרים"]):::mishnah
+  M1 -->|הכלל ההפוך| M2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["10 הַחַיָּיב בִּשְׁקֵדִים הַמָּרִים — פָּטוּר בַּמְּתוּקִים"]):::mishnah
+  M2(["10 הַחַיָּיב בַּמְּתוּקִים — פָּטוּר בַּמָּרִים"]):::mishnah
+  M1 -->|הכלל ההפוך| M2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין כ״ה ב — Chullin 25b:5</span></div>
+      <div class="orig">מַתְנִי׳ הַחַיָּיב בִּשְׁקֵדִים הַמָּרִים – פָּטוּר בַּמְּתוּקִים, הַחַיָּיב בַּמְּתוּקִים – פָּטוּר בַּמָּרִים.</div>
+      <div class="trans">משנה: לעניין חיוב תרומה ומעשר — שלב הגדילה שבו השקדים המרים חייבים, הוא שלב שבו המתוקים פטורים; ושלב שבו המתוקים חייבים, הוא שלב שבו המרים פטורים. (הסיבה תתבאר בגמרא: מתי כל סוג ראוי לאכילה.)</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge">סוגיה 4</span> שקדים: מתי חייבים במעשר <span class="ref">Chullin 25b:6-8</span></h2>
+    <div class="lead">הגמרא מבארת: שקדים מרים חייבים כשהם קטנים (עדיין ראויים), מתוקים כשהם גדולים. ואז דעה שמרים פטורים בשני השלבים, ובירור: לדעה המחייבת — מה התועלת בגדולים?</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["11 ברייתא: מרים — קטנים חייבים, גדולים פטורים; מתוקים להפך"]:::statement
+  O1["12 ר׳ ישמעאל ברבי יוסי (משום אביו): מרים — זה וזה לפטור"]:::statement
+  O2["12 ואיכא דאמרי: זה וזה לחיוב"]:::statement
+  C1["12 ר׳ אלעא: ר׳ חנינא הורה בציפורי כדעת 'זה וזה לפטור'"]:::conclusion
+  Q1{"13 לדעת 'זה וזה לחיוב' — גדולים מרים למה ראויים?"}:::question
+  A1["13 ר׳ יוחנן: אפשר למתקם על ידי האור (קליה)"]:::answer
+  S1 --> O1
+  S1 --> O2
+  O1 -->|מחלוקת בנוסחאות| O2
+  O1 -->|הוראה למעשה| C1
+  O2 -->|הגמרא מקשה| Q1
+  Q1 -->|תירוץ| A1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["11 שְׁקֵדִים הַמָּרִים, קְטַנִּים חַיָּיבִין, גְּדוֹלִים פְּטוּרִין"]:::statement
+  O1["12 רַבִּי יִשְׁמָעֵאל בְּרַבִּי יוֹסֵי: זֶה וָזֶה לִפְטוּר"]:::statement
+  O2["12 וְאָמְרִי לַהּ: זֶה וָזֶה לְחִיּוּב"]:::statement
+  C1["12 הוֹרָה רַבִּי חֲנִינָא בְּצִפּוֹרִי כְּדִבְרֵי 'זֶה וָזֶה לִפְטוּר'"]:::conclusion
+  Q1{"13 לְמַאן דְּאָמַר זֶה וָזֶה לְחִיּוּב, גְּדוֹלִים לְמַאי חֲזוּ?"}:::question
+  A1["13 רַבִּי יוֹחָנָן: הוֹאִיל וְיָכוֹל לְמַתְּקָן עַל יְדֵי הָאוּר"]:::answer
+  S1 --> O1
+  S1 --> O2
+  O1 -->|מחלוקת בנוסחאות| O2
+  O1 -->|הוראה למעשה| C1
+  O2 -->|הגמרא מקשה| Q1
+  Q1 -->|תירוץ| A1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין כ״ה ב — Chullin 25b:6</span></div>
+      <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן: שְׁקֵדִים הַמָּרִים, קְטַנִּים – חַיָּיבִין, גְּדוֹלִים – פְּטוּרִין. מְתוּקִים, גְּדוֹלִים – חַיָּיבִין, קְטַנִּים – פְּטוּרִין.</div>
+      <div class="trans">גמרא: שנו חכמים בברייתא: שקדים מרים — כשהם קטנים חייבים בתרומה ומעשר (כי עדיין אינם מרים וראויים לאכילה), וכשהם גדולים פטורים (כי נעשו מרים ופסולים לאכילה). שקדים מתוקים — כשהם גדולים חייבים (כי הבשילו וראויים), וכשהם קטנים פטורים (כי עדיין אינם ראויים).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין כ״ה ב — Chullin 25b:7</span></div>
+      <div class="orig">רַבִּי יִשְׁמָעֵאל בְּרַבִּי יוֹסֵי אוֹמֵר מִשּׁוּם אָבִיו: זֶה וָזֶה לִפְטוּר, וְאָמְרִי לַהּ: זֶה וָזֶה לְחִיּוּב. אָמַר רַבִּי אִלְעָא: הוֹרָה רַבִּי חֲנִינָא בְּצִפּוֹרִי כְּדִבְרֵי הָאוֹמֵר זֶה וָזֶה לִפְטוּר.</div>
+      <div class="trans">ר׳ ישמעאל ברבי יוסי אומר בשם אביו (לגבי מרים): זה וזה — גם הקטן וגם הגדול — לפטור. ויש הגורסים להפך: זה וזה לחיוב. אמר ר׳ אלעא: ר׳ חנינא הורה הלכה למעשה בעיר ציפורי כדעת האומר "זה וזה לפטור".</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין כ״ה ב — Chullin 25b:8</span></div>
+      <div class="orig">וּלְמַאן דְּאָמַר זֶה וָזֶה לְחִיּוּב, גְּדוֹלִים לְמַאי חֲזוּ? אָמַר רַבִּי יוֹחָנָן: הוֹאִיל וְיָכוֹל לְמַתְּקָן עַל יְדֵי הָאוּר.</div>
+      <div class="trans">הגמרא שואלת: ולדעה הגורסת "זה וזה לחיוב" — שקדים מרים גדולים, שהם מרים ופסולים, למה הם ראויים שיתחייבו? ענה ר׳ יוחנן: מאחר שאפשר להמתיקם על ידי האש (קליה), הם נחשבים ראויים לאכילה.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+    <h2><span class="badge">סוגיה 5</span> משנה: תֶּמֶד וקלבון <span class="ref">Chullin 25b:9-10</span></h2>
+    <div class="lead">המשנה: התֶּמֶד (משקה משאריות ענבים) — לפני שהחמיץ אינו יין, ומשהחמיץ נחשב יין. ועוד כלל מנוגד באחים שותפים: קלבון מול מעשר בהמה.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["14 משנה: תֶּמֶד (יין מדולל) לפני שהחמיץ — אינו נקנה בכסף מעשר, ופוסל מקווה"]):::mishnah
+  M2(["14 משהחמיץ — נקנה בכסף מעשר, ואינו פוסל מקווה"]):::mishnah
+  M3(["15 משנה: אחים שותפים — חייבים בקלבון = פטורים ממעשר בהמה, ולהפך"]):::mishnah
+  M1 -->|לפני / אחרי החמצה| M2
+  M2 --> M3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["14 הַתֶּמֶד, עַד שֶׁלֹּא הֶחְמִיץ — אֵינוֹ נִיקָּח בְּכֶסֶף מַעֲשֵׂר, וּפוֹסֵל אֶת הַמִּקְוֶה"]):::mishnah
+  M2(["14 מִשֶּׁהֶחְמִיץ — נִיקָּח בְּכֶסֶף מַעֲשֵׂר, וְאֵינוֹ פּוֹסֵל אֶת הַמִּקְוֶה"]):::mishnah
+  M3(["15 הָאַחִין הַשּׁוּתָּפִין… קָלְבּוֹן מול מַעְשַׂר בְּהֵמָה"]):::mishnah
+  M1 -->|לפני / אחרי החמצה| M2
+  M2 --> M3
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין כ״ה ב — Chullin 25b:9</span></div>
+      <div class="orig">מַתְנִי׳ הַתֶּמֶד, עַד שֶׁלֹּא הֶחְמִיץ – אֵינוֹ נִיקָּח בְּכֶסֶף מַעֲשֵׂר, וּפוֹסֵל אֶת הַמִּקְוֶה. מִשֶּׁהֶחְמִיץ – נִיקָּח בְּכֶסֶף מַעֲשֵׂר, וְאֵינוֹ פּוֹסֵל אֶת הַמִּקְוֶה.</div>
+      <div class="trans">משנה: התֶּמֶד (משקה שעושים משאריות ענבים ששורים במים) — כל עוד לא החמיץ אינו נחשב יין: אי אפשר לקנותו בכסף מעשר שני, ואם נופל למקווה הוא פוסלו (כמים שאובים). אך משהחמיץ — נחשב יין: אפשר לקנותו בכסף מעשר שני, ואינו פוסל את המקווה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין כ״ה ב — Chullin 25b:10</span></div>
+      <div class="orig">הָאַחִין הַשּׁוּתָּפִין, כְּשֶׁחַיָּיבִין בַּקָּלְבּוֹן – פְּטוּרִין מִמַּעְשַׂר בְּהֵמָה; כְּשֶׁחַיָּיבִין בְּמַעְשַׂר בְּהֵמָה – פְּטוּרִין מִן הַקָּלְבּוֹן.</div>
+      <div class="trans">אחים שירשו את אביהם ונעשו שותפים: כשהם חייבים בתוספת הקָלְבּוֹן (תוספת קטנה לתשלום מחצית השקל) — הם פטורים ממעשר בהמה; וכשהם חייבים במעשר בהמה — הם פטורים מן הקלבון. (שני החיובים אינם חלים יחד.)</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-6">
+    <h2><span class="badge">סוגיה 6</span> כשיטת מי נשנתה משנת התֶּמֶד <span class="ref">Chullin 25b:11-26a:1</span></h2>
+    <div class="lead">הגמרא מבררת: מַנִּי מַתְנִיתִין? המשנה (שמשהחמיץ התֶּמֶד נחשב יין) אינה כר׳ יהודה ולא כרבנן — ומתרצים שהמחלוקת היא רק במקרה שהחמיץ, והמשנה כר׳ יהודה.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"16 קושיא: מַנִּי מַתְנִיתִין? לא ר׳ יהודה ולא רבנן"}:::question
+  S1["16 ברייתא: מתמד ומצא כמידת המים — חכמים פוטרים, ר׳ יהודה מחייב"]:::statement
+  Q2{"17 אם רבנן — יחייב גם משהחמיץ? אם ר׳ יהודה — גם בלא החמיץ?"}:::question
+  A1["18 רב נחמן בשם רבה בר אבוה: המחלוקת רק כשהחמיץ, והמשנה כר׳ יהודה"]:::answer
+  C1["18 וכן ר׳ יוסי ברבי חנינא: בשהחמיץ מחלוקת"]:::conclusion
+  Q1 -->|מקור הקושי| S1
+  S1 --> Q2
+  Q2 -->|תירוץ| A1
+  A1 -->|אישוש| C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"16 מַנִּי מַתְנִיתִין? לָא רַבִּי יְהוּדָה וְלָא רַבָּנַן"}:::question
+  S1["16 דְּתַנְיָא: הַמְתַמֵּד… פָּטוּר, וְרַבִּי יְהוּדָה מְחַיֵּיב"]:::statement
+  Q2{"17 אִי רַבָּנַן… אִי רַבִּי יְהוּדָה אַף עַל גַּב דְּלֹא הֶחְמִיץ"}:::question
+  A1["18 רַב נַחְמָן אָמַר רַבָּה בַּר אֲבוּהּ: בְּשֶׁהֶחְמִיץ מַחְלוֹקֶת, וּמַתְנִיתִין רַבִּי יְהוּדָה"]:::answer
+  C1["18 וְכֵן רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: בְּשֶׁהֶחְמִיץ מַחְלוֹקֶת"]:::conclusion
+  Q1 -->|מקור הקושי| S1
+  S1 --> Q2
+  Q2 -->|תירוץ| A1
+  A1 -->|אישוש| C1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">חולין כ״ה ב — Chullin 25b:11</span></div>
+      <div class="orig">גְּמָ׳ מַנִּי מַתְנִיתִין? לָא רַבִּי יְהוּדָה וְלָא רַבָּנַן, דְּתַנְיָא: הַמְתַמֵּד וְנָתַן מַיִם בַּמִּדָּה וּמָצָא כְּדֵי מִדָּתוֹ – פָּטוּר, וְרַבִּי יְהוּדָה מְחַיֵּיב.</div>
+      <div class="trans">גמרא: כשיטת מי נשנתה משנתנו? לכאורה לא כר׳ יהודה ולא כחכמים, שהרי שנינו בברייתא: מי שעושה תֶּמֶד ונתן מים במידה מסוימת, ובסוף מצא רק את מידת המים שנתן (בלי תוספת) — חכמים פוטרים אותו ממעשר (כי אין שם אלא מים), ור׳ יהודה מחייב (כי הטעם מכריע שזה יין).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">חולין כ״ה ב — Chullin 25b:12</span></div>
+      <div class="orig">מַנִּי? אִי רַבָּנַן – אַף עַל גַּב דְּהֶחְמִיץ, אִי רַבִּי יְהוּדָה – אַף עַל גַּב דְּלֹא הֶחְמִיץ! אָמַר רַב נַחְמָן אָמַר רַבָּה בַּר אֲבוּהּ:</div>
+      <div class="trans">אם כן כשיטת מי? אם כחכמים — היו פוטרים אפילו משהחמיץ (שהרי הולכים אחר הכמות, לא הטעם), ואילו המשנה מחייבת משהחמיץ; ואם כר׳ יהודה — היה מחייב אפילו בטרם החמיץ (שהרי הולך אחר הטעם), ואילו המשנה פוטרת לפני שהחמיץ! אמר רב נחמן בשם רבה בר אבוה (התירוץ בקטע הבא):</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">חולין כ״ו א — Chullin 26a:1</span></div>
+      <div class="orig">בְּשֶׁהֶחְמִיץ מַחְלוֹקֶת, וּמַתְנִיתִין רַבִּי יְהוּדָה. וְכֵן אָמַר רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: בְּשֶׁהֶחְמִיץ מַחְלוֹקֶת.</div>
+      <div class="trans">המחלוקת בין ר׳ יהודה לחכמים היא דווקא במקרה שהתֶּמֶד החמיץ: רק אז ר׳ יהודה מחייב (לפי הטעם) וחכמים פוטרים; ומשנתנו, שמחייבת משהחמיץ, היא כשיטת ר׳ יהודה. וכן אמר ר׳ יוסי ברבי חנינא: המחלוקת היא דווקא בשהחמיץ.</div>
+    </div>
+  </section>
+
+  <footer>נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</footer>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: { fontFamily: 'Frank Ruhl Libre, Heebo, serif', fontSize: '15px' },
+    flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis', nodeSpacing: 45, rankSpacing: 55 }
+  });
+
+  let _seq = 0;
+  async function renderChart(chart, lang) {
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if (!holder || !target) return;
+    try {
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if (bindFunctions) bindFunctions(target);
+    } catch (e) {
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+  }
+
+  for (const chart of document.querySelectorAll('.chart')) {
+    await renderChart(chart, 'he');
+    const btn = chart.querySelector('.lang-toggle');
+    if (btn && chart.querySelector('.src-ar')) {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.lang === 'he' ? 'ar' : 'he';
+        await renderChart(chart, next);
+        btn.dataset.lang = next;
+        btn.textContent = next === 'he' ? 'הצג ארמית (מקור) ⇄' : 'הצג עברית ⇄';
+      });
+    } else if (btn) {
+      btn.remove();
+    }
+  }
+</script>
+</body>
+</html>

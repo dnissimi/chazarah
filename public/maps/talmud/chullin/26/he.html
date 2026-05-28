@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין כ״ו</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --ink:#1f2937; --muted:#6b7280; --bg:#faf7f0; --card:#ffffff; --border:#e7e2d6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Heebo","Segoe UI",Arial,"Arial Hebrew",sans-serif; line-height:1.7;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 90px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:"Frank Ruhl Libre",Georgia,serif; font-size:2rem; margin:0 0 6px}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{
+    background:#fffbea; border:1px solid var(--conclusion-line); border-radius:12px;
+    padding:14px 18px; margin:18px 0; font-size:1.05rem;
+  }
+  .takeaway b{font-family:"Frank Ruhl Libre",serif}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:"Frank Ruhl Libre","Heebo",serif !important; direction:rtl}
+  .lang-toggle{position:absolute; top:10px; left:10px; z-index:2; cursor:pointer;
+    font-family:"Heebo",sans-serif; font-size:.78rem; color:var(--statement-line);
+    background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .lang-toggle:hover{background:#f3f4ff; border-color:var(--statement-line)}
+  /* overview block */
+  .overview h2{text-align:center}
+  /* per-sugya sections */
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:"Frank Ruhl Libre",serif; margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--statement-line); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:#374151; margin:8px 0 14px}
+  h3{font-family:"Frank Ruhl Libre",serif; color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-right:5px solid var(--statement-line); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--statement-line); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-left:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:"Frank Ruhl Libre",serif; font-size:1.15rem; margin:6px 0 4px}
+  .quote .trans{color:#374151}
+  .quote .trans:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>מפת הסוגיא — חולין כ״ו</h1>
+    <div class="subtitle">חולין כ״ו א:ב׳-כ״ו ב:י״ח · Chullin 26a:2-26b:18 · מקור: ספריא (William Davidson) · סיום פרק "הכל שוחטין"</div>
+  </header>
+
+  <div class="takeaway"><b>שורה תחתונה:</b> הדף ממשיך את דין התֶּמֶד (יין מדולל מגפת ענבים) — אימתי הוא נחשב פרי לקניית מעשר ולטומאה/השקה — ועובר לארבע משניות קצרות מאותו תבנית "כָּל מָקוֹם שֶׁיֵּשׁ X — אֵין Y": מֶכֶר מול קְנָס בקטינה ונערה, מֵיאוּן (סירוב קטינה) מול חֲלִיצָה, ותְּקִיעָה (שופר ערב שבת ביו"ט) מול הַבְדָּלָה (במוצאי שבת שחל בו יו"ט). בכך מסתיים פרק "הכל שוחטין".</div>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--mishnah)"></i>משנה</span>
+    <span><i class="swatch" style="background:var(--statement)"></i>מימרא / דעה</span>
+    <span><i class="swatch" style="background:var(--question)"></i>קושיא / מיתיבי</span>
+    <span><i class="swatch" style="background:var(--answer)"></i>תירוץ / יישוב</span>
+    <span><i class="swatch" style="background:var(--proof)"></i>ראיה / תא שמע</span>
+    <span><i class="swatch" style="background:var(--conclusion)"></i>מסקנה</span>
+  </div>
+
+  <section class="overview"><h2>מפת הדף — מבט-על</h2>
+    <div class="chart">
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · תֶּמֶד שנקנה בכסף מעשר והחמיץ (רב נחמן)"]:::statement
+  O2["2 · ברייתא: השקת תֶּמֶד טמא לפני החמצה"]:::statement
+  O3(["3 · משנה: מֶכֶר וּקְנָס — כלל ר״מ"]):::mishnah
+  O4["4 · גמ׳ מֶכֶר/קְנָס: ר״מ מול חכמים"]:::statement
+  O5(["5 · משנה: מֵיאוּן וַחֲלִיצָה — כלל ר״מ"]):::mishnah
+  O6["6 · גמ׳ מֵיאוּן/חֲלִיצָה: ר״מ מול ר׳ יהודה"]:::statement
+  O7(["7 · משנה: תְּקִיעָה וְהַבְדָּלָה ביו״ט שחל בערב שבת ובמוצאי שבת"]):::mishnah
+  O8["8 · גמ׳: כיצד תוקעין? — רב יהודה ורב אסי"]:::statement
+  O9["9 · גמ׳: סדר ההבדלה במוצאי שבת שחל בו יו״ט"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  O5 --> O6
+  O6 --> O7
+  O7 --> O8
+  O8 --> O9
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+      </script>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge">סוגיה 1</span> תֶּמֶד שנקנה בכסף מעשר והחמיץ <span class="ref">Chullin 26a:2-9</span></h2>
+    <div class="lead">רב נחמן בשם רבה בר אבוה: תֶּמֶד (יין מדולל מגפת ענבים) שקנו אותו בכסף מעשר שני וְלבסוף החמיץ — קנה מעשר למפרע, כי התברר שהוא פרי. רבה ורבא חולקים כיצד ליישב זאת עם המשנה שמתנה זאת בהחמצה.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · מימרא: תֶּמֶד (יין מגפת) שנקנה בכסף מעשר וְהחמיץ — קנה מעשר למפרע (רב נחמן בשם רבה בר אבוה)"]:::statement
+  Q1{"2 · קושיא: והרי המשנה אומרת רק אם החמיץ — שמא היה מחמיץ אילו השאירוֹ?"}:::question
+  A1["3 · תירוץ רבה: באמת שייר ממנו בכוס לבדיקה וְלא החמיץ"]:::answer
+  A2["4 · תירוץ רבא: המשנה כר׳ יוחנן בן נורי — הכל הולך אחר המראה"]:::answer
+  P1["5 · ראיה: מחלוקת ג׳ לוּגין מים עם קוּרטוֹב יין/חלב (מקואות ז:ה)"]:::proof
+  C1["6 · מסקנה: רב נחמן כתנא קמא — לא הולכים אחר המראה; הואיל וְלבסוף החמיץ, התגלה למפרע שהוא פרי"]:::conclusion
+  S2["7 · הערה: רב נחמן חולק על ר׳ אלעזר — שאמר שהכול מודים שלא מפרישין ממקום אחר אלא אם החמיץ"]:::statement
+  S3["8 · טעם ר׳ אלעזר: ר׳ יהודה מחייב מעשר רק מתוכו וְלא ממקום אחר, שמא יפריש מן החיוב על הפטור"]:::statement
+  S1 -->|הגמ׳ מקשה| Q1
+  Q1 -->|תירוץ א׳| A1
+  Q1 -->|תירוץ ב׳| A2
+  A2 -->|מקור הראיה| P1
+  P1 --> C1
+  A1 --> C1
+  C1 -->|ופליגא| S2
+  S2 -->|הסבר| S3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · וְאָמַר רַב נַחְמָן אָמַר רַבָּה בַּר אֲבוּהּ: תֶּמֶד שֶׁלְּקָחוֹ בְּכֶסֶף מַעֲשֵׂר וּלְבַסּוֹף הֶחְמִיץ — קָנָה מַעֲשֵׂר; אִיגַּלַּאי מִילְּתָא לְמַפְרֵעַ דְּפֵירָא הוּא"]:::statement
+  Q1{"2 · אֶלָּא, מַתְנִיתִין דְּקָתָנֵי הֶחְמִיץ אִין, לֹא הֶחְמִיץ לָא — דִּלְמָא אִי שַׁבְקֵיהּ הֲוָה מַחְמִיץ"}:::question
+  A1["3 · אָמַר רַבָּה: כְּשֶׁשִּׁיֵּיר מִמֶּנּוּ בְּכוֹס וְלֹא הֶחְמִיץ"]:::answer
+  A2["4 · רָבָא אָמַר: הָא מַנִּי? רַבִּי יוֹחָנָן בֶּן נוּרִי הִיא"]:::answer
+  P1["5 · דִּתְנַן: שְׁלֹשָׁה לוּגִּין מַיִם חָסֵר קוּרְטוֹב … רַבִּי יוֹחָנָן בֶּן נוּרִי אוֹמֵר הַכֹּל הוֹלֵךְ אַחַר הַמַּרְאֶה"]:::proof
+  C1["6 · לָאו אָמַר רַבִּי יוֹחָנָן בָּתַר חֲזוּתָא אָזְלִינַן? הָכָא נָמֵי זִיל בָּתַר חֲזוּתָא, וְטַעְמָא וַחֲזוּתָא דְּהַאי מַיָּא נִינְהוּ"]:::conclusion
+  S2["7 · וּפְלִיגָא דְּרַבִּי אֶלְעָזָר: הַכֹּל מוֹדִים שֶׁאֵין מַפְרִישִׁין עָלָיו מִמָּקוֹם אַחֵר אֶלָּא אִם כֵּן הֶחְמִיץ"]:::statement
+  S3["8 · קָסָבַר בְּלֹא הֶחְמִיץ מַחְלוֹקֶת … דִּלְמָא אָתֵי לְאַפְרוֹשֵׁי מִן הַחִיּוּב עַל הַפְּטוּר וּמִן הַפְּטוּר עַל הַחִיּוּב"]:::statement
+  S1 -->|הגמ׳ מקשה| Q1
+  Q1 -->|תירוץ א׳| A1
+  Q1 -->|תירוץ ב׳| A2
+  A2 -->|מקור הראיה| P1
+  P1 --> C1
+  A1 --> C1
+  C1 -->|ופליגא| S2
+  S2 -->|הסבר| S3
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו א — Chullin 26a:2</span></div>
+      <div class="orig">וְאָמַר רַב נַחְמָן אָמַר רַבָּה בַּר אֲבוּהּ: תֶּמֶד שֶׁלְּקָחוֹ בְּכֶסֶף מַעֲשֵׂר, וּלְבַסּוֹף הֶחְמִיץ – קָנָה מַעֲשֵׂר. מַאי טַעְמָא? אִיגַּלַּאי מִילְּתָא לְמַפְרֵעַ דְּפֵירָא הוּא.</div>
+      <div class="trans">רב נחמן אומר בשם רבה בר אבוה: תֶּמֶד (משקה מדולל מגפת ענבים ומים) שקנה אותו אדם בכסף של מעשר שני, וְלבסוף החמיץ והפך ליין — המעשר חל עליו, וכסף המעשר מתחלל. הטעם: בדיעבד התברר למפרע שכבר בשעת הקנייה היה זה "פרי" שניתן לקנותו בכסף מעשר, וְלא רק מים.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ו א — Chullin 26a:3</span></div>
+      <div class="orig">אֶלָּא, מַתְנִיתִין דְּקָתָנֵי הֶחְמִיץ – אִין, לֹא הֶחְמִיץ – לָא, דִּלְמָא אִי שַׁבְקֵיהּ הֲוָה מַחְמִיץ! אָמַר רַבָּה: כְּשֶׁשִּׁיֵּיר מִמֶּנּוּ בְּכוֹס וְלֹא הֶחְמִיץ.</div>
+      <div class="trans">קושיא: אם כך, מדוע המשנה תולה את הדין דווקא בְּהחמצה, ואם לא החמיץ — לא? שמא לוּ היה מניחו זמן רב היה מחמיץ! תירוץ רבה: מדובר במקרה שבדק — הניח כוס מהתֶּמֶד בצד, וְלא החמיץ; אז ידוע שזה אכן רק מים בשעת הקנייה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ו א — Chullin 26a:4</span></div>
+      <div class="orig">רָבָא אָמַר: הָא מַנִּי? רַבִּי יוֹחָנָן בֶּן נוּרִי הִיא, דִּתְנַן: שְׁלֹשָׁה לוּגִּין מַיִם חָסֵר קוּרְטוֹב, שֶׁנָּפַל לְתוֹכָן קוּרְטוֹב יַיִן, וּמַרְאֵיהֶן כְּמַרְאֵה יַיִן, וְנָפְלוּ לַמִּקְוֶה – לֹא פְּסָלוּהוּ.</div>
+      <div class="trans">תירוץ אחר של רבא: המשנה אינה דברי הכל, אלא היא דעת ר׳ יוחנן בן נוּרי. שכך שנינו (מקואות ז׳:ה׳): שלושה לוּגין מים חסר קוּרטוֹב (מידה זעירה) שנפלה לתוכם טיפת יין כשיעור קוּרטוֹב, וְמראה התערובת נראה כיין, ואחר כך נפלו השלושה לוּגין למקוה — לא פסלוה (מפני שמים שאוּבים פוסלים מקוה רק בשלושה לוּגין, וכאן היה פחות).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין כ״ו א — Chullin 26a:5-6</span></div>
+      <div class="orig">שְׁלֹשָׁה לוּגִּין מַיִם חָסֵר קוּרְטוֹב, שֶׁנָּפַל לְתוֹכָן קוּרְטוֹב חָלָב, וּמַרְאֵיהֶן כְּמַרְאֵה מַיִם, וְנָפְלוּ לַמִּקְוֶה – לֹא פְּסָלוּהוּ. רַבִּי יוֹחָנָן בֶּן נוּרִי אוֹמֵר: הַכֹּל הוֹלֵךְ אַחַר הַמַּרְאֶה.</div>
+      <div class="trans">המשך המשנה: וכן אם נפל קוּרטוב חלב במקום קוּרטוב יין, וְהמראה נשאר כשל מים (כי החלב לא צבע) — לא פסלו, כי החלב בטל. ר׳ יוחנן בן נורי חולק: הכל הולך לפי המראה — אם נראה כמים, נחשב מים; ולכן במקרה של חלב הוא יפסול את המקוה (כי כל הג׳ לוּגין הם בעצם "מים").</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין כ״ו א — Chullin 26a:7</span></div>
+      <div class="orig">לָאו אָמַר רַבִּי יוֹחָנָן: בָּתַר חֲזוּתָא אָזְלִינַן? הָכָא נָמֵי זִיל בָּתַר חֲזוּתָא, וְטַעְמָא וַחֲזוּתָא דְּהַאי מַיָּא נִינְהוּ.</div>
+      <div class="trans">המשך תירוץ רבא: הרי ר׳ יוחנן בן נורי קובע שהולכים אחר המראה. אם כן, גם במשנת התֶּמֶד: כל זמן שלא החמיץ — טעמו וְמראהו של אותו משקה הם של מים, וְלכן הוא נחשב מים בלבד; רק אם החמיץ מתגלה שהיה פרי. ולעומת זאת רב נחמן סובר כתנא קמא — שלא הולכים אחר המראה, אלא אחר עצם העובדה שלבסוף החמיץ — וְזה מתגלה למפרע.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין כ״ו א — Chullin 26a:7</span></div>
+      <div class="orig">לָאו אָמַר רַבִּי יוֹחָנָן: בָּתַר חֲזוּתָא אָזְלִינַן? הָכָא נָמֵי זִיל בָּתַר חֲזוּתָא, וְטַעְמָא וַחֲזוּתָא דְּהַאי מַיָּא נִינְהוּ.</div>
+      <div class="trans">המסקנה היוצאת מתירוץ רבא: עמדת רב נחמן (שגם בלי בדיקה, ההחמצה מגלה למפרע שזה פרי) מתאימה לתנא קמא של המשנה במקואות — שאינו הולך אחר המראה, אלא אחר התוצאה הסופית.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין כ״ו א — Chullin 26a:8</span></div>
+      <div class="orig">וּפְלִיגָא דְּרַבִּי אֶלְעָזָר, דְּאָמַר רַבִּי אֶלְעָזָר: הַכֹּל מוֹדִים שֶׁאֵין מַפְרִישִׁין עָלָיו מִמָּקוֹם אַחֵר, אֶלָּא אִם כֵּן הֶחְמִיץ.</div>
+      <div class="trans">הערת הגמ׳: דעתו של רב נחמן חולקת על דברי ר׳ אלעזר. ר׳ אלעזר אומר: גם ר׳ יהודה מודה שאין מפרישים מעשר ממקום אחר (תֶּמֶד אחר) על תֶּמֶד זה, אלא רק לאחר שהחמיץ.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין כ״ו א — Chullin 26a:9</span></div>
+      <div class="orig">קָסָבַר בְּלֹא הֶחְמִיץ מַחְלוֹקֶת, וְעַד כָּאן לָא מְחַיֵּיב רַבִּי יְהוּדָה אֶלָּא מִינֵּיהּ וּבֵיהּ, אֲבָל מֵעָלְמָא לָא, דִּלְמָא אָתֵי לְאַפְרוֹשֵׁי מִן הַחִיּוּב עַל הַפְּטוּר וּמִן הַפְּטוּר עַל הַחִיּוּב.</div>
+      <div class="trans">ביאור עמדת ר׳ אלעזר: לדעתו, המחלוקת בין ר׳ יהודה לחכמים היא דווקא בְּתֶמֶד שלא החמיץ, ור׳ יהודה מחייבו רק אם מפריש מן התֶּמֶד עצמו — כי אם החמיץ מאוחר, ההפרשה תקפה. אך לא מתֶּמֶד אחר, שמא יפריש בטעות מן החייב במעשר על הפטור או להפך.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge">סוגיה 2</span> ברייתא: השקת תֶּמֶד טמא בְּמי מקווה <span class="ref">Chullin 26a:10-26b:3</span></h2>
+    <div class="lead">תָּנוּ רַבָּנָן בעניין תֶּמֶד שנטמא: כל זמן שלא החמיץ — מטהרים אותו על ידי הַשָּׁקָה (השקת המים שבו אל מי מקוה דרך כלי); משהחמיץ — אין הַשָּׁקָה מועילה (כי דין השקה רק במים, לא ביין). רבא מצמצם, ורב גְּבִיהָה מקשה ומיישב.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · תָּנוּ רַבָּנָן: התֶּמֶד עד שלא החמיץ —"]:::statement
+  S2["2 · משיקו בְּמים (טהרה ע״י הַשָּׁקָה — מגע במי מקווה); משהחמיץ — אין משיקו; רבא: דווקא תִּמְּדוֹ במים טהורים וְנטמאו, אבל טמאים מעיקרא — לא"]:::statement
+  Q1{"3 · קושיית רב גְּבִיהָה: למה בטמאים מעיקרא לא? וכי משום שהמים כבדים שוקעים תחת, וְהפרי צף מעל — אם כן גם בטהורים שנטמאו!"}:::question
+  A1["4 · תירוץ: אדרבה, התֶּמֶד והמים מבולבלים — מעורבים זה בזה; הָכי נָמי הָכא, גם בְּטמאים מעיקרא הם מעורבים וְהשקה מועילה"]:::answer
+  S1 -->|הברייתא ממשיכה| S2
+  S2 -->|מיתיבי דרב גביהה| Q1
+  Q1 -->|תירוץ| A1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · תָּנוּ רַבָּנָן: הַתֶּמֶד עַד שֶׁלֹּא הֶחְמִיץ —"]:::statement
+  S2["2 · מַשִּׁיקוֹ בַּמַּיִם, מִשֶּׁהֶחְמִיץ אֵין מַשִּׁיקוֹ; אָמַר רָבָא: לֹא שָׁנוּ אֶלָּא שֶׁתִּמְּדוֹ בְּמַיִם טְהוֹרִים וְנִטְמְאוּ, אֲבָל טְמֵאִים מֵעִיקָּרָא לָא"]:::statement
+  Q1{"3 · אֲזַל רַב גְּבִיהָה מִבֵּי כְתִיל קַמֵּיהּ דְּרַב אָשֵׁי: מַאי שְׁנָא טְמֵאִין מֵעִיקָּרָא? אַיְּידֵי דְּמַיָּא יַקִּירִי שׇׁכְנִי תַּתַּאי וּפֵירָא קָפֵי מִלְּעֵיל — אִי הָכִי, טְהוֹרִים וּלְבַסּוֹף נִטְמְאוּ נָמֵי"}:::question
+  A1["4 · אֶלָּא, מְבַלְבְּלִי; הָכָא נָמֵי — מְבַלְבְּלִי"]:::answer
+  S1 -->|הברייתא ממשיכה| S2
+  S2 -->|מיתיבי דרב גביהה| Q1
+  Q1 -->|תירוץ| A1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו א — Chullin 26a:10</span></div>
+      <div class="orig">תָּנוּ רַבָּנָן: הַתֶּמֶד עַד שֶׁלֹּא הֶחְמִיץ –</div>
+      <div class="trans">פתיחת ברייתא: שָׁנוּ חכמים בעניין תֶּמֶד שנטמא — כל זמן שלא החמיץ (עוד אינו יין).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ו ב — Chullin 26b:1</span></div>
+      <div class="orig">מַשִּׁיקוֹ בַּמַּיִם, מִשֶּׁהֶחְמִיץ – אֵין מַשִּׁיקוֹ בְּמַיִם. אָמַר רָבָא: לֹא שָׁנוּ אֶלָּא שֶׁתִּמְּדוֹ בְּמַיִם טְהוֹרִים וְנִטְמְאוּ, אֲבָל טְמֵאִים מֵעִיקָּרָא – לָא.</div>
+      <div class="trans">המשך הברייתא: מטהרים אותו על ידי הַשָּׁקָה — מַשִּׁיקין את כלי התֶּמֶד למי מקווה, כך שהמים שבו "נושקים" למים הטהורים וְנטהרים. אך משהחמיץ — אין הַשָּׁקָה מועילה (היא מועילה רק במים, לא ביין). הוסיף רבא: ההלכה הזאת נאמרה רק כאשר התֶּמֶד הוכן בְּמים טהורים ולאחר מכן נטמא; אבל אם הוכן כבר בְּמים טמאים מתחילה — אין הַשָּׁקָה מועילה כלל.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ו ב — Chullin 26b:2</span></div>
+      <div class="orig">אֲזַל רַב גְּבִיהָה מִבֵּי כְתִיל, אַמְרַהּ לִשְׁמַעְתָּא קַמֵּיהּ דְּרַב אָשֵׁי, מַאי שְׁנָא טְמֵאִין מֵעִיקָּרָא דְּלָא, דְּאָמְרִינַן: אַיְּידֵי דְּמַיָּא יַקִּירִי שׇׁכְנִי תַּתַּאי, וּפֵירָא קָפֵי מִלְּעֵיל, וְלָא קָא סָלְקָא לְהוּ הַשָּׁקָה לְמַיָּא. אִי הָכִי, טְהוֹרִים וּלְבַסּוֹף נִטְמְאוּ נָמֵי.</div>
+      <div class="trans">רב גְּבִיהָה מבית כְּתִיל אמר את הסוגיה לפני רב אשי והקשה: מה ההבדל? אם הסיבה שבטמאים מעיקרא לא מועילה הַשָּׁקָה היא שהמים כבדים וְשוקעים תחתית הכלי, וְהשמרים (פֵּירָא) צפים למעלה ומפסיקים בין מי המקווה לְמים שבכלי — אם כן, גם בְּמים טהורים שנטמאו אחר כך, אותה בעיה אמורה להתקיים!</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין כ״ו ב — Chullin 26b:3</span></div>
+      <div class="orig">אֶלָּא, מְבַלְבְּלִי; הָכָא נָמֵי – מְבַלְבְּלִי.</div>
+      <div class="trans">תירוץ: אדרבה, הסיבה שבטהורים שנטמאו מועילה הַשָּׁקָה היא שהמים והשמרים מבולבלים — מעורבים זה בזה ולא נחים בשתי שכבות. וְגם כאן, בטמאים מעיקרא, באמת הם מעורבים — וְלכן הַשָּׁקָה מועילה. (כלומר, יש לעיין שוב בדין רבא — והסוגיה משאירה את העניין פתוח לדיון.)</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge">סוגיה 3</span> משנה: מֶכֶר וּקְנָס בקטינה ונערה <span class="ref">Chullin 26b:4</span></h2>
+    <div class="lead">משנה קצרה הפותחת רצף של ארבע משניות מתבנית "כָּל מָקוֹם שֶׁיֵּשׁ X — אֵין Y": כל מקום שיש מֶכֶר (זכות האב למכור את בִּתּוֹ הקטנה לאמה עברייה) — אין קְנָס (קנס חמישים שקלים של מפתה/אונס נערה); וְהיכן שיש קְנָס — אין מֶכֶר.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · משנה: כָּל מָקוֹם שֶׁיֵּשׁ מֶכֶר (זכות אב למכור קטינה) אֵין קְנָס (קנס מפתה לנערה), וכל מקום שיש קְנָס אֵין מֶכֶר"]):::mishnah
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · מַתְנִי׳: כׇּל מָקוֹם שֶׁיֵּשׁ מֶכֶר אֵין קְנָס, וְכׇל מָקוֹם שֶׁיֵּשׁ קְנָס אֵין מֶכֶר"]):::mishnah
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו ב — Chullin 26b:4</span></div>
+      <div class="orig">מַתְנִי׳ כׇּל מָקוֹם שֶׁיֵּשׁ מֶכֶר, אֵין קְנָס, וְכׇל מָקוֹם שֶׁיֵּשׁ קְנָס, אֵין מֶכֶר.</div>
+      <div class="trans">משנה: כָּל מקרה שיש בו דין "מֶכֶר" — היינו זכותו של האב למכור את בִּתּוֹ הקטנה לאמה עברייה (עד גיל שתים-עשרה וְהבאת שתי שערות) — אין בו דין קְנָס (חמישים השקלים של אונס/מפתה, שמוטלים רק כשהבת היא "נערה" — מבת שתים-עשרה ויום עד גיל בגרות). וכל מקרה שיש בו קְנָס — אין בו מֶכֶר.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge">סוגיה 4</span> גמ׳ מֶכֶר/קְנָס: ר״מ מול חכמים <span class="ref">Chullin 26b:5-7</span></h2>
+    <div class="lead">רב יהודה בשם רב: המשנה היא דעת ר״מ בלבד; חכמים חולקים וְסוברים שיש קְנָס גם במקום שיש מֶכֶר. הגמ׳ מביאה ברייתא המגדירה את שלוש תקופות הבת ומקשה ומתרצת.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · מימרא: זו דעת ר׳ מאיר; אבל חכמים אומרים יש קְנָס במקום מֶכֶר (רב יהודה בשם רב)"]:::statement
+  P1["2 · ברייתא: שלוש תקופות הבת — קטינה (יום-שתי שערות): מֶכֶר, לא קְנָס · נערה (משעה שמביאה שתי שערות עד בגרות): קְנָס, לא מֶכֶר — לפי ר׳ מאיר"]:::proof
+  S2["3 · חכמים: בת שלוש שנים ויום אחד עד שתבגר — יש לה קְנָס"]:::statement
+  Q1{"4 · קושיא: קְנָס אִין, מֶכֶר לָא? והרי בקטינה האב רשאי למכרה!"}:::question
+  A1["5 · תירוץ: אֵימָא — אף קְנָס במקום מֶכֶר (כלומר: גם קְנָס וְגם מֶכֶר חלים יחד אצל קטינה לדעת חכמים)"]:::answer
+  S1 -->|מקור הראיה| P1
+  P1 -->|דעה אחרת| S2
+  S2 -->|הגמ׳ מקשה| Q1
+  Q1 -->|תירוץ| A1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · אָמַר רַב יְהוּדָה אָמַר רַב: זוֹ דִּבְרֵי רַבִּי מֵאִיר, אֲבָל חֲכָמִים אָמְרוּ יֵשׁ קְנָס בִּמְקוֹם מֶכֶר"]:::statement
+  P1["2 · דְּתַנְיָא: קְטַנָּה מִבַּת יוֹם אֶחָד עַד שֶׁתָּבִיא שְׁתֵּי שְׂעָרוֹת — יֵשׁ לָהּ מֶכֶר וְאֵין לָהּ קְנָס · מִשֶּׁתָּבִיא שְׁתֵּי שְׂעָרוֹת עַד שֶׁתִּיבְגַּר — יֵשׁ לָהּ קְנָס וְאֵין לָהּ מֶכֶר, דִּבְרֵי רַבִּי מֵאִיר"]:::proof
+  S2["3 · וַחֲכָמִים אוֹמְרִים: קְטַנָּה מִבַּת שָׁלֹשׁ שָׁנִים וְיוֹם אֶחָד עַד שֶׁתִּיבְגַּר — יֵשׁ לָהּ קְנָס"]:::statement
+  Q1{"4 · קְנָס אִין, מֶכֶר לָא?"}:::question
+  A1["5 · אֵימָא: אַף קְנָס בִּמְקוֹם מֶכֶר"]:::answer
+  S1 -->|מקור הראיה| P1
+  P1 -->|דעה אחרת| S2
+  S2 -->|הגמ׳ מקשה| Q1
+  Q1 -->|תירוץ| A1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו ב — Chullin 26b:5</span></div>
+      <div class="orig">גְּמָ׳ אָמַר רַב יְהוּדָה אָמַר רַב: זוֹ דִּבְרֵי רַבִּי מֵאִיר, אֲבָל חֲכָמִים אָמְרוּ: יֵשׁ קְנָס בִּמְקוֹם מֶכֶר, דְּתַנְיָא: קְטַנָּה מִבַּת יוֹם אֶחָד עַד שֶׁתָּבִיא שְׁתֵּי שְׂעָרוֹת – יֵשׁ לָהּ מֶכֶר וְאֵין לָהּ קְנָס, מִשֶּׁתָּבִיא שְׁתֵּי שְׂעָרוֹת עַד שֶׁתִּיבְגַּר – יֵשׁ לָהּ קְנָס וְאֵין לָהּ מֶכֶר, דִּבְרֵי רַבִּי מֵאִיר, שֶׁהָיָה רַבִּי מֵאִיר אוֹמֵר: כׇּל מָקוֹם שֶׁיֵּשׁ מֶכֶר – אֵין קְנָס, וְכׇל מָקוֹם שֶׁיֵּשׁ קְנָס – אֵין מֶכֶר.</div>
+      <div class="trans">גמרא: רב יהודה בשם רב — המשנה היא דעת ר׳ מאיר בלבד, אך חכמים אומרים שיש קְנָס גם במקום שיש מֶכֶר. ראיה מברייתא: לפי ר׳ מאיר, יש שלוש תקופות בְּחיי הבת — מיום הלידה ועד הבאת שתי שערות (כשתים-עשרה) היא קטינה — לאביה זכות למכרה, אבל אין לה קְנָס; משהביאה שתי שערות עד גיל בגרות היא נערה — יש לה קְנָס וְאין מֶכֶר. ר׳ מאיר הוא שטבע את הכלל "כל מקום שיש מֶכֶר אין קְנָס וכו׳".</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ו ב — Chullin 26b:5</span></div>
+      <div class="orig">קְטַנָּה מִבַּת יוֹם אֶחָד עַד שֶׁתָּבִיא שְׁתֵּי שְׂעָרוֹת – יֵשׁ לָהּ מֶכֶר וְאֵין לָהּ קְנָס, מִשֶּׁתָּבִיא שְׁתֵּי שְׂעָרוֹת עַד שֶׁתִּיבְגַּר – יֵשׁ לָהּ קְנָס וְאֵין לָהּ מֶכֶר, דִּבְרֵי רַבִּי מֵאִיר.</div>
+      <div class="trans">פירוט הברייתא: ר׳ מאיר מחלק את חיי הבת לשתי תקופות חופפות לדין הזה — בקטנותה (יום אחד עד שתי שערות, כלומר עד גיל י״ב) — יש מֶכֶר אבל אין קְנָס; משעה שהביאה שתי שערות וְעד בגרות (חצי שנה אחרי י״ב, כשהיא "נערה") — יש לה קְנָס אבל אין כבר מֶכֶר.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ו ב — Chullin 26b:6</span></div>
+      <div class="orig">וַחֲכָמִים אוֹמְרִים: קְטַנָּה מִבַּת שָׁלֹשׁ שָׁנִים וְיוֹם אֶחָד עַד שֶׁתִּיבְגַּר – יֵשׁ לָהּ קְנָס.</div>
+      <div class="trans">דעת חכמים בברייתא: בת שלוש שנים ויום אחד ועד גיל בגרות — מגיע לה קְנָס. כלומר, חכמים מרחיבים את גיל הקְנָס לכל גיל שראויה לתשמיש (מבת ג׳ ויום), גם בתקופת הקטינות שבה יש לאב זכות מֶכֶר.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין כ״ו ב — Chullin 26b:7</span></div>
+      <div class="orig">קְנָס – אִין, מֶכֶר – לָא?</div>
+      <div class="trans">קושיא: לפי לשון חכמים משמע שיש לה קְנָס בלבד, אבל אין לה מֶכֶר? — והרי במהלך אותן שנים גופן (בקטנותה) זכותו של האב למכרה היא עובדה הלכתית מפורסמת!</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין כ״ו ב — Chullin 26b:7</span></div>
+      <div class="orig">אֵימָא: אַף קְנָס בִּמְקוֹם מֶכֶר.</div>
+      <div class="trans">תירוץ: אל תקרא בדברי חכמים שאין מֶכֶר; אלא הכוונה היא — גם קְנָס יש בְּתקופה שבה יש מֶכֶר. כלומר, לדעת חכמים שני הדינים יכולים לחול יחד אצל קטינה, וזה החידוש על ר׳ מאיר.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+    <h2><span class="badge">סוגיה 5</span> משנה: מֵיאוּן וַחֲלִיצָה <span class="ref">Chullin 26b:8</span></h2>
+    <div class="lead">משנה שניה במסגרת "כל מקום שיש X אין Y": כל מקום שיש מֵיאוּן (זכות קטינה היתומה שהשׂיאוה אִמָּה אֶחָיה לסרב לְקדוּשיה לפני שהגדילה) — אין חֲלִיצָה; וכל מקום שיש חֲלִיצָה (לאחר שבגרה ובעלה מת בלי ילדים, ונופלת לְיבם) — אין מֵיאוּן.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · משנה: כל מקום שיש מֵיאוּן (סירוב קטינה לקידושין) אין חֲלִיצָה; וכל מקום שיש חֲלִיצָה אין מֵיאוּן"]):::mishnah
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · מַתְנִי׳: כׇּל מָקוֹם שֶׁיֵּשׁ מֵיאוּן אֵין חֲלִיצָה, וְכׇל מָקוֹם שֶׁיֵּשׁ חֲלִיצָה אֵין מֵיאוּן"]):::mishnah
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו ב — Chullin 26b:8</span></div>
+      <div class="orig">מַתְנִי׳ כׇּל מָקוֹם שֶׁיֵּשׁ מֵיאוּן – אֵין חֲלִיצָה, וְכׇל מָקוֹם שֶׁיֵּשׁ חֲלִיצָה – אֵין מֵיאוּן.</div>
+      <div class="trans">משנה: כל מקום שיש מֵיאוּן — כאשר קטינה יתומה הושאה על ידי אִמָּה אוֹ אֶחֶיהָ והיא יכולה לסרב ולבטל את הקידושין — אין שָׁם חֲלִיצָה: כי קטינה שבעלה מת בלי בנים אינה חולצת ליבם, אלא רק ממאנת. וְכל מקום שיש חֲלִיצָה (לאחר שבגרה והבעל מת בלי ילדים) — שוב אין מֵיאוּן, כי גדלה ונשואיה תקפים מלאים.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-6">
+    <h2><span class="badge">סוגיה 6</span> גמ׳ מֵיאוּן/חֲלִיצָה: ר״מ מול ר׳ יהודה <span class="ref">Chullin 26b:9</span></h2>
+    <div class="lead">רב יהודה בשם רב: גם משנה זו דעת ר״מ בלבד; חכמים אומרים שיש מֵיאוּן במקום חֲלִיצָה. הברייתא מציגה את מחלוקת ר״מ ור׳ יהודה — עד מתי קטינה ממאנת.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · מימרא: זו דעת ר׳ מאיר; אבל חכמים אומרים יש מֵיאוּן במקום חֲלִיצָה (רב יהודה בשם רב)"]:::statement
+  P1["2 · ברייתא: עד מתי הבת ממאנת? — עד שתביא שתי שערות (ר״מ)"]:::proof
+  O1["3 · ר׳ יהודה: עד שירבה השחור על הלבן (סימן מאוחר יותר של בגרות)"]:::statement
+  S1 -->|מקור הראיה| P1
+  P1 -->|מחלוקת| O1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["1 · אָמַר רַב יְהוּדָה אָמַר רַב: זוֹ דִּבְרֵי רַבִּי מֵאִיר, אֲבָל חֲכָמִים אוֹמְרִים יֵשׁ מֵיאוּן בִּמְקוֹם חֲלִיצָה"]:::statement
+  P1["2 · דְּתַנְיָא: עַד מָתַי הַבַּת מְמָאֶנֶת? עַד שֶׁתָּבִיא שְׁתֵּי שְׂעָרוֹת, דִּבְרֵי רַבִּי מֵאִיר"]:::proof
+  O1["3 · רַבִּי יְהוּדָה אוֹמֵר: עַד שֶׁיִּרְבֶּה הַשָּׁחוֹר עַל הַלָּבָן"]:::statement
+  S1 -->|מקור הראיה| P1
+  P1 -->|מחלוקת| O1
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו ב — Chullin 26b:9</span></div>
+      <div class="orig">גְּמָ׳ אָמַר רַב יְהוּדָה, אָמַר רַב: זוֹ דִּבְרֵי רַבִּי מֵאִיר, אֲבָל חֲכָמִים אוֹמְרִים: יֵשׁ מֵיאוּן בִּמְקוֹם חֲלִיצָה.</div>
+      <div class="trans">גמרא: רב יהודה בשם רב — גם משנה זו היא דעת ר׳ מאיר בלבד; אבל חכמים אומרים שיש מקרים שמותר לקטינה לְמאן גם בְּתקופה שבה היא כבר מסוגלת לחלוץ.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ו ב — Chullin 26b:9</span></div>
+      <div class="orig">דְּתַנְיָא: עַד מָתַי הַבַּת מְמָאֶנֶת? עַד שֶׁתָּבִיא שְׁתֵּי שְׂעָרוֹת, דִּבְרֵי רַבִּי מֵאִיר.</div>
+      <div class="trans">ראיה מברייתא: עד אימתי קטינה רשאית למאן בקידושיה? לדעת ר׳ מאיר — עד שתביא שתי שערות, כלומר עד תחילת גיל הנערוּת. מאותה שעה ואילך — חֲלִיצָה ולא מֵיאוּן.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ו ב — Chullin 26b:9</span></div>
+      <div class="orig">רַבִּי יְהוּדָה אוֹמֵר: עַד שֶׁיִּרְבֶּה הַשָּׁחוֹר עַל הַלָּבָן.</div>
+      <div class="trans">דעת ר׳ יהודה (מייצג את חכמים): היא ממאנת אפילו לאחר שהביאה שתי שערות, וְעד שירבה השיער השחור על אזור הלבן שמסביבו — סימן בגרות מאוחר יותר. בתקופת ביניים זו, לדעת חכמים, יש לה גם מֵיאוּן וְגם חֲלִיצָה.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-7">
+    <h2><span class="badge">סוגיה 7</span> משנה: תְּקִיעָה וְהַבְדָּלָה ביו״ט הסמוך לשבת <span class="ref">Chullin 26b:10-12</span></h2>
+    <div class="lead">משנה שלישית-רביעית מאותו תבנית, החותמת את הפרק: כל מקום שיש תְּקִיעָה (תקיעת שופר בערב שבת/יו״ט להפסיק ממלאכה ולציין הקדושה הבאה) — אין הַבְדָּלָה; וכל מקום שיש הַבְדָּלָה — אין תְּקִיעָה. הדוגמאות: יו״ט שחל בערב שבת — תוקעין וְלא מבדילין; יו״ט שחל במוצאי שבת — מבדילין וְלא תוקעין. וְהובא נוסח ההבדלה: "המבדיל בין קוֹדש לקוֹדש", ר׳ דוֹסא: "בין קוֹדש חמוּר לקוֹדש הקל".</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · משנה (כלל): כל מקום שיש תְּקִיעָה אין הַבְדָּלָה, וכל מקום שיש הַבְדָּלָה אין תְּקִיעָה"]):::mishnah
+  M2(["2 · יו״ט שחל בערב שבת — תוקעין (שופר לקראת שבת) וְלא מבדילין"]):::mishnah
+  M3(["3 · במוצאי שבת (יו״ט שחל בה) — מבדילין וְלא תוקעין"]):::mishnah
+  M4(["4 · נוסח ההבדלה: ׳הַמַּבְדִּיל בֵּין קֹדֶשׁ לְקֹדֶשׁ׳; ר׳ דוֹסָא: ׳בֵּין קֹדֶשׁ חָמוּר לְקֹדֶשׁ הַקַּל׳"]):::mishnah
+  M1 --> M2
+  M2 --> M3
+  M3 --> M4
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["1 · מַתְנִי׳: כׇּל מָקוֹם שֶׁיֵּשׁ תְּקִיעָה אֵין הַבְדָּלָה, וְכׇל מָקוֹם שֶׁיֵּשׁ הַבְדָּלָה אֵין תְּקִיעָה"]):::mishnah
+  M2(["2 · יוֹם טוֹב שֶׁחָל לִהְיוֹת בְּעֶרֶב שַׁבָּת — תּוֹקְעִין וְלֹא מַבְדִּילִין"]):::mishnah
+  M3(["3 · בְּמוֹצָאֵי שַׁבָּת — מַבְדִּילִין וְלֹא תּוֹקְעִין"]):::mishnah
+  M4(["4 · כֵּיצַד מַבְדִּילִין? ׳הַמַּבְדִּיל בֵּין קוֹדֶשׁ לְקוֹדֶשׁ׳; רַבִּי דּוֹסָא אוֹמֵר: ׳בֵּין קוֹדֶשׁ חָמוּר לְקוֹדֶשׁ הַקַּל׳"]):::mishnah
+  M1 --> M2
+  M2 --> M3
+  M3 --> M4
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו ב — Chullin 26b:10</span></div>
+      <div class="orig">מַתְנִי׳ כׇּל מָקוֹם שֶׁיֵּשׁ תְּקִיעָה – אֵין הַבְדָּלָה, וְכׇל מָקוֹם שֶׁיֵּשׁ הַבְדָּלָה – אֵין תְּקִיעָה.</div>
+      <div class="trans">משנה (הכלל): כל מקום שיש תְּקִיעָה (תקיעת שופר בערב שבת או ערב יו״ט, להפסיק את העם ממלאכה ולציין מעבר לקדוּשה) — אין שָׁם הַבְדָּלָה; וכל מקום שיש הַבְדָּלָה (במוצאי שבת או יו״ט בתפילה וְעל כוס יין) — אין תְּקִיעָה.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ו ב — Chullin 26b:11</span></div>
+      <div class="orig">יוֹם טוֹב שֶׁחָל לִהְיוֹת בְּעֶרֶב שַׁבָּת – תּוֹקְעִין, וְלֹא מַבְדִּילִין.</div>
+      <div class="trans">דוגמה ראשונה: יום טוב שחל ביום שישי, וצריך לעבור משם לשבת — תוקעין בערב שבת כדי לסיים את מלאכות המוּתרוֹת ביו״ט (שאסורות בשבת) ולציין את המעבר משני ימי קדושה; אך לא אומרים הַבְדָּלָה, כי הַבְדָּלָה נאמרת רק כשעוברים מקדוּשה גדולה לקלה יותר — וכאן עוברים לְשבת שהיא קדושה מהיו״ט.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ו ב — Chullin 26b:11</span></div>
+      <div class="orig">בְּמוֹצָאֵי שַׁבָּת – מַבְדִּילִין, וְלֹא תּוֹקְעִין.</div>
+      <div class="trans">דוגמה שניה: יו״ט שחל במוצאי שבת — מבדילין (כי עוברים מקדוּשת שבת לקדוּשת יו״ט הקלה ממנה); אבל לא תוקעין, כי תְּקִיעַת השופר היא רק בערב שבת או ערב יו״ט (קודם הכניסה לקדוּשה), וְלא במוצאי שבת.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין כ״ו ב — Chullin 26b:12</span></div>
+      <div class="orig">כֵּיצַד מַבְדִּילִין? ״הַמַּבְדִּיל בֵּין קוֹדֶשׁ לְקוֹדֶשׁ״. רַבִּי דּוֹסָא אוֹמֵר: ״בֵּין קוֹדֶשׁ חָמוּר לְקוֹדֶשׁ הַקַּל״.</div>
+      <div class="trans">איך מנסחים את הַבְדָּלָה כאן? "המבדיל בין קוֹדש לקוֹדש" (במקום הניסוח הרגיל "בין קוֹדש לחוֹל", שהרי גם הזמן הבא קדוּש). ר׳ דוֹסָא נותן נוסח אחר: "בין קוֹדש חמוּר לקוֹדש הקל" — הדגשה שמדובר בְּמעבר מקדושה גדולה (שבת) לקטנה (יו״ט).</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-8">
+    <h2><span class="badge">סוגיה 8</span> גמ׳: כיצד תוקעין? — רב יהודה ורב אסי <span class="ref">Chullin 26b:13-14</span></h2>
+    <div class="lead">הגמ׳ דנה כיצד תוקעין דווקא ביו״ט שחל בערב שבת. רב יהודה ורב אסי חולקים בָּצורת התקיעה. ברייתא מקשה ומתיישבת לפי שני המהלכים.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q0{"1 · גמ׳: היכי תוקע? (איך תוקעין?)"}:::question
+  O1["2 · רב יהודה: תוקע וּמריע (תרועה) מתוך תקיעה"]:::statement
+  O2["3 · רב אסי: תוקע וּמריע בנשימה אחת — וְכן תיקן בְּהוּצָל"]:::statement
+  Q1{"4 · מיתיבי מברייתא: יו״ט שחל בערב שבת — תוקעין וְלא מריעין; משמע לא תרועה כלל!"}:::question
+  A1["5 · תירוץ לרב יהודה: ׳לא מריעין׳ — בפני עצמן, אלא מתוך תקיעה"]:::answer
+  A2["6 · תירוץ לרב אסי: ׳לא מריעין׳ — בשתי נשימות, אלא בנשימה אחת"]:::answer
+  Q0 -->|מחלוקת| O1
+  Q0 -->|מחלוקת| O2
+  O2 -->|מיתיבי| Q1
+  O1 -->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  Q1 -->|תירוץ| A2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q0{"1 · גְּמָ׳ הֵיכִי תּוֹקֵעַ?"}:::question
+  O1["2 · אָמַר רַב יְהוּדָה: תּוֹקֵעַ וּמֵרִיעַ מִתּוֹךְ תְּקִיעָה"]:::statement
+  O2["3 · וְרַב אַסִּי אָמַר: תּוֹקֵעַ וּמֵרִיעַ בִּנְשִׁימָה אַחַת; אַתְקֵין רַב אַסִּי בְּהוּצָל כִּשְׁמַעְתֵּיהּ"]:::statement
+  Q1{"4 · מֵיתִיבִי: יוֹם טוֹב שֶׁחָל לִהְיוֹת בְּעֶרֶב שַׁבָּת — תּוֹקְעִין וְלֹא מְרִיעִין; מַאי לָאו לֹא מְרִיעִין כְּלָל"}:::question
+  A1["5 · רַב יְהוּדָה מְתָרֵץ לְטַעְמֵיהּ: לָא מְרִיעִין בִּפְנֵי עַצְמָהּ, אֶלָּא מִתּוֹךְ תְּקִיעָה"]:::answer
+  A2["6 · וְרַב אַסִּי מְתָרֵץ לְטַעְמֵיהּ: לָא מְרִיעִין בִּשְׁתֵּי נְשִׁימוֹת, אֶלָּא בִּנְשִׁימָה אַחַת"]:::answer
+  Q0 -->|מחלוקת| O1
+  Q0 -->|מחלוקת| O2
+  O2 -->|מיתיבי| Q1
+  O1 -->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  Q1 -->|תירוץ| A2
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו ב — Chullin 26b:13</span></div>
+      <div class="orig">גְּמָ׳ הֵיכִי תּוֹקֵעַ?</div>
+      <div class="trans">פתיחת הגמ׳: באיזה אופן תוקעין בערב שבת שחל בו יו״ט — תקיעה רגילה? תרועה? איזה צירוף?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ו ב — Chullin 26b:13</span></div>
+      <div class="orig">אָמַר רַב יְהוּדָה: תּוֹקֵעַ וּמֵרִיעַ מִתּוֹךְ תְּקִיעָה.</div>
+      <div class="trans">דעת רב יהודה: תוקעין תקיעה רגילה (קול ארוך), ובאמצעה משלבים תרועה (סדרה של קולות קצועים) — וְהיא יוצאת מתוך התקיעה ולא בנפרד.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ו ב — Chullin 26b:13</span></div>
+      <div class="orig">וְרַב אַסִּי אָמַר: תּוֹקֵעַ וּמֵרִיעַ בִּנְשִׁימָה אַחַת. אַתְקֵין רַב אַסִּי בְּהוּצָל כִּשְׁמַעְתֵּיהּ.</div>
+      <div class="trans">דעת רב אסי: תקיעה וְתרועה בשתי קוֹלוֹת נפרדים — אבל בנשימה אחת, בלי לעצור באמצע. וְכן תיקן רב אסי במנהג בעיר הוּצָל לפי שיטתו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין כ״ו ב — Chullin 26b:14</span></div>
+      <div class="orig">מֵיתִיבִי: יוֹם טוֹב שֶׁחָל לִהְיוֹת בְּעֶרֶב שַׁבָּת, תּוֹקְעִין וְלֹא מְרִיעִין. מַאי לָאו לֹא מְרִיעִין כְּלָל?</div>
+      <div class="trans">קושיא מברייתא: שָׁנינו שביו״ט שחל בערב שבת — תוקעין אבל לא מריעין. וכי לא משמע מכאן שאין תרועה כלל, בניגוד לשני האמוראים?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין כ״ו ב — Chullin 26b:14</span></div>
+      <div class="orig">לָא, רַב יְהוּדָה מְתָרֵץ לְטַעְמֵיהּ … רַב יְהוּדָה מְתָרֵץ לְטַעְמֵיהּ: לָא מְרִיעִין בִּפְנֵי עַצְמָהּ, אֶלָּא מִתּוֹךְ תְּקִיעָה.</div>
+      <div class="trans">תירוץ לרב יהודה: כוונת הברייתא "לא מריעין" — לא מריעין תרועה עצמאית; אלא רק תרועה מתוך התקיעה, כמו שאמר.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין כ״ו ב — Chullin 26b:14</span></div>
+      <div class="orig">וְרַב אַסִּי מְתָרֵץ לְטַעְמֵיהּ: לָא מְרִיעִין בִּשְׁתֵּי נְשִׁימוֹת, אֶלָּא בִּנְשִׁימָה אַחַת.</div>
+      <div class="trans">תירוץ לרב אסי: כוונת הברייתא "לא מריעין" — לא מריעין בשתי נשימות נפרדות; אלא בנשימה אחת המשולבת עם התקיעה.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-9">
+    <h2><span class="badge">סוגיה 9</span> גמ׳: סדר ההבדלה במוצאי שבת שחל בה יו״ט <span class="ref">Chullin 26b:15-18</span></h2>
+    <div class="lead">המשנה הזכירה "במוצאי שבת מבדילין". הגמ׳ דנה היכן בברכת ההבדלה נאמרה הנוסחה "המבדיל בין קוֹדש לקוֹדש". רב יהודה ורב נחמן: בחתימה. רב שֵׁשת בנו של רב אִדי: גם בפתיחה — וְאין הלכה כמותו. ר׳ דוֹסא: "בין קוֹדש חמוּר לקוֹדש הקל" — אין הלכה כמותו. ר׳ זירא: ביו״ט שחל באמצע שבוע, אומרים את כל סדר ההבדלות.</div>
+    <div class="chart">
+      <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · קושיא: היכן בתוך ברכת ההבדלה אומרים ׳המבדיל בין קוֹדש לקוֹדש׳?"}:::question
+  S1["2 · רב יהודה וְכן רב נחמן: בחתימה בלבד (בסיום הברכה)"]:::statement
+  S2["3 · רב שֵׁשת בנו של רב אִדי: גם בפתיחה (בגוף הברכה)"]:::statement
+  C1["4 · לֵית הִלְכְתָא כְּוָתֵיהּ — אין הלכה כרב שֵׁשת"]:::conclusion
+  S3["5 · ר׳ דוֹסא (מהמשנה): ׳בין קוֹדש חמוּר לקוֹדש הקל׳"]:::statement
+  C2["6 · לֵית הִלְכְתָא כְּוָתֵיהּ — אין הלכה כר׳ דוֹסא"]:::conclusion
+  S4["7 · ר׳ זירא: יו״ט שחל באמצע שבוע (לא מוצאי שבת) — אומר את כל סדר ההבדלות (קוֹדש לחוֹל, אור לחוֹשך, ישראל לגויים, יום השביעי לששת ימי המעשה) — מונה את סדר ההבדלות"]:::statement
+  Q1 -->|דעה ראשונה| S1
+  Q1 -->|דעה שניה| S2
+  S2 --> C1
+  S3 --> C2
+  S1 -->|דיון נוסף| S3
+  C2 --> S4
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"1 · וּבְמוֹצָאֵי שַׁבָּת כּוּ׳ — הֵיכָא אָמַר לַהּ?"}:::question
+  S1["2 · אָמַר רַב יְהוּדָה: בַּחֲתִימָתָהּ, וְכֵן אָמַר רַב נַחְמָן: בַּחֲתִימָתָהּ"]:::statement
+  S2["3 · וְרַב שֵׁשֶׁת בְּרֵיהּ דְּרַב אִידִי אָמַר: אַף בִּפְתִיחָתָהּ"]:::statement
+  C1["4 · וְלֵית הִלְכְתָא כְּוָותֵיהּ"]:::conclusion
+  S3["5 · רַבִּי דּוֹסָא אוֹמֵר: ׳בֵּין קֹדֶשׁ חָמוּר לְקֹדֶשׁ הַקַּל׳"]:::statement
+  C2["6 · וְלֵית הִלְכְתָא כְּוָותֵיהּ"]:::conclusion
+  S4["7 · אָמַר רַבִּי זֵירָא: יוֹם טוֹב שֶׁחָל לִהְיוֹת בְּאֶמְצַע שַׁבָּת — אוֹמֵר ׳הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל וּבֵין אוֹר לְחֹשֶׁךְ וּבֵין יִשְׂרָאֵל לַגּוֹיִם וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה׳; סֵדֶר הַבְדָּלוֹת הוּא מוֹנֶה"]:::statement
+  Q1 -->|דעה ראשונה| S1
+  Q1 -->|דעה שניה| S2
+  S2 --> C1
+  S3 --> C2
+  S1 -->|דיון נוסף| S3
+  C2 --> S4
+      </script>
+    </div>
+    <h3>ציטוטים</h3>
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ו ב — Chullin 26b:15</span></div>
+      <div class="orig">וּבְמוֹצָאֵי שַׁבָּת כּוּ׳. הֵיכָא אָמַר לַהּ?</div>
+      <div class="trans">הגמ׳ חוזרת לדברי המשנה "ובמוצאי שבת — מבדילין", ושואלת: היכן בתוך ברכת ההבדלה אומרים את הנוסח "המבדיל בין קוֹדש לקוֹדש" — בתחילתה? בסיומה? במקום הנוסח הרגיל?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ו ב — Chullin 26b:15</span></div>
+      <div class="orig">אָמַר רַב יְהוּדָה: בַּחֲתִימָתָהּ, וְכֵן אָמַר רַב נַחְמָן: בַּחֲתִימָתָהּ.</div>
+      <div class="trans">תשובת רב יהודה וְרב נחמן: רק בחתימה — כלומר רק בסיום הברכה משנים את הנוסח ל"המבדיל בין קוֹדש לקוֹדש"; אבל בגוף הברכה אומרים את הנוסח הרגיל של מוצאי שבת ("המבדיל בין קוֹדש לחוֹל", בין אור לחוֹשך, וכו׳).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ו ב — Chullin 26b:16</span></div>
+      <div class="orig">וְרַב שֵׁשֶׁת בְּרֵיהּ דְּרַב אִידִי אָמַר: אַף בִּפְתִיחָתָהּ, וְלֵית הִלְכְתָא כְּוָותֵיהּ.</div>
+      <div class="trans">דעה חולקת: רב שֵׁשת בנו של רב אִדי סבר שגם בפתיחה — בגוף הברכה — אומרים "בין קוֹדש לקוֹדש" במקום "בין קוֹדש לחוֹל". מסקנת הסוגיה: אין הלכה כדעתו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין כ״ו ב — Chullin 26b:17</span></div>
+      <div class="orig">רַבִּי דּוֹסָא אוֹמֵר: ״בֵּין קֹדֶשׁ חָמוּר לְקֹדֶשׁ הַקַּל״, וְלֵית הִלְכְתָא כְּוָותֵיהּ.</div>
+      <div class="trans">הגמ׳ מסיימת על נוסח ר׳ דוֹסא שהובא במשנה — "בין קוֹדש חמוּר לקוֹדש הקל" — ומכריעה שגם בו אין הלכה כדעתו; הנוסח המקובל נשאר "בין קוֹדש לקוֹדש" סתם.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין כ״ו ב — Chullin 26b:17</span></div>
+      <div class="orig">רַבִּי דּוֹסָא אוֹמֵר: ״בֵּין קֹדֶשׁ חָמוּר לְקֹדֶשׁ הַקַּל״, וְלֵית הִלְכְתָא כְּוָותֵיהּ.</div>
+      <div class="trans">המסקנה השנייה של הגמ׳: גם בעניין נוסח ר׳ דוֹסא — הוסכם בסוגיה שאין הלכה כמותו.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין כ״ו ב — Chullin 26b:17</span></div>
+      <div class="orig">רַבִּי דּוֹסָא אוֹמֵר: ״בֵּין קֹדֶשׁ חָמוּר לְקֹדֶשׁ הַקַּל״, וְלֵית הִלְכְתָא כְּוָותֵיהּ.</div>
+      <div class="trans">חיזור על המסקנה שאין הלכה כר׳ דוֹסא — היא מקבילה למסקנה על רב שֵׁשת: שתי הדעות החולקות נדחו, וְעמדת רב יהודה ורב נחמן (בחתימה בלבד, נוסח רגיל) מתקבלת.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין כ״ו ב — Chullin 26b:18</span></div>
+      <div class="orig">אָמַר רַבִּי זֵירָא: יוֹם טוֹב שֶׁחָל לִהְיוֹת בְּאֶמְצַע שַׁבָּת, אוֹמֵר ״הַמַּבְדִּיל בֵּין קֹדֶשׁ לְחוֹל וּבֵין אוֹר לְחֹשֶׁךְ וּבֵין יִשְׂרָאֵל לַגּוֹיִם וּבֵין יוֹם הַשְּׁבִיעִי לְשֵׁשֶׁת יְמֵי הַמַּעֲשֶׂה״, מַאי טַעְמָא? סֵדֶר הַבְדָּלוֹת הוּא מוֹנֶה.</div>
+      <div class="trans">מימרא נוספת של ר׳ זירא: אם יו״ט חל באמצע שבוע (יום שלא צמוּד לשבת), ובמוצאי השבת שלפניו עברנו ממש משבת ליום חוֹל — אומרים בהבדלה את כל סדר ההבדלות הרגיל: "המבדיל בין קוֹדש לחוֹל, בין אור לחוֹשך, בין ישראל לגויים, בין יום השביעי לששת ימי המעשה". מה הטעם? אינו מבדיל ביחס ליום הספציפי, אלא מונה את סדר ההבדלות הקבוע שתיקנו חכמים.</div>
+    </div>
+  </section>
+
+  <footer>נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</footer>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: { fontFamily: 'Frank Ruhl Libre, Heebo, serif', fontSize: '15px' },
+    flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis', nodeSpacing: 45, rankSpacing: 55 }
+  });
+
+  let _seq = 0;
+  async function renderChart(chart, lang) {
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if (!holder || !target) return;
+    try {
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if (bindFunctions) bindFunctions(target);
+    } catch (e) {
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+  }
+
+  for (const chart of document.querySelectorAll('.chart')) {
+    await renderChart(chart, 'he');
+    const btn = chart.querySelector('.lang-toggle');
+    if (btn && chart.querySelector('.src-ar')) {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.lang === 'he' ? 'ar' : 'he';
+        await renderChart(chart, next);
+        btn.dataset.lang = next;
+        btn.textContent = next === 'he' ? 'הצג ארמית (מקור) ⇄' : 'הצג עברית ⇄';
+      });
+    } else if (btn) {
+      btn.remove();
+    }
+  }
+</script>
+</body>
+</html>

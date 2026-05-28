@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — מגילה כ״ח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --ink:#1f2937; --muted:#6b7280; --bg:#faf7f0; --card:#ffffff; --border:#e7e2d6;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Heebo","Segoe UI",Arial,"Arial Hebrew",sans-serif; line-height:1.7;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 90px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:"Frank Ruhl Libre",Georgia,serif; font-size:2rem; margin:0 0 6px}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{
+    background:#fffbea; border:1px solid var(--conclusion-line); border-radius:12px;
+    padding:14px 18px; margin:18px 0; font-size:1.05rem;
+  }
+  .takeaway b{font-family:"Frank Ruhl Libre",serif}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:"Frank Ruhl Libre","Heebo",serif !important; direction:rtl}
+  .lang-toggle{position:absolute; top:10px; left:10px; z-index:2; cursor:pointer;
+    font-family:"Heebo",sans-serif; font-size:.78rem; color:var(--statement-line);
+    background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .lang-toggle:hover{background:#f3f4ff; border-color:var(--statement-line)}
+  /* overview block */
+  .overview h2{text-align:center}
+  /* per-sugya sections */
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:"Frank Ruhl Libre",serif; margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--statement-line); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:#374151; margin:8px 0 14px}
+  h3{font-family:"Frank Ruhl Libre",serif; color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-right:5px solid var(--statement-line); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--statement-line); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-left:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:"Frank Ruhl Libre",serif; font-size:1.15rem; margin:6px 0 4px}
+  .quote .trans{color:#374151}
+  .quote .trans:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>מפת הסוגיא — מגילה כ״ח</h1>
+    <div class="subtitle">מגילה כ״ח א:כ״ב-כ״ט א:ג׳ · Megillah 28a:22-29a:3 · מקור: ספריא (William Davidson)</div>
+  </header>
+
+  <div class="takeaway"><b>שורה תחתונה:</b> הדף עוסק בקדושת בית הכנסת — שאף כשהוא חרב נשארת בו קדושתו, ולכן אסור לנהוג בו קלות ראש. מכאן עוברת הגמרא לדיני כבוד בית הכנסת ולאגדות על כבוד תלמידי חכמים, על מי שמשתמש ב״כתרה של תורה״, ועל מספר האנשים הראוי ללוויית מי שעוסק בתורה.</div>
+
+  <div class="legend">
+    <span><i class="swatch" style="background:var(--mishnah)"></i>משנה</span>
+    <span><i class="swatch" style="background:var(--statement)"></i>מימרא / דעה</span>
+    <span><i class="swatch" style="background:var(--question)"></i>קושיא / מיתיבי</span>
+    <span><i class="swatch" style="background:var(--answer)"></i>תירוץ / יישוב</span>
+    <span><i class="swatch" style="background:var(--proof)"></i>ראיה / תא שמע</span>
+    <span><i class="swatch" style="background:var(--conclusion)"></i>מסקנה</span>
+  </div>
+
+  <section class="overview"><h2>מפת הדף — מבט-על</h2>
+  <div class="chart">
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · משנה: בית כנסת שחרב — קדושתו נשמרת"]):::mishnah
+  O2["2 · מותר ואסור בבית הכנסת; קלות ראש"]:::statement
+  O3["3 · כבוד תלמידי חכמים, הספד והלכות"]:::statement
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge">סוגיה 1</span> משנה: קדושת בית הכנסת שחרב <span class="ref">Megillah 28a:22-24</span></h2>
+  <div class="lead">המשנה: בית כנסת שנחרב — אסור להשתמש בו לדברי חול, שכן קדושתו נשארת אף כשהוא שומם.</div>
+  <div class="chart">
+    <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  M1(["1 · משנה: בית כנסת שחרב — אסור בשימושי חול"]):::mishnah
+  P2["2 · מקור מהפסוק: קדושתם נשמרת גם כשהם שוממים"]:::proof
+  S3["3 · עלו עשבים — לא יתלוש, מפני עוגמת נפש (צער)"]:::statement
+  M1 -->|מניין?| P2
+  P2 -->|ועוד דין| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  M1(["1 · בֵּית הַכְּנֶסֶת שֶׁחָרַב — אֵין מַסְפִּידִין"]):::mishnah
+  P2["2 · ״וַהֲשִׁמּוֹתִי אֶת מִקְדְּשֵׁיכֶם״ — אַף כְּשֶׁהֵן שׁוֹמְמִין"]:::proof
+  S3["3 · עָלוּ בּוֹ עֲשָׂבִים לֹא יִתְלוֹשׁ"]:::statement
+  M1 -->|מניין?| P2
+  P2 -->|ועוד דין| S3
+    </script>
+  </div>
+  <h3>ציטוטים</h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">מגילה כ״ח א — Megillah 28a:22</span></div>
+    <div class="orig">מַתְנִי׳ וְעוֹד אָמַר רַבִּי יְהוּדָה: בֵּית הַכְּנֶסֶת שֶׁחָרַב — אֵין מַסְפִּידִין בְּתוֹכוֹ, וְאֵין מַפְשִׁילִין בְּתוֹכוֹ חֲבָלִים, וְאֵין פּוֹרְשִׂין לְתוֹכוֹ מְצוּדוֹת, וְאֵין שׁוֹטְחִין עַל גַּגּוֹ פֵּירוֹת, וְאֵין עוֹשִׂין אוֹתוֹ קַפֶּנְדַּרְיָא,</div>
+    <div class="trans">משנה: ועוד אמר רבי יהודה — בית כנסת שנחרב, אסור לנהוג בו שימושי חול: אין מספידים בתוכו, אין מפתלים בו חבלים, אין פורשים בו מלכודות לצוד, אין שוטחים על גגו פירות לייבוש, ואין עושים אותו דרך קיצור (קַפֶּנְדַּרְיָא = שביל מעבר).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">מגילה כ״ח א — Megillah 28a:23</span></div>
+    <div class="orig">שֶׁנֶּאֱמַר: ״וַהֲשִׁמּוֹתִי אֶת מִקְדְּשֵׁיכֶם״ — קְדוּשָּׁתָן אַף כְּשֶׁהֵן שׁוֹמְמִין.</div>
+    <div class="trans">המקור לכך הוא הפסוק ״וַהֲשִׁמּוֹתִי אֶת מִקְדְּשֵׁיכֶם״ — שהתורה קוראת להם ״מקדשיכם״ אפילו אחרי שהושמו; משמע שקדושתם נשארת אף כשהם שוממים וחרבים.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">מגילה כ״ח א — Megillah 28a:24</span></div>
+    <div class="orig">עָלוּ בּוֹ עֲשָׂבִים לֹא יִתְלוֹשׁ, מִפְּנֵי עׇגְמַת נֶפֶשׁ.</div>
+    <div class="trans">אם צמחו בו עשבים מעצמם — אין לתלוש אותם, מפני עוגמת הנפש: מראה השממה יזכיר לרואים את צער החורבן ואת הצורך לבנותו מחדש.</div>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-2">
+  <h2><span class="badge">סוגיה 2</span> דיני קלות ראש ושימוש בבית הכנסת <span class="ref">Megillah 28a:25-28b:5</span></h2>
+  <div class="lead">הגמרא מביאה ברייתא המפרטת מה אסור ומה מותר בבית הכנסת, מתקנת את נוסחה, ומוסיפה דברי רב אסי על בתי כנסת שבבבל.</div>
+  <div class="chart">
+    <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S4["4 · ברייתא: אין נוהגין קלות ראש — אין אוכלין ושותין"]:::statement
+  S5["5 · אסור לטייל ולהיכנס מהחמה; אבל קוראין ושונין ומספידין לרבים"]:::statement
+  S6["6 · רבי יהודה: בחורבנם — מניחין שיעלו עשבים, ולא יתלוש"]:::statement
+  Q7{"7 · קושיא: עשבים — מי הזכיר אותם?"}:::question
+  A7["7 · תירוץ: חסורי מיחסרא — מכבדין ומרביצין כדי שלא יעלו עשבים"]:::answer
+  S8["8 · רב אסי: בתי כנסת שבבבל עשויים על תנאי — ועדיין אין קלות ראש (חשבונות)"]:::statement
+  C9["9 · רב אסי: בית כנסת שמחשבין בו חשבונות — סופו שילינו בו מת מצוה"]:::conclusion
+  S4 -->|המשך| S5
+  S5 -->|דברי ר׳ יהודה| S6
+  S6 -->|קושיא| Q7
+  Q7 -->|תירוץ| A7
+  A7 -->|הוספה| S8
+  S8 -->|ועוד| C9
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S4["4 · תָּנוּ רַבָּנַן: אֵין נוֹהֲגִין בָּהֶן קַלּוּת רֹאשׁ"]:::statement
+  S5["5 · אֵין מְטַיְּילִין... אֲבָל קוֹרִין וְשׁוֹנִין וּמַסְפִּידִין שֶׁל רַבִּים"]:::statement
+  S6["6 · אָמַר ר׳ יְהוּדָה: בְּחוּרְבָּנָן מַנִּיחִין... וְלֹא יִתְלוֹשׁ"]:::statement
+  Q7{"7 · עֲשָׂבִים מַאן דְּכַר שְׁמַיְיהוּ?"}:::question
+  A7["7 · חַסּוֹרֵי מִיחַסְּרָא: וּמְכַבְּדִין... שֶׁלֹּא יַעֲלוּ עֲשָׂבִים"]:::answer
+  S8["8 · אָמַר רַב אַסִּי: בְּבָבֶל עַל תְּנַאי... מַאי נִיהוּ — חֶשְׁבּוֹנוֹת"]:::statement
+  C9["9 · רַב אַסִּי: שֶׁמְּחַשְּׁבִין בּוֹ חֶשְׁבּוֹנוֹת — מְלִינִין בּוֹ מֵת מִצְוָה"]:::conclusion
+  S4 -->|המשך| S5
+  S5 -->|דברי ר׳ יהודה| S6
+  S6 -->|קושיא| Q7
+  Q7 -->|תירוץ| A7
+  A7 -->|הוספה| S8
+  S8 -->|ועוד| C9
+    </script>
+  </div>
+  <h3>ציטוטים</h3>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">מגילה כ״ח א — Megillah 28a:25</span></div>
+    <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן: בָּתֵּי כְנֵסִיּוֹת אֵין נוֹהֲגִין בָּהֶן קַלּוּת רֹאשׁ. אֵין אוֹכְלִין בָּהֶן, וְאֵין שׁוֹתִין בָּהֶן,</div>
+    <div class="trans">גמרא: שנו חכמים בברייתא — בבתי כנסת אין נוהגים קלות ראש (התנהגות לא־רצינית). לכן אין אוכלים בהם ואין שותים בהם.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:1</span></div>
+    <div class="orig">וְאֵין נֵיאוֹתִין בָּהֶם, וְאֵין מְטַיְּילִין בָּהֶם, וְאֵין נִכְנָסִין בָּהֶן בַּחַמָּה מִפְּנֵי הַחַמָּה, וּבַגְּשָׁמִים מִפְּנֵי הַגְּשָׁמִים. וְאֵין מַסְפִּידִין בָּהֶן הֶסְפֵּד שֶׁל יָחִיד. אֲבָל קוֹרִין בָּהֶן, וְשׁוֹנִין בָּהֶן, וּמַסְפִּידִין בָּהֶן הֶסְפֵּד שֶׁל רַבִּים,</div>
+    <div class="trans">ואין מתקשטים בהם, ואין מטיילים בהם, ואין נכנסים אליהם בימי חמה כדי להסתתר מהשמש או בימי גשמים כדי לחסות מהגשם, ואין מספידים בהם הספד פרטי של יחיד. אבל מותר לקרוא בהם מקרא, ללמוד בהם הלכות (״שׁוֹנִין״ = לומדים משנה), ולהספיד בהם הספד ציבורי של רבים.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:2</span></div>
+    <div class="orig">אָמַר רַבִּי יְהוּדָה: אֵימָתַי — בְּיִשּׁוּבָן, אֲבָל בְּחוּרְבָּנָן — מַנִּיחִין אוֹתָן וְעוֹלִין בָּהֶן עֲשָׂבִים, וְלֹא יִתְלוֹשׁ מִפְּנֵי עׇגְמַת נֶפֶשׁ.</div>
+    <div class="trans">אמר רבי יהודה: מתי נוהגים כל האיסורים האלה? כשבתי הכנסת מיושבים ובשימוש. אבל כשהם חרבים — מניחים אותם ומצמיחים בהם עשבים, ולא תולשים אותם, מפני עוגמת הנפש.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:3</span></div>
+    <div class="orig">עֲשָׂבִים מַאן דְּכַר שְׁמַיְיהוּ? חַסּוֹרֵי מִיחַסְּרָא וְהָכִי קָתָנֵי: וּמְכַבְּדִין אוֹתָן וּמַרְבִּיצִין אוֹתָן כְּדֵי שֶׁלֹּא יַעֲלוּ בָּהֶן עֲשָׂבִים. אָמַר רַבִּי יְהוּדָה: אֵימָתַי — בְּיִשּׁוּבָן, אֲבָל בְּחוּרְבָּנָן — מַנִּיחִין אוֹתָן לַעֲלוֹת. עָלוּ בָּהֶן עֲשָׂבִים — לֹא יִתְלוֹשׁ, מִפְּנֵי עׇגְמַת נֶפֶשׁ.</div>
+    <div class="trans">קושיא: עשבים — מי הזכיר אותם בכלל? הברייתא חסרה משפט ויש להשלימה (חַסּוֹרֵי מִיחַסְּרָא = הברייתא חסרה), וכך צריך ללמוד: ומכבדים אותם (מנקים) ומרביצים (מזליפים מים) כדי שלא יעלו בהם עשבים. ועל זה אמר רבי יהודה: מתי? בזמן יישובם; אבל בחורבנם מניחים לעשבים לעלות, ואם עלו — לא יתלוש, מפני עוגמת נפש.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:4</span></div>
+    <div class="orig">אָמַר רַב אַסִּי: בָּתֵּי כְנֵסִיּוֹת שֶׁבְּבָבֶל, עַל תְּנַאי הֵן עֲשׂוּיִין. וְאַף עַל פִּי כֵן, אֵין נוֹהֲגִין בָּהֶן קַלּוּת רֹאשׁ. וּמַאי נִיהוּ — חֶשְׁבּוֹנוֹת.</div>
+    <div class="trans">אמר רב אסי: בתי הכנסת שבבבל נבנו מלכתחילה על תנאי — שיהיה מותר להשתמש בהם גם לצורכי הציבור (ולכן אין בהם קדושה גמורה). ואף על פי כן אין נוהגים בהם קלות ראש. ומהי הקלות ראש האסורה? לעשות בהם חשבונות (עסקים).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:5</span></div>
+    <div class="orig">אָמַר רַב אַסִּי: בֵּית הַכְּנֶסֶת שֶׁמְּחַשְּׁבִין בּוֹ חֶשְׁבּוֹנוֹת — מְלִינִין בּוֹ אֶת הַמֵּת. מְלִינִין סָלְקָא דַעְתָּךְ? לָא סַגִּי דְּלָאו הָכִי? אֶלָּא, לְסוֹף שֶׁיָּלִינוּ בּוֹ מֵת מִצְוָה.</div>
+    <div class="trans">אמר רב אסי: בית כנסת שמחשבים בו חשבונות — סופו שילינו בו את המת. הגמרא תמהה: וכי יעלה על הדעת שילינו בו מת? וכי אין ברירה אחרת? אלא הכוונה: כעונש על קלות הראש, סופו שיבוא לתוכו מֵת מִצְוָה (מת שאין מי שיקברו) וילינו אותו בו בלילה.</div>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-3">
+  <h2><span class="badge">סוגיה 3</span> כבוד תלמידי חכמים, הספד ולימוד הלכות <span class="ref">Megillah 28b:6-29a:3</span></h2>
+  <div class="lead">הגמרא עוברת על שאר סעיפי הברייתא — מה מותר לחכמים, איך נכנסים, מהו הספד של רבים — ומתפתחת לאגדות על כבוד התורה ולומדיה, ולשאלת כמה אנשים ראויים ללוויה.</div>
+  <div class="chart">
+    <button class="lang-toggle" data-lang="he" type="button">הצג ארמית (מקור) ⇄</button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S10["10 · רבא: חכמים ותלמידיהם מותרים — בֵּי רַבָּנַן (בית החכמים)"]:::statement
+  S11["11 · נכנסים בגשמים? רבינא ורב אדא: לא משום הגשם אלא ללימוד הצריך צלילות"]:::statement
+  Q12{"12 · איך קוראים אדם מבית הכנסת בלי איסור?"}:::question
+  A12["12 · רב אשי: יאמר הלכה / משנה / פסוק, או ישהה מעט"]:::answer
+  Q13{"13 · מהו ׳הספד של רבים׳?"}:::question
+  A13["13 · רב חסדא ורב ששת: הספד שחכם גדול עומד בו"]:::answer
+  S14["14 · רפרם ורבי זירא הספידו בבית כנסת — כי הכל באים לכבוד"]:::statement
+  S15["15 · ריש לקיש הספיד תלמיד חכם: ׳ווי, חסרה ארץ ישראל אדם גדול׳"]:::statement
+  S16["16 · רב נחמן סירב להספיד מי שלמד ולא הבין: ׳סל מלא ספרים׳"]:::statement
+  C17["17 · מסקנה: ההבדל בין חכמי א״י החריפים לחסידי בבל"]:::conclusion
+  S18["18 · משנה (אבות): המשתמש בכתרה של תורה חולף — בעובד ת״ח"]:::statement
+  S19["19 · עולא: ישתמש בלומד ולא במלמד; מעשה ריש לקיש שנשאוֹ במים"]:::statement
+  S20["20 · ריש לקיש לימדו דין: בנות ישראל החמירו על עצמן (שבעה נקיים)"]:::statement
+  S21["21 · תנא דבי אליהו: השונה הלכות — מובטח לו עולם הבא (׳הליכות׳←׳הלכות׳)"]:::statement
+  S22["22 · ברייתא: מבטלין תלמוד תורה להוצאת המת ולהכנסת כלה"]:::statement
+  S23["23 · רבי יהודה בר׳ אילעאי ביטל; אך רק כשאין שם די אנשים"]:::statement
+  Q24{"24 · קושיא: וכמה זה ׳כל צורכו׳?"}:::question
+  A24["24 · רב ועולא: י״ב אלף איש (ושיתא אלפי שופרות) / שורת אנשים מהשער"]:::answer
+  C25["25 · רב ששת: כנתינתה כך נטילתה — שישים ריבוא; ולמלמד — אין שיעור"]:::conclusion
+  S10 -->|המשך הברייתא| S11
+  S11 -->|שאלה| Q12
+  Q12 -->|תשובה| A12
+  A12 -->|המשך הברייתא| Q13
+  Q13 -->|תשובה| A13
+  A13 -->|מעשים| S14
+  S14 --> S15
+  S15 -->|מנגד| S16
+  S16 -->|מסקנה| C17
+  C17 -->|כבוד התורה| S18
+  S18 --> S19
+  S19 --> S20
+  S20 --> S21
+  S21 -->|ברייתא נוספת| S22
+  S22 --> S23
+  S23 -->|קושיא| Q24
+  Q24 -->|תשובות| A24
+  A24 -->|מסקנה| C25
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S10["10 · אָמַר רָבָא: חֲכָמִים וְתַלְמִידֵיהֶם מוּתָּרִין — מַאי בֵּי רַבָּנַן בֵּיתָא דְרַבָּנַן"]:::statement
+  S11["11 · אֲתָא זִילְחָא דְמִיטְרָא... דִּשְׁמַעְתָּא בָּעֲיָא צִילּוּתָא"]:::statement
+  Q12{"12 · אִי אִצְטְרִיךְ לְמִיקְרֵי גַּבְרָא מִבֵּי כְנִישְׁתָּא, מַאי?"}:::question
+  A12["12 · לֵימָא הִלְכְתָא / מַתְנִיתִין / פְּסוּקָא, אִי נָמֵי נִישְׁהֵי פּוּרְתָּא"]:::answer
+  Q13{"13 · הֵיכִי דָּמֵי הֶסְפֵּידָא דְרַבִּים?"}:::question
+  A13["13 · כְּגוֹן דְּקָאֵי בֵּיהּ רַב שֵׁשֶׁת / רַב חִסְדָּא"]:::answer
+  S14["14 · רַפְרָם וְרַבִּי זֵירָא: מִשּׁוּם יְקָרָא... אָתוּ כּוּלֵּי עָלְמָא"]:::statement
+  S15["15 · רֵישׁ לָקִישׁ: וַוי חָסְרָא אַרְעָא דְיִשְׂרָאֵל גַּבְרָא רַבָּה"]:::statement
+  S16["16 · רַב נַחְמָן: הֵי צַנָּא דִּמְלֵי סִיפְרֵי דַּחֲסַר?!"]:::statement
+  C17["17 · תָּא חֲזִי מָה בֵּין תַּקִּיפֵי דְּאַרְעָא דְיִשְׂרָאֵל לַחֲסִידֵי דְבָבֶל"]:::conclusion
+  S18["18 · וּדְאִשְׁתַּמַּשׁ בְּתָגָא — חָלֵף; זֶה הַמִּשְׁתַּמֵּשׁ בְּמִי שֶׁשּׁוֹנֶה הֲלָכוֹת"]:::statement
+  S19["19 · עוּלָּא: לִשְׁתַּמַּשׁ בְּמַאן דְּתָנֵי... שְׁדִי בַּר לָקִישָׁא בְּמַיָּא"]:::statement
+  S20["20 · גְּמוֹר מִינִּי: בְּנוֹת יִשְׂרָאֵל הֵן הֶחֱמִירוּ עַל עַצְמָן"]:::statement
+  S21["21 · תָּנָא דְּבֵי אֵלִיָּהוּ: כׇּל הַשּׁוֹנֶה הֲלָכוֹת בֶּן עוֹלָם הַבָּא"]:::statement
+  S22["22 · תָּנוּ רַבָּנַן: מְבַטְּלִין תַּלְמוּד תּוֹרָה לְהוֹצָאַת הַמֵּת וּלְהַכְנָסַת הַכַּלָּה"]:::statement
+  S23["23 · ר׳ יְהוּדָה בר׳ אִילְעַאי; בְּשֶׁאֵין שָׁם כׇּל צוֹרְכּוֹ"]:::statement
+  Q24{"24 · וְכַמָּה כׇּל צוֹרְכּוֹ?"}:::question
+  A24["24 · תְּרֵיסַר אַלְפֵי גַּבְרֵי וְשִׁיתָּא אַלְפֵי שִׁיפּוּרֵי / דְּחָיְיצִי גַּבְרֵי"]:::answer
+  C25["25 · רַב שֵׁשֶׁת: כִּנְתִינָתָהּ כָּךְ נְטִילָתָהּ — בְּשִׁשִּׁים רִיבּוֹא; לְמַתְנֵי לֵית שִׁיעוּרָא"]:::conclusion
+  S10 -->|המשך הברייתא| S11
+  S11 -->|שאלה| Q12
+  Q12 -->|תשובה| A12
+  A12 -->|המשך הברייתא| Q13
+  Q13 -->|תשובה| A13
+  A13 -->|מעשים| S14
+  S14 --> S15
+  S15 -->|מנגד| S16
+  S16 -->|מסקנה| C17
+  C17 -->|כבוד התורה| S18
+  S18 --> S19
+  S19 --> S20
+  S20 --> S21
+  S21 -->|ברייתא נוספת| S22
+  S22 --> S23
+  S23 -->|קושיא| Q24
+  Q24 -->|תשובות| A24
+  A24 -->|מסקנה| C25
+    </script>
+  </div>
+  <h3>ציטוטים</h3>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:6</span></div>
+    <div class="orig">וְאֵין נֵיאוֹתִין בָּהֶן. אָמַר רָבָא: חֲכָמִים וְתַלְמִידֵיהֶם מוּתָּרִין, דְּאָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: מַאי בֵּי רַבָּנַן — בֵּיתָא דְרַבָּנַן.</div>
+    <div class="trans">על מה ששנינו ״ואין מתקשטים (נהנים) בהם״, אמר רבא: האיסור הוא רק על אנשים רגילים, אבל חכמים ותלמידיהם מותרים. שכן אמר רבי יהושע בן לוי: מהו ״בֵּי רַבָּנַן״ (=בית המדרש)? פירושו ״בֵּיתָא דְרַבָּנַן״ — ביתם של החכמים; ולכן מותר להם להשתמש בו כבביתם.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:7</span></div>
+    <div class="orig">וְאֵין נִכְנָסִין בָּהֶן בַּחַמָּה מִפְּנֵי הַחַמָּה וּבַגְּשָׁמִים מִפְּנֵי הַגְּשָׁמִים. כִּי הָא דְּרָבִינָא וְרַב אַדָּא בַּר מַתְנָה הֲווֹ קָיְימִי וְשָׁאֲלִי שְׁאֵילְתָּא מֵרָבָא, אֲתָא זִילְחָא דְמִיטְרָא, עָיְילִי לְבֵי כְנִישְׁתָּא אָמְרִי: הַאי דְּעָיְילִינַן לְבֵי כְנִישְׁתָּא לָאו מִשּׁוּם מִיטְרָא, אֶלָּא מִשּׁוּם דִּשְׁמַעְתָּא בָּעֲיָא צִילּוּתָא כְּיוֹמָא דְאִסְתָּנָא.</div>
+    <div class="trans">על ״אין נכנסים בחמה מפני החמה ובגשמים מפני הגשמים״ — כמו אותו מעשה: רבינא ורב אדא בר מתנה היו עומדים ושואלים שאלה מרבא, ירד עליהם זרם גשם, ונכנסו לבית הכנסת. אמרו: כניסתנו לבית הכנסת אינה בגלל הגשם, אלא משום שהלימוד צריך צלילות־דעת כיום שנושבת בו רוח צפונית (אִסְתָּנָא) והשמיים בהירים; ולכן נכנסנו לצורך לימוד, שמותר.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:8</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אַחָא בְּרֵיהּ דְּרָבָא לְרַב אָשֵׁי: אִי אִצְטְרִיךְ לֵיהּ לְאִינִישׁ לְמִיקְרֵי גַּבְרָא מִבֵּי כְנִישְׁתָּא, מַאי? אֲמַר לֵיהּ: אִי צוּרְבָּא מֵרַבָּנַן הוּא — לֵימָא הִלְכְתָא, וְאִי תַּנָּא הוּא — לֵימָא מַתְנִיתִין, וְאִי קָרָא הוּא — לֵימָא פְּסוּקָא. וְאִי לָא, לֵימָא לֵיהּ לְיָנוֹקָא: אֵימָא לִי פְּסוּקָיךְ. אִי נָמֵי, נִישְׁהֵי פּוּרְתָּא וְנֵיקוּם.</div>
+    <div class="trans">שאל רב אחא בנו של רבא את רב אשי: אם אדם צריך לקרוא (להזמין) מישהו מתוך בית הכנסת — מה יעשה, הרי אסור להיכנס לשם סתם? ענה לו: אם הוא תלמיד חכם צעיר — יאמר הלכה; אם הוא תַנָּא (בקיא במשניות) — יאמר משנה; אם הוא בקיא במקרא — יאמר פסוק; ואם אינו יכול אף זאת — יאמר לילד: אמור לי את הפסוק שלמדת. ולחלופין: ישהה מעט בבית הכנסת ואז יקום וייצא.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:9</span></div>
+    <div class="orig">וּמַסְפִּידִין בָּהֶן הֶסְפֵּד שֶׁל רַבִּים. הֵיכִי דָּמֵי הֶסְפֵּידָא דְרַבִּים? מַחְוֵי רַב חִסְדָּא: כְּגוֹן הֶסְפֵּידָא דְּקָאֵי בֵּיהּ רַב שֵׁשֶׁת. מַחְוֵי רַב שֵׁשֶׁת: כְּגוֹן הֶסְפֵּידָא דְּקָאֵי בֵּיהּ רַב חִסְדָּא.</div>
+    <div class="trans">על ״ומספידים בהם הספד של רבים״ — שואלת הגמרא: מהו ״הספד של רבים״? הראה (=הדגים) רב חסדא: למשל הספד שרב ששת עומד ונוכח בו (שבזכותו יבואו רבים). והדגים רב ששת בחזרה: למשל הספד שרב חסדא נוכח בו.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:10</span></div>
+    <div class="orig">רַפְרָם אַסְפְּדַהּ לְכַלְּתֵיהּ בְּבֵי כְנִישְׁתָּא, אָמַר: מִשּׁוּם יְקָרָא דִּידִי וּדְמִיתָא אָתוּ כּוּלֵּיהּ עָלְמָא. רַבִּי זֵירָא סַפְדֵיהּ לְהָהוּא מֵרַבָּנַן בְּבֵי כְנִישְׁתָּא, אֲמַר: אִי מִשּׁוּם יְקָרָא דִּידִי, אִי מִשּׁוּם יְקָרָא (דִּידֵיהּ) דְּמִיתָא, אָתוּ כּוּלֵּי עָלְמָא.</div>
+    <div class="trans">רפרם הספיד את כלתו בבית הכנסת, ואמר: בגלל כבודי וכבוד המת יבואו כל העם — ולכן זה הספד של רבים המותר בבית הכנסת. וכן רבי זירא הספיד חכם אחד בבית הכנסת, ואמר: בין בגלל כבודי ובין בגלל כבוד המת — יבואו כל העם.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:11</span></div>
+    <div class="orig">רֵישׁ לָקִישׁ סַפְדֵיהּ לְהָהוּא צוּרְבָּא מֵרַבָּנַן דִּשְׁכִיחַ בְּאַרְעָא דְיִשְׂרָאֵל דַּהֲוָה תָּנֵי הִלְכָתָא בְּעֶשְׂרִים וְאַרְבַּע שׁוּרָתָא, אֲמַר: וַוי חָסְרָא אַרְעָא דְיִשְׂרָאֵל גַּבְרָא רַבָּה.</div>
+    <div class="trans">ריש לקיש הספיד תלמיד חכם צעיר שהיה מצוי בארץ ישראל ולמד הלכה בשורה העשרים וארבע בבית המדרש (כלומר לא היה מן הגדולים, ישב מאחור). ואף על פי כן אמר: אוי, חסרה ארץ ישראל אדם גדול.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:12</span></div>
+    <div class="orig">הָהוּא דַּהֲוָה תָּנֵי הִלְכְתָא סִיפְרָא וְסִיפְרֵי וְתוֹסֶפְתָּא וּשְׁכֵיב, אֲתוֹ וַאֲמַרוּ לֵיהּ לְרַב נַחְמָן: לִיסְפְּדֵיהּ מָר! אֲמַר: הֵיכִי נִסְפְּדֵיהּ? הֵי צַנָּא דִּמְלֵי סִיפְרֵי דַּחֲסַר?!</div>
+    <div class="trans">לעומת זאת: אדם שלמד הרבה — הלכה, סִפְרָא, סִפְרֵי ותוספתא — ומת, באו ואמרו לרב נחמן: יספיד אותו אדוני! אמר: כיצד אספידנו? וכי אומר ״אוי, סל מלא ספרים שחסר״?! (כלומר: למד הרבה אך לא הבין ולא העמיק, ואין מה לשבחו).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:13</span></div>
+    <div class="orig">תָּא חֲזִי מָה בֵּין תַּקִּיפֵי דְּאַרְעָא דְיִשְׂרָאֵל לַחֲסִידֵי דְבָבֶל.</div>
+    <div class="trans">מסקנה (השוואה): בוא וראה מה ההבדל בין החכמים החריפים והקשוחים של ארץ ישראל לבין החסידים של בבל — ריש לקיש, הקשוח, הספיד בכבוד את הצעיר, ואילו רב נחמן ה״חסיד״ נמנע מלהספיד.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:14</span></div>
+    <div class="orig">תְּנַן הָתָם: וּדְאִשְׁתַּמַּשׁ בְּתָגָא — חָלֵף. תָּנֵי רֵישׁ לָקִישׁ: זֶה הַמִּשְׁתַּמֵּשׁ בְּמִי שֶׁשּׁוֹנֶה הֲלָכוֹת כִּתְרָהּ שֶׁל תּוֹרָה.</div>
+    <div class="trans">שנינו במשנה במקום אחר (אבות): ״המשתמש בכתר (תָּגָא) — חולף ועובר מן העולם״. דרש ריש לקיש: זהו מי שמשתמש (לצרכיו) באדם השונה הלכות, שהן ״כתרה של תורה״ — כלומר מנצל תלמיד חכם לשירותו הפרטי.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">19</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:15</span></div>
+    <div class="orig">וְאָמַר עוּלָּא: לִשְׁתַּמַּשׁ אִינִישׁ בְּמַאן דְּתָנֵי אַרְבְּעָה, וְלָא לִשְׁתַּמַּשׁ בְּמַאן דְּמַתְנֵי אַרְבְּעָה. כִּי הָא דְּרֵישׁ לָקִישׁ הֲוָה אָזֵיל בְּאוֹרְחָא מְטָא עוּרְקְמָא דְמַיָּא, אֲתָא הָהוּא גַּבְרָא אַרְכְּבֵיהּ אַכַּתְפֵּיהּ וְקָא מְעַבַּר לֵיהּ. אֲמַר לֵיהּ: קְרֵית? אֲמַר לֵיהּ: קָרֵינָא. תְּנֵית? תָּנֵינָא אַרְבָּעָה סִידְרֵי מִשְׁנָה. אֲמַר לֵיהּ: פְּסַלְתְּ לָךְ אַרְבְּעָה טוּרֵי וְטָעֲנַתְּ בַּר לָקִישׁ אַכַּתְפָּךְ?! שְׁדִי בַּר לָקִישָׁא בְּמַיָּא!</div>
+    <div class="trans">ואמר עולא: מותר לאדם להשתמש במי שלומד (״תָּנֵי״) ארבעה סדרי משנה, אבל לא במי שמלמד אותם לאחרים. כמעשה זה: ריש לקיש הלך בדרך והגיע לשלולית מים עמוקה, בא אדם, הרכיב אותו על כתפיו והעבירוֹ. שאלוֹ ריש לקיש: למדת מקרא? אמר: קראתי. למדת משנה? אמר: למדתי ארבעה סדרי משנה. אמר לו: חצבת לך ארבעה הרים (=סדרים) ואתה נושא את ״בר לקיש״ על כתפך?! הַשלך את בר לקיש למים! (כלומר: אינו ראוי שאדם כזה ישמשני).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">20</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:16</span></div>
+    <div class="orig">אֲמַר לֵיהּ: נִיחָא לִי דַּאֲשַׁמְּעֵיהּ לְמָר. אִי הָכִי, גְּמוֹר מִינִּי הָא מִלְּתָא דְּאָמַר רַבִּי זֵירָא: בְּנוֹת יִשְׂרָאֵל הֵן הֶחֱמִירוּ עַל עַצְמָן שֶׁאֲפִילּוּ רוֹאוֹת טִיפַּת דָּם כְּחַרְדָּל יוֹשְׁבוֹת עָלָיו שִׁבְעָה נְקִיִּים.</div>
+    <div class="trans">אמר לו האיש: נעים לי לשרת את אדוני. אמר לו ריש לקיש: אם כך, למד ממני דבר זה שאמר רבי זירא — בנות ישראל החמירו על עצמן, שאפילו רואות טיפת דם קטנה כחרדל, יושבות עליה שבעה ימים נקיים (לפני טבילה). כך תהיה תלמידי, ויהיה ראוי שתשרתני.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">21</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:17</span></div>
+    <div class="orig">תָּנָא דְּבֵי אֵלִיָּהוּ: כׇּל הַשּׁוֹנֶה הֲלָכוֹת, מוּבְטָח לוֹ שֶׁהוּא בֶּן עוֹלָם הַבָּא, שֶׁנֶּאֱמַר: ״הֲלִיכוֹת עוֹלָם לוֹ״, אַל תִּקְרֵי ״הֲלִיכוֹת״ אֶלָּא ״הֲלָכוֹת״.</div>
+    <div class="trans">שנו בבית מדרשו של אליהו: כל הלומד הלכות (באופן קבוע) — מובטח לו שהוא בן העולם הבא, שנאמר ״הֲלִיכוֹת עוֹלָם לוֹ״; אל תקרא ״הֲלִיכוֹת״ אלא ״הֲלָכוֹת״ — לימוד ההלכות מביא לחיי עולם.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">22</span> <span class="ref">מגילה כ״ח ב — Megillah 28b:18</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן:</div>
+    <div class="trans">שנו חכמים בברייתא (פתיחה לברייתא הבאה):</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">23</span> <span class="ref">מגילה כ״ט א — Megillah 29a:1</span></div>
+    <div class="orig">מְבַטְּלִין תַּלְמוּד תּוֹרָה לְהוֹצָאַת הַמֵּת, וּלְהַכְנָסַת הַכַּלָּה. אָמְרוּ עָלָיו עַל רַבִּי יְהוּדָה בְּרַבִּי אִילְעַאי שֶׁהָיָה מְבַטֵּל תַּלְמוּד תּוֹרָה לְהוֹצָאַת הַמֵּת וּלְהַכְנָסַת הַכַּלָּה. בַּמֶּה דְּבָרִים אֲמוּרִים — בְּשֶׁאֵין שָׁם כׇּל צוֹרְכּוֹ, אֲבָל יֵשׁ שָׁם כׇּל צוֹרְכּוֹ — אֵין מְבַטְּלִין.</div>
+    <div class="trans">מפסיקים את לימוד התורה כדי ללוות מת (הוצאת המת לקבורה) ולשמח חתן וכלה (הכנסת כלה לחופה). אמרו על רבי יהודה בר׳ אילעאי שהיה מבטל תלמוד תורה לשם כך. במה דברים אמורים? כשאין מספיק אנשים לכבד את המת או הכלה כראוי; אבל כשיש שם די אנשים — אין צריך להפסיק את הלימוד.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">24</span> <span class="ref">מגילה כ״ט א — Megillah 29a:2</span></div>
+    <div class="orig">וְכַמָּה כׇּל צוֹרְכּוֹ? אָמַר רַב שְׁמוּאֵל בַּר אִינְיָא מִשְּׁמֵיהּ דְּרַב: תְּרֵיסַר אַלְפֵי גַּבְרֵי, וְשִׁיתָּא אַלְפֵי שִׁיפּוּרֵי. וְאָמְרִי לַהּ: תְּרֵיסַר אַלְפֵי גַּבְרֵי, וּמִינַּיְיהוּ שִׁיתָּא אַלְפֵי שִׁיפּוּרֵי. עוּלָּא אָמַר: כְּגוֹן דְּחָיְיצִי גַּבְרֵי מֵאֲבוּלָּא עַד סִיכְרָא.</div>
+    <div class="trans">קושיא: וכמה אנשים נחשבים ״כל צורכו״ (מספיק)? אמר רב שמואל בר איניא בשם רב: שנים־עשר אלף איש ועוד ששת אלפים תוקעי שופרות (לאות אבל). ויש אומרים: שנים־עשר אלף איש, ומתוכם ששת אלפים בעלי שופרות. עולא אמר: כמות שמספיקה כדי שתיווצר שורת אנשים רצופה משער העיר (אֲבוּלָּא) ועד מקום הקבורה (סִיכְרָא).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">25</span> <span class="ref">מגילה כ״ט א — Megillah 29a:3</span></div>
+    <div class="orig">רַב שֵׁשֶׁת אָמַר: כִּנְתִינָתָהּ כָּךְ נְטִילָתָהּ. מָה נְתִינָתָהּ בְּשִׁשִּׁים רִיבּוֹא, אַף נְטִילָתָהּ בְּשִׁשִּׁים רִיבּוֹא. הָנֵי מִילֵּי לְמַאן דְּקָרֵי וְתָנֵי, אֲבָל לְמַאן דְּמַתְנֵי — לֵית לֵיהּ שִׁיעוּרָא.</div>
+    <div class="trans">מסקנה: רב ששת אמר — כשם שנתינת התורה, כך נטילתה (לוויית תלמיד חכם דומה למעמד נתינת התורה). מה נתינתה היתה בשישים ריבוא (600,000 איש בהר סיני), אף נטילתה (לוויית הנפטר) בשישים ריבוא. ודברים אלה אמורים במי שלמד לעצמו מקרא ומשנה; אבל מי שלימד אחרים — אין שיעור לכבוד שראוי לתת לו.</div>
+  </div>
+</section>
+
+  <footer>נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</footer>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: { fontFamily: 'Frank Ruhl Libre, Heebo, serif', fontSize: '15px' },
+    flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis', nodeSpacing: 45, rankSpacing: 55 }
+  });
+
+  let _seq = 0;
+  async function renderChart(chart, lang) {
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if (!holder || !target) return;
+    try {
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if (bindFunctions) bindFunctions(target);
+    } catch (e) {
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+  }
+
+  for (const chart of document.querySelectorAll('.chart')) {
+    await renderChart(chart, 'he');
+    const btn = chart.querySelector('.lang-toggle');
+    if (btn && chart.querySelector('.src-ar')) {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.lang === 'he' ? 'ar' : 'he';
+        await renderChart(chart, next);
+        btn.dataset.lang = next;
+        btn.textContent = next === 'he' ? 'הצג ארמית (מקור) ⇄' : 'הצג עברית ⇄';
+      });
+    } else if (btn) {
+      btn.remove();
+    }
+  }
+</script>
+</body>
+</html>
