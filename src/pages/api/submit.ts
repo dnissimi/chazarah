@@ -94,7 +94,9 @@ export const POST: APIRoute = async ({ request, locals, clientAddress }) => {
   if (!env?.TURNSTILE_SECRET) missing.push('TURNSTILE_SECRET');
   if (!env?.GITHUB_TOKEN) missing.push('GITHUB_TOKEN');
   if (!env?.RATE_LIMIT_KV) missing.push('RATE_LIMIT_KV');
-  if (missing.length > 0 || !env) {
+  // The explicit conjunction (rather than `missing.length`) lets TS narrow the
+  // bindings to non-undefined for the rest of the handler.
+  if (!env || !env.TURNSTILE_SECRET || !env.GITHUB_TOKEN || !env.RATE_LIMIT_KV) {
     return json({ ok: false, error: 'server-misconfigured', missing }, 500);
   }
 
