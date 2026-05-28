@@ -83,3 +83,31 @@ done
   for PRs that contain unreleased Chazarah Maps.
 - No custom domain in v0. When ready, add via Pages → project → Custom
   domains.
+
+## Provisioned state (as of 2026-05-28)
+
+All Cloudflare config below was set on the **Production** environment of the
+`chazarah` Pages project via `wrangler` / the CF REST API (token in
+`~/.config/chazarah/cloudflare.env`):
+
+- **Turnstile widget** "Chazarah" — sitekey `0x4AAAAAADX9O3p4b0EOP_sF`
+  (public), domains `hazara.co.il` + `chazarah.pages.dev`, mode Managed.
+  Secret set as `TURNSTILE_SECRET`.
+- **KV namespace** `chazarah-rate-limit` (`aa769d0c34644e8981a1d81c6f525e00`)
+  bound as `RATE_LIMIT_KV`.
+- Env vars on Production: `PUBLIC_TURNSTILE_SITEKEY`, `TURNSTILE_SECRET`,
+  `GITHUB_TOKEN`, `NODE_VERSION`.
+
+The custom domain `hazara.co.il` is live and serves Production.
+
+## Follow-ups
+
+- [ ] **Swap `GITHUB_TOKEN` to a fine-grained PAT.** It currently holds the
+  owner's broad `gh` CLI token (full `repo` scope across all repos) as a
+  stopgap. Before publicizing the site, replace it with a fine-grained PAT
+  scoped to **Issues: Read and write on `chazarah-submissions` only**:
+  ```
+  source ~/.config/chazarah/cloudflare.env
+  printf '%s' '<fine-grained-pat>' | wrangler pages secret put GITHUB_TOKEN --project-name chazarah
+  ```
+  Then trigger a redeploy. Limits blast radius if the worker secret ever leaks.
