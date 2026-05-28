@@ -1,0 +1,201 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import { strings, DEFAULT_LANG } from '../i18n/strings';
+
+const t = strings[DEFAULT_LANG];
+const TURNSTILE_TEST_SITEKEY = '1x00000000000000000000AA';
+---
+<SiteLayout title="משוב על מפה — Chazarah">
+  <section class="feedback container narrow">
+    <div class="feedback-card" data-feedback-card>
+      <header class="feedback-header">
+        <h1 data-i18n="feedbackTitle">{t.feedbackTitle}</h1>
+        <p class="feedback-intro" data-i18n="feedbackIntro">{t.feedbackIntro}</p>
+      </header>
+
+      <form class="feedback-form" novalidate data-feedback-form>
+        <div class="feedback-banner" data-feedback-banner>
+          <span class="feedback-banner-label" data-i18n="feedbackBannerLabel">{t.feedbackBannerLabel}</span>
+          <span class="feedback-banner-ref" data-feedback-ref></span>
+          <span class="chip feedback-banner-variant" data-feedback-variant hidden></span>
+        </div>
+
+        <div class="field">
+          <label for="fb-node" data-i18n="feedbackNodeLabel">{t.feedbackNodeLabel}</label>
+          <input
+            type="text"
+            id="fb-node"
+            name="nodeOrQuote"
+            autocomplete="off"
+            data-feedback-node
+            data-i18n-placeholder="feedbackNodePlaceholder"
+            placeholder={t.feedbackNodePlaceholder}
+          />
+        </div>
+
+        <div class="field">
+          <label for="fb-observation" data-i18n="feedbackObservationLabel">{t.feedbackObservationLabel}</label>
+          <textarea
+            id="fb-observation"
+            name="observation"
+            rows="5"
+            required
+            aria-required="true"
+            data-feedback-observation
+            data-i18n-placeholder="feedbackObservationPlaceholder"
+            placeholder={t.feedbackObservationPlaceholder}
+          ></textarea>
+          <p class="error" data-feedback-observation-error hidden data-i18n="feedbackObservationRequired">{t.feedbackObservationRequired}</p>
+        </div>
+
+        <div class="field">
+          <label for="fb-email" data-i18n="requestEmailLabel">{t.requestEmailLabel}</label>
+          <input
+            type="email"
+            id="fb-email"
+            name="email"
+            autocomplete="email"
+            data-feedback-email
+            data-i18n-placeholder="requestEmailPlaceholder"
+            placeholder={t.requestEmailPlaceholder}
+          />
+          <p class="hint" data-i18n="feedbackEmailHint">{t.feedbackEmailHint}</p>
+        </div>
+
+        <div class="field">
+          <div class="cf-turnstile turnstile" data-sitekey={TURNSTILE_TEST_SITEKEY}></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" data-i18n="feedbackSubmitBtn">{t.feedbackSubmitBtn}</button>
+          <a class="btn btn-ghost" href="/" data-i18n="requestBackHomeBtn">{t.requestBackHomeBtn}</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="feedback-success" data-feedback-success hidden>
+      <div class="kicker" data-i18n="requestSuccessKicker">{t.requestSuccessKicker}</div>
+      <h1 data-i18n="feedbackSuccessTitle">{t.feedbackSuccessTitle}</h1>
+      <p data-i18n="feedbackSuccessBody">{t.feedbackSuccessBody}</p>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" data-feedback-reset data-i18n="feedbackSubmitAnother">{t.feedbackSubmitAnother}</button>
+        <a class="btn btn-ghost" href="/" data-i18n="requestBackHomeBtn">{t.requestBackHomeBtn}</a>
+      </div>
+    </div>
+  </section>
+
+  <script
+    is:inline
+    async
+    defer
+    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  ></script>
+
+  <script>
+    import {
+      parseFeedbackPrefill,
+      buildFeedbackPayload,
+      type FeedbackPrefill,
+    } from '../lib/feedback-form';
+    import type { TargetLang } from '../lib/request-form';
+    import { strings, DEFAULT_LANG, LANG_STORAGE_KEY, type Lang } from '../i18n/strings';
+
+    const VARIANT_KEY: Record<TargetLang, 'mapInfoVariantLangHe' | 'mapInfoVariantLangEn' | 'mapInfoVariantLangYi'> = {
+      he: 'mapInfoVariantLangHe',
+      en: 'mapInfoVariantLangEn',
+      yi: 'mapInfoVariantLangYi',
+    };
+
+    function activeLang(): Lang {
+      try {
+        const stored = localStorage.getItem(LANG_STORAGE_KEY);
+        return stored === 'en' ? 'en' : 'he';
+      } catch {
+        return DEFAULT_LANG;
+      }
+    }
+
+    const form = document.querySelector<HTMLFormElement>('[data-feedback-form]');
+    const card = document.querySelector<HTMLElement>('[data-feedback-card]');
+    const successPanel = document.querySelector<HTMLElement>('[data-feedback-success]');
+    const refEl = document.querySelector<HTMLElement>('[data-feedback-ref]');
+    const variantEl = document.querySelector<HTMLElement>('[data-feedback-variant]');
+    const nodeInput = document.querySelector<HTMLInputElement>('[data-feedback-node]');
+    const observationInput = document.querySelector<HTMLTextAreaElement>('[data-feedback-observation]');
+    const observationError = document.querySelector<HTMLElement>('[data-feedback-observation-error]');
+    const emailInput = document.querySelector<HTMLInputElement>('[data-feedback-email]');
+    const resetBtn = document.querySelector<HTMLButtonElement>('[data-feedback-reset]');
+
+    let prefill: FeedbackPrefill = { ref: '', lang: null };
+
+    function applyPrefill() {
+      prefill = parseFeedbackPrefill(new URLSearchParams(window.location.search));
+      if (refEl) refEl.textContent = prefill.ref;
+      if (variantEl) {
+        if (prefill.lang) {
+          const key = VARIANT_KEY[prefill.lang];
+          variantEl.setAttribute('data-i18n', key);
+          variantEl.textContent = strings[activeLang()][key] ?? strings.he[key];
+          variantEl.hidden = false;
+        } else {
+          variantEl.removeAttribute('data-i18n');
+          variantEl.textContent = '';
+          variantEl.hidden = true;
+        }
+      }
+    }
+
+    function showSuccess() {
+      if (card) card.hidden = true;
+      if (successPanel) {
+        successPanel.hidden = false;
+        successPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function resetForm() {
+      if (form) form.reset();
+      if (observationError) observationError.hidden = true;
+      if (card) card.hidden = false;
+      if (successPanel) successPanel.hidden = true;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    observationInput?.addEventListener('input', () => {
+      if (observationError && !observationError.hidden && observationInput.value.trim() !== '') {
+        observationError.hidden = true;
+      }
+    });
+
+    form?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const observation = observationInput?.value.trim() ?? '';
+      if (observation === '') {
+        if (observationError) observationError.hidden = false;
+        observationInput?.focus();
+        return;
+      }
+      if (observationError) observationError.hidden = true;
+
+      const turnstileResponse =
+        (form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value) ?? '';
+
+      const payload = buildFeedbackPayload({
+        ref: prefill.ref,
+        languageVariant: prefill.lang,
+        nodeOrQuote: nodeInput?.value.trim() ?? '',
+        observation,
+        email: emailInput?.value ?? '',
+        submittedAt: new Date().toISOString(),
+      });
+
+      // Slice 12: no backend yet — the Submission Worker (#13) will POST this same shape.
+      console.log('[chazarah] map-feedback payload', { payload, turnstileResponse });
+      showSuccess();
+    });
+
+    resetBtn?.addEventListener('click', resetForm);
+
+    applyPrefill();
+  </script>
+</SiteLayout>
