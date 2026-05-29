@@ -1,6 +1,6 @@
 # ADR 0005 — Non-commercial site; minimal-compliance attribution; the "no Davidson English" discipline is load-bearing
 
-- Status: Accepted
+- Status: Accepted — "never show Davidson" amended by [ADR 0006](./0006-bilingual-map-files-and-per-variant-language-policy.md) (the English variant shows Davidson under a per-variant IP policy; the Hebrew side and the non-commercial posture are unchanged)
 - Date: 2026-05-26
 
 ## Context

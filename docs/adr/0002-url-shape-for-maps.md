@@ -1,6 +1,6 @@
 # ADR 0002 — Map URLs: corpus-first hierarchy, language as suffix, bare URL is an info page
 
-- Status: Accepted
+- Status: Accepted — URL→file mapping amended by [ADR 0006](./0006-bilingual-map-files-and-per-variant-language-policy.md) (one bilingual file now answers both `/he` and `/en`; the URL shape itself is unchanged)
 - Date: 2026-05-26
 
 ## Context
