@@ -97,7 +97,27 @@ the English fields derive from Davidson / Sefaria, not the LLM.
 
 ## Status of implementation
 
-Spec-only (per owner). The skill/template change, the metadata-extractor
-update, the `_redirects` change (both `/he` and `/en` → one file), and the
-content-collection `languages` semantics are implemented when the
-`/chazarah-fulfill` loop is built. See `docs/specs/map-wiring.md`.
+The `gemara-map` skill/template change (bilingual + the `gemara-map:` metadata
+block) has landed. The site-side publication is automated by the
+`chazarah-publish` skill (see `docs/specs/chazarah-publish.md`); the
+content-collection `languages` field now means "languages this file contains."
+
+### Implementation note — per-language materialization (2026-05-29)
+
+The Decision above frames the URL→file mapping as **many-to-one** (both `/he`
+and `/en` rewriting to one physical file, via a `_redirects` change). In
+implementation we chose the equivalent but simpler **per-language
+materialization**: the single *authored* bilingual artifact is written to one
+**byte-identical** file per language (`…/<location>/he.html` **and**
+`…/<location>/en.html`), so the existing one-to-one `_redirects` rule
+(`/map/:corpus/:book/:location/:lang → /maps/:corpus/:book/:location/:lang.html`)
+is unchanged and stays uniform with the legacy he-only maps.
+
+The user-facing behavior is identical to the Decision: each language URL serves
+the same self-contained file byte-for-byte (ADR 0004 intact), and the file's JS
+still defaults the language from the URL's trailing segment. The only
+differences are physical: there is one authored artifact but two on-disk copies
+(negligible bytes), and the URL→file mapping stays **one-to-one** rather than
+many-to-one. No `_redirects` change was needed. This narrows — does not
+contradict — the Decision: "one bilingual file" is the *authoring* model;
+materializing it per language is a deployment detail.
