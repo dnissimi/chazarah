@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין כ״ט</title>
+<meta name="description" content="המשנה כופלת ״רוב אחד בעוף ורוב שנים בבהמה״ אחרי ״רובו של אחד כמוהו״ — הגמרא מיישבת שאחת בחולין ואחת בקדשים, ונחלקים ר׳ שמעון בן לקיש (משום לוי סבא) ור׳ יוחנן אם השחיטה חלה בסוף או מתחילתה ועד סופה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="29">
+<meta name="gemara-map:sefaria-ref" content="Chullin 29">
+<meta name="gemara-map:topic-he" content="רוב אחד בעוף; אימתי חלה שחיטה">
+<meta name="gemara-map:topic-en" content="Majority of one siman; when slaughter takes effect">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין כ״ט">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 29">
+<meta name="gemara-map:blurb-he" content="המשנה כופלת ״רוב אחד בעוף״ — אחת בחולין ואחת בקדשים; ונחלקו אם השחיטה חלה רק בסופה או מתחילתה ועד סופה.">
+<meta name="gemara-map:blurb-en" content="The Mishnah repeats ״majority of one siman״ — one clause non-sacred, one sacrificial; and the amoraim dispute whether slaughter takes effect only at its end or throughout.">
+<meta name="gemara-map:sugya-count" content="2">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.78rem; color:var(--accent); background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px; box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .lang-toggle:hover{background:#eef1f8; border-color:var(--accent)}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* page HE⇄EN toggle (fixed, top corner) */
+  .page-lang{position:fixed; top:14px; inset-inline-start:14px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.85rem; font-weight:600; color:var(--accent); background:var(--card); border:1px solid var(--accent-soft); border-radius:999px; padding:6px 14px; box-shadow:0 2px 6px rgba(0,0,0,.08)}
+  .page-lang:hover{background:#fff}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+<button class="page-lang" type="button" aria-label="toggle language"></button>
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין כ״ט</span><span data-when="en">Sugya map — Chullin 29</span></h1>
+    <div class="subtitle"><span data-when="he">חולין כ״ט א:ט׳–ל׳ א:ט׳ · Chullin 29a:9-30a:9 · פרק ״השוחט״ · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 29a:9-30a:9 · perek ״ha-Shochet״ · source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשנה שונה פעמיים ש״רוב הסימן״ מכשיר — והגמרא קובעת שאחת מן הבבות עוסקת בחולין ואחת בקדשים, ומראה זאת ממטבעות הלשון של המשנה. מכאן עוברים למחלוקת ר׳ שמעון בן לקיש (משום לוי סבא) ור׳ יוחנן: האם השחיטה חלה רק ברגע סיומה, או ״מתחילתה ועד סופה״ — ונפקא מינה לשוחט בשני מקומות, לטומאת פרה ולפסח שעבר זמנו.</span>
+    <span data-when="en"><b>Bottom line:</b> The Mishnah teaches twice that ״the majority of a siman״ validates slaughter — the Gemara resolves the redundancy by assigning one clause to non-sacred and one to sacrificial slaughter, proving it from the Mishnah's wording. It then turns to the dispute of Reish Lakish (in the name of Levi the Elder) and Rabbi Yochanan: does slaughter take effect only at its conclusion, or throughout ״from beginning to end״ — with practical stakes for splitting a slaughter across places, for the red heifer's impurity, and for an out-of-time Paschal offering.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+    <h2><span data-when="he">מפת־על · שתי הסוגיות</span><span data-when="en">Overview · the two sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1(["1 · רוב אחד בעוף — חולין או קדשים?"]):::mishnah
+  O2["2 · אימתי חלה שחיטה — בסוף או מתחילה ועד סוף?"]:::statement
+  O1 -->|מאותה בבא לסברת ריש לקיש| O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1(["1 · Majority of one siman — non-sacred or sacrificial?"]):::mishnah
+  O2["2 · When does slaughter take effect — at the end or throughout?"]:::statement
+  O1 -->|from that clause to Reish Lakish| O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+      </script>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">רוב אחד בעוף — חולין או קדשים?</span><span data-when="en">Majority of one siman — non-sacred or sacrificial?</span>
+        <span class="ref">Chullin 29a:9-29b:2</span></h2>
+    <div class="lead"><span data-when="he">המשנה כפלה ש״רוב הסימן״ מכשיר; הגמרא מיישבת שבבא אחת בחולין ואחת בקדשים, ומבררת מי בְּמה — עד לסברת ר׳ שמעון בן לקיש מן הקריצה של התמיד.</span><span data-when="en">The Mishnah repeats that ״the majority of a siman״ validates; the Gemara resolves that one clause concerns non-sacred and one sacrificial slaughter, then identifies which is which — culminating in Reish Lakish's reasoning from the partial slaughter (keritza) of the daily offering.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① רוב אחד בעוף — כשר"]):::mishnah
+  Q1{"① קושיא: הרי שנינו כבר ׳רובו כמוהו׳!"}:::question
+  A1["②③ רב הושעיא: אחת בחולין ואחת בקדשים"]:::answer
+  A1b["③④ וצריכא: חולין אין צריך דם, קדשים צריך"]:::statement
+  Q2{"⑤ הי בחולין והי בקדשים?"}:::question
+  A2["⑥⑦ רב כהנא: רישא חולין — דקתני ׳השוחט׳ ולא ׳המולק׳"]:::answer
+  A3["⑧⑨ רב שימי: רישא חולין — ׳אחד בעוף׳, ועולת העוף בעי שניים"]:::answer
+  A4["⑩ רב פפא: רישא חולין — ר׳ יהודה והוורידין, ורבנן פליגי"]:::answer
+  A5["⑪⑫⑬ רב אשי: סיפא קדשים — ׳השוחט שניים׳ דיעבד אין"]:::answer
+  P1["⑭ אף ריש לקיש: רישא חולין סיפא קדשים"]:::proof
+  P2["⑮⑯⑰ ראיה: קריצת התמיד — שמא בלא מירוק פסול?"]:::proof
+  C1["⑱ לכך שנינו ׳רוב אחד בעוף׳: אף פסול דרבנן ליכא; מירוק — מצוה"]:::conclusion
+  M1 -->|קושיא: ייתור| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> A1b
+  A1b -->|בירור| Q2
+  Q2 -->|תירוץ| A2
+  Q2 -->|תירוץ נוסף| A3
+  Q2 -->|תירוץ נוסף| A4
+  Q2 -->|תירוץ נוסף| A5
+  A5 -->|וכן| P1
+  P1 --> P2
+  P2 -->|מסקנה| C1
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Majority of one siman in a bird — valid"]):::mishnah
+  Q1{"① Question: we already taught ׳majority is like whole׳!"}:::question
+  A1["②③ Rav Hoshaya: one clause non-sacred, one sacrificial"]:::answer
+  A1b["③④ And needed: non-sacred needs no blood, sacrificial does"]:::statement
+  Q2{"⑤ Which clause is non-sacred, which sacrificial?"}:::question
+  A2["⑥⑦ Rav Kahana: reisha = non-sacred — says ׳slaughters׳ not ׳pinches׳"]:::answer
+  A3["⑧⑨ Rav Shimi: reisha = non-sacred — ׳one in a bird׳, but burnt-offering needs two"]:::answer
+  A4["⑩ Rav Pappa: reisha = non-sacred — R. Yehuda on veins, Rabbis disagree"]:::answer
+  A5["⑪⑫⑬ Rav Ashi: seifa = sacrificial — ׳slaughters two heads׳ only after the fact"]:::answer
+  P1["⑭ Reish Lakish too: reisha non-sacred, seifa sacrificial"]:::proof
+  P2["⑮⑯⑰ Proof: keritza of the daily offering — would no completion invalidate?"]:::proof
+  C1["⑱ Hence ׳majority of one siman׳: not even rabbinic invalidation; completing is a mitzva"]:::conclusion
+  M1 -->|Question: redundancy| Q1
+  Q1 -->|answer| A1
+  A1 --> A1b
+  A1b -->|clarify| Q2
+  Q2 -->|answer| A2
+  Q2 -->|another| A3
+  Q2 -->|another| A4
+  Q2 -->|another| A5
+  A5 -->|likewise| P1
+  P1 --> P2
+  P2 -->|conclusion| C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① רוֹב אֶחָד בָּעוֹף"]):::mishnah
+  Q1{"① תְּנֵינָא חֲדָא זִימְנָא: רוּבּוֹ שֶׁל אֶחָד כָּמוֹהוּ!"}:::question
+  A1["②③ אָמַר רַב הוֹשַׁעְיָא: חֲדָא בְּחוּלִּין וַחֲדָא בְּקָדָשִׁים"]:::answer
+  A1b["③④ וּצְרִיכָא … לָאו לְדָם הוּא צָרִיךְ … דִּלְדָם הוּא צָרִיךְ"]:::statement
+  Q2{"⑤ הֵי בְּחוּלִּין, וְהֵי בְּקָדָשִׁים?"}:::question
+  A2["⑥⑦ אָמַר רַב כָּהֲנָא: מִיסְתַּבְּרָא רֵישָׁא בְּחוּלִּין … ׳הַמּוֹלֵק׳ מִיבְּעֵי לֵיהּ"]:::answer
+  A3["⑧⑨ רַב שִׁימִי בַּר אָשֵׁי … אִיכָּא עוֹלַת הָעוֹף דְּבָעֵי שְׁנֵי סִימָנִים"]:::answer
+  A4["⑩ רַב פָּפָּא … רַבִּי יְהוּדָה … הַוְּרִידִין, וּפְלִיגִי רַבָּנַן עֲלֵיהּ"]:::answer
+  A5["⑪⑫⑬ רַב אָשֵׁי … הַשּׁוֹחֵט — דִּיעֲבַד אִין, לְכַתְּחִלָּה לָא"]:::answer
+  P1["⑭ וְאַף רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ סָבַר: רֵישָׁא בְּחוּלִּין, וְסֵיפָא בְּקָדָשִׁים"]:::proof
+  P2["⑮⑯⑰ הֵבִיאוּ לוֹ אֶת הַתָּמִיד, קְרָצוֹ … יָכוֹל לֹא מֵירַק יְהֵא פָּסוּל?"]:::proof
+  C1["⑱ לְכָךְ שָׁנִינוּ … אֲפִילּוּ פְּסוּלָא דְּרַבָּנַן לֵיכָּא … מִצְוָה לְמָרֵק"]:::conclusion
+  M1 -->|קושיא: ייתור| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> A1b
+  A1b -->|בירור| Q2
+  Q2 -->|תירוץ| A2
+  Q2 -->|תירוץ נוסף| A3
+  Q2 -->|תירוץ נוסף| A4
+  Q2 -->|תירוץ נוסף| A5
+  A5 -->|וכן| P1
+  P1 --> P2
+  P2 -->|מסקנה| C1
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין כ״ט א — Chullin 29a:9</span></div>
+      <div class="orig">רוֹב אֶחָד בָּעוֹף, תְּנֵינָא חֲדָא זִימְנָא: רוּבּוֹ שֶׁל אֶחָד כָּמוֹהוּ!</div>
+      <div class="trans" data-when="he">המשנה אומרת ״רוב אחד בעוף... שחיטתו כשרה״ — והרי כבר שנינו פעם אחת ״רובו של אחד כמוהו״, אם כן הדבר כפול ומיותר.</div>
+      <div class="trans" data-when="en">§ The mishna teaches: If one cut the majority of one siman in a bird or the majority of two simanim in an animal,his slaughter is valid. The Gemara asks: We already learn this on another occasion, in the first clause of the mishna: The halakhic status of the majority of one siman is like that of the entire siman. Why is the redundancy necessary?</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין כ״ט א — Chullin 29a:10</span></div>
+      <div class="orig">(הכ״ש פש״ח סִימָן).</div>
+      <div class="trans" data-when="he">סימן לזיכרון שמות האמוראים שדנים להלן: ה׳ — רב הושעיא, כ׳ — רב כהנא, ש׳ — רב שימי, פ׳ — רב פפא, ש׳ — רב אשי, ח׳.</div>
+      <div class="trans" data-when="en">The Gemara provides a mnemonic for the names of the amora’im who participate in the discussion that ensues: Heh, Rav Hoshaya; kaf, Rabbi Kahana; shin, Rabbi Shimi; peh, Rav Pappa; shin, Rav Ashi; ḥet.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין כ״ט א — Chullin 29a:11</span></div>
+      <div class="orig">אָמַר רַב הוֹשַׁעְיָא: חֲדָא בְּחוּלִּין וַחֲדָא בְּקָדָשִׁים, וּצְרִיכָא, דְּאִי אַשְׁמְעִינַן חוּלִּין – הָתָם הוּא דְּסַגִּי לֵיהּ בְּרוּבָּא, מִשּׁוּם דְּלָאו לְדָם הוּא צָרִיךְ, אֲבָל קָדָשִׁים דִּלְדָם הוּא צָרִיךְ – אֵימָא לָא תִּיסְגֵּי לֵיהּ בְּרוּבָּא עַד דְּאִיכָּא כּוּלֵּיהּ.</div>
+      <div class="trans" data-when="he">רב הושעיא: אחת מן הבבות עוסקת בחולין ואחת בקדשים, וצריך את שתיהן. שאילו שנה רק חולין — שם די ברוב הסימן, כי אינו צריך את הדם; אבל בקדשים שצריך את הדם לזריקה, הייתי אומר שלא יספיק רוב עד שייחתך כל הסימן.</div>
+      <div class="trans" data-when="en">Rav Hoshaya said: One mention of the equivalence between majority and whole is referring to slaughter of non-sacred birds and animals and one is referring to slaughter of sacrificial birds and animals. And it is necessary for the tanna to teach both cases, as, if the tanna taught us only the case of slaughter of non-sacred birds and animals, one might think that it is there that one suffices with the majority of the siman, because he does not require the blood; he seeks merely to slaughter the animal. But in the case of sacrificial birds and animals, where he requires the blood for sprinkling on the altar, say that it will not suffice for him to cut the majority, and the slaughter is not valid until there is a cutting of the entire windpipe or gullet.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין כ״ט א — Chullin 29a:12</span></div>
+      <div class="orig">וְאִי אַשְׁמְעִינַן קָדָשִׁים, מִשּׁוּם דִּלְדָם הוּא צָרִיךְ, אֲבָל חוּלִּין דִּלְדָם לָא צְרִיךְ – אֵימָא בְּפַלְגָא סַגִּי לֵיהּ, קָא מַשְׁמַע לַן.</div>
+      <div class="trans" data-when="he">ולהפך: אילו שנה רק קדשים — הייתי תולה שצריך רוב מפני שצריך את הדם, אבל בחולין שאינו צריך דם הייתי אומר שדי בחצי; לכן שנה שתי הבבות.</div>
+      <div class="trans" data-when="en">And if the tanna taught us only the case of slaughter of sacrificial birds and animals, one might think that one must cut a majority of the siman because he requires the blood for sprinkling on the altar; but with regard to the slaughter of non-sacred birds and animals, where he does not require the blood, say that cutting half the siman is sufficient, and there is no need to cut a majority. Therefore, the tanna teaches us the principle twice, once to teach that a majority suffices in the case of sacrificial animals, and once to teach that a majority is required in the case of non-sacred animals.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין כ״ט א — Chullin 29a:13</span></div>
+      <div class="orig">הֵי בְּחוּלִּין, וְהֵי בְּקָדָשִׁים?</div>
+      <div class="trans" data-when="he">הגמרא שואלת: איזו בבא עוסקת בחולין ואיזו בקדשים?</div>
+      <div class="trans" data-when="en">The Gemara asks which clause of the mishna is referring to cutting a majority of the simanim in non-sacred birds and animals, and which is referring to cutting a majority of the simanim in sacrificial birds and animals?</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין כ״ט א — Chullin 29a:14</span></div>
+      <div class="orig">אָמַר רַב כָּהֲנָא: מִיסְתַּבְּרָא רֵישָׁא בְּחוּלִּין וְסֵיפָא בְּקָדָשִׁים. מִמַּאי? מִדְּקָתָנֵי ״הַשּׁוֹחֵט״, וְאִי סָלְקָא דַעְתָּךְ רֵישָׁא בְּקָדָשִׁים, ״הַמּוֹלֵק״ מִיבְּעֵי לֵיהּ.</div>
+      <div class="trans" data-when="he">רב כהנא: מסתבר שהרישא בחולין והסיפא בקדשים. מנין? מכך ששנה ״השוחט״; ואילו הרישא היתה בקדשים, היה לו לשנות ״המולק״ (שעוף קדשים נמלק ולא נשחט).</div>
+      <div class="trans" data-when="en">Rav Kahana said: It stands to reason that the first clause of the mishna is referring to the slaughter of non-sacred birds and animals and the latter clause is referring to the slaughter of sacrificial birds and animals. The Gemara asks: From where does Rav Kahana arrive at that conclusion? The Gemara answers: It is from the fact that the first clause of the mishna teaches: One who slaughters by cutting one siman in a bird and two simanim in an animal. And if it enters your mind that the first clause is referring to the case of sacrificial birds and animals, the tanna should have formulated it as: One who pinches the nape of the neck of a bird, as sacrificial birds are not slaughtered with a knife, but pinched with a fingernail.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין כ״ט א — Chullin 29a:15</span></div>
+      <div class="orig">אֶלָּא מַאי, סֵיפָא בְּקָדָשִׁים? ״שְׁחִיטָתוֹ כְּשֵׁרָה״? ״מְלִיקָתוֹ כְּשֵׁרָה״ מִיבְּעֵי לֵיהּ! הָא לָא קַשְׁיָא, אַיְּידֵי דְּסָלֵיק מִבְּהֵמָה תְּנָא נָמֵי ״שְׁחִיטָתוֹ כְּשֵׁרָה״. אֶלָּא רֵישָׁא, מִכְּדֵי עַל עוֹף קָאֵי, אִי סָלְקָא דַעְתָּךְ בְּקָדָשִׁים – ״הַמּוֹלֵק״ מִיבְּעֵי לֵיהּ!</div>
+      <div class="trans" data-when="he">קושיא על רב כהנא: אם הסיפא בקדשים, היה לו לומר ״מליקתו כשרה״ ולא ״שחיטתו״! מתרצים: אין קושיא — מאחר שסיים בבהמה (שנשחטת) שנה גם בעוף ״שחיטתו״. אבל ברישא, שעוסקת בעוף, אם תעלה על דעתך שהיא בקדשים — היה לו לומר ״המולק״.</div>
+      <div class="trans" data-when="en">The Gemara asks: Rather, what do you say? That the latter clause is referring to slaughter of sacrificial birds and animals? But the tanna teaches in the latter clause: If one cut the majority of one siman in a bird or the majority of two simanim in an animal, his slaughter is valid. If the reference is to sacrificial birds and animals, the tanna should have formulated it: His pinching is valid. The Gemara answers: That is not difficult; since the tanna concluded with mention of the slaughter of an animal, he also taught: His slaughter is valid, which is referring to the sacrificial animal. But in the first clause, since the tanna stands to begin with the case of a bird, if it enters your mind that the reference is to sacrificial birds, the tanna should have formulated it: One who pinches the nape of the neck of the bird.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין כ״ט א — Chullin 29a:16</span></div>
+      <div class="orig">רַב שִׁימִי בַּר אָשֵׁי אָמַר: רֵישָׁא בְּחוּלִּין מֵהָכָא, דְּקָתָנֵי ״אֶחָד בְּעוֹף״, וְאִי סָלְקָא דַעְתָּךְ בְּקָדָשִׁים – הָא אִיכָּא עוֹלַת הָעוֹף דְּבָעֵי שְׁנֵי סִימָנִים!</div>
+      <div class="trans" data-when="he">רב שימי בר אשי: הרישא בחולין — ראיה אחרת, מכך ששנה ״אחד בעוף״ (סימן אחד); ואילו היתה בקדשים, הרי יש עולת העוף שצריך בה שני סימנים.</div>
+      <div class="trans" data-when="en">Rav Shimi bar Ashi said that one arrives at the conclusion that the first clause is referring to slaughter of non-sacred birds and animals from here: As the tanna teaches: One who slaughters by cutting one siman in a bird. And if it enters your mind that the reference is to the slaughter of sacrificial birds, isn’t there the bird burnt offering, which requires that two simanim be cut?</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין כ״ט א — Chullin 29a:17</span></div>
+      <div class="orig">אֶלָּא מַאי, סֵיפָא בְּקָדָשִׁים? רוֹב אֶחָד בְּעוֹף – הָא אִיכָּא עוֹלַת הָעוֹף דְּבָעֵי שְׁנֵי סִימָנִין! מַאי ״רוֹב אֶחָד״? רוֹב כׇּל אֶחָד וְאֶחָד. וּבְדִין הוּא דְּלִיתְנֵי רוֹב שְׁנַיִם, כֵּיוָן דְּאִיכָּא חַטָּאת דְּסַגִּי לֵיהּ בְּחַד סִימָן – מִשּׁוּם הָכִי לָא פְּסִיקָא לֵיהּ.</div>
+      <div class="trans" data-when="he">קושיא ותירוץ: אם תאמר שהסיפא בקדשים, הרי ״רוב אחד בעוף״ קשה — שעולת העוף בעי שני סימנים. ומתרצים: ״רוב אחד״ פירושו רוב כל אחד ואחד מן השניים; ובדין היה לשנות ״רוב שניים״, אלא שמפני חטאת העוף שדי בה בסימן אחד — לא נקט לשון פסוקה.</div>
+      <div class="trans" data-when="en">The Gemara asks: Rather, what do you say? That the latter clause is referring to slaughter of sacrificial birds and animals? But the tanna teaches in the latter clause: If one cut the majority of one siman in a bird or the majority of two simanim in an animal, his slaughter is valid. If the reference is to sacrificial birds, isn’t there the bird burnt offering, which requires the pinching of two simanim? The Gemara answers: What is the meaning of: The majority of one siman? It means the majority of each and every one of the two. And by right the tanna should have taught: The majority of two. But since there is the bird sin offering, which suffices with the cutting of one siman, due to that reason the matter is not clear-cut for him. Therefore, the tanna formulated the halakha in a manner that could apply to one siman, i.e., in the case of a sin offering, and to two simanim, i.e., in the case of a burnt offering and of animal offerings.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין כ״ט א — Chullin 29a:18</span></div>
+      <div class="orig">רַב פָּפָּא אָמַר: רֵישָׁא בְּחוּלִּין מֵהָכָא, דְּקָתָנֵי: רַבִּי יְהוּדָה אוֹמֵר: עַד שֶׁיִּשְׁחוֹט אֶת הַוְּרִידִין, וּפְלִיגִי רַבָּנַן עֲלֵיהּ. אִי אָמְרַתְּ בִּשְׁלָמָא בְּחוּלִּין – שַׁפִּיר, אֶלָּא אִי אָמְרַתְּ בְּקָדָשִׁים, אַמַּאי פְּלִיגִי רַבָּנַן עֲלֵיהּ? הוּא עַצְמוֹ לְדָם הוּא צָרִיךְ!</div>
+      <div class="trans" data-when="he">רב פפא: הרישא בחולין — מכך ששנה ר׳ יהודה ״עד שישחוט את הוורידין״, ורבנן חולקים. אם בחולין — מובן; אבל אם בקדשים, מדוע יחלקו רבנן? הרי בקדשים צריכים את הדם, ויש טעם לדרוש חיתוך הוורידין.</div>
+      <div class="trans" data-when="en">Rav Pappa said that one arrives at the conclusion that the first clause is referring to slaughter of non-sacred birds and animals from here: As the tanna teaches that Rabbi Yehuda says: The slaughter is not valid until he cuts the veins in the neck. And the Rabbis disagree with him, and do not require that one cut the veins in the neck. Granted, if you say that the reference is to the slaughter of non-sacred birds, it works out well. But if you say that the reference is to the slaughter of sacrificial birds, why do the Rabbis disagree with him? He himself, i.e., the one slaughtering, requires the blood in order to sprinkle it on the altar, which would warrant cutting the veins.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין כ״ט א — Chullin 29a:19</span></div>
+      <div class="orig">רַב אָשֵׁי אָמַר: סֵיפָא בְּקָדָשִׁים מֵהָכָא, דְּקָתָנֵי: הַשּׁוֹחֵט שְׁנֵי רָאשִׁין כְּאֶחָד – שְׁחִיטָתוֹ כְּשֵׁרָה. הַשּׁוֹחֵט – דִּיעֲבַד אִין, לְכַתְּחִלָּה לָא.</div>
+      <div class="trans" data-when="he">רב אשי: הסיפא בקדשים — מכך ששנה ״השוחט שני ראשים כאחד שחיטתו כשרה״. הדיוק: ״השוחט״ — דיעבד כן, לכתחילה לא.</div>
+      <div class="trans" data-when="en">Rav Ashi said that one arrives at the conclusion that the latter clause is referring to slaughter of sacrificial birds and animals from here: As the tanna teaches in the mishna (30b): One who slaughters by cutting two animals’ heads simultaneously, his slaughter is valid. The Gemara infers from the precise language of the mishna: One who slaughters, indicating that after the fact, yes, his slaughter is valid; but one may not slaughter two animals simultaneously ab initio.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין כ״ט א — Chullin 29a:20</span></div>
+      <div class="orig">אִי אָמְרַתְּ בִּשְׁלָמָא בְּקָדָשִׁים – הַיְינוּ דִּלְכַתְּחִלָּה לָא, מִשּׁוּם דְּתָנֵי רַב יוֹסֵף: ״תִּזְבַּח״ – שֶׁלֹּא יְהֵא שְׁנַיִם שׁוֹחֲטִים זֶבַח אֶחָד, ״תִּזְבָּחֻהוּ״ – שֶׁלֹּא יְהֵא אֶחָד שׁוֹחֵט שְׁנֵי זְבָחִים.</div>
+      <div class="trans" data-when="he">אם הסיפא בקדשים, מובן מדוע ״לכתחילה לא״: מדרשת רב יוסף — ״תזבח״ שלא יהיו שניים שוחטים זבח אחד, ״תזבחהו״ שלא יהא אחד שוחט שני זבחים.</div>
+      <div class="trans" data-when="en">Granted, if you say that the reference is to sacrificial birds or animals, this is the reason that one may not slaughter two animals simultaneously ab initio: It is due to that which Rav Yosef teaches in a baraita: “And when you sacrifice a peace offering to the Lord, you shall sacrifice it [tizbaḥuhu] that you may be accepted” (Leviticus 19:5). The term “tizbaḥuhu” can be divided into two terms: You shall sacrifice [tizbaḥ] and it [hu]. From the term “You shall sacrifice [tizbaḥ],” it is derived that there will not be two people slaughtering one offering. From the full term “You shall sacrifice it [tizbaḥuhu]” it is derived that one person may not slaughter two offerings simultaneously.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין כ״ט א — Chullin 29a:21</span></div>
+      <div class="orig">וְאָמַר רַב כָּהֲנָא: ״תִּזְבָּחֵהוּ״ כְּתִיב, אֶלָּא אִי אָמְרַתְּ בְּחוּלִּין – אֲפִילּוּ לְכַתְּחִלָּה נָמֵי.</div>
+      <div class="trans" data-when="he">ורב כהנא מוסיף: ״תזבחהו״ כתוב חסר (בלי וי״ו), ומכאן שאין שניים שוחטים. אבל אם הסיפא בחולין — מותר לשחוט שניים אף לכתחילה, וקשה הדיוק.</div>
+      <div class="trans" data-when="en">And Rav Kahana said, to explain the derivation of the first halakha in the baraita: Although the term “tizbaḥuhu” is vocalized in the plural, leading to the conclusion that two people may slaughter an animal together, nevertheless, because the word is written without a vav, the term tizbaḥehu is written, in the singular, indicating that two individuals may not slaughter the offering. But if you say that the reference is to the slaughter of non-sacred birds, it should be permitted even ab initio.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין כ״ט א — Chullin 29a:22</span></div>
+      <div class="orig">וְאַף רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ סָבַר: רֵישָׁא בְּחוּלִּין, וְסֵיפָא בְּקָדָשִׁים, דְּאָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: מֵאַחַר שֶׁשָּׁנִינוּ ״רוּבּוֹ שֶׁל אֶחָד כָּמוֹהוּ״, לָמָּה שָׁנִינוּ ״רוֹב אֶחָד בְּעוֹף וְרוֹב שְׁנַיִם בִּבְהֵמָה״?</div>
+      <div class="trans" data-when="he">אף ר׳ שמעון בן לקיש סובר רישא בחולין וסיפא בקדשים, שכן הוא שאל: מאחר ששנינו ״רובו של אחד כמוהו״, למה שנינו שוב ״רוב אחד בעוף ורוב שניים בבהמה״?</div>
+      <div class="trans" data-when="en">And Rabbi Shimon ben Lakish, too, holds that the first clause of the mishna is referring to the slaughter of non-sacred birds and animals and the latter clause is referring to the slaughter of sacrificial birds and animals, as Rabbi Shimon ben Lakish says: Since we learned in the mishna that the halakhic status of the majority of one siman is like that of the entire siman, why did we also need to learn later in the mishna: The majority of one siman in a bird or the majority of two simanim in an animal? The latter clause is obvious based on the principle articulated in the first clause.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין כ״ט א — Chullin 29a:23</span></div>
+      <div class="orig">לְפִי שֶׁשָּׁנִינוּ: הֵבִיאוּ לוֹ אֶת הַתָּמִיד, קְרָצוֹ וּמֵירַק אַחֵר שְׁחִיטָתוֹ עַל יָדוֹ, יָכוֹל לֹא מֵירַק יְהֵא פָּסוּל? לְכָךְ שָׁנִינוּ: רוֹב אֶחָד בְּעוֹף וְרוֹב שְׁנַיִם בִּבְהֵמָה.</div>
+      <div class="trans" data-when="he">תשובת ריש לקיש: מפני ששנינו (יומא) שהביאו לכהן הגדול את התמיד, קרצו (חתך רוב הסימנים) ואחר גמר השחיטה במקומו — שמא נחשוב שאם לא מירק (גמר) השחיטה פסולה; לכן שנינו ״רוב אחד בעוף ורוב שניים בבהמה״, להכשיר ברוב.</div>
+      <div class="trans" data-when="en">Rabbi Shimon ben Lakish explains: Since we learned in a mishna (Yoma 31b): They brought him the sheep for the daily morning offering, and he slaughtered it [keratzo] by cutting most of the way through the gullet and the windpipe, and a different priest completed the slaughter on his behalf so that the High Priest could receive the blood in a vessel and proceed with the order of the Yom Kippur service, one might have thought that if the other priest did not complete the cutting of the two simanim, the slaughter would not be valid. Therefore, we learned in the mishna: If one cut the majority of one siman in a bird or the majority of two simanim in an animal, his slaughter is valid.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">חולין כ״ט א — Chullin 29a:24</span></div>
+      <div class="orig">אָמַר מָר: יָכוֹל לֹא מֵירַק יְהֵא פָּסוּל?</div>
+      <div class="trans" data-when="he">הגמרא מדייקת בדברי ריש לקיש: ״יכול לא מירק יהא פסול?״ — וכי עלה על הדעת שיהא פסול?</div>
+      <div class="trans" data-when="en">The Gemara analyzes the statement of Rabbi Shimon ben Lakish. The Master said: One might have thought that if the other priest did not complete the cutting of the two simanim, the slaughter would not be valid.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">חולין כ״ט ב — Chullin 29b:1</span></div>
+      <div class="orig">אִם כֵּן הָוְיָא לֵיהּ עֲבוֹדָה בְּאַחֵר, וְתַנְיָא: כׇּל עֲבוֹדַת יוֹם הַכִּפּוּרִים אֵינָן כְּשֵׁרוֹת אֶלָּא בּוֹ.</div>
+      <div class="trans" data-when="he">קושיא: אם תאמר שבלא מירוק היה פסול — נמצא שגמר העבודה נעשה באחֵר; והרי שנינו שכל עבודת יום הכיפורים כשרה רק בכהן הגדול עצמו, ולא יתכן שהמירוק מעכב.</div>
+      <div class="trans" data-when="en">How could that possibility enter one’s mind? If that is so, the completion of that slaughter is a Temple service performed by another on Yom Kippur. And it is taught in a baraita: The entire Yom Kippur Temple service is valid only if performed by the High Priest.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">חולין כ״ט ב — Chullin 29b:2</span></div>
+      <div class="orig">הָכִי קָאָמַר: יָכוֹל יְהֵא פָּסוּל מִדְּרַבָּנַן, דְּסָלְקָא דַּעְתָּךְ אָמֵינָא אִיכָּא פָּסוּל מִדְּרַבָּנַן, לְכָךְ שָׁנִינוּ: ״רוֹב אֶחָד בְּעוֹף וְרוֹב שְׁנַיִם בַּבְּהֵמָה״, וּמֵאַחַר דַּאֲפִילּוּ פְּסוּלָא דְּרַבָּנַן לֵיכָּא, לְמָה לִי לְמָרֵק? מִצְוָה לְמָרֵק.</div>
+      <div class="trans" data-when="he">תירוץ: כוונת ריש לקיש — שמא יהא פסול מדרבנן; לכך שנינו ״רוב אחד בעוף״ ללמד שאף פסול דרבנן ליכא. ואם כן למה צריך למרק (לגמור)? — מצוה למרק לכתחילה, להוצאת הדם.</div>
+      <div class="trans" data-when="en">The Gemara answers that this is what Rabbi Shimon ben Lakish is saying: One might have thought that if the slaughter was not completed by the other priest it would be not valid by rabbinic law, as it might enter your mind to say that there is an invalidation by rabbinic law. Therefore, we learned in the mishna: The majority of one siman in a bird or the majority of two simanim in an animal. The Gemara asks: And since there is not even an invalidation by rabbinic law, why do I need the other priest to complete the cutting of the simanim? The Gemara answers: There is a mitzva to complete the slaughter ab initio to facilitate the free flow of the blood.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">אימתי חלה שחיטה — בסוף או מתחילה ועד סוף?</span><span data-when="en">When does slaughter take effect — at the end or throughout?</span>
+        <span class="ref">Chullin 29b:3-30a:9</span></h2>
+    <div class="lead"><span data-when="he">מחלוקת ר׳ שמעון בן לקיש (משום לוי סבא) ור׳ יוחנן: האם השחיטה נחשבת רק ברגע סיומה, או חלה מתחילתה ועד סופה; רבא ורב יוסף מגדירים את הנפקא מינה, ושתי מתיבתות (מפרה ומפסח) מנסות להכריע.</span><span data-when="en">The dispute of Reish Lakish (in the name of Levi the Elder) and Rabbi Yochanan: is slaughter reckoned only at its conclusion, or does it take effect from beginning to end; Rava and Rav Yosef pin down the practical difference, and two objections (from the red heifer and from the Paschal offering) test it.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["⑲ ריש לקיש משום לוי סבא: אינה לשחיטה אלא בסוף"]:::statement
+  S2["⑲ ר׳ יוחנן: ישנה לשחיטה מתחילה ועד סוף"]:::statement
+  R1["⑳ רבא: הכל מודים — גוי וישראל פסולה"]:::statement
+  R2["㉑ וכן עולת העוף — מלק למטה ולמעלה פסולה"]:::statement
+  R3["㉒ נחלקו: סימן בחוץ וסימן בפנים"]:::statement
+  RY["㉓ רבה בר שימי בשם רב יוסף: גם בזה פסול"]:::statement
+  RY2["㉔ נחלקו: מיעוט בחוץ וגמרו בפנים"]:::statement
+  Q1{"㉕㉖㉗ מתיב ר׳ זירא: ממשנת פרה — לפלוג בשחיטתה!"}:::question
+  A1["㉘ רבא: נתקלקלה שחיטה שאני — לאו שחיטה כלל"]:::answer
+  Q2{"㉙ רבא: אִי קשיא — לפלוג בהכשרה, בשני גברי!"}:::question
+  A2["㉚㉛ רב יוסף: ׳תזבח׳ — אין שניים שוחטים זבח אחד"]:::answer
+  Q3{"㉜㉝ אביי: הא ר׳ יוחנן — זו ר׳ אלעזר בר״ש, וחכמים מתירים"}:::question
+  A3["㉞ אלא בפסולא דפרה מיירי, בהכשרה לא"]:::answer
+  Q4{"㉟㊱ מתיב רב אידי: ממשנת פסח — סתמא פטור"}:::question
+  A4["㊲ ש״מ: פסח בשאר ימות השנה בעי עקירה"]:::statement
+  A5["㊳ ר׳ חייא: בטמא מת שנדחה לפסח שני — סתמא לשמו"]:::answer
+  Q5{"㊴ הקושיא: למ״ד בסוף — נדחה מפסח, ושוחט שלמים!"}:::question
+  A6["㊵ אביי: נדחה מפסח, אך לא מדמי פסח — יכול להיפדות"]:::answer
+  C1["㊶ והתנן: שחט רוב שניים ומפרכסת — כחיה לפדיון"]:::conclusion
+  S1 -->|מחלוקת| S2
+  S2 --> R1
+  R1 --> R2
+  R2 -->|לרבא נחלקו כאן| R3
+  R1 -.->|רב יוסף חולק בהגדרה| RY
+  RY --> RY2
+  R3 -->|מתיבי| Q1
+  RY2 -->|מתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> Q2
+  Q2 -->|תירוץ| A2
+  A2 -.->|דחייה| Q3
+  Q3 -->|מסקנה| A3
+  A3 -->|מתיבי שנית| Q4
+  Q4 --> A4
+  A4 --> A5
+  A5 --> Q5
+  Q5 -->|תירוץ| A6
+  A6 -->|ראיה| C1
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["⑲ Reish Lakish (Levi the Elder): slaughter takes effect only at its end"]:::statement
+  S2["⑲ Rabbi Yochanan: slaughter takes effect from beginning to end"]:::statement
+  R1["⑳ Rava: all agree — gentile + Jew is invalid"]:::statement
+  R2["㉑ Likewise bird burnt-offering — pinched below + above is invalid"]:::statement
+  R3["㉒ They dispute: one siman outside, one inside"]:::statement
+  RY["㉓ Rabba b. Shimi for Rav Yosef: that too is invalid"]:::statement
+  RY2["㉔ They dispute: minority outside, completed inside"]:::statement
+  Q1{"㉕㉖㉗ R. Zeira objects: from Para mishna — let it split slaughter too!"}:::question
+  A1["㉘ Rava: a spoiled slaughter is different — no slaughter at all"]:::answer
+  Q2{"㉙ Rava: my real difficulty — let it split a fit heifer, two men!"}:::question
+  A2["㉚㉛ Rav Yosef: ׳tizbach׳ — two may not slaughter one offering"]:::answer
+  Q3{"㉜㉝ Abaye: but R. Yochanan said this is R. Elazar b. R. Shimon; Rabbis permit"}:::question
+  A3["㉞ Rather it speaks of disqualified heifer, not a fit one"]:::answer
+  Q4{"㉟㊱ Rav Idi objects: from Pesach mishna — unspecified is exempt"}:::question
+  A4["㊲ Conclude: Pesach the rest of the year needs revocation"]:::statement
+  A5["㊳ R. Chiyya: owners corpse-impure, deferred to second Pesach — stands for its sake"]:::answer
+  Q5{"㊴ The push: per ׳only at end׳ — rejected from Pesach, slaughters a peace-offering!"}:::question
+  A6["㊵ Abaye: rejected from Pesach, not from its value — still redeemable"]:::answer
+  C1["㊶ And we learned: cut majority of two, still convulsing — alive for redemption"]:::conclusion
+  S1 -->|dispute| S2
+  S2 --> R1
+  R1 --> R2
+  R2 -->|per Rava they dispute here| R3
+  R1 -.->|Rav Yosef redefines| RY
+  RY --> RY2
+  R3 -->|objection| Q1
+  RY2 -->|objection| Q1
+  Q1 -->|answer| A1
+  A1 --> Q2
+  Q2 -->|answer| A2
+  A2 -.->|rebuttal| Q3
+  Q3 -->|conclusion| A3
+  A3 -->|further objection| Q4
+  Q4 --> A4
+  A4 --> A5
+  A5 --> Q5
+  Q5 -->|answer| A6
+  A6 -->|proof| C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["⑲ רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ מִשּׁוּם לֵוִי סָבָא: אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף"]:::statement
+  S2["⑲ וְרַבִּי יוֹחָנָן אָמַר: יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף"]:::statement
+  R1["⑳ אָמַר רָבָא: הַכֹּל מוֹדִים … גּוֹי … יִשְׂרָאֵל … פְּסוּלָה"]:::statement
+  R2["㉑ בְּעוֹלַת הָעוֹף נָמֵי … לְמַטָּה … לְמַעְלָה … פְּסוּלָה"]:::statement
+  R3["㉒ לֹא נֶחְלְקוּ אֶלָּא … סִימָן אֶחָד בַּחוּץ וְסִימָן אֶחָד בִּפְנִים"]:::statement
+  RY["㉓ אֲמַר לֵיהּ רַבָּה בַּר שִׁימִי … רַב יוֹסֵף … נָמֵי פָּסוּל"]:::statement
+  RY2["㉔ לֹא נֶחְלְקוּ אֶלָּא … מִיעוּט סִימָנִין בַּחוּץ וּגְמָרוֹ בִּפְנִים"]:::statement
+  Q1{"㉕㉖㉗ מֵתִיב רַבִּי זֵירָא … לִפְלוֹג נָמֵי בִּשְׁחִיטָתָהּ!"}:::question
+  A1["㉘ אָמַר רָבָא: נִתְקַלְקְלָה שְׁחִיטָה … לְמַפְרֵעַ דְּלָאו שְׁחִיטָה הִיא כְּלָל"]:::answer
+  Q2{"㉙ אָמַר רָבָא: אִי קַשְׁיָא לִי … לִפְלוֹג בְּהֶכְשֵׁרַהּ … בִּתְרֵי גַּבְרֵי!"}:::question
+  A2["㉚㉛ אָמַר רַב יוֹסֵף: ״תִּזְבַּח״ – שֶׁלֹּא יְהוּ שְׁנַיִם שׁוֹחֲטִין זֶבַח אֶחָד"]:::answer
+  Q3{"㉜㉝ אֲמַר לֵיהּ אַבָּיֵי … זוֹ דִּבְרֵי רַבִּי אֶלְעָזָר בר״ש … חֲכָמִים אוֹמְרִים שְׁנַיִם שׁוֹחֲטִים"}:::question
+  A3["㉞ אֶלָּא בִּפְסוּלָא דְּפָרָה קָא מַיְירֵי, בְּהֶכְשֵׁרַהּ לָא קָא מַיְירֵי"]:::answer
+  Q4{"㉟㊱ מֵתִיב רַב אִידִי בַּר אָבִין … לִשְׁמוֹ פָּטוּר, שֶׁלֹּא לִשְׁמוֹ חַיָּיב"}:::question
+  A4["㊲ שְׁמַע מִינַּהּ: פֶּסַח בִּשְׁאָר יְמוֹת הַשָּׁנָה בָּעֵי עֲקִירָה"]:::statement
+  A5["㊳ רַבִּי חִיָּיא בַּר גַּמָּדָא … טְמֵאֵי מֵתִים … לְפֶסַח שֵׁנִי … סְתָמָא לִשְׁמוֹ קָאֵי"]:::answer
+  Q5{"㊴ אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף … אִידְּחִי לֵיהּ מִפֶּסַח … שְׁלָמִים קָא שָׁחֵיט!"}:::question
+  A6["㊵ אֲמַר לֵיהּ אַבָּיֵי: … מִדְּמֵי פֶסַח מִי אִידְּחִי?"]:::answer
+  C1["㊶ וְהָתְנַן: שָׁחַט … רוֹב שְׁנַיִם וַעֲדַיִין מְפַרְכֶּסֶת – הֲרֵי הִיא כְּחַיָּה"]:::conclusion
+  S1 -->|מחלוקת| S2
+  S2 --> R1
+  R1 --> R2
+  R2 -->|לרבא נחלקו כאן| R3
+  R1 -.->|רב יוסף חולק בהגדרה| RY
+  RY --> RY2
+  R3 -->|מתיבי| Q1
+  RY2 -->|מתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> Q2
+  Q2 -->|תירוץ| A2
+  A2 -.->|דחייה| Q3
+  Q3 -->|מסקנה| A3
+  A3 -->|מתיבי שנית| Q4
+  Q4 --> A4
+  A4 --> A5
+  A5 --> Q5
+  Q5 -->|תירוץ| A6
+  A6 -->|ראיה| C1
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">חולין כ״ט ב — Chullin 29b:3</span></div>
+      <div class="orig">אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ מִשּׁוּם לֵוִי סָבָא: אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף, וְרַבִּי יוֹחָנָן אָמַר: יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף.</div>
+      <div class="trans" data-when="he">ר׳ שמעון בן לקיש בשם לוי הזקן: השחיטה נחשבת רק ברגע סיומה (״אינה לשחיטה אלא בסוף״). ור׳ יוחנן: השחיטה חלה לכל אורכה — ״מתחילתה ועד סופה״.</div>
+      <div class="trans" data-when="en">§ Rabbi Shimon ben Lakish says in the name of Levi the Elder: Halakhic slaughter is accomplished only at its conclusion. And Rabbi Yoḥanan says: Halakhic slaughter is accomplished from the beginning to the end of the act.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">20</span> <span class="ref">חולין כ״ט ב — Chullin 29b:4</span></div>
+      <div class="orig">אָמַר רָבָא: הַכֹּל מוֹדִים, הֵיכָא דְּשָׁחַט סִימָן אֶחָד גּוֹי, וְסִימָן אֶחָד יִשְׂרָאֵל – שֶׁהִיא פְּסוּלָה, שֶׁהֲרֵי נַעֲשֶׂה בָּהּ מַעֲשֵׂה טְרֵפָה בְּיַד גּוֹי.</div>
+      <div class="trans" data-when="he">רבא תוחם את המחלוקת: הכל מודים שאם גוי שחט סימן אחד וישראל סימן אחד — פסולה, שכבר נעשה בה מעשה טריפה ביד הגוי (ששחיטתו פוסלת).</div>
+      <div class="trans" data-when="en">Rava said in establishing the parameters of the dispute between Rabbi Shimon ben Lakish and Rabbi Yoḥanan: Everyone concedes in a case where a gentile slaughtered, i.e., cut, one siman and a Jew slaughtered one siman, that the slaughter is not valid even if slaughter is accomplished only at its conclusion, as an action rendering the animal a tereifa was performed at the hand of a gentile. Since slaughter by a gentile is not valid, the gentile renders the animal a tereifa.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">21</span> <span class="ref">חולין כ״ט ב — Chullin 29b:5</span></div>
+      <div class="orig">בְּעוֹלַת הָעוֹף נָמֵי, הֵיכָא דְּמָלַק סִימָן אֶחָד לְמַטָּה וְסִימָן אֶחָד לְמַעְלָה – פְּסוּלָה, שֶׁהֲרֵי עָשָׂה בָּהּ מַעֲשֵׂה חַטַּאת הָעוֹף לְמַטָּה.</div>
+      <div class="trans" data-when="he">וכן בעולת העוף: אם מלק סימן אחד למטה (כדרך חטאת העוף) וסימן אחד למעלה — פסולה, שכבר עשה בה מעשה חטאת העוף למטה, ופסל אותה כעולה.</div>
+      <div class="trans" data-when="en">In the case of a bird burnt offering as well, where one siman was pinched by a priest below the red line marking half the height of the altar, in accordance with the procedure of the sin offering, and one siman was pinched above the red line, in accordance with the procedure of the burnt offering, the pinching is not valid, as the priest performed an action appropriate for a bird sin offering below the red line, disqualifying it from being sacrificed as a burnt offering.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">22</span> <span class="ref">חולין כ״ט ב — Chullin 29b:6</span></div>
+      <div class="orig">לֹא נֶחְלְקוּ אֶלָּא כְּגוֹן שֶׁשָּׁחַט סִימָן אֶחָד בַּחוּץ וְסִימָן אֶחָד בִּפְנִים, לְמַאן דְּאָמַר יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף – מִיחַיַּיב, לְמַאן דְּאָמַר אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף – לָא מִיחַיַּיב.</div>
+      <div class="trans" data-when="he">לדעת רבא נחלקו רק בכגון ששחט סימן אחד בחוץ (מחוץ לעזרה) וסימן אחד בפנים: למ״ד ״ישנה מתחילה ועד סוף״ — חייב משום שחוטי חוץ; ולמ״ד ״אינה אלא בסוף״ — פטור, שגמר השחיטה בפנים.</div>
+      <div class="trans" data-when="en">Rabbi Shimon ben Lakish and Rabbi Yoḥanan disagree only in a case where an individual cut one siman outside the Temple courtyard and one siman inside the Temple courtyard. According to the one who says: Halakhic slaughter is accomplished from the beginning to the end of the act, i.e., Rabbi Yoḥanan, one who begins the slaughter outside the Temple courtyard is liable for slaughter of a sacrificial animal outside the courtyard. According to the one who says: Halakhic slaughter is accomplished only at its conclusion, i.e., Rabbi Shimon ben Lakish, one who does so is not liable, as the conclusion of the slaughter, which is the determining factor, is performed inside the Temple courtyard.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">23</span> <span class="ref">חולין כ״ט ב — Chullin 29b:7</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַבָּה בַּר שִׁימִי: מָר לָא אָמַר הָכִי, וּמַנּוּ רַב יוֹסֵף? הֵיכָא דְּשָׁחַט סִימָן אֶחָד בַּחוּץ וְסִימָן אֶחָד בִּפְנִים – נָמֵי פָּסוּל, שֶׁהֲרֵי עָשָׂה בָּהּ מַעֲשֵׂה חַטַּאת הָעוֹף בַּחוּץ.</div>
+      <div class="trans" data-when="he">רבה בר שימי לרבא: ״מר״ (=רב יוסף) לא הגדיר כך; אף בסימן אחד בחוץ וסימן אחד בפנים הכל מודים שפסול, שכבר עשה בה מעשה חטאת העוף בחוץ — אין זו נקודת המחלוקת.</div>
+      <div class="trans" data-when="en">Rabba bar Shimi said to Rava: The Master did not say that this was the crux of the dispute between Rabbi Yoḥanan and Rabbi Shimon ben Lakish. And who is the Master? It is Rav Yosef, who says that in a case where one cut one siman outside the Temple courtyard and one siman inside the Temple courtyard, all agree that the slaughter is not valid and the priest is liable to receive punishment, because he performed an action appropriate for a bird sin offering outside the Temple courtyard.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">24</span> <span class="ref">חולין כ״ט ב — Chullin 29b:8</span></div>
+      <div class="orig">לֹא נֶחְלְקוּ אֶלָּא כְּגוֹן שֶׁשָּׁחַט מִיעוּט סִימָנִין בַּחוּץ וּגְמָרוֹ בִּפְנִים, לְמַאן דְּאָמַר יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף – מִיחַיַּיב, לְמַאן דְּאָמַר אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף – לָא מִיחַיַּיב.</div>
+      <div class="trans" data-when="he">לפי רב יוסף נחלקו רק בכגון ששחט מיעוט הסימנים בחוץ וגמרם בפנים: למ״ד ״ישנה מתחילה ועד סוף״ — חייב; ולמ״ד ״אינה אלא בסוף״ — פטור, שגמר במקום הכשר.</div>
+      <div class="trans" data-when="en">They disagree only in a case where one slaughtered the minority of each of the simanim outside the Temple courtyard and completed the slaughter inside the Temple courtyard. According to the one who says: Halakhic slaughter is accomplished from the beginning to the end of the act, i.e., Rabbi Yoḥanan, one who begins the slaughter outside the Temple courtyard is liable for slaughter of a sacrificial animal outside the courtyard. According to the one who says: Halakhic slaughter is accomplished only at its conclusion, i.e., Rabbi Shimon ben Lakish, one who does so is not liable, as he concludes the slaughter in an appropriate place.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">25</span> <span class="ref">חולין כ״ט ב — Chullin 29b:9</span></div>
+      <div class="orig">מֵתִיב רַבִּי זֵירָא: כׇּל הָעֲסוּקִין בַּפָּרָה מִתְּחִלָּה וְעַד סוֹף – מְטַמְּאִין בְּגָדִים, וּפוֹסְלִין אוֹתָהּ בִּמְלָאכָה אַחֶרֶת.</div>
+      <div class="trans" data-when="he">ר׳ זירא מקשה ממשנת פרה אדומה: כל העוסקים בפרה מתחילה ועד סוף מטמאים בגדים, ופוסלים אותה אם עשו מלאכה אחרת בשעת עיסוקם.</div>
+      <div class="trans" data-when="en">Rabbi Zeira raises an objection from a mishna (Para 4:4): Anyone who is engaged in any part of the rite of the red heifer continuously from beginning to end transmits ritual impurity to the garments that he is wearing. And they disqualify the red heifer for use in the rite if they perform any other labor while engaged in any part of the rite of the red heifer.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">26</span> <span class="ref">חולין כ״ט ב — Chullin 29b:10</span></div>
+      <div class="orig">אֵירַע בָּהּ פְּסוּל בִּשְׁחִיטָתָהּ, בֵּין קוֹדֶם פְּסוּלָהּ בֵּין לְאַחַר פְּסוּלָהּ – אֵינָהּ מְטַמְּאָה בְּגָדִים; בְּהַזָּאָתָהּ: קוֹדֶם פְּסוּלָהּ – מְטַמְּאָה בְּגָדִים, לְאַחַר פְּסוּלָהּ – אֵינָהּ מְטַמְּאָה בְּגָדִים.</div>
+      <div class="trans" data-when="he">המשנה ממשיכה: אם אירע פסול בשחיטתה — בין לפני הפסול בין אחריו אינה מטמאה בגדים; אבל בהזאתה — לפני הפסול מטמאה, ולאחריו אינה מטמאה. (כלומר בשחיטה לא חילקה בין לפני לאחר.)</div>
+      <div class="trans" data-when="en">If a disqualification befell the heifer during its slaughter, with regard to all those engaged in the rite of the red heifer, whether they engaged in the rite before the heifer was disqualified or after the heifer was disqualified, the heifer does not render garments that they are wearing impure. Since its slaughter was not valid it is disqualified from being used as a red heifer and therefore does not impart impurity. If it became disqualified at the time of sprinkling the blood of the heifer toward the opening of the Temple, with regard to those who engaged in the rite of the red heifer before it was disqualified, the heifer renders the garments that they are wearing impure. By contrast, with regard to those who handled the animal after it was disqualified, the heifer does not render the garments that they are wearing impure.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">27</span> <span class="ref">חולין כ״ט ב — Chullin 29b:11</span></div>
+      <div class="orig">וְאִי אָמְרַתְּ יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף, לִפְלוֹג נָמֵי בִּשְׁחִיטָתָהּ: אֵירַע בָּהּ פְּסוּל בִּשְׁחִיטָה – קוֹדֶם פְּסוּלָהּ מְטַמְּאָה בְּגָדִים, לְאַחַר פְּסוּלָהּ – אֵינָהּ מְטַמְּאָה בְּגָדִים!</div>
+      <div class="trans" data-when="he">ר׳ זירא ממשיך: אם השחיטה חלה מתחילה ועד סוף, היה למשנה לחלק גם בשחיטתה — שלפני הפסול תטמא ולאחריו לא; ומדלא חילקה, משמע ״אינה אלא בסוף״.</div>
+      <div class="trans" data-when="en">Rabbi Zeira elaborates: And if you say that halakhic slaughter is accomplished from the beginning to the end of the act, let the mishna also distinguish between disqualification at the beginning and at the end of the slaughter: If it became disqualified during slaughter, with regard to one who engaged in any part of the rite before it became disqualified, the heifer renders garments that he is wearing impure, and with regard to one who engaged in any part of the rite after it became disqualified, the heifer does not render the garments that he is wearing impure.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">28</span> <span class="ref">חולין כ״ט ב — Chullin 29b:12</span></div>
+      <div class="orig">אָמַר רָבָא: נִתְקַלְקְלָה שְׁחִיטָה קָאָמְרַתְּ? שָׁאנֵי הָתָם, דְּאִגַּלַּאי מִלְּתָא לְמַפְרֵעַ דְּלָאו שְׁחִיטָה הִיא כְּלָל.</div>
+      <div class="trans" data-when="he">רבא דוחה: אתה מדבר במקרה שנתקלקלה השחיטה (נפסלה)? שם שונה — שהתגלה למפרע שלא היתה כאן שחיטה כלל, ולכן בשחיטה לא חילקו; אין מכאן ראיה.</div>
+      <div class="trans" data-when="en">Rava said: Are you saying that the discussion concerns a case where the slaughter was invalidated? There it is different, because the matter was revealed retroactively, i.e., it was revealed that it was not a valid slaughter at all. Since at no stage of the slaughter was it valid, the heifer does not render the garments impure at all.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">29</span> <span class="ref">חולין כ״ט ב — Chullin 29b:13</span></div>
+      <div class="orig">אָמַר רָבָא: אִי קַשְׁיָא לִי הָא קַשְׁיָא לִי, לְמַאן דְּאָמַר אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף, לִפְלוֹג בְּהֶכְשֵׁרַהּ דְּפָרָה, כְּגוֹן דְּשַׁחְטוּהָ בִּתְרֵי גַּבְרֵי, דְּגַבְרָא קַמָּא לָא מְטַמְּאָה, וְגַבְרָא בָּתְרָא מְטַמְּאָה!</div>
+      <div class="trans" data-when="he">רבא: אם משהו קשה לי, זה הקשה לי — למ״ד ״אינה אלא בסוף״, היה למשנה לחלק בפרה כשרה ששחטוה שני אנשים: את הראשון (שלא בסוף) אינה מטמאה, ואת האחרון (שבסופו) מטמאה.</div>
+      <div class="trans" data-when="en">Rava said: If any aspect of that mishna is difficult for me it is this that is difficult for me: According to the one who says: Halakhic slaughter is accomplished only at its conclusion, let the mishna distinguish between two individuals in the preparation of a fit red heifer, even when the heifer was not disqualified. Let the mishna teach a case where they slaughtered it with two men, as the heifer does not render the first man who slaughters impure, as the slaughter did not yet begin, and the heifer renders the latter man impure.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">30</span> <span class="ref">חולין כ״ט ב — Chullin 29b:14</span></div>
+      <div class="orig">אָמַר רַב יוֹסֵף: תְּרֵי גַּבְרֵי בְּחַד זִיבְחָא קָאָמְרַתְּ? בַּר מִינֵּיהּ דְּהָהוּא דִּתְנֵינָא: ״תִּזְבַּח״ – שֶׁלֹּא יְהוּ שְׁנַיִם שׁוֹחֲטִין זֶבַח אֶחָד, ״תִּזְבָּחֻהוּ״ – שֶׁלֹּא יְהֵא אֶחָד שׁוֹחֵט שְׁנֵי זְבָחִים.</div>
+      <div class="trans" data-when="he">רב יוסף דוחה: אתה שואל על שני אנשים בזבח אחד? הנח קושיא זו — שהרי שנינו ״תזבח״ שלא יהיו שניים שוחטים זבח אחד; ממילא אין מציאות של שני גברי בפרה.</div>
+      <div class="trans" data-when="en">Rav Yosef said: Are you saying that the discussion concerns a case of two men slaughtering one offering? Raise difficulties except for that, as we learn in a baraita with regard to the verse: “And when you sacrifice a peace offering to the Lord, you shall sacrifice it [tizbaḥuhu] that you may be accepted” (Leviticus 19:5), that the term “tizbaḥuhu” can be divided into two terms: You shall sacrifice [tizbaḥ] and it [hu]. From the term “You shall sacrifice [tizbaḥ],” it is derived that there will not be two people slaughtering one offering. From the full term “You shall offer it [tizbaḥuhu],” it is derived that one person may not slaughter two offerings simultaneously.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">31</span> <span class="ref">חולין כ״ט ב — Chullin 29b:15</span></div>
+      <div class="orig">וְאָמַר רַב כָּהֲנָא: ״תִּזְבָּחֵהוּ״ כְּתִיב.</div>
+      <div class="trans" data-when="he">ורב כהנא: ״תזבחהו״ כתוב חסר וי״ו, ולכן נדרש בלשון יחיד — שאין שניים שוחטים זבח אחד.</div>
+      <div class="trans" data-when="en">And Rav Kahana said, to explain the derivation of the first halakha in the baraita: Although the term “tizbaḥuhu” is vocalized in the plural, leading to the conclusion that two people may slaughter an animal together, nevertheless, because the word is written without a vav, it emerges that the phrase “You shall sacrifice it [tizbaḥehu],” in the singular, is written, indicating that two individuals may not slaughter the offering.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">32</span> <span class="ref">חולין כ״ט ב — Chullin 29b:16</span></div>
+      <div class="orig">אֲמַר לֵיהּ אַבָּיֵי: לָאו אִתְּמַר עֲלַהּ, אָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: זוֹ דִּבְרֵי רַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן</div>
+      <div class="trans" data-when="he">אביי משיב לרב יוסף: והרי נאמר על דרשה זו — רבה בר בר חנה בשם ר׳ יוחנן — שזו דעת ר׳ אלעזר ברבי שמעון.</div>
+      <div class="trans" data-when="en">Abaye said to Rav Yosef: Wasn’t it stated with regard to this halakha that Rabba bar bar Ḥana says that Rabbi Yoḥanan says: This is the statement of Rabbi Elazar, son of Rabbi Shimon,</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">33</span> <span class="ref">חולין ל׳ א — Chullin 30a:1</span></div>
+      <div class="orig">סְתִימְתָּאָה, אֲבָל חֲכָמִים אוֹמְרִים שְׁנַיִם שׁוֹחֲטִים זֶבַח אֶחָד.</div>
+      <div class="trans" data-when="he">המשך דברי אביי: דעת ר׳ אלעזר בר״ש נשנית סתם, אבל חכמים אומרים ששניים שוחטים זבח אחד — ולפיהם קושיית רבא (שני גברי) חוזרת.</div>
+      <div class="trans" data-when="en">which is cited unattributed, i.e., it is one of his many opinions that are cited in the Mishna and baraitot without attribution. But the Rabbis say: Two people may slaughter one offering. According to the Rabbis, Rava’s difficulty remains: Let the mishna teach a case where they slaughtered it with two men, as the heifer does not render the first man who slaughters impure, as the slaughter did not yet begin, and the heifer renders the latter man impure.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">34</span> <span class="ref">חולין ל׳ א — Chullin 30a:2</span></div>
+      <div class="orig">וּלְרַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן, נָמֵי לִפְלוֹג כְּגוֹן דִּשְׁחַט חַד גַּבְרָא בִּשְׁנֵי סוּדָרִים, דְּסוּדָר קַמָּא לָא מְטַמֵּא, וְסוּדָר בָּתְרָא מְטַמֵּא. אֶלָּא בִּפְסוּלָא דְּפָרָה קָא מַיְירֵי, בְּהֶכְשֵׁרַהּ לָא קָא מַיְירֵי.</div>
+      <div class="trans" data-when="he">ואף לר׳ אלעזר בר״ש קשה: היה למשנה לחלק בכגון שאדם אחד שחט בשני סודרים (בגדים) — שהראשון אינו מיטמא והאחרון מיטמא. אלא מסקנה: המשנה עוסקת רק בפסולי פרה ולא בפרה כשרה, ואין מכאן ראיה כלל.</div>
+      <div class="trans" data-when="en">And according to the opinion of Rabbi Elazar, son of Rabbi Shimon, who holds that two people may not slaughter one offering, let the tanna of the mishna also distinguish and teach a case where one man slaughtered with two cloths on his head, starting the slaughter with one and replacing it with the other midway through the slaughter, as in that case, since halakhic slaughter is accomplished only at its conclusion, the first cloth is not rendered impure but the latter cloth is rendered impure. Rather, one must say that the tanna is speaking only in reference to cases involving the disqualification of the red heifer itself, but he is not speaking in reference to cases involving a fit red heifer, and no proof may be cited from here.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">35</span> <span class="ref">חולין ל׳ א — Chullin 30a:3</span></div>
+      <div class="orig">מֵתִיב רַב אִידִי בַּר אָבִין: וּבַמּוֹעֵד לִשְׁמוֹ – פָּטוּר, שֶׁלֹּא לִשְׁמוֹ – חַיָּיב.</div>
+      <div class="trans" data-when="he">רב אידי בר אבין מקשה ממשנת פסחים: השוחט קרבן פסח בחג עם חמץ — אם שחטו לשמו, פטור (שהפסח פסול לאחר זמנו); ואם שלא לשמו (כשלמים), חייב.</div>
+      <div class="trans" data-when="en">Rav Idi bar Avin raises an objection from a mishna (Pesaḥim 63a) to the opinion that halakhic slaughter is accomplished only at its conclusion. If one slaughters an animal for the sake of the Paschal offering on the fourteenth of Nisan after noon while he has leaven in his possession, he is flogged for violating the prohibition: “You shall not slaughter the blood of My sacrifice with leavened bread” (Exodus 23:18). If he slaughtered the animal not for the sake of the Paschal offering, he is exempt from receiving lashes. And if he slaughtered the animal during the festival of Passover for the sake of the Paschal offering with leaven in his possession, he is exempt, because it is a disqualified Paschal offering, as it was slaughtered beyond its appointed time. But if he slaughtered the animal during the Festival not for the sake of the Paschal offering, but rather as a peace offering, he is liable for slaughtering the animal with leaven in his possession.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">36</span> <span class="ref">חולין ל׳ א — Chullin 30a:4</span></div>
+      <div class="orig">וְהָוֵינַן בָּהּ: טַעְמָא דְּשֶׁלֹּא לִשְׁמוֹ, הָא סְתָמָא – פָּטוּר.</div>
+      <div class="trans" data-when="he">ודנו בכך: הטעם שחייב הוא דווקא משום ש״שלא לשמו״; אבל אילו שחטו סתם (בלי כוונה אחרת) — פטור, שהפסח שלא בזמנו פסול.</div>
+      <div class="trans" data-when="en">And we discussed this matter: The reason he is liable is due to the fact that his intent was to slaughter it not for the sake of the Paschal offering, but had he slaughtered it with unspecified intent he would be exempt, because the offering would be disqualified. Unless he specifically intends otherwise, the animal retains its status as a Paschal offering and is disqualified when sacrificed beyond its appointed time.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">37</span> <span class="ref">חולין ל׳ א — Chullin 30a:5</span></div>
+      <div class="orig">וְאַמַּאי פָּטוּר? פֶּסַח בִּשְׁאָר יְמוֹת הַשָּׁנָה שְׁלָמִים הוּא! שְׁמַע מִינַּהּ: פֶּסַח בִּשְׁאָר יְמוֹת הַשָּׁנָה בָּעֵי עֲקִירָה.</div>
+      <div class="trans" data-when="he">ולמה פטור? הרי פסח בשאר ימות השנה דינו כשלמים, וגם שלמים חייב על שחיטתם עם חמץ! שמע מינה: פסח בשאר ימות השנה צריך ״עקירה״ (עקירת שם פסח) כדי שייעשה שלמים.</div>
+      <div class="trans" data-when="en">The Gemara asks: And why is he exempt? Doesn’t a Paschal offering sacrificed during the rest of the days of the year assume the status of a peace offering, and doesn’t one who slaughters a peace offering during the time when it is prohibited to possess leaven with leaven in his possession also violate the prohibition? Conclude from it that a Paschal offering sacrificed during the rest of the days of the year requires explicit revocation of its status; otherwise, it does not assume the status of a peace offering and it remains a disqualified Paschal offering.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">38</span> <span class="ref">חולין ל׳ א — Chullin 30a:6</span></div>
+      <div class="orig">וְאָמַר רַבִּי חִיָּיא בַּר גַּמָּדָא, נִזְרְקָה מִפִּי חֲבוּרָה וְאָמְרוּ: הָכָא בְּמַאי עָסְקִינַן? כְּגוֹן שֶׁהָיוּ בְּעָלִים טְמֵאֵי מֵתִים, דְּנִדְחִין לְפֶסַח שֵׁנִי, דִּסְתָמָא לִשְׁמוֹ קָאֵי, וְהַאי הוּא דְּבָעֵי עֲקִירָה, הָא אַחֵר לָא בָּעֵי עֲקִירָה.</div>
+      <div class="trans" data-when="he">ר׳ חייא בר גמדא בשם החבורה: כאן מדובר כשהבעלים היו טמאי מתים ונדחו לפסח שני — שאז סתם שחיטה עומדת לשם הפסח (השני), ודווקא זה צריך עקירה; אבל פסח אחר שעבר זמנו אינו צריך עקירה ונעשה שלמים מאליו.</div>
+      <div class="trans" data-when="en">And Rabbi Ḥiyya bar Gamda said: A response emerged from the group of scholars that discussed this matter, and they said: What are we dealing with here? It is with a case where the owners of the Paschal offering were ritually impure on the fourteenth of Nisan with impurity imparted by a corpse. In that case, the Torah commands (Numbers 9:10–11) that since they were unable to sacrifice the Paschal offering at the appointed time, the fourteenth of Nisan, they were deferred to the second Pesaḥ, the fourteenth of Iyyar. Since presumably the owner plans to use his Paschal offering on the second Pesaḥ, its unspecified slaughter in the interim stands to be offered for the sake of the Paschal offering, and it is that Paschal offering that requires revocation of its status. But other situations of a Paschal offering that is slaughtered beyond its designated time do not require revocation of the animal’s status, and it assumes the status of a peace offering.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">39</span> <span class="ref">חולין ל׳ א — Chullin 30a:7</span></div>
+      <div class="orig">אִי אָמְרַתְּ בִּשְׁלָמָא יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף – אִיפְּסִיל לֵיהּ מִתְּחִלַּת שְׁחִיטָה, אֶלָּא אִי אָמְרַתְּ אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף – כֵּיוָן דִּשְׁחַט בֵּיהּ פּוּרְתָּא אִידְּחִי לֵיהּ מִפֶּסַח, אִידַּךְ כִּי קָא שָׁחֵיט שְׁלָמִים קָא שָׁחֵיט!</div>
+      <div class="trans" data-when="he">כעת הקושיא: למ״ד ״ישנה מתחילה ועד סוף״ — הפסח (השני) נפסל כבר מתחילת השחיטה, ולכן פטור. אבל למ״ד ״אינה אלא בסוף״ — כיוון ששחט מעט נדחה מן הפסח, ונמצא ששאר השחיטה כבר שחיטת שלמים, וצריך היה להתחייב!</div>
+      <div class="trans" data-when="en">Returning to the matter at hand, if a Paschal offering that is designated for use on the second Pesaḥ is slaughtered on Passover while one has leaven in his possession, he is exempt from receiving lashes because it is a disqualified Paschal offering. Granted, if you say that halakhic slaughter is accomplished from the beginning to the end of the act, the offering is disqualified from the beginning of the slaughter as a Paschal offering slaughtered beyond its appointed time. Therefore, one is exempt from receiving lashes. But if you say that halakhic slaughter is accomplished only at its conclusion, why is one exempt if he slaughtered the animal with leaven in his possession? Once he began and cut a bit of the siman, it is rejected from its status as a Paschal offering and can no longer be offered on the second Pesaḥ. Therefore, when he slaughters the other, remaining, portion of the simanim without specification, it is a peace offering that he is slaughtering.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">40</span> <span class="ref">חולין ל׳ א — Chullin 30a:8</span></div>
+      <div class="orig">אֲמַר לֵיהּ אַבָּיֵי: נְהִי דְּאִידְּחִי לֵיהּ מִפֶּסַח, מִדְּמֵי פֶסַח מִי אִידְּחִי?</div>
+      <div class="trans" data-when="he">אביי מתרץ: אף שנדחה מהקרבה כפסח שני, וכי נדחה גם מ״דמי פסח״? — כל עוד לא נגמרה השחיטה הוא בר־פדיון, ועדיין סתם שחיטתו עומדת לשם פסח; לכן פטור.</div>
+      <div class="trans" data-when="en">Abaye said to Rav Idi bar Avin: Even if you say that halakhic slaughter is accomplished only at its conclusion, although it was rejected from the possibility of being sacrificed on the second Pesaḥ, was it rejected from the possibility of being redeemed and from the possibility of the monetary value of a Paschal offering being used to purchase an animal to be sacrificed on the second Pesaḥ? As long as the slaughter is not yet complete, redemption of the animal remains possible. Therefore, unspecified slaughter at that time is for the sake of a Paschal offering and one should be exempt from receiving lashes.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">41</span> <span class="ref">חולין ל׳ א — Chullin 30a:9</span></div>
+      <div class="orig">וְכִי תֵּימָא, בָּעֵי הַעֲמָדָה וְהַעֲרָכָה, וְהָתְנַן: שָׁחַט בָּהּ שְׁנַיִם אוֹ רוֹב שְׁנַיִם וַעֲדַיִין הִיא מְפַרְכֶּסֶת – הֲרֵי הִיא כְּחַיָּה לְכׇל דְּבָרֶיהָ.</div>
+      <div class="trans" data-when="he">ואם תאמר שאי אפשר לפדות כי צריך ״העמדה והערכה״ והבהמה כבר שחוטה — והרי שנינו: שחט בה שניים או רוב שניים והיא עדיין מפרכסת, הרי היא כחיה לכל דבריה (וניתנת לפדיון).</div>
+      <div class="trans" data-when="en">And if you would say that in order to redeem a consecrated item one requires that the animal be placed standing before the priest and it requires valuation (see Leviticus 27:11–12), and once it is slaughtered it is unable to stand, but didn’t we learn in a baraita: If one slaughtered, i.e., cut, two simanim in the animal or a majority of two simanim, and the animal is still convulsing, its halakhic status is like a living animal in every respect, and it may be redeemed until the convulsing ceases?</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ pageToggle:'English', showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ pageToggle:'עברית',  showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const pt = document.querySelector('.page-lang');
+    if(pt) pt.textContent = LABELS[pageLang].pageToggle;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // page language toggle
+  const pageBtn = document.querySelector('.page-lang');
+  if(pageBtn) pageBtn.addEventListener('click', () => { pageLang = (pageLang === 'he') ? 'en' : 'he'; applyPageLang(); });
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = live page lang)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang;
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+</body>
+</html>
