@@ -56,8 +56,9 @@
   .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
   .mermaid-target{display:flex; justify-content:center; min-height:40px}
   .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
-  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.78rem; color:var(--accent); background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px; box-shadow:0 1px 2px rgba(0,0,0,.06)}
-  .lang-toggle:hover{background:#eef1f8; border-color:var(--accent)}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
   .overview h2{text-align:center}
   section.sugya{margin-top:34px; padding-top:6px}
   section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
@@ -77,10 +78,6 @@
   .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
   footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
 
-  /* page HE⇄EN toggle (fixed, top corner) */
-  .page-lang{position:fixed; top:14px; inset-inline-start:14px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.85rem; font-weight:600; color:var(--accent); background:var(--card); border:1px solid var(--accent-soft); border-radius:999px; padding:6px 14px; box-shadow:0 2px 6px rgba(0,0,0,.08)}
-  .page-lang:hover{background:#fff}
-
   /* report-a-correction affordance */
   .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
   .report-pill:hover{opacity:1; border-color:var(--accent)}
@@ -92,8 +89,6 @@
 </style>
 </head>
 <body data-lang="he">
-<button class="page-lang" type="button" aria-label="toggle language"></button>
-
 <div class="wrap">
   <header>
     <h1><span data-when="he">מפת הסוגיא — חולין כ״ז</span><span data-when="en">Sugya map — Chullin 27</span></h1>
@@ -915,8 +910,8 @@
   let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
 
   const LABELS = {
-    he:{ pageToggle:'English', showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
-    en:{ pageToggle:'עברית',  showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
   };
 
   let _seq = 0;
@@ -939,11 +934,10 @@
   }
 
   function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
     document.documentElement.lang = pageLang;
     document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
     document.body.dataset.lang = pageLang;
-    const pt = document.querySelector('.page-lang');
-    if(pt) pt.textContent = LABELS[pageLang].pageToggle;
     const rp = document.querySelector('.report-pill');
     if(rp) rp.textContent = LABELS[pageLang].report;
     for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
@@ -960,11 +954,8 @@
     } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
   }
 
-  // page language toggle
-  const pageBtn = document.querySelector('.page-lang');
-  if(pageBtn) pageBtn.addEventListener('click', () => { pageLang = (pageLang === 'he') ? 'en' : 'he'; applyPageLang(); });
-
-  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = live page lang)
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
   const pill = document.querySelector('.report-pill');
   const modal = document.querySelector('.report-modal');
   if(pill && modal){
@@ -972,7 +963,7 @@
     const base = pill.dataset.feedbackPath || '/feedback';
     const open = () => {
       const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
-      frame.src = base + '?ref=' + ref + '&lang=' + pageLang;
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
       modal.classList.add('open');
     };
     const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
