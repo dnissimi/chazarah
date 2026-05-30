@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one <section class="sugya"> per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל׳</title>
+<meta name="description" content="שוחט סימן בשניים-שלושה מקומות, החלדת הסכין, ומקור הדין &quot;ושחט&quot; — שחיטה במשיכה ולא בדריסה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="30">
+<meta name="gemara-map:sefaria-ref" content="Chullin 30">
+<meta name="gemara-map:topic-he" content="שחיטה במשיכה — מפורעת, החלדה, ושחט">
+<meta name="gemara-map:topic-en" content="Drawn slaughter: obvious, concealing, veshahat">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל׳">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 30">
+<meta name="gemara-map:blurb-he" content="שוחט סימן בשניים-שלושה מקומות, החלדת הסכין, ומקור הדין &quot;ושחט&quot; — שחיטה במשיכה ולא בדריסה.">
+<meta name="gemara-map:blurb-en" content="Cutting a siman in two or three places, concealing the knife (heḥlid), and the source that slaughter must be a drawing motion, not pressing.">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.78rem; color:var(--accent); background:#fff; border:1px solid var(--border); border-radius:999px; padding:4px 12px; box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .lang-toggle:hover{background:#eef1f8; border-color:var(--accent)}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* page HE⇄EN toggle (fixed, top corner) */
+  .page-lang{position:fixed; top:14px; inset-inline-start:14px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.85rem; font-weight:600; color:var(--accent); background:var(--card); border:1px solid var(--accent-soft); border-radius:999px; padding:6px 14px; box-shadow:0 2px 6px rgba(0,0,0,.08)}
+  .page-lang:hover{background:#fff}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+<button class="page-lang" type="button" aria-label="toggle language"></button>
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל׳</span><span data-when="en">Sugya map — Chullin 30</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל׳ א:י׳-ל״א א:ג׳ · Chullin 30a:10-31a:3 · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 30a:10-31a:3 · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> פרק ״השוחט״ ממשיך לברר מהי שחיטה כשרה: סימן שנחתך בכמה מקומות, החלדת הסכין מתחת לסימן או לעור, ומה מקור הדין שצריך ״משיכה״ — שמואל וריש לקיש לומדים מ״חץ שחוט לשונם״ ששחיטה צריכה להיות מפורעת ובמשיכה, לא בדריסה.</span>
+    <span data-when="en"><b>Bottom line:</b> The chapter "One who slaughters" keeps refining what counts as valid slaughter: a siman cut in several spots, concealing the knife under a siman or under the hide, and the scriptural source that slaughter must be a drawing motion — Shmuel and Reish Lakish derive from "their tongue is a sharpened arrow" that slaughter must be clear and drawn, not a press or chop.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+    <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — ארבע סוגיות</span><span data-when="en">Overview — four sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · שוחט בשניים-שלושה מקומות — צריך שחיטה מפורעת?"]:::statement
+  O2["2 · הֶחְלִיד את הסכין — בין הסימנים ותחת העור"]:::statement
+  O3(["3 · משנה: השוחט שני ראשים כאחד"]):::mishnah
+  O4["4 · מנהני מילי? ״ושחט״ — שחיטה במשיכה"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · Cutting a siman in 2-3 spots — must slaughter be obvious?"]:::statement
+  O2["2 · Concealing the knife (heḥlid) — between simanim vs. under the hide"]:::statement
+  O3(["3 · Mishnah: slaughtering two heads at once"]):::mishnah
+  O4["4 · From where? ״veshaḥat״ — slaughter as a drawing motion"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+      </script>
+    </div>
+  </section>
+
+    <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">שוחט בשניים-שלושה מקומות — שחיטה מפורעת</span><span data-when="en">Cutting a siman in several spots — must slaughter be obvious?</span>
+        <span class="ref">Chullin 30a:10-30b:4</span></h2>
+    <div class="lead"><span data-when="he">רב מכשיר חיתוך סימן בכמה מקומות; שמואל וריש לקיש דורשים ״שחיטה מפורעת״, ומכאן קושיות מן המשניות והברייתות.</span><span data-when="en">Rav validates cutting a siman in several spots; Shmuel and Reish Lakish require a clear, obvious slaughter, prompting objections from mishnayot and baraitot.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב: שוחט בשניים-שלושה מקומות — כשרה"]:::statement
+  Q1{"① שמואל: צריך שחיטה מפורעת — וליכא"}:::question
+  S2["② ריש לקיש: מנין? ״חץ שחוט לשונם״"]:::statement
+  Q2{"③ מיתיבי: שניים אוחזים בסכין — כשרה, ואין מפורעת"}:::question
+  A1["④ ר׳ ירמיה: בסכין אחד ושני בני אדם"]:::answer
+  Q3{"⑤ ר׳ אבא: אם כן — ׳שמא יטרפו׳? היה צריך ׳ידרוסו׳"}:::question
+  A2["⑥-⑦-⑧ ר׳ אבין: תְּני ׳שמא ידרוסו זה על זה׳"]:::answer
+  Q4{"⑨ מיתיבי: ושט למטה וקנה למעלה — כשרה, ואין מפורעת"}:::question
+  A3["⑩ הוא מותיב והוא מפרק: בשחיטה כקולמוס"]:::answer
+  C1["⑪ מעשה בשור: רב יצחק לקח — לִמדנו בשני סכינים"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|סיוע| S2
+  S2 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|דחייה| Q3
+  Q3 -->|תירוץ| A2
+  A2 -.->|מיתיבי| Q4
+  Q4 -->|תירוץ| A3
+  A3 -->|מסקנה| C1
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav: cutting a siman in 2-3 spots — valid"]:::statement
+  Q1{"① Shmuel: we need an obvious slaughter — and there is none"}:::question
+  S2["② Reish Lakish: source? ״a sharpened arrow״"]:::statement
+  Q2{"③ Objection: two grasping a knife — valid, yet not obvious"}:::question
+  A1["④ R. Yirmeya: one knife and two people"]:::answer
+  Q3{"⑤ R. Abba: then why ׳lest tereifa׳? should be ׳lest press׳"}:::question
+  A2["⑥-⑦-⑧ R. Avin: teach ׳lest they press on each other׳"]:::answer
+  Q4{"⑨ Objection: gullet below, windpipe above — valid, not obvious"}:::question
+  A3["⑩ He asks and answers: slaughter shaped like a reed-pen"]:::answer
+  C1["⑪ The bull story: R. Yitzḥak took meat — proves two knives"]:::conclusion
+  S1 -->|question| Q1
+  Q1 -->|support| S2
+  S2 -.->|objection| Q2
+  Q2 -->|answer| A1
+  A1 -.->|rebuttal| Q3
+  Q3 -->|answer| A2
+  A2 -.->|objection| Q4
+  Q4 -->|answer| A3
+  A3 -->|conclusion| C1
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הַשּׁוֹחֵט בִּשְׁנַיִם וּשְׁלֹשָׁה מְקוֹמוֹת, שְׁחִיטָתוֹ כְּשֵׁרָה"]:::statement
+  Q1{"① בָּעֵינַן שְׁחִיטָה מְפוֹרַעַת, וְלֵיכָּא"}:::question
+  S2["② מִנַּיִן לַשְּׁחִיטָה שֶׁהִיא מְפוֹרַעַת? … ״חֵץ שָׁחוּט לְשׁוֹנָם מִרְמָה דִבֵּר״"]:::statement
+  Q2{"③ שְׁנַיִם אוֹחֲזִין בְּסַכִּין … שְׁחִיטָתוֹ כְּשֵׁרָה. אַמַּאי? וְהָא לֵיכָּא שְׁחִיטָה מְפוֹרַעַת"}:::question
+  A1["④ מִשְׁנָתֵינוּ בְּסַכִּין אֶחָד וּשְׁנֵי בְּנֵי אָדָם"]:::answer
+  Q3{"⑤ אֵין חוֹשְׁשִׁין שֶׁמָּא יִטְרְפוּ … מַהוּ דְּתֵימָא … סָמְכִי אַהֲדָדֵי"}:::question
+  A2["⑥-⑦-⑧ תְּנִי: אֵין חוֹשְׁשִׁין שֶׁמָּא יִדְרוֹסוּ זֶה עַל זֶה"]:::answer
+  Q4{"⑨ שָׁחַט אֶת הַוֶּושֶׁט לְמַטָּה וְאֶת הַקָּנֶה לְמַעְלָה … אַמַּאי? וְהָא לֵיכָּא שְׁחִיטָה מְפוֹרַעַת"}:::question
+  A3["⑩ הוּא מוֹתֵיב לַהּ, וְהוּא מְפָרֵק לַהּ: בִּשְׁחִיטָה הָעֲשׂוּיָה כְּקוּלְמוֹס"]:::answer
+  C1["⑪ לִמַּדְתָּנוּ רַבֵּינוּ מִשְׁנָתֵינוּ בִּשְׁנֵי סַכִּינִין וּשְׁנֵי בְּנֵי אָדָם"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|סיוע| S2
+  S2 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|דחייה| Q3
+  Q3 -->|תירוץ| A2
+  A2 -.->|מיתיבי| Q4
+  Q4 -->|תירוץ| A3
+  A3 -->|מסקנה| C1
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל׳ א — Chullin 30a:10</span></div>
+      <div class="orig">אָמַר רַב יְהוּדָה אָמַר רַב: הַשּׁוֹחֵט בִּשְׁנַיִם וּשְׁלֹשָׁה מְקוֹמוֹת, שְׁחִיטָתוֹ כְּשֵׁרָה. כִּי אַמְרִיתַהּ קַמֵּיהּ דִּשְׁמוּאֵל, אָמַר לִי: בָּעֵינַן שְׁחִיטָה מְפוֹרַעַת, וְלֵיכָּא.</div>
+      <div class="trans" data-when="he">רב: השוחט סימן בשניים-שלושה מקומות (ובסך הכול חתך את השיעור הדרוש) — שחיטתו כשרה. אך שמואל השיב לרב יהודה: אנו דורשים ״שחיטה מפורעת״ — חיתוך גלוי וברור — וכאן אין כזה.</div>
+      <div class="trans" data-when="en">§ Rav Yehuda said that Rav said: One who cuts a siman in two or three places on the neck, and together the cuts constitute the requisite measure of slaughter, his slaughter is valid. Rav Yehuda adds: When I stated this halakha before Shmuel he said to me: We require a clear and obvious slaughter and in the case of cuts in two or three places there is no obvious slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל׳ א — Chullin 30a:11</span></div>
+      <div class="orig">וְאַף רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ סָבַר: בָּעֵינַן שְׁחִיטָה מְפוֹרַעַת, דְּאָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: מִנַּיִן לַשְּׁחִיטָה שֶׁהִיא מְפוֹרַעַת? שֶׁנֶּאֱמַר: ״חֵץ שָׁחוּט לְשׁוֹנָם מִרְמָה דִבֵּר״.</div>
+      <div class="trans" data-when="he">גם ריש לקיש סובר שצריך שחיטה מפורעת, שכן דרש: מניין שהשחיטה צריכה להיות גלויה? מן הפסוק ״חֵץ שָׁחוּט לְשׁוֹנָם״ — כשם שחץ נכנס בגלוי, כך השחיטה צריכה להיות ברורה וניכרת.</div>
+      <div class="trans" data-when="en">And Rabbi Shimon ben Lakish also holds that we require a clear and obvious slaughter, as Rabbi Shimon ben Lakish says: From where is it derived that slaughter must be clear and obvious? As it is stated: “Their tongue is a sharpened [shaḥut] arrow, it speaks deceit; one speaks peaceably to his neighbor with his mouth, but in his heart he lays wait for him” (Jeremiah 9:7). Just as an arrow clearly enters one part of the body, so too, the slaughter [sheḥita] must be clear and obvious.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל׳ א — Chullin 30a:12</span></div>
+      <div class="orig">מֵתִיב רַבִּי אֶלְעָזָר: שְׁנַיִם אוֹחֲזִין בְּסַכִּין וְשׁוֹחֲטִין, אֲפִילּוּ אֶחָד מִלְּמַעְלָה וְאֶחָד מִלְּמַטָּה – שְׁחִיטָתוֹ כְּשֵׁרָה. אַמַּאי? וְהָא לֵיכָּא שְׁחִיטָה מְפוֹרַעַת!</div>
+      <div class="trans" data-when="he">ר׳ אלעזר מקשה ממשנה: שניים האוחזים בסכין ושוחטים, אפילו אחד מלמעלה ואחד מלמטה — שחיטתם כשרה. ולשיטת שמואל וריש לקיש: מדוע? הרי אין כאן שחיטה מפורעת (כל אחד חותך במקום אחר)!</div>
+      <div class="trans" data-when="en">Rabbi Elazar raises an objection from a mishna (30b): If two people are grasping a knife and slaughtering one animal, even if each is holding a knife and slaughtering one above and one below, with each one slaughtering at a different point in the neck, their slaughter is valid. But why is the slaughter valid according to the opinions of Shmuel and Rabbi Shimon ben Lakish? There is no clear and obvious slaughter, as each is cutting a different part of the neck.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל׳ א — Chullin 30a:13</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַבִּי יִרְמְיָה: מִשְׁנָתֵינוּ בְּסַכִּין אֶחָד וּשְׁנֵי בְּנֵי אָדָם.</div>
+      <div class="trans" data-when="he">ר׳ ירמיה תירץ: המשנה עוסקת בסכין אחד ושני אנשים האוחזים בשני קצותיו — ויוצא חתך אלכסוני אחד מלמעלה למטה, שהוא שחיטה מפורעת.</div>
+      <div class="trans" data-when="en">Rabbi Yirmeya said to Rabbi Elazar: The mishna is referring to a case with one knife and two people, each holding one end of the knife, resulting in a single diagonal incision from above to below.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל׳ א — Chullin 30a:14</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַבִּי אַבָּא: אִי הָכִי, הַיְינוּ דְּתָנֵי עֲלַהּ אֵין חוֹשְׁשִׁין שֶׁמָּא יִטְרְפוּ זֶה עַל זֶה? אִי אָמְרַתְּ בִּשְׁלָמָא בִּשְׁתֵּי סַכִּינִין וּשְׁנֵי בְּנֵי אָדָם – שַׁפִּיר, מַהוּ דְּתֵימָא לֵיחוּשׁ דִּלְמָא סָמְכִי אַהֲדָדֵי, וְהַאי לָא אָתֵי לְמֶעְבַּד רוּבָּא וְהַאי לָא אָתֵי לְמֶעְבַּד רוּבָּא, קָא מַשְׁמַע לַן דְּאֵין חוֹשְׁשִׁין.</div>
+      <div class="trans" data-when="he">ר׳ אבא הקשה: אם כן, מדוע הברייתא אומרת ״אין חוששין שמא יטרפו זה על זה״? — אם המשנה בשתי סכינים ושני אנשים, מובן: היה מקום לחשוש שכל אחד יסמוך על חברו ולא יחתוך את הרוב, ומשמיענו שאין לחשוש.</div>
+      <div class="trans" data-when="en">Rabbi Abba said to Rabbi Yirmeya: If so, is this what is taught in that regard in a baraita commenting on that mishna: One need not be concerned that perhaps each will render the animal a tereifa due to the other? Granted, if you say that the mishna is referring to a case of two knives and two people it works out well, lest you say: Let us be concerned that perhaps each will rely on the other that he will perform the slaughter properly, and neither will this one come to execute the cut on the majority of the simanim, nor will that one come to execute the cut on the majority of the simanim. Therefore, the tanna teaches us that one need not be concerned.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל׳ א — Chullin 30a:15</span></div>
+      <div class="orig">אֶלָּא אִי אָמְרַתְּ בְּסַכִּין אַחַת וּשְׁנֵי בְּנֵי אָדָם, הַאי ״אֵין חוֹשְׁשִׁין שֶׁמָּא יִטְרְפוּ זֶה עַל זֶה״ – ״שֶׁמָּא יִדְרוֹסוּ זֶה עַל זֶה״ מִיבְּעֵי לֵיהּ.</div>
+      <div class="trans" data-when="he">אבל אם המשנה בסכין אחד ושני אנשים — אז במקום ״שמא יטרפו זה על זה״ הברייתא הייתה צריכה לומר ״שמא ידרוסו זה על זה״ (שאחד מושך לכאן ואחד לכאן ויבואו לדרוס).</div>
+      <div class="trans" data-when="en">But if you say that the mishna is referring to a case of one knife and two people, that statement in the baraita should not have said: One need not be concerned that perhaps each will render the animal a tereifa due to the other; it should have said: One need not be concerned that because one is pulling in one direction and one is pulling in the other, perhaps each will cause the other to press the knife and thereby invalidate the slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל׳ א — Chullin 30a:16</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַבִּי אָבִין, תְּנִי: אֵין חוֹשְׁשִׁין</div>
+      <div class="trans" data-when="he">ר׳ אבין השיב: תַּקֵּן את גרסת הברייתא — לְמַד ״אין חוששין…״ (וההמשך בקטע הבא).</div>
+      <div class="trans" data-when="en">Rabbi Avin said to him: Teach: One need not be concerned</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל׳ ב — Chullin 30b:1</span></div>
+      <div class="orig">שֶׁמָּא יִדְרוֹסוּ זֶה עַל זֶה.</div>
+      <div class="trans" data-when="he">…שמא ידרוסו זה על זה — כלומר נְסַח את הברייתא כך שתתאים למקרה של סכין אחד ושני אנשים.</div>
+      <div class="trans" data-when="en">that perhaps each will cause the other to press the knife.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל׳ ב — Chullin 30b:2</span></div>
+      <div class="orig">מֵתִיב רַבִּי אָבִין: שָׁחַט אֶת הַוֶּושֶׁט לְמַטָּה וְאֶת הַקָּנֶה לְמַעְלָה, אוֹ אֶת הַוֶּושֶׁט לְמַעְלָה וְאֶת הַקָּנֶה לְמַטָּה – שְׁחִיטָתוֹ כְּשֵׁרָה. אַמַּאי? וְהָא לֵיכָּא שְׁחִיטָה מְפוֹרַעַת!</div>
+      <div class="trans" data-when="he">ר׳ אבין מקשה מברייתא: שחט את הוושט למטה ואת הקנה למעלה, או להפך — שחיטתו כשרה. מדוע? הרי אין כאן שחיטה מפורעת (כל סימן במקום אחר)!</div>
+      <div class="trans" data-when="en">Rabbi Avin raises an objection from a baraita: If one slaughtered, i.e., cut, the gullet below on the neck and the windpipe above on the neck, or cut the gullet above on the neck and the windpipe below on the neck, his slaughter is valid. Based on this, Rabbi Avin asks: Why is the slaughter valid? But in that case there is no clear and obvious slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל׳ ב — Chullin 30b:3</span></div>
+      <div class="orig">הוּא מוֹתֵיב לַהּ, וְהוּא מְפָרֵק לַהּ: בִּשְׁחִיטָה הָעֲשׂוּיָה כְּקוּלְמוֹס.</div>
+      <div class="trans" data-when="he">הוא עצמו הקשה והוא עצמו תירץ: אין מדובר בחיתוך בשני מקומות נפרדים, אלא בשחיטה אלכסונית ״כקולמוס״ — מתחיל גבוה בסימן אחד ויורד באלכסון, ובכך זו שחיטה אחת מפורעת.</div>
+      <div class="trans" data-when="en">He raises the objection and he resolves it. This baraita is not referring to cuts on two places on the neck; rather, it is referring to slaughter performed on a diagonal, like the point of a reed [kekulmos] fashioned into a writing utensil. The slaughterer begins cutting from the top of one siman and cuts diagonally downward so that when he reaches the second siman, the knife is lower down.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל׳ ב — Chullin 30b:4</span></div>
+      <div class="orig">הָהוּא תּוֹרָא דְּאִישְּׁחַט בִּשְׁנַיִם וּשְׁלֹשָׁה מְקוֹמוֹת, עָל רַב יִצְחָק בַּר שְׁמוּאֵל בַּר מָרְתָא שְׁקַל מִשׁוּפְרֵי שׁוּפְרֵי. אֲמַר לֵיהּ רַבִּי זֵירָא: לִמַּדְתָּנוּ רַבֵּינוּ מִשְׁנָתֵינוּ בִּשְׁנֵי סַכִּינִין וּשְׁנֵי בְּנֵי אָדָם.</div>
+      <div class="trans" data-when="he">מעשה בשור שנשחט בשניים-שלושה מקומות: רב יצחק בר שמואל בר מרתא נכנס ולקח מן הבשר המשובח — בכך הראה שהשחיטה כשרה. אמר לו ר׳ זירא: לימדתנו, רבנו, שמשנתנו (שניים אוחזים בסכין) עוסקת אף בשני סכינים ושני בני אדם.</div>
+      <div class="trans" data-when="en">The Gemara relates: There was a certain bull that was slaughtered with cuts in two or three places in the simanim on its neck. Rav Yitzḥak bar Shmuel bar Marta entered the store and took a cut of meat from the highest quality parts of the animal, thereby demonstrating that the slaughter was valid. Rabbi Zeira said to him: Our rabbi, you have taught us through your actions that the mishna: If two people are grasping a knife and slaughtering one animal, even one above and one below, is referring even to a case of two knives and two people who are each cutting the simanim at a different part of the neck with their knives.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">הֶחְלִיד את הסכין — בין הסימנים ותחת העור</span><span data-when="en">Concealing the knife (heḥlid) — between simanim and under the hide</span>
+        <span class="ref">Chullin 30b:5-10</span></h2>
+    <div class="lead"><span data-when="he">רב פוסל החלדת סכין בין סימן לסימן ומכשיר תחת העור; הגמרא מבררת מה התחדש, ומסיימת בשתי בעיות שלא נפתרו (תיקו).</span><span data-when="en">Rav invalidates concealing the knife between the simanim and validates it under the hide; the Gemara asks what is new, ending in two unresolved dilemmas (teiku).</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב: החליד בין סימן לסימן — פסולה; תחת העור — כשרה"]:::statement
+  Q1{"② מאי קא משמע לן? תְּנֵינא במשנה!"}:::question
+  A1["③ אילו מהמשנה — הוה אמינא רק מלמטה למעלה; קמ״ל בכל"]:::answer
+  S2["④ ׳תחת העור כשרה׳ — בי רב: איני יודע"]:::statement
+  Q2{"⑤ תחת מטלית מהו? תחת צמר מסובך מהו?"}:::question
+  C1["⑤ תֵּיקו"]:::conclusion
+  Q3{"⑥ רב פפא: החליד במיעוט סימנים מהו?"}:::question
+  C2["⑥ תֵּיקו"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|המשך המימרא| S2
+  S2 -.->|בעיא| Q2
+  Q2 -->|מסקנה| C1
+  S2 -.->|בעיא| Q3
+  Q3 -->|מסקנה| C2
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav: concealing between simanim — invalid; under the hide — valid"]:::statement
+  Q1{"② What is Rav teaching us? We learned it in a mishna!"}:::question
+  A1["③ From the mishna alone I'd limit it to below-to-above; so Rav extends it"]:::answer
+  S2["④ ׳under the hide is valid׳ — school of Rav: I do not know"]:::statement
+  Q2{"⑤ Under a cloth, what is the law? Under tangled wool?"}:::question
+  C1["⑤ Teiku (unresolved)"]:::conclusion
+  Q3{"⑥ Rav Pappa: concealing for a minority of the simanim?"}:::question
+  C2["⑥ Teiku (unresolved)"]:::conclusion
+  S1 -->|question| Q1
+  Q1 -->|answer| A1
+  A1 -->|same statement| S2
+  S2 -.->|dilemma| Q2
+  Q2 -->|conclusion| C1
+  S2 -.->|dilemma| Q3
+  Q3 -->|conclusion| C2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הֶחְלִיד אֶת הַסַּכִּין בֵּין סִימָן לְסִימָן וּפְסָקוֹ – פְּסוּלָה, תַּחַת הָעוֹר – כְּשֵׁרָה"]:::statement
+  Q1{"② מַאי קָא מַשְׁמַע לַן? תְּנֵינָא … רַבִּי יְשֵׁבָב אוֹמֵר נְבֵלָה, רַבִּי עֲקִיבָא אוֹמֵר טְרֵפָה"}:::question
+  A1["③ אִי מִמַּתְנִיתִין … מִלְּמַטָּה לְמַעְלָה … אֲבָל מִלְּמַעְלָה לְמַטָּה … אֵימָא שַׁפִּיר דָּמֵי, קָא מַשְׁמַע לַן"]:::answer
+  S2["④ תַּחַת הָעוֹר – כְּשֵׁרָה, בֵּי רַב אָמְרִי: תַּחַת הָעוֹר – אֵינִי יוֹדֵעַ"]:::statement
+  Q2{"⑤ תַּחַת מַטְלֵית מַהוּ? תַּחַת צֶמֶר מְסוּבָּךְ מַהוּ?"}:::question
+  C1["⑤ תֵּיקוּ"]:::conclusion
+  Q3{"⑥ בָּעֵי רַב פָּפָּא: הֶחְלִיד בְּמִיעוּט סִימָנִים מַהוּ?"}:::question
+  C2["⑥ תֵּיקוּ"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|המשך המימרא| S2
+  S2 -.->|בעיא| Q2
+  Q2 -->|מסקנה| C1
+  S2 -.->|בעיא| Q3
+  Q3 -->|מסקנה| C2
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל׳ ב — Chullin 30b:5</span></div>
+      <div class="orig">אָמַר רַב יְהוּדָה אָמַר רַב: הֶחְלִיד אֶת הַסַּכִּין בֵּין סִימָן לְסִימָן וּפְסָקוֹ – פְּסוּלָה, תַּחַת הָעוֹר – כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">רב: אם החביא (הֶחְלִיד) את הסכין בין סימן לסימן — תחב את הסכין בין הקנה לוושט — וחתך, השחיטה פסולה; אך אם החליד את הסכין תחת העור וחתך את שני הסימנים — כשרה.</div>
+      <div class="trans" data-when="en">§ Rav Yehuda says that Rav says: If one concealed the knife in the neck between one siman and the other siman, i.e., he inserted the knife between the windpipe and the gullet, and he severed the gullet first and then removed the knife and cut the windpipe, the slaughter is not valid. If one concealed the knife beneath the hide of the neck and then he cut both simanim, the slaughter is valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל׳ ב — Chullin 30b:6</span></div>
+      <div class="orig">מַאי קָא מַשְׁמַע לַן? תְּנֵינָא: אוֹ שֶׁהֶחְלִיד אֶת הַסַּכִּין תַּחַת הַשֵּׁנִי וּפְסָקוֹ – רַבִּי יְשֵׁבָב אוֹמֵר: נְבֵלָה, רַבִּי עֲקִיבָא אוֹמֵר: טְרֵפָה.</div>
+      <div class="trans" data-when="he">הגמרא מקשה: מה התחדש בדברי רב? כבר שנינו במשנה (לב ע״א): או שהחליד את הסכין תחת הסימן השני וחתכו — ר׳ ישבב אומר נבלה, ר׳ עקיבא אומר טרפה (שניהם מסכימים שאינה כשרה).</div>
+      <div class="trans" data-when="en">The Gemara asks: What is Rav teaching us? We already learn this halakha explicitly in a mishna (32a): Or if one cut one siman and concealed the knife beneath the second siman and severed it, Rabbi Yeshevav says: The animal is an unslaughtered carcass and imparts ritual impurity through contact with it and carrying it. Rabbi Akiva says: The animal is a tereifa, and although eating it is prohibited, it does not transmit ritual impurity. Both agree that the slaughter is not valid in the sense that it does not permit the consumption of the meat of the animal.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל׳ ב — Chullin 30b:7</span></div>
+      <div class="orig">אִי מִמַּתְנִיתִין, הֲוָה אָמֵינָא: הָנֵי מִילֵּי – מִלְּמַטָּה לְמַעְלָה, דְּלָא קָעָבֵיד כְּדֶרֶךְ שְׁחִיטָה, אֲבָל מִלְּמַעְלָה לְמַטָּה, דְּקָעָבֵיד כְּדֶרֶךְ שְׁחִיטָה – אֵימָא שַׁפִּיר דָּמֵי, קָא מַשְׁמַע לַן.</div>
+      <div class="trans" data-when="he">תירוץ: אילו רק מן המשנה, הייתי אומר שזה רק כשהחליד וחתך מלמטה למעלה, שאינו כדרך שחיטה; אבל מלמעלה למטה, שכן כדרך שחיטה — הייתי אומר שכשרה. לכן רב משמיענו שכל החלדה פוסלת.</div>
+      <div class="trans" data-when="en">The Gemara answers: If this halakha is learned from the mishna alone, I would say that this statement applies only in a case where one conceals the knife beneath the gullet and cuts it from below to above, i.e., from the nape to the front of the neck, because he did not perform the slaughter in the standard manner of slaughter. But if he cut the gullet from above to below, i.e., from the front of the neck to the nape, since he performed the slaughter in the standard manner of slaughter, say that the slaughter is valid. Therefore, Rav teaches us that with regard to any case where one conceals the knife during slaughter, his slaughter is not valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל׳ ב — Chullin 30b:8</span></div>
+      <div class="orig">תַּחַת הָעוֹר – כְּשֵׁרָה, בֵּי רַב אָמְרִי: תַּחַת הָעוֹר – אֵינִי יוֹדֵעַ.</div>
+      <div class="trans" data-when="he">בחלק השני של דברי רב — ״תחת העור כשרה״ — בי רב (בית מדרשו של רב) מוסרים בנוסח אחר: ״תחת העור — איני יודע״ אם כשרה או פסולה.</div>
+      <div class="trans" data-when="en">The Gemara proceeds to analyze the second part of that which Rav Yehuda says that Rav says: If one concealed the knife beneath the hide of the neck and then he cut both simanim in the standard manner the slaughter is valid. The school of Rav say that Rav says that in a case where one conceals the knife beneath the hide and cuts the simanim of the animal, I do not know whether the slaughter is valid, or whether it is not valid because he concealed the knife during the slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל׳ ב — Chullin 30b:9</span></div>
+      <div class="orig">אִיבַּעְיָא לְהוּ: לְבֵי רַב, דְּאָמְרִי: תַּחַת הָעוֹר אֵינִי יוֹדֵעַ, תַּחַת מַטְלֵית מַהוּ? תַּחַת צֶמֶר מְסוּבָּךְ מַהוּ? תֵּיקוּ.</div>
+      <div class="trans" data-when="he">נשאלה שאלה: לשיטת בי רב שאמרו ״תחת העור איני יודע״ — אם החליד תחת מטלית (בד שעל הצוואר), מה הדין? תחת צמר מסובך (פלוטר על צוואר הכבש), מה הדין? תֵּיקו — הספקות נותרו ללא הכרעה.</div>
+      <div class="trans" data-when="en">A dilemma was raised before the Sages: According to the opinion of the school of Rav, who say: Beneath the hide, I do not know, if one concealed the knife beneath a cloth that is around the animal’s neck, what is the halakha? If one concealed the knife beneath tangled wool on the neck of a sheep, what is the halakha? The Gemara concludes: These dilemmas shall stand unresolved.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל׳ ב — Chullin 30b:10</span></div>
+      <div class="orig">בָּעֵי רַב פָּפָּא: הֶחְלִיד בְּמִיעוּט סִימָנִים מַהוּ? תֵּיקוּ.</div>
+      <div class="trans" data-when="he">רב פפא שואל: אם החליד את הסכין רק בחיתוך מיעוט הסימנים (ואת הרוב חתך כדרכו), מה הדין? תֵּיקו — הספק נותר ללא הכרעה.</div>
+      <div class="trans" data-when="en">Rav Pappa raises a dilemma: If one concealed the knife in cutting the minority of the simanim and cut the majority of the simanim in the standard manner, what is the halakha? The Gemara concludes: The dilemma shall stand unresolved.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+        <span data-when="he">משנה: השוחט שני ראשים כאחד</span><span data-when="en">Mishnah: slaughtering two heads at once</span>
+        <span class="ref">Chullin 30b:11-12</span></h2>
+    <div class="lead"><span data-when="he">המשנה החדשה: שחיטת שני ראשים כאחד, שניים האוחזים בסכין, התזת הראש בבת אחת, ושיעור הסכין במלוא הצוואר.</span><span data-when="en">A new Mishnah: cutting two heads at once, two people grasping a knife, decapitation in one stroke, and the knife matching the breadth of the neck.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: שוחט שני ראשים כאחד — כשרה; שניים אוחזים בסכין — כשרה"]):::mishnah
+  M2(["① התיז הראש בבת אחת — פסולה; שוחט והתיז: אם מלוא צוואר — כשרה"]):::mishnah
+  M3(["② שני ראשים בבת אחת: מלוא צוואר אחד — כשרה; הוליך והביא — כשרה אף בכל-שהוא"]):::mishnah
+  M1 --> M2
+  M2 --> M3
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishnah: two heads at once — valid; two grasping a knife — valid"]):::mishnah
+  M2(["① Decapitating in one stroke — invalid; mid-slaughter decapitation: valid if knife = neck"]):::mishnah
+  M3(["② Two heads at once: valid if knife = one neck; back-and-forth — valid at any size"]):::mishnah
+  M1 --> M2
+  M2 --> M3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① הַשּׁוֹחֵט שְׁנֵי רָאשִׁין כְּאֶחָד – שְׁחִיטָתוֹ כְּשֵׁרָה. שְׁנַיִם אוֹחֲזִין בְּסַכִּין … שְׁחִיטָתוֹ כְּשֵׁרָה"]):::mishnah
+  M2(["① הִתִּיז אֶת הָרֹאשׁ בְּבַת אַחַת – פְּסוּלָה … אִם יֵשׁ בַּסַּכִּין מְלֹא צַוָּאר – כְּשֵׁרָה"]):::mishnah
+  M3(["② הִתִּיז שְׁנֵי רָאשִׁין … מְלֹא צַוָּאר אֶחָד – כְּשֵׁרָה … הוֹלִיךְ וְהֵבִיא … אֲפִילּוּ כׇּל שֶׁהוּא – כְּשֵׁרָה"]):::mishnah
+  M1 --> M2
+  M2 --> M3
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל׳ ב — Chullin 30b:11</span></div>
+      <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט שְׁנֵי רָאשִׁין כְּאֶחָד – שְׁחִיטָתוֹ כְּשֵׁרָה. שְׁנַיִם אוֹחֲזִין בְּסַכִּין וְשׁוֹחֲטִים, אֲפִילּוּ אֶחָד לְמַעְלָה וְאֶחָד לְמַטָּה – שְׁחִיטָתוֹ כְּשֵׁרָה. הִתִּיז אֶת הָרֹאשׁ בְּבַת אַחַת – פְּסוּלָה. הָיָה שׁוֹחֵט וְהִתִּיז אֶת הָרֹאשׁ בְּבַת אַחַת, אִם יֵשׁ בַּסַּכִּין מְלֹא צַוָּאר – כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">משנה: השוחט שני ראשים כאחד — שחיטתו כשרה. שניים האוחזים בסכין ושוחטים, אפילו אחד למעלה ואחד למטה — כשרה. התיז את הראש בבת אחת (חתך הכול בתנופה אחת, לא בדרך משיכה) — פסולה. היה שוחט (במשיכה) ובסוף התיז את הראש בבת אחת — אם אורך הסכין כמלוא רוחב הצוואר, כשרה.</div>
+      <div class="trans" data-when="en">MISHNA: With regard to one who slaughters by cutting two animals’ heads simultaneously, his slaughter is valid. If two people are grasping a knife and slaughtering one animal, even if each is holding a knife and slaughtering one above and one below, with each one slaughtering at a different point in the neck, their slaughter is valid. If one decapitated the animal in one motion and did not slaughter the animal in the standard manner of drawing the knife back and forth, the slaughter is not valid. In a case where one was in the process of slaughtering the animal in the standard manner and he decapitated the animal in one motion, if the length of the knife is equivalent to the breadth of the animal’s entire neck, the slaughter is valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל׳ ב — Chullin 30b:12</span></div>
+      <div class="orig">הָיָה שׁוֹחֵט וְהִתִּיז שְׁנֵי רָאשִׁין בְּבַת אַחַת, אִם יֵשׁ בַּסַּכִּין מְלֹא צַוָּאר אֶחָד – כְּשֵׁרָה. בַּמֶּה דְּבָרִים אֲמוּרִים? בִּזְמַן שֶׁהוֹלִיךְ וְלֹא הֵבִיא, אוֹ הֵבִיא וְלֹא הוֹלִיךְ, אֲבָל אִם הוֹלִיךְ וְהֵבִיא, אֲפִילּוּ כׇּל שֶׁהוּא, אֲפִילּוּ בְּאִיזְמֵל – כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">היה שוחט והתיז שני ראשים בבת אחת — אם אורך הסכין כמלוא צוואר אחד, כשרה. במה דברים אמורים (ששיעור הסכין קובע)? כשהוליך ולא הביא או הביא ולא הוליך (תנועה אחת בלבד); אבל אם הוליך והביא (משיכה הלוך ושוב), אפילו סכין קצרה ביותר, ואפילו איזמל — כשרה.</div>
+      <div class="trans" data-when="en">If one was in the process of slaughtering two animals simultaneously, and he decapitated two heads in one motion, if the length of the knife is equivalent to the breadth of an entire neck of one of the animals, the slaughter is valid. In what case is this statement, that one must be concerned about the length of the knife, said? It is when one drew the knife back and did not draw it forth, or drew it forth and did not draw it back; but if he drew it back and forth, even if the knife was of any length, even if he slaughtered with a scalpel [be’izemel], the slaughter is valid.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+        <span data-when="he">מנהני מילי? ״ושחט״ — שחיטה במשיכה</span><span data-when="en">From where is this derived? ״veshaḥat״ — slaughter as drawing</span>
+        <span class="ref">Chullin 30b:13-31a:3</span></h2>
+    <div class="lead"><span data-when="he">הגמרא מבררת מקור הדין שהתזה בבת אחת פסולה: שמואל ובית מדרשו של ר׳ ישמעאל לומדים מ״ושחט״ ו״חץ שחוט״ ששחיטה היא משיכה; ומעשה ברבא ששחט עוף בחץ.</span><span data-when="en">The Gemara seeks the source for invalidating a single-stroke decapitation: Shmuel and the school of R. Yishmael derive from "veshaḥat" and "a sharpened arrow" that slaughter is a drawing motion; then a story of Rava slaughtering a bird with an arrow.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① גמרא: מנהני מילי?"}:::question
+  S1["① שמואל: ״חץ שחוט לשונם״ — שחיטה במשיכה"]:::statement
+  S2["② דבי ר׳ ישמעאל: ׳ושחט׳ — אין ׳ושחט׳ אלא ומשך"]:::statement
+  Q2{"③ מאי ׳ואומר׳?"}:::question
+  A1["③ שמא ׳זהב שחוט׳ = נטווה כחוט; תא שמע ׳חץ שחוט׳"]:::answer
+  S3["④ רבא שחט עוף בחץ בהדי דפרח"]:::statement
+  Q3{"④ ודלמא עביד חלדה?"}:::question
+  A2["⑤ חזינן גידפי דמיפרמי — נשחט מלפנים"]:::answer
+  Q4{"⑥ והא בעי כיסוי? וצריך עפר למטה ולמעלה!"}:::question
+  A3["⑦ מַזמין עפר דכולה פתקא — מכין עפר מראש"]:::answer
+  Q1 -->|תשובה| S1
+  S1 -->|דרשה נוספת| S2
+  S2 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -->|מעשה| S3
+  S3 -.->|דחייה| Q3
+  Q3 -->|תירוץ| A2
+  A2 -.->|קושיא| Q4
+  Q4 -->|תירוץ| A3
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Gemara: from where is this derived?"}:::question
+  S1["① Shmuel: ״a sharpened arrow״ — slaughter is a drawing"]:::statement
+  S2["② School of R. Yishmael: ׳veshaḥat׳ means only ׳and he drew׳"]:::statement
+  Q2{"③ Why the extra ׳and it states׳?"}:::question
+  A1["③ Lest ׳drawn gold׳ = spun like thread; so cite ׳sharpened arrow׳"]:::answer
+  S3["④ Rava slaughtered a bird with an arrow as it flew"]:::statement
+  Q3{"④ But perhaps it was an inverted (concealed) slaughter?"}:::question
+  A2["⑤ We see the feathers were unraveled — cut from the front"]:::answer
+  Q4{"⑥ But the blood needs covering — earth below and above!"}:::question
+  A3["⑦ He designates the valley's earth in advance"]:::answer
+  Q1 -->|answer| S1
+  S1 -->|further derivation| S2
+  S2 -.->|question| Q2
+  Q2 -->|answer| A1
+  A1 -->|story| S3
+  S3 -.->|challenge| Q3
+  Q3 -->|answer| A2
+  A2 -.->|challenge| Q4
+  Q4 -->|answer| A3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① מְנָהָנֵי מִילֵּי?"}:::question
+  S1["① אָמַר שְׁמוּאֵל … ״חֵץ שָׁחוּט לְשׁוֹנָם מִרְמָה דִבֵּר״"]:::statement
+  S2["② תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל: ״וְשָׁחַט״ – אֵין ״וְשָׁחַט״ אֶלָּא וּמָשַׁךְ"]:::statement
+  Q2{"③ מַאי ״וְאוֹמֵר״?"}:::question
+  A1["③ וְכִי תֵּימָא ״זָהָב שָׁחוּט״ שֶׁנִּטְוֶוה כְּחוּט … תָּא שְׁמַע: ״חֵץ שָׁחוּט לְשׁוֹנָם״"]:::answer
+  S3["④ רָבָא … וְשָׁחַט בֵּהּ עוֹפָא בַּהֲדֵי דְּפָרַח"]:::statement
+  Q3{"④ וְדִילְמָא עָבִיד חֲלָדָה?"}:::question
+  A2["⑤ חֲזִינַן גִּידְפֵי דְּמִיפַּרְמִי"]:::answer
+  Q4{"⑥ וְהָא בָּעֵי כִּסּוּי … צָרִיךְ שֶׁיִּתֵּן עָפָר לְמַטָּה וְעָפָר לְמַעְלָה"}:::question
+  A3["⑦ דְּמַזְמֵין לֵיהּ לְעָפָר דְּכוּלַּהּ פִּתְקָא"]:::answer
+  Q1 -->|תשובה| S1
+  S1 -->|דרשה נוספת| S2
+  S2 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -->|מעשה| S3
+  S3 -.->|דחייה| Q3
+  Q3 -->|תירוץ| A2
+  A2 -.->|קושיא| Q4
+  Q4 -->|תירוץ| A3
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל׳ ב — Chullin 30b:13</span></div>
+      <div class="orig">גְּמָ׳ מְנָהָנֵי מִילֵּי? אָמַר שְׁמוּאֵל, דְּאָמַר קְרָא: ״חֵץ שָׁחוּט לְשׁוֹנָם מִרְמָה דִבֵּר״.</div>
+      <div class="trans" data-when="he">גמרא: מניין לנו דין זה (שהתזה בבת אחת פסולה)? אמר שמואל: מן הפסוק ״חֵץ שָׁחוּט לְשׁוֹנָם״ — כשם שהחץ נורה במשיכת המיתר, כך השחיטה צריכה להיעשות במשיכה ולא בדריסה או בהכאה.</div>
+      <div class="trans" data-when="en">GEMARA: The mishna stated: If one decapitated the animal in one motion, the slaughter is not valid. The Gemara asks: From where is this matter derived? Shmuel said: It is derived from a verse, as the verse states: “Their tongue is a sharpened [shaḥut] arrow, it speaks deceit” (Jeremiah 9:7). Just as an arrow is propelled by drawing back the bowstring, so too, slaughter [sheḥita] must be performed by drawing the knife across the animal’s neck and not by pressing the knife or striking the neck with the knife.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל׳ ב — Chullin 30b:14</span></div>
+      <div class="orig">תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל: ״וְשָׁחַט״ – אֵין ״וְשָׁחַט״ אֶלָּא וּמָשַׁךְ, וְכֵן הוּא אוֹמֵר: ״זָהָב שָׁחוּט״, וְאוֹמֵר: ״חֵץ שָׁחוּט לְשׁוֹנָם מִרְמָה דִבֵּר״.</div>
+      <div class="trans" data-when="he">תנא דבי ר׳ ישמעאל: ״ושחט״ — אין משמעו אלא ״ומשך״; וכן ״זָהָב שָׁחוּט״ (זהב מרודד ומלוטש), ואומר ״חֵץ שָׁחוּט לְשׁוֹנָם״ — בכולם השורש שח״ט מורה על משיכה.</div>
+      <div class="trans" data-when="en">Likewise, the school of Rabbi Yishmael taught: The verse states: “And he shall slaughter [veshaḥat] the young bull before the Lord” (Leviticus 1:5). The term “veshaḥat” means nothing other than: And he shall draw the knife across the neck of the animal. And similarly, the verse states: “And King Solomon made two hundred targets of drawn [shaḥut] gold” (I Kings 10:16), meaning gold that is smoothed in the manner of goldsmiths. And the verse states: “Their tongue is a sharpened arrow, it speaks deceit” (Jeremiah 9:7).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל׳ ב — Chullin 30b:15</span></div>
+      <div class="orig">מַאי ״וְאוֹמֵר״? וְכִי תֵּימָא ״זָהָב שָׁחוּט״ שֶׁנִּטְוֶוה כְּחוּט הוּא, תָּא שְׁמַע: ״חֵץ שָׁחוּט לְשׁוֹנָם״.</div>
+      <div class="trans" data-when="he">מדוע צריך גם את הפסוק הנוסף (״ואומר״)? שמא תאמר ״זָהָב שָׁחוּט״ פירושו זהב שנטווה דק כחוט (ולא משיכה) — לכן בוא ושמע מ״חֵץ שָׁחוּט לְשׁוֹנָם״, שָׁחוּט שם הוא במובן משיכה, כמיתר הקשת.</div>
+      <div class="trans" data-when="en">The Gemara asks: What is the purpose of citing the additional verse introduced with the term: And the verse states? The Gemara answers: And if you would say that the term “drawn [shaḥut] gold” means that the gold was spun like soft thread [keḥut], come and hear: “Their tongue is a sharpened [shaḥut] arrow.” In this verse, shaḥut means drawn like the bowstring that propels an arrow, and is not a reference to thread.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל׳ ב — Chullin 30b:16</span></div>
+      <div class="orig">רָבָא הֲוָה בָּדֵיק לֵיהּ גִּירָא לְרַבִּי יוֹנָה בַּר תַּחְלִיפָא, וְשָׁחַט בֵּהּ עוֹפָא בַּהֲדֵי דְּפָרַח. וְדִילְמָא עָבִיד חֲלָדָה? חֲזִינַן</div>
+      <div class="trans" data-when="he">רבא היה בודק את החץ עבור ר׳ יונה בר תחליפא (שלא יהיו בו פגימות), ושחט בו עוף תוך כדי שהעוף פורח. ומקשים: שמא נעשתה כאן חלדה (החץ נחבא וחתך הסימנים מאחור לפנים)? משיבים: אנו רואים… (וההמשך בקטע הבא).</div>
+      <div class="trans" data-when="en">The Gemara relates: Rava would examine the arrow for Rabbi Yona bar Taḥlifa to ensure that there were no notches in it. And Rava shot the arrow and slaughtered a bird with it as it was flying. The Gemara challenges: And perhaps when the arrow cut the bird’s neck it performed an inverted slaughter, with the arrow concealed in the neck, and cut the simanim from back to front. The Gemara responds: We see</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״א א — Chullin 31a:1</span></div>
+      <div class="orig">גִּידְפֵי דְּמִיפַּרְמִי.</div>
+      <div class="trans" data-when="he">…שהנוצות שבחזית הצוואר נפרמו (נקרעו) על ידי החץ — סימן ברור שהשחיטה נעשתה מלפנים, ולא חלדה.</div>
+      <div class="trans" data-when="en">that the feathers at the front of the neck were unraveled by the arrow, a clear indication that slaughter was performed from the front of the neck.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״א א — Chullin 31a:2</span></div>
+      <div class="orig">וְהָא בָּעֵי כִּסּוּי, וְכִי תֵּימָא דִּמְכַסּוּ לֵיהּ, וְהָאָמַר רַבִּי זֵירָא אָמַר רַב: הַשּׁוֹחֵט צָרִיךְ שֶׁיִּתֵּן עָפָר לְמַטָּה וְעָפָר לְמַעְלָה, שֶׁנֶּאֱמַר: ״וְכִסָּהוּ בֶּעָפָר״, ״עָפָר״ לֹא נֶאֱמַר אֶלָּא ״בֶּעָפָר״, מְלַמֵּד שֶׁהַשּׁוֹחֵט צָרִיךְ שֶׁיִּתֵּן עָפָר לְמַטָּה וְעָפָר לְמַעְלָה!</div>
+      <div class="trans" data-when="he">קושיה נוספת: הרי דם העוף טעון כיסוי בעפר! ואם תאמר שכיסו אותו אחר כך — הרי אמר ר׳ זירא בשם רב: השוחט צריך לתת עפר למטה ועפר למעלה, שנאמר ״וְכִסָּהוּ בֶּעָפָר״ (לא ״עפר״ אלא ״בעפר״, בתוך העפר) — כיצד היה עפר מתחת מוכן מראש?</div>
+      <div class="trans" data-when="en">The Gemara notes another difficulty encountered in the slaughter of a flying bird with an arrow. But doesn’t the bird’s blood require covering with earth? And if you would say that Rabbi Yona bar Taḥlifa covers the blood, but doesn’t Rabbi Zeira say that Rav says: In fulfilling the mitzva of covering the blood, one who slaughters an undomesticated animal or bird must place earth beneath the blood and earth above it, as it is stated: “He shall spill its blood, and cover it in earth” (Leviticus 17:13). It is not stated: Cover it with earth, but rather “in earth.” This teaches that one who slaughters must place earth beneath the blood and earth above the blood, so that the blood will be within the earth.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״א א — Chullin 31a:3</span></div>
+      <div class="orig">דְּמַזְמֵין לֵיהּ לְעָפָר דְּכוּלַּהּ פִּתְקָא.</div>
+      <div class="trans" data-when="he">תירוץ: ר׳ יונה בר תחליפא היה מזמין מראש את עפר כל הבקעה (הפיתקא) לפני יריית החץ — והוא משמש כעפר התחתון, ועליו מכסה לאחר מכן בעפר נוסף.</div>
+      <div class="trans" data-when="en">The Gemara answers that Rabbi Yona bar Taḥlifa would designate for himself the earth of the entire valley [patka] before shooting the arrow. That earth would serve as the layer of earth beneath the blood and he would proceed to cover the blood with another layer of earth.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ pageToggle:'English', showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ pageToggle:'עברית',  showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const pt = document.querySelector('.page-lang');
+    if(pt) pt.textContent = LABELS[pageLang].pageToggle;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // page language toggle
+  const pageBtn = document.querySelector('.page-lang');
+  if(pageBtn) pageBtn.addEventListener('click', () => { pageLang = (pageLang === 'he') ? 'en' : 'he'; applyPageLang(); });
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = live page lang)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang;
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+</body>
+</html>
