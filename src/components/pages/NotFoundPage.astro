@@ -1,0 +1,24 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import { resolved, type Lang } from '../../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = resolved(lang);
+const homeHref = lang === 'en' ? '/en' : '/';
+---
+<SiteLayout
+  lang={lang}
+  title={`404 — ${t.brand}`}
+  description={t.notFoundBody}
+  canonicalPath="/404"
+>
+  <section class="notfound container narrow">
+    <div class="kicker">{t.notFoundKicker}</div>
+    <h1>{t.notFoundTitle}</h1>
+    <p>{t.notFoundBody}</p>
+    <a class="home-link" href={homeHref}>{t.notFoundHome}</a>
+  </section>
+</SiteLayout>

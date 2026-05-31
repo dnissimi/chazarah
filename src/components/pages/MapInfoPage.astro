@@ -1,0 +1,235 @@
+---
+import { getCollection } from 'astro:content';
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import { resolved, type Lang } from '../../i18n/strings';
+import { SITE } from '../../i18n/urls';
+import {
+  buildRequestUrl,
+  buildFeedbackUrl,
+  deriveAdjacents,
+  syntheticRefFromUrl,
+  type Corpus,
+  type MapEntrySummary,
+} from '../../lib/map-info';
+import { formatRef } from '../../lib/library';
+import { hebrewNumeral } from '../../lib/browse';
+
+interface Props {
+  lang: Lang;
+  corpus: Corpus;
+  book: string;
+  location: string;
+}
+const { lang, corpus: typedCorpus, book, location } = Astro.props;
+const isEn = lang === 'en';
+const t = resolved(lang);
+const pfx = isEn ? '/en' : '';
+
+const allMaps = await getCollection('maps');
+const collectionEntries: MapEntrySummary[] = allMaps.map((entry) => ({
+  corpus: entry.data.corpus,
+  book: entry.data.book,
+  location: entry.data.location,
+  topic: entry.data.topic,
+}));
+
+const entry = allMaps.find(
+  (m) => m.data.corpus === typedCorpus && m.data.book === book && m.data.location === location,
+);
+
+const sefariaRef = entry?.data.sefariaRef ?? syntheticRefFromUrl(book, location);
+const feedbackHref = `${pfx}${buildFeedbackUrl(sefariaRef)}`;
+const adjacents = deriveAdjacents(collectionEntries, book, location);
+
+const canonicalPath = `/map/${typedCorpus}/${book}/${location}`;
+const pageTitle = entry
+  ? `${isEn ? entry.data.title.en : entry.data.title.he} — ${t.brand}`
+  : `${sefariaRef} — ${t.brand}`;
+const description = entry
+  ? (isEn ? entry.data.blurb.en : entry.data.blurb.he)
+  : t.mapInfoEmptyBody;
+
+// Bilingual ref formatting for any visible {book, location} pair on this page.
+const headRefHe = entry ? formatRef(entry.data.book, entry.data.location, 'he') : '';
+const headRefEn = entry ? formatRef(entry.data.book, entry.data.location, 'en') : '';
+const emptyRefHe = formatRef(book, location, 'he');
+const emptyRefEn = formatRef(book, location, 'en');
+
+function dafHe(loc: string): string {
+  const n = Number(loc);
+  return Number.isInteger(n) && n >= 1 && n <= 499 ? hebrewNumeral(n) : loc;
+}
+
+// Absolute URL for a language-neutral path, in the page's own language.
+const abs = (path: string) => `${SITE}${isEn ? `/en${path === '/' ? '' : path}` : path === '/' ? '/' : path}`;
+
+const jsonLd: unknown[] = [];
+if (entry) {
+  jsonLd.push({
+    '@context': 'https://schema.org',
+    '@type': 'LearningResource',
+    name: isEn ? entry.data.title.en : entry.data.title.he,
+    description,
+    inLanguage: lang,
+    url: abs(canonicalPath),
+    learningResourceType: 'Sugya flowchart',
+    about: entry.data.sefariaRef,
+    isPartOf: { '@type': 'WebSite', name: t.brand, url: SITE },
+  });
+  jsonLd.push({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t.brand, item: abs('/') },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: formatRef(book, '', lang),
+        item: abs(`/map/${typedCorpus}/${book}`),
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: isEn ? headRefEn : headRefHe,
+        item: abs(canonicalPath),
+      },
+    ],
+  });
+}
+---
+<SiteLayout
+  lang={lang}
+  title={pageTitle}
+  description={description}
+  canonicalPath={canonicalPath}
+  ogType="article"
+  jsonLd={jsonLd}
+>
+  <article class="map-info container narrow">
+    {entry ? (
+      <>
+        <header class="map-info-header">
+          <h1 class="map-info-title">{isEn ? entry.data.title.en : entry.data.title.he}</h1>
+          <p class="map-info-ref">
+            <span class="label">{t.mapInfoSefariaRefLabel}</span>
+            <span class="value">{isEn ? headRefEn : headRefHe}</span>
+          </p>
+          <p class="map-info-blurb">{isEn ? entry.data.blurb.en : entry.data.blurb.he}</p>
+        </header>
+
+        {/* Single open-map CTA — picks the variant matching the active site
+            language (fallback: the first language this map ships in). The map
+            itself has its own internal language toggle once you're inside. */}
+        <section class="map-info-open" aria-label={t.mapInfoOpenVariant}>
+          <a
+            class="btn btn-primary map-info-open-btn"
+            href={`/map/${typedCorpus}/${book}/${location}/${entry.data.languages.includes(lang) ? lang : entry.data.languages[0]}`}
+            data-map-open
+            data-map-base={`/map/${typedCorpus}/${book}/${location}`}
+            data-map-langs={entry.data.languages.join(',')}
+          >{t.mapInfoOpenVariant}</a>
+        </section>
+
+        <section class="map-info-adjacent" aria-labelledby="map-info-adjacent-heading">
+          <h2 id="map-info-adjacent-heading">{t.mapInfoAdjacentHeading}</h2>
+          <div class="map-info-adjacent-grid">
+            {(['previous', 'next'] as const).map((side) => {
+              const slot = adjacents[side];
+              const labelText = side === 'previous' ? t.mapInfoAdjacentPrev : t.mapInfoAdjacentNext;
+              if (!slot) {
+                return <div class="map-info-adjacent-card map-info-adjacent-card--end" aria-hidden="true"></div>;
+              }
+              if (slot.entry) {
+                const adjHref = `${pfx}/map/${slot.entry.corpus}/${slot.entry.book}/${slot.entry.location}`;
+                const locHe = dafHe(slot.entry.location);
+                return (
+                  <a class="map-info-adjacent-card" href={adjHref}>
+                    <span class="map-info-adjacent-kicker">{labelText}</span>
+                    <span class="map-info-adjacent-location">{isEn ? slot.entry.location : locHe}</span>
+                    {slot.entry.topic ? (
+                      <span class="map-info-adjacent-topic">{isEn ? slot.entry.topic.en : slot.entry.topic.he}</span>
+                    ) : null}
+                  </a>
+                );
+              }
+              const adjRef = syntheticRefFromUrl(book, slot.location);
+              const requestHref = `${pfx}${buildRequestUrl(adjRef, lang === 'en' ? 'en' : 'he')}`;
+              const locHe = dafHe(slot.location);
+              return (
+                <a class="map-info-adjacent-card map-info-adjacent-card--missing" href={requestHref}>
+                  <span class="map-info-adjacent-kicker">{labelText}</span>
+                  <span class="map-info-adjacent-location">{isEn ? slot.location : locHe}</span>
+                  <span class="map-info-adjacent-note">{t.mapInfoAdjacentNoMap}</span>
+                  <span class="map-info-adjacent-action">{t.mapInfoAdjacentRequest}</span>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+
+        <section class="map-info-feedback" aria-labelledby="map-info-feedback-heading">
+          <h2 id="map-info-feedback-heading">{t.mapInfoFeedbackHeading}</h2>
+          <p class="map-info-feedback-body">{t.mapInfoFeedbackBody}</p>
+          <a class="btn btn-primary" href={feedbackHref}>{t.mapInfoFeedbackBtn}</a>
+        </section>
+
+        <footer class="map-info-meta">
+          <span class="label">{t.mapInfoUpdated}</span>
+          <time datetime={entry.data.updated}>{entry.data.updated}</time>
+        </footer>
+      </>
+    ) : (
+      <div class="map-info-empty">
+        <p class="map-info-empty-kicker">{t.mapInfoEmptyRefLabel}</p>
+        <h1 class="map-info-empty-ref">{isEn ? emptyRefEn : emptyRefHe}</h1>
+        <p class="map-info-empty-title">{t.mapInfoEmptyTitle}</p>
+        <p class="map-info-empty-body">{t.mapInfoEmptyBody}</p>
+        <a class="btn btn-primary" href={`${pfx}${buildRequestUrl(sefariaRef, lang === 'en' ? 'en' : 'he')}`}>{t.mapInfoEmptyRequestBtn}</a>
+      </div>
+    )}
+  </article>
+  {entry && (
+    <script
+      is:inline
+      type="application/json"
+      id="visitor-recents-data"
+      set:html={JSON.stringify({
+        corpus: typedCorpus,
+        book,
+        location,
+        topic: entry.data.topic,
+        ref: entry.data.sefariaRef,
+      })}
+    />
+  )}
+
+  {/* Keep the "Open map" button pointed at the variant matching the page
+      language (fallback: the first language this map ships in). */}
+  <script is:inline>
+    (function () {
+      const btn = document.querySelector('[data-map-open]');
+      if (!btn) return;
+      const base = btn.getAttribute('data-map-base') || '';
+      const langs = (btn.getAttribute('data-map-langs') || '').split(',').filter(Boolean);
+      if (langs.length === 0) return;
+      const active = document.documentElement.lang === 'en' ? 'en' : 'he';
+      const pick = langs.includes(active) ? active : langs[0];
+      btn.href = `${base}/${pick}`;
+    })();
+  </script>
+</SiteLayout>
+
+<script>
+  import { record, type VisitorRecentInput } from '../../lib/visitor-recents';
+
+  const blob = document.getElementById('visitor-recents-data');
+  if (blob && blob.textContent) {
+    try {
+      const data = JSON.parse(blob.textContent) as VisitorRecentInput;
+      const storage = typeof window !== 'undefined' ? window.localStorage : null;
+      record(data, storage);
+    } catch {
+      /* malformed blob — skip */
+    }
+  }
+</script>

@@ -296,6 +296,16 @@ export function t(lang: Lang, key: StringKey): string {
   return strings[lang][key] ?? he[key];
 }
 
+/**
+ * A fully-resolved string table for a language: English values where present,
+ * Hebrew as the fallback for any key `strings.en` doesn't define. Pages render
+ * server-side from this (`const t = resolved(lang)`) so every `t.key` is a real
+ * string in the page's own language — no client-side swap, no `undefined`.
+ */
+export function resolved(lang: Lang): Record<StringKey, string> {
+  return lang === 'en' ? { ...he, ...en } : he;
+}
+
 export const DIR: Record<Lang, 'rtl' | 'ltr'> = {
   he: 'rtl',
   en: 'ltr',

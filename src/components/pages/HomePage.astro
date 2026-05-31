@@ -1,0 +1,390 @@
+---
+import { getCollection } from 'astro:content';
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import { resolved, type Lang } from '../../i18n/strings';
+import { SITE } from '../../i18n/urls';
+import { BAVLI_TRACTATES, isRegisteredMasechet, formatRef } from '../../lib/library';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = resolved(lang);
+const isEn = lang === 'en';
+const libraryHref = isEn ? '/en/library' : '/library';
+const requestHref = isEn ? '/en/request' : '/request';
+
+const allMaps = await getCollection('maps');
+const sortedMaps = allMaps
+  .slice()
+  .sort((a, b) => b.data.updated.localeCompare(a.data.updated));
+
+// "Recently added" surfaces the most recent few dapim. Capped at 5 so the
+// homepage stays scannable as the library grows.
+const RECENTLY_ADDED_LIMIT = 5;
+const recentlyAdded = sortedMaps.slice(0, RECENTLY_ADDED_LIMIT);
+
+// Static fallback for the daf-yomi card: the most recent map. The card always
+// renders, and client-side JS upgrades it to today's actual daf-yomi by hitting
+// Sefaria's calendar API. The fallback keeps the page sensible without JS or
+// when the API is unreachable.
+const fallbackMap = sortedMaps[0] ?? null;
+
+// Index of available maps keyed by `${book}/${location}`, so the JS swap can
+// figure out whether today's daf-yomi has a map (open it) or not (request it).
+const mapIndex = allMaps.map((m) => ({
+  book: m.data.book,
+  location: m.data.location,
+  topicHe: m.data.topic.he,
+  topicEn: m.data.topic.en,
+  languages: m.data.languages,
+  ref: m.data.sefariaRef,
+}));
+const mapIndexJson = JSON.stringify(mapIndex);
+
+// Bavli tractate names (en + he + registered flag) — drives the en→slug match
+// for whatever Sefaria's calendar returns ("Megillah 27a" → "megillah", 27).
+const tractateIndex = BAVLI_TRACTATES.map((tr) => ({
+  slug: tr.slug,
+  he: tr.he,
+  en: tr.en,
+  registered: isRegisteredMasechet(tr.slug),
+}));
+const tractateIndexJson = JSON.stringify(tractateIndex);
+
+// Default standalone-map leaf for server-rendered links — the page's own
+// language when the map ships it, else the map's first language.
+const leaf = (langs: string[]) => (langs.includes(lang) ? lang : langs[0]);
+
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'WebSite', name: t.brand, url: SITE, inLanguage: lang },
+  { '@context': 'https://schema.org', '@type': 'Organization', name: t.brand, url: SITE },
+];
+---
+<SiteLayout
+  lang={lang}
+  title={`${t.brand} — ${t.brandSub}`}
+  description={t.homeIntro}
+  canonicalPath="/"
+  jsonLd={jsonLd}
+>
+  <section class="home-hero container">
+    <p class="home-hero-kicker">{t.homeHeroKicker}</p>
+    <h1 class="home-hero-tagline">{t.homeTagline}</h1>
+    <p class="home-hero-intro">{t.homeIntro}</p>
+  </section>
+
+  <section class="home-section home-section-tight">
+    <div class="container">
+      <article class="daf-yomi-card" data-dafyomi-card>
+        <div class="daf-yomi-text">
+          <p class="kicker accent">{t.homeDafYomiKicker}</p>
+          <p class="daf-yomi-meta" data-dafyomi-meta>
+            <span class="daf-yomi-meta-ref">{fallbackMap ? fallbackMap.data.sefariaRef : ''}</span>
+          </p>
+          <h2
+            class="daf-yomi-topic"
+            data-dafyomi-topic
+            data-i18n-he={fallbackMap ? fallbackMap.data.topic.he : t.libraryDafYomiLoading}
+            data-i18n-en={fallbackMap ? fallbackMap.data.topic.en : t.libraryDafYomiLoading}
+          >{fallbackMap ? (isEn ? fallbackMap.data.topic.en : fallbackMap.data.topic.he) : t.libraryDafYomiLoading}</h2>
+          <div class="daf-yomi-actions">
+            {/* Exactly one primary CTA. Server renders "Open map" linked to
+                the fallback (most recent map); JS swaps to "Request map" if
+                today's actual daf-yomi has no map yet. Library link is the
+                always-visible secondary action. */}
+            <a
+              class="btn btn-primary"
+              data-dafyomi-action-map
+              data-recent-link
+              data-map-base={fallbackMap
+                ? `/map/${fallbackMap.data.corpus}/${fallbackMap.data.book}/${fallbackMap.data.location}`
+                : ''}
+              data-map-langs={fallbackMap ? fallbackMap.data.languages.join(',') : ''}
+              href={fallbackMap
+                ? `/map/${fallbackMap.data.corpus}/${fallbackMap.data.book}/${fallbackMap.data.location}/${leaf(fallbackMap.data.languages)}`
+                : '#'}
+              hidden={!fallbackMap}
+            >{t.homeOpenMapCta}</a>
+            <a
+              class="btn btn-primary"
+              data-dafyomi-action-request
+              href={requestHref}
+              hidden
+            >{t.libraryDafYomiRequest}</a>
+            <a class="btn btn-ghost" href={libraryHref}>{t.homeBrowseCta}</a>
+          </div>
+        </div>
+        <div class="daf-yomi-art" aria-hidden="true">
+          <svg viewBox="0 0 480 340" width="100%" role="presentation">
+            <defs>
+              <pattern id="hero-dots" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+                <circle cx="1" cy="1" r="0.7" fill="var(--rule-strong)" opacity="0.35" />
+              </pattern>
+            </defs>
+            <rect x="0" y="0" width="480" height="340" fill="url(#hero-dots)" />
+            <rect x="190" y="20" width="100" height="34" fill="var(--accent)" />
+            <line x1="240" y1="54" x2="90" y2="100" stroke="var(--rule-strong)" />
+            <line x1="240" y1="54" x2="240" y2="100" stroke="var(--rule-strong)" />
+            <line x1="240" y1="54" x2="390" y2="100" stroke="var(--rule-strong)" />
+            <rect x="40"  y="100" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" />
+            <rect x="190" y="100" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" />
+            <rect x="340" y="100" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" />
+            <line x1="90"  y1="134" x2="90"  y2="180" stroke="var(--rule-strong)" />
+            <line x1="240" y1="134" x2="240" y2="180" stroke="var(--rule-strong)" />
+            <line x1="390" y1="134" x2="390" y2="180" stroke="var(--rule-strong)" />
+            <rect x="40"  y="180" width="100" height="34" fill="var(--paper-warm)" stroke="var(--rule-strong)" />
+            <rect x="190" y="180" width="100" height="34" fill="var(--paper-warm)" stroke="var(--rule-strong)" />
+            <rect x="340" y="180" width="100" height="34" fill="var(--paper-warm)" stroke="var(--rule-strong)" />
+            <line x1="90"  y1="214" x2="90"  y2="260" stroke="var(--rule-strong)" />
+            <line x1="390" y1="214" x2="390" y2="260" stroke="var(--rule-strong)" />
+            <rect x="40"  y="260" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" stroke-dasharray="3 3" />
+            <rect x="340" y="260" width="100" height="34" fill="var(--paper-card)" stroke="var(--rule-strong)" stroke-dasharray="3 3" />
+          </svg>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <div class="container">
+      <div class="section-label">
+        <span>{t.homeRecentlyAddedHeading}</span>
+        <span class="section-label-bar" aria-hidden="true"></span>
+      </div>
+      {recentlyAdded.length === 0 ? (
+        <p class="muted">{t.homeRecentlyAddedEmpty}</p>
+      ) : (
+        <div class="popular-scroll">
+          <table class="popular-table">
+            <thead>
+              <tr>
+                <th scope="col">{t.homeColTopic}</th>
+                <th scope="col">{t.homeColRef}</th>
+                <th scope="col">{t.homeColUpdated}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentlyAdded.map((m) => {
+                const base = `/map/${m.data.corpus}/${m.data.book}/${m.data.location}`;
+                const langs = m.data.languages;
+                const href = `${base}/${leaf(langs)}`;
+                const refHe = formatRef(m.data.book, m.data.location, 'he');
+                const refEn = formatRef(m.data.book, m.data.location, 'en');
+                return (
+                  <tr>
+                    <td class="popular-topic">
+                      <a
+                        href={href}
+                        data-recent-link
+                        data-map-base={base}
+                        data-map-langs={langs.join(',')}
+                        data-i18n-he={m.data.topic.he}
+                        data-i18n-en={m.data.topic.en}
+                      >{isEn ? m.data.topic.en : m.data.topic.he}</a>
+                    </td>
+                    <td class="popular-ref" data-i18n-he={refHe} data-i18n-en={refEn}>{isEn ? refEn : refHe}</td>
+                    <td class="popular-updated latin">
+                      <time datetime={m.data.updated}>{m.data.updated}</time>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section
+    id="visitor-recents"
+    class="home-section"
+    hidden
+    aria-labelledby="visitor-recents-heading"
+  >
+    <div class="container">
+      <div class="section-label">
+        <span id="visitor-recents-heading">{t.homeRecentsHeading}</span>
+        <span class="section-label-bar" aria-hidden="true"></span>
+      </div>
+      <ul id="visitor-recents-list" class="recents-list"></ul>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <div class="container">
+      <aside class="request-banner">
+        <div class="request-banner-text">
+          <p class="request-banner-title">{t.homeRequestBannerTitle}</p>
+          <p class="request-banner-sub muted">{t.homeRequestBannerSub}</p>
+        </div>
+        <a class="btn btn-primary" href={requestHref}>{t.homeRequestBannerCta}</a>
+      </aside>
+    </div>
+  </section>
+</SiteLayout>
+
+<script
+  is:inline
+  define:vars={{
+    mapIndexJson,
+    tractateIndexJson,
+  }}
+>
+  // Live daf-yomi: fetch today's daf from Sefaria, swap the card content.
+  // If the API is unreachable, the static fallback (most-recent map) stays.
+  (function () {
+    const card = document.querySelector('[data-dafyomi-card]');
+    if (!card) return;
+    // Chrome links stay within the page's language (he at root, en under /en).
+    const reqBase = document.documentElement.lang === 'en' ? '/en/request' : '/request';
+    const refEl = card.querySelector('.daf-yomi-meta-ref');
+    const topicEl = card.querySelector('[data-dafyomi-topic]');
+    const mapLink = card.querySelector('[data-dafyomi-action-map]');
+    const requestLink = card.querySelector('[data-dafyomi-action-request]');
+    const mapIndex = JSON.parse(mapIndexJson);
+    const tractates = JSON.parse(tractateIndexJson);
+
+    function slugFromSefariaBook(book) {
+      const lc = String(book).toLowerCase();
+      for (const tr of tractates) {
+        if (tr.en.toLowerCase() === lc) return tr.slug;
+      }
+      return null;
+    }
+    function dafToHebrew(n) {
+      if (!Number.isInteger(n) || n < 1 || n > 499) return String(n);
+      const ones = ['', 'א','ב','ג','ד','ה','ו','ז','ח','ט'];
+      const tens = ['', 'י','כ','ל','מ','נ','ס','ע','פ','צ'];
+      const hundreds = ['', 'ק','ר','ש','ת'];
+      let letters = hundreds[Math.floor(n / 100)];
+      const rem = n % 100;
+      if (rem === 15) letters += 'טו';
+      else if (rem === 16) letters += 'טז';
+      else letters += tens[Math.floor(rem / 10)] + ones[rem % 10];
+      if (letters.length === 1) return letters + '׳';
+      return letters.slice(0, -1) + '״' + letters.slice(-1);
+    }
+
+    function applyTodaysDaf(slug, daf, bookHe, bookEn) {
+      const lang = document.documentElement.lang === 'en' ? 'en' : 'he';
+      const mapEntry = mapIndex.find((m) => m.book === slug && m.location === String(daf));
+
+      // Meta ref — formatted to current language.
+      const heRef = `${bookHe} ${dafToHebrew(daf)}`;
+      const enRef = `${bookEn} ${daf}`;
+      refEl.setAttribute('data-i18n-he', heRef);
+      refEl.setAttribute('data-i18n-en', enRef);
+      refEl.textContent = lang === 'en' ? enRef : heRef;
+
+      if (mapEntry) {
+        topicEl.setAttribute('data-i18n-he', mapEntry.topicHe);
+        topicEl.setAttribute('data-i18n-en', mapEntry.topicEn);
+        topicEl.textContent = lang === 'en' ? mapEntry.topicEn : mapEntry.topicHe;
+        // Skip the info page — link straight to the active-lang variant.
+        // Stash the langs the map ships in so the lang switch can re-pick.
+        const langs = Array.isArray(mapEntry.languages) ? mapEntry.languages : [];
+        const pick = langs.includes(lang) ? lang : (langs[0] || 'he');
+        mapLink.href = `/map/talmud/${mapEntry.book}/${mapEntry.location}/${pick}`;
+        mapLink.setAttribute('data-map-base', `/map/talmud/${mapEntry.book}/${mapEntry.location}`);
+        mapLink.setAttribute('data-map-langs', langs.join(','));
+        mapLink.hidden = false;
+        requestLink.hidden = true;
+      } else {
+        // No map for today's daf — invite a request. The library link stays as
+        // the secondary, no separate "browse this masechet" needed.
+        const noMapHe = `אין מפה לדף היומי (${heRef})`;
+        const noMapEn = `No map for today's daf (${enRef})`;
+        topicEl.setAttribute('data-i18n-he', noMapHe);
+        topicEl.setAttribute('data-i18n-en', noMapEn);
+        topicEl.textContent = lang === 'en' ? noMapEn : noMapHe;
+        mapLink.hidden = true;
+        requestLink.href = `${reqBase}?ref=${encodeURIComponent(enRef)}`;
+        requestLink.hidden = false;
+      }
+    }
+
+    fetch('https://www.sefaria.org/api/calendars', { credentials: 'omit' })
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error('calendar HTTP ' + r.status)))
+      .then((data) => {
+        const items = (data && data.calendar_items) || [];
+        const dy = items.find((i) => i.title && i.title.en === 'Daf Yomi');
+        if (!dy || !dy.ref) throw new Error('no Daf Yomi item');
+        const m = String(dy.ref).match(/^(.+?)\s+(\d+)[ab]?$/);
+        if (!m) throw new Error('unparseable ref: ' + dy.ref);
+        const slug = slugFromSefariaBook(m[1]);
+        if (!slug) throw new Error('unknown tractate: ' + m[1]);
+        const tr = tractates.find((t) => t.slug === slug);
+        applyTodaysDaf(slug, Number(m[2]), tr ? tr.he : m[1], tr ? tr.en : m[1]);
+      })
+      .catch(() => {
+        // Leave the static fallback (most-recent map) in place.
+      });
+  })();
+</script>
+
+<script>
+  // Keep each "Recently added" row link pointed at the variant matching the
+  // page language (fallback: the first language each map ships in).
+  (function () {
+    const links = document.querySelectorAll('[data-recent-link]');
+    if (!links.length) return;
+    const active = document.documentElement.lang === 'en' ? 'en' : 'he';
+    for (const a of links) {
+      const base = a.getAttribute('data-map-base') || '';
+      const langs = (a.getAttribute('data-map-langs') || '').split(',').filter(Boolean);
+      if (!base || langs.length === 0) continue;
+      const pick = langs.includes(active) ? active : langs[0];
+      a.setAttribute('href', `${base}/${pick}`);
+    }
+  })();
+</script>
+
+<script>
+  import { list } from '../../lib/visitor-recents';
+  import { formatRef } from '../../lib/library';
+
+  const section = document.getElementById('visitor-recents');
+  const ul = document.getElementById('visitor-recents-list');
+  // Cap the rendered list at the 5 most recently viewed maps. The store still
+  // tracks up to VISITOR_RECENTS_MAX (10), but the surface stays short.
+  const VISITOR_RECENTS_VISIBLE = 5;
+  if (section && ul) {
+    const storage = typeof window !== 'undefined' ? window.localStorage : null;
+    const entries = list(storage).slice(0, VISITOR_RECENTS_VISIBLE);
+    if (entries.length > 0) {
+      const lang = document.documentElement.lang === 'en' ? 'en' : 'he';
+      for (const e of entries) {
+        const li = document.createElement('li');
+        li.className = 'recents-item';
+
+        const a = document.createElement('a');
+        a.className = 'recents-link';
+        // Skip the info-page hop — go straight to the visitor's active-lang
+        // variant of the map. He is the default if the visitor hasn't picked.
+        a.href = `/map/${e.corpus}/${e.book}/${e.location}/${lang}`;
+
+        const topic = document.createElement('span');
+        topic.className = 'recents-topic';
+        topic.setAttribute('data-i18n-he', e.topic.he);
+        topic.setAttribute('data-i18n-en', e.topic.en);
+        topic.textContent = lang === 'en' ? e.topic.en : e.topic.he;
+
+        const refHe = formatRef(e.book, e.location, 'he');
+        const refEn = formatRef(e.book, e.location, 'en');
+        const ref = document.createElement('span');
+        ref.className = 'recents-ref';
+        ref.setAttribute('data-i18n-he', refHe);
+        ref.setAttribute('data-i18n-en', refEn);
+        ref.textContent = lang === 'en' ? refEn : refHe;
+
+        a.appendChild(topic);
+        a.appendChild(ref);
+        li.appendChild(a);
+        ul.appendChild(li);
+      }
+      section.hidden = false;
+    }
+  }
+</script>

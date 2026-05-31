@@ -1,0 +1,575 @@
+---
+import { getCollection } from 'astro:content';
+import { resolved, t as tStr, type Lang } from '../../i18n/strings';
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import {
+  BAVLI_TRACTATES,
+  groupBySeder,
+  isRegisteredMasechet,
+} from '../../lib/library';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const isEn = lang === 'en';
+const t = resolved(lang);
+const pfx = isEn ? '/en' : '';
+
+const allMaps = await getCollection('maps');
+
+// Per-tractate map counts drive the switcher badges.
+const mapCounts: Record<string, number> = {};
+for (const m of allMaps) {
+  if (m.data.corpus !== 'talmud') continue;
+  mapCounts[m.data.book] = (mapCounts[m.data.book] ?? 0) + 1;
+}
+
+// Tractate index for the search box — baked into the page so ref parsing has
+// no network dependency.
+const tractateIndex = BAVLI_TRACTATES.map((tr) => ({
+  slug: tr.slug,
+  he: tr.he,
+  en: tr.en,
+  registered: isRegisteredMasechet(tr.slug),
+}));
+const tractateIndexJson = JSON.stringify(tractateIndex);
+
+// Tiny topic index for substring search across map topics.
+const topicIndex = allMaps.map((m) => ({
+  corpus: m.data.corpus,
+  book: m.data.book,
+  location: m.data.location,
+  topicHe: m.data.topic.he,
+  topicEn: m.data.topic.en,
+  ref: m.data.sefariaRef,
+}));
+const topicIndexJson = JSON.stringify(topicIndex);
+
+const groups = groupBySeder();
+---
+<SiteLayout
+  lang={lang}
+  title={`${t.libraryTitle} — ${t.brand}`}
+  description={t.librarySubtitle}
+  canonicalPath="/library"
+>
+  <article class="library container">
+    <header class="library-header">
+      <h1 class="library-title">{t.libraryTitle}</h1>
+      <p class="library-subtitle muted">{t.librarySubtitle}</p>
+    </header>
+
+    {/* Search — first thing visitors see, since searching beats browsing 37 tractates. */}
+    <section class="library-search" aria-labelledby="library-search-heading">
+      <label class="library-search-label" for="library-search-input">
+        <span class="kicker" id="library-search-heading">{t.librarySearchLabel}</span>
+      </label>
+      <div class="library-search-row">
+        <input
+          id="library-search-input"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          class="library-search-input"
+          placeholder={t.librarySearchPlaceholder}
+        />
+        <button
+          type="button"
+          class="btn btn-ghost library-search-clear"
+          aria-label="clear"
+          hidden
+        >×</button>
+      </div>
+      <div class="library-search-results" hidden></div>
+    </section>
+
+    {/* Seder-grouped switcher — the actual library. */}
+    <section class="library-switcher" aria-labelledby="library-switcher-heading">
+      <div class="section-label">
+        <span id="library-switcher-heading">{t.librarySwitcherHeading}</span>
+        <span class="section-label-bar" aria-hidden="true"></span>
+      </div>
+      <p class="library-switcher-intro muted">{t.librarySwitcherIntro}</p>
+      <div class="library-seder-list">
+        {groups.map((g) => (
+          <section class="library-seder" aria-label={g.he}>
+            <h2 class="library-seder-title">
+              <span>{isEn ? g.en : g.he}</span>
+            </h2>
+            <ul class="library-tractate-grid">
+              {g.tractates.map((tr) => {
+                const count = mapCounts[tr.slug] ?? 0;
+                const registered = isRegisteredMasechet(tr.slug);
+                const linkable = registered || count > 0;
+                const href = linkable
+                  ? `${pfx}/map/talmud/${tr.slug}`
+                  : `${pfx}/request?ref=${encodeURIComponent(tr.en)}`;
+                const countLabelHe = count === 0
+                  ? tStr('he', 'libraryMapCountNone')
+                  : count === 1
+                    ? tStr('he', 'libraryMapCountOne')
+                    : tStr('he', 'libraryMapCountMany').replace('{count}', String(count));
+                const countLabelEn = count === 0
+                  ? tStr('en', 'libraryMapCountNone')
+                  : count === 1
+                    ? tStr('en', 'libraryMapCountOne')
+                    : tStr('en', 'libraryMapCountMany').replace('{count}', String(count));
+                return (
+                  <li
+                    class={`library-tractate ${count > 0 ? 'has-maps' : 'no-maps'} ${linkable ? '' : 'unlinkable'}`}
+                    data-slug={tr.slug}
+                  >
+                    <a class="library-tractate-link" href={href}>
+                      <span class="library-tractate-name">
+                        <span>{isEn ? tr.en : tr.he}</span>
+                      </span>
+                      <span class="library-tractate-count">{isEn ? countLabelEn : countLabelHe}</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </section>
+  </article>
+
+  <script
+    is:inline
+    define:vars={{
+      tractateIndexJson,
+      topicIndexJson,
+    }}
+  >
+    // Search box — ref (Hebrew or English) routes to map/request; topic
+    // substring scans the small baked index of available maps.
+    (function () {
+      const input = document.getElementById('library-search-input');
+      const clearBtn = document.querySelector('.library-search-clear');
+      const resultsEl = document.querySelector('.library-search-results');
+      if (!input || !resultsEl) return;
+      const tractates = JSON.parse(tractateIndexJson);
+      const topicIndex = JSON.parse(topicIndexJson);
+      // Internal links stay within the page language (he at root, en under /en).
+      const pfx = document.documentElement.lang === 'en' ? '/en' : '';
+
+      // Ref parser mirrored from src/lib/library.ts. Kept inline so the
+      // search box has no network or module-resolution dependency at runtime.
+      const HE_VAL = {
+        'א':1,'ב':2,'ג':3,'ד':4,'ה':5,'ו':6,'ז':7,'ח':8,'ט':9,
+        'י':10,'כ':20,'ך':20,'ל':30,'מ':40,'ם':40,'נ':50,'ן':50,
+        'ס':60,'ע':70,'פ':80,'ף':80,'צ':90,'ץ':90,
+        'ק':100,'ר':200,'ש':300,'ת':400,
+      };
+      function parseHebrewNumeral(s) {
+        const cleaned = s.replace(/[׳״'"\s]/g, '').trim();
+        if (!cleaned) return null;
+        let total = 0;
+        for (const ch of cleaned) {
+          const v = HE_VAL[ch];
+          if (v === undefined) return null;
+          total += v;
+        }
+        return total > 0 ? total : null;
+      }
+      function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+      function parseRef(input) {
+        const trimmed = input.trim();
+        if (!trimmed) return null;
+        const sorted = tractates.slice().sort(
+          (a, b) => Math.max(b.en.length, b.he.length) - Math.max(a.en.length, a.he.length),
+        );
+        for (const tr of sorted) {
+          let rest = null;
+          const enRe = new RegExp(`^${esc(tr.en)}(?=\\s|$|\\d)`, 'i');
+          if (enRe.test(trimmed)) rest = trimmed.slice(tr.en.length).trim();
+          else {
+            const heRe = new RegExp(`^${esc(tr.he)}(?=\\s|$|\\d|[\\u0590-\\u05FF])`);
+            if (heRe.test(trimmed)) rest = trimmed.slice(tr.he.length).trim();
+          }
+          if (rest === null) continue;
+          if (rest === '') return { tractate: tr, daf: null };
+          const arabic = rest.match(/^(\d+)/);
+          if (arabic) return { tractate: tr, daf: Number(arabic[1]) };
+          const heRest = rest.replace(/^דף\s*/, '');
+          const heNum = parseHebrewNumeral(heRest);
+          if (heNum !== null && heNum > 0) return { tractate: tr, daf: heNum };
+          return { tractate: tr, daf: null };
+        }
+        return null;
+      }
+
+      function topicMatches(q) {
+        const lc = q.toLowerCase();
+        return topicIndex.filter(
+          (m) => m.topicHe.toLowerCase().includes(lc)
+              || m.topicEn.toLowerCase().includes(lc)
+              || m.ref.toLowerCase().includes(lc),
+        );
+      }
+
+      function dafToHebrew(n) {
+        if (!Number.isInteger(n) || n < 1 || n > 499) return String(n);
+        const ones = ['', 'א','ב','ג','ד','ה','ו','ז','ח','ט'];
+        const tens = ['', 'י','כ','ל','מ','נ','ס','ע','פ','צ'];
+        const hundreds = ['', 'ק','ר','ש','ת'];
+        let letters = hundreds[Math.floor(n / 100)];
+        const rem = n % 100;
+        if (rem === 15) letters += 'טו';
+        else if (rem === 16) letters += 'טז';
+        else letters += tens[Math.floor(rem / 10)] + ones[rem % 10];
+        if (letters.length === 1) return letters + '׳';
+        return letters.slice(0, -1) + '״' + letters.slice(-1);
+      }
+
+      // Hebrew-aware ref formatting. The site ref stored in the YAML is always
+      // English (Sefaria's canonical form); we synthesize the Hebrew form from
+      // the tractate slug → he name + hebrew-numeral daf.
+      function formatRef(slug, location, lang) {
+        if (lang === 'en') {
+          const tr = tractates.find((t) => t.slug === slug);
+          const en = tr ? tr.en : slug;
+          return location ? `${en} ${location}` : en;
+        }
+        const tr = tractates.find((t) => t.slug === slug);
+        const he = tr ? tr.he : slug;
+        if (!location) return he;
+        const n = Number(location);
+        return Number.isInteger(n) ? `${he} ${dafToHebrew(n)}` : `${he} ${location}`;
+      }
+
+      function render(query) {
+        const q = query.trim();
+        resultsEl.innerHTML = '';
+        if (q === '') {
+          resultsEl.hidden = true;
+          clearBtn.hidden = true;
+          return;
+        }
+        clearBtn.hidden = false;
+
+        const lang = document.documentElement.lang === 'en' ? 'en' : 'he';
+        const items = [];
+        const ref = parseRef(q);
+        if (ref) {
+          const refLabel = ref.daf
+            ? formatRef(ref.tractate.slug, String(ref.daf), lang)
+            : (lang === 'en' ? ref.tractate.en : ref.tractate.he);
+          if (ref.daf) {
+            const mapEntry = topicIndex.find(
+              (m) => m.book === ref.tractate.slug && m.location === String(ref.daf),
+            );
+            if (mapEntry) {
+              items.push({
+                kind: 'map',
+                label: lang === 'en' ? mapEntry.topicEn : mapEntry.topicHe,
+                ref: formatRef(mapEntry.book, mapEntry.location, lang),
+                refLang: lang,
+                href: `${pfx}/map/talmud/${mapEntry.book}/${mapEntry.location}`,
+              });
+            } else {
+              items.push({
+                kind: 'request',
+                label: lang === 'en'
+                  ? `Request a map for ${refLabel}`
+                  : `בקשת מפה ל${refLabel}`,
+                ref: '',
+                refLang: lang,
+                href: `${pfx}/request?ref=${encodeURIComponent(`${ref.tractate.en} ${ref.daf}`)}`,
+              });
+            }
+          } else {
+            // Masechet name alone — surface every existing map in that
+            // masechet so typing "מגילה" actually shows the four Megillah
+            // maps and not just a single "Browse all" link.
+            for (const m of topicIndex) {
+              if (m.book !== ref.tractate.slug) continue;
+              items.push({
+                kind: 'map',
+                label: lang === 'en' ? m.topicEn : m.topicHe,
+                ref: formatRef(m.book, m.location, lang),
+                refLang: lang,
+                href: `${pfx}/map/talmud/${m.book}/${m.location}`,
+              });
+            }
+          }
+          items.push({
+            kind: 'masechet',
+            label: lang === 'en'
+              ? `Browse all of ${ref.tractate.en}`
+              : `דפדוף בכל ${ref.tractate.he}`,
+            ref: '',
+            refLang: lang,
+            href: ref.tractate.registered
+              ? `${pfx}/map/talmud/${ref.tractate.slug}`
+              : `${pfx}/request?ref=${encodeURIComponent(ref.tractate.en)}`,
+          });
+        }
+        for (const m of topicMatches(q)) {
+          items.push({
+            kind: 'topic',
+            label: lang === 'en' ? m.topicEn : m.topicHe,
+            ref: formatRef(m.book, m.location, lang),
+            refLang: lang,
+            href: `${pfx}/map/talmud/${m.book}/${m.location}`,
+          });
+        }
+
+        if (items.length === 0) {
+          const empty = document.createElement('p');
+          empty.className = 'library-search-empty muted';
+          const reqRef = encodeURIComponent(q);
+          empty.textContent = lang === 'en'
+            ? `No match for "${q}" — `
+            : `לא נמצאה התאמה ל״${q}״ — `;
+          const a = document.createElement('a');
+          a.className = 'library-search-empty-link';
+          a.href = `${pfx}/request?ref=${reqRef}`;
+          a.textContent = lang === 'en' ? 'request a map' : 'בקשת מפה';
+          empty.appendChild(a);
+          resultsEl.appendChild(empty);
+        } else {
+          const ul = document.createElement('ul');
+          ul.className = 'library-search-list';
+          const seen = new Set();
+          for (const it of items) {
+            if (seen.has(it.href)) continue;
+            seen.add(it.href);
+            const li = document.createElement('li');
+            li.className = 'library-search-item';
+            const a = document.createElement('a');
+            a.className = 'library-search-link';
+            a.href = it.href;
+            const label = document.createElement('span');
+            label.className = 'library-search-link-label';
+            label.textContent = it.label;
+            a.appendChild(label);
+            if (it.ref) {
+              const refSpan = document.createElement('span');
+              // Refs are styled in the body font when Hebrew (e.g. "מגילה כ״ו")
+              // and in the latin font when English (e.g. "Megillah 26").
+              refSpan.className = 'library-search-link-ref' + (it.refLang === 'en' ? ' latin' : '');
+              refSpan.textContent = it.ref;
+              a.appendChild(refSpan);
+            }
+            li.appendChild(a);
+            ul.appendChild(li);
+          }
+          resultsEl.appendChild(ul);
+        }
+        resultsEl.hidden = false;
+      }
+
+      input.addEventListener('input', (e) => render(e.target.value));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          input.value = '';
+          render('');
+        }
+      });
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        render('');
+        input.focus();
+      });
+    })();
+  </script>
+
+  {/* `is:global` because the search-results subtree is built at runtime by
+      JS (createElement) without Astro's scope-class tag, so scoped selectors
+      wouldn't match it — list bullets would leak back in, etc. All the
+      selectors below are page-prefixed (`.library-*`) so global scope is safe. */}
+  <style is:global>
+    .library {
+      padding-top: 32px;
+      padding-bottom: 64px;
+    }
+    .library-header {
+      margin-bottom: 24px;
+    }
+    .library-title {
+      font-family: var(--font-display);
+      font-weight: var(--display-weight);
+      letter-spacing: var(--display-tight);
+      font-size: clamp(28px, 4vw, 40px);
+      margin: 0 0 4px;
+    }
+    .library-subtitle {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    /* Search — first interaction surface */
+    .library-search {
+      margin: 0 0 36px;
+    }
+    .library-search-label .kicker {
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .library-search-row {
+      position: relative;
+      display: flex;
+      align-items: stretch;
+    }
+    .library-search-input {
+      flex: 1;
+      background: var(--paper-card);
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      padding: 12px 16px;
+      font-family: var(--font-body);
+      font-size: 17px;
+      color: var(--ink);
+    }
+    .library-search-input:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .library-search-clear {
+      margin-inline-start: 8px;
+      min-width: 40px;
+      padding: 0 12px;
+      line-height: 1;
+      font-size: 22px;
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      color: var(--ink-2);
+      cursor: pointer;
+    }
+    .library-search-clear:hover {
+      background: var(--paper-warm);
+    }
+    .library-search-results {
+      margin-top: 8px;
+    }
+    .library-search-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .library-search-item {
+      margin: 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .library-search-item:last-child {
+      border-bottom: none;
+    }
+    .library-search-link {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      padding: 10px 4px;
+      color: var(--ink);
+    }
+    .library-search-link:hover .library-search-link-label {
+      color: var(--accent);
+    }
+    .library-search-link-label {
+      font-weight: 500;
+    }
+    .library-search-link-ref {
+      color: var(--ink-3);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .library-search-empty {
+      margin: 0;
+      padding: 10px 4px;
+      color: var(--ink-2);
+    }
+    .library-search-empty-link {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    /* Seder-grouped switcher */
+    .library-switcher-intro {
+      margin: 8px 0 16px;
+      font-size: 14px;
+    }
+    .library-seder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .library-seder-title {
+      margin: 0 0 8px;
+      font-family: var(--font-display);
+      font-weight: var(--display-weight);
+      font-size: 20px;
+      color: var(--accent);
+      border-block-end: 1px solid var(--rule);
+      padding-block-end: 4px;
+    }
+    .library-tractate-grid {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .library-tractate {
+      margin: 0;
+    }
+    .library-tractate-link {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--paper-card);
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      color: var(--ink);
+    }
+    .library-tractate-link:hover {
+      border-color: var(--rule-strong);
+    }
+    .library-tractate.no-maps .library-tractate-link {
+      background: transparent;
+    }
+    .library-tractate.no-maps .library-tractate-name {
+      color: var(--ink-2);
+    }
+    .library-tractate-name {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: var(--display-weight);
+    }
+    .library-tractate-count {
+      font-size: 12px;
+      color: var(--ink-3);
+      white-space: nowrap;
+    }
+    .library-tractate.has-maps .library-tractate-count {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* Buttons — local fallback in case global doesn't define btn-ghost */
+    .btn {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 3px;
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid var(--rule);
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink);
+    }
+    .btn-ghost:hover {
+      background: var(--paper-card);
+      border-color: var(--rule-strong);
+    }
+  </style>
+</SiteLayout>
