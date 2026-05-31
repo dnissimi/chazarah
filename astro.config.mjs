@@ -10,6 +10,11 @@ export default defineConfig({
   // Links across the site are written without a trailing slash (/library,
   // /map/...); pin the behavior so /en/library and friends don't slash-redirect.
   trailingSlash: 'never',
+  // Emit prerendered pages as `name.html` (not `name/index.html`) so Cloudflare
+  // Pages serves them at the no-slash URL directly — otherwise CF 308-redirects
+  // /en/library → /en/library/, which contradicts our no-slash canonicals. With
+  // 'file', static pages match the SSR routes and the canonical/hreflang URLs.
+  build: { format: 'file' },
   adapter: cloudflare({
     platformProxy: { enabled: true },
   }),
