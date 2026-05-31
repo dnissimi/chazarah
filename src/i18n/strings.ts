@@ -88,7 +88,7 @@ const he = {
 
   mapInfoSefariaRefLabel: 'מקור בספריא',
   mapInfoVariantsHeading: 'גרסאות זמינות',
-  mapInfoOpenVariant: 'פתיחה',
+  mapInfoOpenVariant: 'פתחו את המפה',
   mapInfoVariantLangHe: 'עברית',
   mapInfoVariantLangEn: 'אנגלית',
   mapInfoVariantLangYi: 'יידיש',
@@ -228,7 +228,7 @@ const en: Partial<Record<StringKey, string>> = {
 
   mapInfoSefariaRefLabel: 'Sefaria reference',
   mapInfoVariantsHeading: 'Available variants',
-  mapInfoOpenVariant: 'Open',
+  mapInfoOpenVariant: 'Open map',
   mapInfoVariantLangHe: 'Hebrew',
   mapInfoVariantLangEn: 'English',
   mapInfoVariantLangYi: 'Yiddish',

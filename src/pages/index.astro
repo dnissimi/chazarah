@@ -12,6 +12,11 @@ const sortedMaps = allMaps
   .slice()
   .sort((a, b) => b.data.updated.localeCompare(a.data.updated));
 
+// "Recently added" surfaces the most recent few dapim. Capped at 5 so the
+// homepage stays scannable as the library grows.
+const RECENTLY_ADDED_LIMIT = 5;
+const recentlyAdded = sortedMaps.slice(0, RECENTLY_ADDED_LIMIT);
+
 // Static fallback for the daf-yomi card: the most recent map. The card always
 // renders, and client-side JS upgrades it to today's actual daf-yomi by hitting
 // Sefaria's calendar API. The fallback keeps the page sensible without JS or
@@ -123,7 +128,7 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
         <span data-i18n="homeRecentlyAddedHeading">{t.homeRecentlyAddedHeading}</span>
         <span class="section-label-bar" aria-hidden="true"></span>
       </div>
-      {sortedMaps.length === 0 ? (
+      {recentlyAdded.length === 0 ? (
         <p class="muted" data-i18n="homeRecentlyAddedEmpty">{t.homeRecentlyAddedEmpty}</p>
       ) : (
         <div class="popular-scroll">
@@ -137,7 +142,7 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
               </tr>
             </thead>
             <tbody>
-              {sortedMaps.map((m) => {
+              {recentlyAdded.map((m) => {
                 const href = `/map/${m.data.corpus}/${m.data.book}/${m.data.location}`;
                 const refHe = formatRef(m.data.book, m.data.location, 'he');
                 const refEn = formatRef(m.data.book, m.data.location, 'en');
