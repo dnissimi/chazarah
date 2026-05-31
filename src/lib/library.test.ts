@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BAVLI_TRACTATES,
   SEDARIM,
+  formatRef,
   groupBySeder,
   isRegisteredMasechet,
   parseHebrewNumeral,
@@ -105,6 +106,30 @@ describe('parseHebrewNumeral()', () => {
     expect(parseHebrewNumeral('   ')).toBeNull();
     expect(parseHebrewNumeral('26')).toBeNull();
     expect(parseHebrewNumeral('abc')).toBeNull();
+  });
+});
+
+describe('formatRef()', () => {
+  it('formats a {book, location} ref in English', () => {
+    expect(formatRef('megillah', '26', 'en')).toBe('Megillah 26');
+    expect(formatRef('chullin', '142', 'en')).toBe('Chullin 142');
+    expect(formatRef('bava-batra', '100', 'en')).toBe('Bava Batra 100');
+  });
+
+  it('formats a {book, location} ref in Hebrew', () => {
+    expect(formatRef('megillah', '26', 'he')).toBe('מגילה כ״ו');
+    expect(formatRef('chullin', '142', 'he')).toBe('חולין קמ״ב');
+    expect(formatRef('bava-batra', '100', 'he')).toBe('בבא בתרא ק׳');
+  });
+
+  it('handles a masechet-only ref (no location)', () => {
+    expect(formatRef('megillah', '', 'en')).toBe('Megillah');
+    expect(formatRef('megillah', '', 'he')).toBe('מגילה');
+  });
+
+  it('falls back to the location string for non-integer or out-of-range', () => {
+    expect(formatRef('megillah', '2a', 'he')).toBe('מגילה 2a');
+    expect(formatRef('megillah', '500', 'he')).toBe('מגילה 500');
   });
 });
 

@@ -14,7 +14,7 @@
  */
 
 import taxonomyJson from '../data/sefaria-taxonomy.json';
-import { MASECHTOT } from './browse';
+import { MASECHTOT, hebrewNumeral } from './browse';
 
 export type SederSlug = 'zeraim' | 'moed' | 'nashim' | 'nezikin' | 'kodashim' | 'tohorot';
 
@@ -137,6 +137,31 @@ export function parseHebrewNumeral(s: string): number | null {
 export interface RefMatch {
   tractate: TractateInfo;
   daf: number | null;  // null = just the masechet name, no daf part
+}
+
+/**
+ * Format a {book, location} ref for display in the active site language.
+ * The Sefaria ref baked into the YAML is always English ("Megillah 26"); we
+ * synthesize the Hebrew form ("מגילה כ״ו") for any place that renders the
+ * ref next to Hebrew copy.
+ */
+export function formatRef(
+  bookSlug: string,
+  location: string,
+  lang: 'he' | 'en',
+  tractates: readonly TractateInfo[] = BAVLI_TRACTATES,
+): string {
+  const tr = tractates.find((t) => t.slug === bookSlug);
+  if (lang === 'en') {
+    const en = tr ? tr.en : bookSlug;
+    return location ? `${en} ${location}` : en;
+  }
+  const he = tr ? tr.he : bookSlug;
+  if (!location) return he;
+  const n = Number(location);
+  return Number.isInteger(n) && n >= 1 && n <= 499
+    ? `${he} ${hebrewNumeral(n)}`
+    : `${he} ${location}`;
 }
 
 function escapeRegex(s: string): string {

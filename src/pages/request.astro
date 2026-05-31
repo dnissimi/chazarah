@@ -2,6 +2,7 @@
 import SiteLayout from '../layouts/SiteLayout.astro';
 import { strings, DEFAULT_LANG } from '../i18n/strings';
 import { TARGET_LANGS, DEFAULT_TARGET_LANG } from '../lib/request-form';
+import { BAVLI_TRACTATES } from '../lib/library';
 
 const t = strings[DEFAULT_LANG];
 // Public sitekey, baked in at build time. Falls back to Turnstile's always-pass
@@ -25,28 +26,32 @@ const LANG_PILL_KEYS = {
       <form class="request-form" novalidate data-request-form>
         <div class="field">
           <label for="req-ref" data-i18n="requestRefLabel">{t.requestRefLabel}</label>
-          <div class="ref-row">
-            <input
-              type="text"
-              id="req-ref"
-              name="ref"
-              required
-              autocomplete="off"
-              spellcheck="false"
-              data-request-ref
-              data-i18n-placeholder="requestRefPlaceholder"
-              placeholder={t.requestRefPlaceholder}
-            />
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-request-lookup
-              data-i18n="requestLookupBtn"
-            >{t.requestLookupBtn}</button>
-          </div>
+          <input
+            type="text"
+            id="req-ref"
+            name="ref"
+            required
+            autocomplete="off"
+            spellcheck="false"
+            list="masechet-suggestions"
+            data-request-ref
+            data-i18n-placeholder="requestRefPlaceholder"
+            placeholder={t.requestRefPlaceholder}
+          />
+          {/* Bavli tractate names (both Hebrew and English) feed native
+              browser substring matching as the visitor types into a blank
+              form. No JS — the browser handles the dropdown. When the form
+              is opened with ?ref= prefilled this is invisible noise. */}
+          <datalist id="masechet-suggestions">
+            {BAVLI_TRACTATES.map((tr) => (
+              <>
+                <option value={tr.he}></option>
+                <option value={tr.en}></option>
+              </>
+            ))}
+          </datalist>
           <p class="hint" data-i18n="requestRefHint">{t.requestRefHint}</p>
           <p class="error" data-request-ref-error hidden data-i18n="requestRefRequired">{t.requestRefRequired}</p>
-          <div class="lookup-status" data-request-lookup-status hidden aria-live="polite"></div>
         </div>
 
         <fieldset class="field lang-field">
@@ -123,7 +128,6 @@ const LANG_PILL_KEYS = {
   ></script>
 
   <script>
-    import { lookup } from '../lib/sefaria';
     import {
       parseRequestPrefill,
       buildRequestPayload,
@@ -132,14 +136,6 @@ const LANG_PILL_KEYS = {
       type TargetLang,
     } from '../lib/request-form';
     import { strings, DEFAULT_LANG, LANG_STORAGE_KEY, type Lang } from '../i18n/strings';
-
-    type StatusKey =
-      | 'requestLookupResolved'
-      | 'requestLookupNotFound'
-      | 'requestLookupAmbiguous'
-      | 'requestLookupNetwork'
-      | 'requestLookupEmpty'
-      | 'requestLookupLoading';
 
     function activeLang(): Lang {
       try {
@@ -150,12 +146,6 @@ const LANG_PILL_KEYS = {
       }
     }
 
-    function tr(key: StatusKey | 'requestLookupResolved'): string {
-      const lang = activeLang();
-      const table = strings[lang] as Partial<Record<string, string>>;
-      return table[key] ?? strings.he[key as keyof typeof strings.he] ?? '';
-    }
-
     const form = document.querySelector<HTMLFormElement>('[data-request-form]');
     const card = document.querySelector<HTMLElement>('[data-request-card]');
     const successPanel = document.querySelector<HTMLElement>('[data-request-success]');
@@ -163,16 +153,12 @@ const LANG_PILL_KEYS = {
     const refError = document.querySelector<HTMLElement>('[data-request-ref-error]');
     const noteInput = document.querySelector<HTMLTextAreaElement>('[data-request-note]');
     const emailInput = document.querySelector<HTMLInputElement>('[data-request-email]');
-    const lookupBtn = document.querySelector<HTMLButtonElement>('[data-request-lookup]');
-    const lookupStatus = document.querySelector<HTMLElement>('[data-request-lookup-status]');
     const langPills = Array.from(
       document.querySelectorAll<HTMLButtonElement>('[data-request-lang]'),
     );
     const resetBtn = document.querySelector<HTMLButtonElement>('[data-request-reset]');
 
     let selectedLang: TargetLang = DEFAULT_TARGET_LANG;
-    let resolvedRef: string | null = null;
-    let resolvedOk = false;
 
     function setSelectedLang(lang: TargetLang) {
       selectedLang = lang;
@@ -190,54 +176,6 @@ const LANG_PILL_KEYS = {
       setSelectedLang(prefill.lang);
     }
 
-    function clearLookupStatus() {
-      if (!lookupStatus) return;
-      lookupStatus.hidden = true;
-      lookupStatus.textContent = '';
-      lookupStatus.classList.remove('ok', 'soft', 'loading');
-    }
-
-    function showLookupStatus(variant: 'ok' | 'soft' | 'loading', text: string) {
-      if (!lookupStatus) return;
-      lookupStatus.hidden = false;
-      lookupStatus.classList.remove('ok', 'soft', 'loading');
-      lookupStatus.classList.add(variant);
-      lookupStatus.textContent = text;
-    }
-
-    async function runLookup() {
-      if (!refInput) return;
-      const query = refInput.value.trim();
-      resolvedRef = null;
-      resolvedOk = false;
-      if (query === '') {
-        showLookupStatus('soft', tr('requestLookupEmpty'));
-        return;
-      }
-      showLookupStatus('loading', tr('requestLookupLoading'));
-      const result = await lookup(query);
-      if (result.ok) {
-        resolvedRef = result.ref;
-        resolvedOk = true;
-        showLookupStatus('ok', `${tr('requestLookupResolved')} ${result.ref}`);
-        return;
-      }
-      switch (result.reason) {
-        case 'empty':
-          showLookupStatus('soft', tr('requestLookupEmpty'));
-          return;
-        case 'not-found':
-          showLookupStatus('soft', tr('requestLookupNotFound'));
-          return;
-        case 'network':
-          showLookupStatus('soft', tr('requestLookupNetwork'));
-          return;
-        case 'ambiguous':
-          showLookupStatus('soft', tr('requestLookupAmbiguous'));
-          return;
-      }
-    }
-
     function showSuccess() {
       if (card) card.hidden = true;
       if (successPanel) {
@@ -249,9 +187,6 @@ const LANG_PILL_KEYS = {
     function resetForm() {
       if (form) form.reset();
       setSelectedLang(DEFAULT_TARGET_LANG);
-      resolvedRef = null;
-      resolvedOk = false;
-      clearLookupStatus();
       if (refError) refError.hidden = true;
       if (card) card.hidden = false;
       if (successPanel) successPanel.hidden = true;
@@ -266,10 +201,6 @@ const LANG_PILL_KEYS = {
         }
       });
     }
-
-    lookupBtn?.addEventListener('click', () => {
-      void runLookup();
-    });
 
     refInput?.addEventListener('input', () => {
       if (refError && !refError.hidden && refInput.value.trim() !== '') {
@@ -317,8 +248,8 @@ const LANG_PILL_KEYS = {
 
       const payload = buildRequestPayload({
         rawRef,
-        resolvedRef,
-        resolvedOk,
+        resolvedRef: null,
+        resolvedOk: false,
         targetLanguage: selectedLang,
         note: noteInput?.value ?? '',
         email: emailInput?.value ?? '',

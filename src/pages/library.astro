@@ -219,6 +219,22 @@ const groups = groupBySeder();
         return letters.slice(0, -1) + '״' + letters.slice(-1);
       }
 
+      // Hebrew-aware ref formatting. The site ref stored in the YAML is always
+      // English (Sefaria's canonical form); we synthesize the Hebrew form from
+      // the tractate slug → he name + hebrew-numeral daf.
+      function formatRef(slug, location, lang) {
+        if (lang === 'en') {
+          const tr = tractates.find((t) => t.slug === slug);
+          const en = tr ? tr.en : slug;
+          return location ? `${en} ${location}` : en;
+        }
+        const tr = tractates.find((t) => t.slug === slug);
+        const he = tr ? tr.he : slug;
+        if (!location) return he;
+        const n = Number(location);
+        return Number.isInteger(n) ? `${he} ${dafToHebrew(n)}` : `${he} ${location}`;
+      }
+
       function render(query) {
         const q = query.trim();
         resultsEl.innerHTML = '';
@@ -233,11 +249,9 @@ const groups = groupBySeder();
         const items = [];
         const ref = parseRef(q);
         if (ref) {
-          const refHebrewDaf = ref.daf ? dafToHebrew(ref.daf) : '';
-          const trName = lang === 'en' ? ref.tractate.en : ref.tractate.he;
           const refLabel = ref.daf
-            ? (lang === 'en' ? `${ref.tractate.en} ${ref.daf}` : `${ref.tractate.he} ${refHebrewDaf}`)
-            : trName;
+            ? formatRef(ref.tractate.slug, String(ref.daf), lang)
+            : (lang === 'en' ? ref.tractate.en : ref.tractate.he);
           if (ref.daf) {
             const mapEntry = topicIndex.find(
               (m) => m.book === ref.tractate.slug && m.location === String(ref.daf),
@@ -246,7 +260,8 @@ const groups = groupBySeder();
               items.push({
                 kind: 'map',
                 label: lang === 'en' ? mapEntry.topicEn : mapEntry.topicHe,
-                ref: mapEntry.ref,
+                ref: formatRef(mapEntry.book, mapEntry.location, lang),
+                refLang: lang,
                 href: `/map/talmud/${mapEntry.book}/${mapEntry.location}`,
               });
             } else {
@@ -255,7 +270,8 @@ const groups = groupBySeder();
                 label: lang === 'en'
                   ? `Request a map for ${refLabel}`
                   : `בקשת מפה ל${refLabel}`,
-                ref: `${ref.tractate.en} ${ref.daf}`,
+                ref: '',
+                refLang: lang,
                 href: `/request?ref=${encodeURIComponent(`${ref.tractate.en} ${ref.daf}`)}`,
               });
             }
@@ -266,6 +282,7 @@ const groups = groupBySeder();
               ? `Browse all of ${ref.tractate.en}`
               : `דפדוף בכל ${ref.tractate.he}`,
             ref: '',
+            refLang: lang,
             href: ref.tractate.registered
               ? `/map/talmud/${ref.tractate.slug}/`
               : `/request?ref=${encodeURIComponent(ref.tractate.en)}`,
@@ -275,7 +292,8 @@ const groups = groupBySeder();
           items.push({
             kind: 'topic',
             label: lang === 'en' ? m.topicEn : m.topicHe,
-            ref: m.ref,
+            ref: formatRef(m.book, m.location, lang),
+            refLang: lang,
             href: `/map/talmud/${m.book}/${m.location}`,
           });
         }
@@ -311,7 +329,9 @@ const groups = groupBySeder();
             a.appendChild(label);
             if (it.ref) {
               const refSpan = document.createElement('span');
-              refSpan.className = 'library-search-link-ref latin';
+              // Refs are styled in the body font when Hebrew (e.g. "מגילה כ״ו")
+              // and in the latin font when English (e.g. "Megillah 26").
+              refSpan.className = 'library-search-link-ref' + (it.refLang === 'en' ? ' latin' : '');
               refSpan.textContent = it.ref;
               a.appendChild(refSpan);
             }
@@ -338,7 +358,11 @@ const groups = groupBySeder();
     })();
   </script>
 
-  <style>
+  {/* `is:global` because the search-results subtree is built at runtime by
+      JS (createElement) without Astro's scope-class tag, so scoped selectors
+      wouldn't match it — list bullets would leak back in, etc. All the
+      selectors below are page-prefixed (`.library-*`) so global scope is safe. */}
+  <style is:global>
     .library {
       padding-top: 32px;
       padding-bottom: 64px;
@@ -401,30 +425,30 @@ const groups = groupBySeder();
       background: var(--paper-warm);
     }
     .library-search-results {
-      margin-top: 10px;
+      margin-top: 8px;
     }
     .library-search-list {
       list-style: none;
       padding: 0;
       margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    }
+    .library-search-item {
+      margin: 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .library-search-item:last-child {
+      border-bottom: none;
     }
     .library-search-link {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
       gap: 12px;
-      padding: 10px 14px;
-      background: var(--paper-warm);
-      border: 1px solid var(--rule);
-      border-radius: 3px;
+      padding: 10px 4px;
       color: var(--ink);
     }
-    .library-search-link:hover {
-      border-color: var(--rule-strong);
-      background: var(--paper-card);
+    .library-search-link:hover .library-search-link-label {
+      color: var(--accent);
     }
     .library-search-link-label {
       font-weight: 500;
@@ -436,10 +460,8 @@ const groups = groupBySeder();
     }
     .library-search-empty {
       margin: 0;
-      padding: 10px 14px;
-      background: var(--paper-warm);
-      border: 1px dashed var(--rule);
-      border-radius: 3px;
+      padding: 10px 4px;
+      color: var(--ink-2);
     }
     .library-search-empty-link {
       color: var(--accent);
