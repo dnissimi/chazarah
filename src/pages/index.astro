@@ -67,6 +67,10 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
             data-i18n-en={fallbackMap ? fallbackMap.data.topic.en : t.libraryDafYomiLoading}
           >{fallbackMap ? fallbackMap.data.topic.he : t.libraryDafYomiLoading}</h2>
           <div class="daf-yomi-actions">
+            {/* Exactly one primary CTA. Server renders "Open map" linked to
+                the fallback (most recent map); JS swaps to "Request map" if
+                today's actual daf-yomi has no map yet. Library link is the
+                always-visible secondary action. */}
             <a
               class="btn btn-primary"
               data-dafyomi-action-map
@@ -81,13 +85,6 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
               data-i18n="libraryDafYomiRequest"
               hidden
             >{t.libraryDafYomiRequest}</a>
-            <a
-              class="btn btn-ghost"
-              data-dafyomi-action-masechet
-              href="/library"
-              data-i18n="libraryDafYomiBrowseMasechet"
-              hidden
-            >{t.libraryDafYomiBrowseMasechet}</a>
             <a class="btn btn-ghost" href="/library" data-i18n="homeBrowseCta">{t.homeBrowseCta}</a>
           </div>
         </div>
@@ -138,29 +135,34 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
                 <th scope="col" data-i18n="homeColTopic">{t.homeColTopic}</th>
                 <th scope="col" data-i18n="homeColRef">{t.homeColRef}</th>
                 <th scope="col" data-i18n="homeColUpdated">{t.homeColUpdated}</th>
-                <th scope="col" data-i18n="homeColLangs">{t.homeColLangs}</th>
               </tr>
             </thead>
             <tbody>
               {recentlyAdded.map((m) => {
-                const href = `/map/${m.data.corpus}/${m.data.book}/${m.data.location}`;
+                const base = `/map/${m.data.corpus}/${m.data.book}/${m.data.location}`;
+                const langs = m.data.languages;
+                // Default to the Hebrew variant when available (the site's
+                // default lang); JS upgrades the href to match the active
+                // chrome language on load + on language switch.
+                const defaultLang = langs.includes('he') ? 'he' : langs[0];
+                const href = `${base}/${defaultLang}`;
                 const refHe = formatRef(m.data.book, m.data.location, 'he');
                 const refEn = formatRef(m.data.book, m.data.location, 'en');
                 return (
                   <tr>
                     <td class="popular-topic">
-                      <a href={href}
-                         data-i18n-he={m.data.topic.he}
-                         data-i18n-en={m.data.topic.en}>{m.data.topic.he}</a>
+                      <a
+                        href={href}
+                        data-recent-link
+                        data-map-base={base}
+                        data-map-langs={langs.join(',')}
+                        data-i18n-he={m.data.topic.he}
+                        data-i18n-en={m.data.topic.en}
+                      >{m.data.topic.he}</a>
                     </td>
                     <td class="popular-ref" data-i18n-he={refHe} data-i18n-en={refEn}>{refHe}</td>
                     <td class="popular-updated latin">
                       <time datetime={m.data.updated}>{m.data.updated}</time>
-                    </td>
-                    <td class="popular-langs">
-                      {m.data.languages.map((l) => (
-                        <span class="chip">{l.toUpperCase()}</span>
-                      ))}
                     </td>
                   </tr>
                 );
@@ -216,7 +218,6 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
     const topicEl = card.querySelector('[data-dafyomi-topic]');
     const mapLink = card.querySelector('[data-dafyomi-action-map]');
     const requestLink = card.querySelector('[data-dafyomi-action-request]');
-    const masechetLink = card.querySelector('[data-dafyomi-action-masechet]');
     const mapIndex = JSON.parse(mapIndexJson);
     const tractates = JSON.parse(tractateIndexJson);
 
@@ -244,7 +245,6 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
     function applyTodaysDaf(slug, daf, bookHe, bookEn) {
       const lang = document.documentElement.lang === 'en' ? 'en' : 'he';
       const mapEntry = mapIndex.find((m) => m.book === slug && m.location === String(daf));
-      const tr = tractates.find((t) => t.slug === slug);
 
       // Meta ref — formatted to current language.
       const heRef = `${bookHe} ${dafToHebrew(daf)}`;
@@ -260,9 +260,9 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
         mapLink.href = `/map/talmud/${mapEntry.book}/${mapEntry.location}`;
         mapLink.hidden = false;
         requestLink.hidden = true;
-        masechetLink.hidden = true;
       } else {
-        // No map for today's daf — invite a request and offer the masechet grid.
+        // No map for today's daf — invite a request. The library link stays as
+        // the secondary, no separate "browse this masechet" needed.
         const noMapHe = `אין מפה לדף היומי (${heRef})`;
         const noMapEn = `No map for today's daf (${enRef})`;
         topicEl.setAttribute('data-i18n-he', noMapHe);
@@ -271,8 +271,6 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
         mapLink.hidden = true;
         requestLink.href = `/request?ref=${encodeURIComponent(enRef)}`;
         requestLink.hidden = false;
-        masechetLink.href = (tr && tr.registered) ? `/map/talmud/${slug}/` : '/library';
-        masechetLink.hidden = false;
       }
     }
 
@@ -297,6 +295,30 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
 </script>
 
 <script>
+  // Keep each "Recently added" row link pointed at the variant matching the
+  // active site language (fallback: the first language each map ships in).
+  // Runs once on load, and again whenever the visitor flips the chrome lang.
+  (function () {
+    const links = document.querySelectorAll('[data-recent-link]');
+    if (!links.length) return;
+    function applyHrefs() {
+      const active = document.documentElement.lang === 'en' ? 'en' : 'he';
+      for (const a of links) {
+        const base = a.getAttribute('data-map-base') || '';
+        const langs = (a.getAttribute('data-map-langs') || '').split(',').filter(Boolean);
+        if (!base || langs.length === 0) continue;
+        const pick = langs.includes(active) ? active : langs[0];
+        a.setAttribute('href', `${base}/${pick}`);
+      }
+    }
+    applyHrefs();
+    document.querySelectorAll('.lang-switcher button[data-lang]').forEach((b) => {
+      b.addEventListener('click', () => setTimeout(applyHrefs, 0));
+    });
+  })();
+</script>
+
+<script>
   import { list } from '../lib/visitor-recents';
   import { formatRef } from '../lib/library';
 
@@ -313,7 +335,9 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
 
         const a = document.createElement('a');
         a.className = 'recents-link';
-        a.href = `/map/${e.corpus}/${e.book}/${e.location}`;
+        // Skip the info-page hop — go straight to the visitor's active-lang
+        // variant of the map. He is the default if the visitor hasn't picked.
+        a.href = `/map/${e.corpus}/${e.book}/${e.location}/${lang}`;
 
         const topic = document.createElement('span');
         topic.className = 'recents-topic';
