@@ -25,8 +25,18 @@ const t = strings[DEFAULT_LANG];
         data-i18n-aria-label="langGroupLabel"
         aria-label={t.langGroupLabel}
       >
-        <button type="button" data-lang="he" data-i18n="langLabelHe">{t.langLabelHe}</button>
-        <button type="button" data-lang="en" data-i18n="langLabelEn">{t.langLabelEn}</button>
+        {/* Two labels per button: the full word for desktop, a compact one-
+            letter form for mobile. CSS picks which is visible. No data-i18n
+            here on purpose — the language buttons always show their own name
+            in their own language, independent of the active chrome language. */}
+        <button type="button" data-lang="he" aria-label="עברית">
+          <span class="lang-toggle-full">עברית</span>
+          <span class="lang-toggle-short" aria-hidden="true">ע</span>
+        </button>
+        <button type="button" data-lang="en" aria-label="English">
+          <span class="lang-toggle-full">English</span>
+          <span class="lang-toggle-short" aria-hidden="true">EN</span>
+        </button>
       </div>
     </div>
   </div>
