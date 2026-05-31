@@ -112,6 +112,15 @@ const TURNSTILE_SITEKEY =
     };
 
     function activeLang(): Lang {
+      // Match SiteLayout's currentLang(): URL `?lang=` is a per-load override
+      // (used by the gemara-map feedback iframe to open this form in the
+      // calling page's language); localStorage stays the persistent preference.
+      try {
+        const q = new URLSearchParams(window.location.search).get('lang');
+        if (q === 'he' || q === 'en') return q;
+      } catch {
+        /* ignore */
+      }
       try {
         const stored = localStorage.getItem(LANG_STORAGE_KEY);
         return stored === 'en' ? 'en' : 'he';

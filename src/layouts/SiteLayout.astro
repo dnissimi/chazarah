@@ -11,6 +11,12 @@ const { title } = Astro.props;
 const lang = DEFAULT_LANG;
 const dir = DIR[lang];
 
+// `?embed=1` strips site chrome (header/footer) so the slot can fill an iframe
+// cleanly — used by the gemara-map "report a correction" modal (see
+// docs/specs/map-wiring.md refinement 2026-05-30). Detected client-side in the
+// pre-paint script below (this layout is wrapped by mostly-static pages, so a
+// server-side Astro.url check would be empty at build time).
+
 // Inline the strings table so the client-side switcher can read it without a fetch.
 const stringsJson = JSON.stringify(strings);
 ---
@@ -28,16 +34,45 @@ const stringsJson = JSON.stringify(strings);
       href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Assistant:wght@300;400;500;600;700&display=swap"
     />
 
-    {/* Apply stored language before paint so dir/lang don't flicker. */}
+    {/* Embed mode (set by the pre-paint script when `?embed=1`): page is hosted
+        inside an iframe (e.g. the gemara-map feedback modal) — hide outer chrome
+        so the slot fills the iframe cleanly. */}
+    <style is:global>
+      html[data-embed="1"] .site-header,
+      html[data-embed="1"] .site-footer{display:none}
+      html[data-embed="1"] .shell{padding:0;min-height:auto}
+      html[data-embed="1"] .site-main{padding-block:0;min-height:auto}
+      html[data-embed="1"] .container{padding-block:1rem}
+    </style>
+
+    {/* Apply language before paint so dir/lang don't flicker. URL `?lang=` is a
+        per-load override (lets the gemara-map iframe open /feedback in the calling
+        page's language); localStorage stays the persistent preference. */}
     <script is:inline define:vars={{ key: LANG_STORAGE_KEY }}>
       try {
-        const stored = localStorage.getItem(key);
-        if (stored === 'he' || stored === 'en') {
-          document.documentElement.lang = stored;
-          document.documentElement.dir = stored === 'he' ? 'rtl' : 'ltr';
+        const params = new URLSearchParams(location.search);
+        // Language: URL `?lang=` is a per-load override (lets the gemara-map iframe
+        // open /feedback in the calling page's language); localStorage stays the
+        // persistent preference.
+        let lang = null;
+        const q = params.get('lang');
+        if (q === 'he' || q === 'en') {
+          lang = q;
+        } else {
+          const stored = localStorage.getItem(key);
+          if (stored === 'he' || stored === 'en') lang = stored;
+        }
+        if (lang) {
+          document.documentElement.lang = lang;
+          document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+        }
+        // Embed mode: `?embed=1` flags this page as hosted inside an iframe (e.g.
+        // the gemara-map feedback modal). CSS hides the site chrome accordingly.
+        if (params.get('embed') === '1') {
+          document.documentElement.dataset.embed = '1';
         }
       } catch (_) {
-        /* localStorage unavailable — render in the default Hebrew. */
+        /* storage/URL unavailable — render in the default Hebrew. */
       }
     </script>
   </head>
@@ -55,6 +90,12 @@ const stringsJson = JSON.stringify(strings);
       const STRINGS = JSON.parse(stringsJson);
 
       function currentLang() {
+        // URL `?lang=` is a per-load override (e.g. /feedback?lang=en in the
+        // gemara-map iframe); localStorage is the persistent preference.
+        try {
+          const q = new URLSearchParams(location.search).get('lang');
+          if (q === 'he' || q === 'en') return q;
+        } catch (_) { /* ignore */ }
         const stored = localStorage.getItem(storageKey);
         return stored === 'en' ? 'en' : 'he';
       }

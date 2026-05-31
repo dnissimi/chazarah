@@ -204,3 +204,118 @@ leaving the page.
 
 Both items are template/skill changes; they ride along with the bilingual +
 metadata work when the `gemara-map` skill is updated.
+
+---
+
+## Finalized change-list — grill-aligned (2026-05-29)
+
+Outcome of a grill-me alignment session against how the skill currently
+operates. This **consolidates and (where noted) refines** the sections above and
+is the implementation guide for the `gemara-map` skill/template update.
+
+### A. Machine-readable metadata — `<head>`, `gemara-map:` namespace
+
+Skill stays **site-agnostic** (emits no URL path). Emit:
+
+- `<meta name="gemara-map:corpus" content="talmud">`
+- `<meta name="gemara-map:book" content="megillah">`
+- `<meta name="gemara-map:location" content="26">`
+- `<meta name="gemara-map:sefaria-ref" content="Megillah 26">` — **daf-level**, not
+  the expanded range shown in the subtitle
+- `<meta name="gemara-map:topic" content="…">` / `…:topic-en` — short (≤6 words)
+- `<meta name="gemara-map:sugya-count" content="6">`
+- `<meta name="gemara-map:languages" content="he,en">`
+- `<meta name="description" content="…takeaway…">` (the `blurb`; English variant too)
+- `<html lang="he">` as the document default; structural `<title>` unchanged.
+
+### B. Bilingual rendering + two orthogonal toggles
+
+- **Page toggle HE⇄EN** — whole-page; sets the *authored* layer: node "meaning"
+  labels, the citation translation column, and all chrome (takeaway, topic,
+  headings, legend). Default comes from the URL path leaf (`/he`|`/en`) read by
+  client JS (ADR 0006), **fallback `he`**; the toggle also flips `<html lang>`/`dir`.
+- **Per-chart toggle meaning⇄original** — flips that chart's node labels to the
+  **verbatim Aramaic original**; available on *both* language pages.
+- ⇒ each chart carries **three label sources**: `src-he`, `src-en`, `src-ar`
+  (Aramaic shared). Each citation row carries the **full Aramaic original** plus
+  `trans-he` (LLM) and `trans-en` (Davidson); the page toggle shows the right one.
+
+### C. Faithfulness — authored layer vs. verbatim original (HARD RULE)
+
+- **Authored layer** (node "meaning" labels, `topic`, `blurb`/takeaway, `title`,
+  headings): written by the skill in **both HE & EN**, informed by the source —
+  owner's IP. *Understanding* the source drives this layer.
+- **Original text** (the gemara/Mishnah source — termed "Aramaic" as shorthand,
+  even where the Mishnah is Hebrew): **never authored, reworded, or free-form.**
+  It appears only as verbatim source. In a chart node it may be shortened **only**
+  by splicing contiguous verbatim fragments with `…`; in the **citation panel it
+  appears in full** (no `…`).
+- **Citations** are grouped **one entry per Sefaria segment** (full verbatim
+  original, tagged with the node numbers that draw on it). The **English citation
+  text = Sefaria's Davidson, verbatim** — never LLM (per ADR 0006).
+
+### D. Visual alignment — bone palette + fonts
+
+- Page background `#f1ece2`, ink `#1c1815`, card surface `#f8f3e8`, structural
+  accent indigo `#3730a3` → **navy `#2a3a6b`**. **Keep the functional node colors**
+  (mishnah amber, statement, question, answer, proof, conclusion).
+- **Fonts (softens the table in the appearance section above):** only the
+  **dominant page header (`h1`) → David Libre**; **everything else keeps Frank Ruhl
+  Libre (serif reading content incl. `h2`/`h3`) + Heebo (UI/body)**. **Assistant is
+  *not* adopted.** Net fonts loaded: David Libre + Frank Ruhl Libre + Heebo.
+
+### E. Report-a-correction affordance
+
+- Always-visible, low-contrast-until-hover **pill** → in-place **modal** →
+  `<iframe src="<feedback_path>?ref=<sefaria-ref>&lang=<live current lang>">`.
+- `feedback_path` is **root-relative, same-origin** (maps are served from the site
+  origin; `/feedback` consumes `ref`+`lang` already), default `/feedback`.
+  **Opt-in**: the affordance is emitted only when `feedback_path` is supplied;
+  omitted entirely otherwise (standalone-safe, keeps the skill site-agnostic).
+- `lang` is the **live page language** (reflects the toggle, not just the initial
+  path); the pill label follows the current language too.
+
+### Refinements to the proposals above (recorded so the doc stays consistent)
+
+1. **English flowchart node labels are authored short summaries (per side), not
+   Davidson** — ADR 0006 read literally ("English flowchart labels = Davidson
+   directly") is impractical (Davidson is long elucidation). Davidson-verbatim
+   governs only the **citation** English column + the full Aramaic original; the
+   flowchart "meaning" layer is curation, authored in both languages (consistent
+   with ADR 0006's per-side IP split).
+2. **Font table softened** — only `h1` aligns to David Libre; the reading fonts
+   stay Frank Ruhl Libre / Heebo (owner preference; carries the nikud-heavy text
+   well).
+
+---
+
+## Refinement — 2026-05-30 (UX tweaks after Chullin 26–30 rollout)
+
+After looking at the first bilingual maps in the wild, three small UX changes,
+now encoded in the skill/template:
+
+1. **No on-page HE⇄EN button.** Page language stays **path-driven only** (`/he`
+   or `/en`, fallback `he`). Once on a language page a reader is unlikely to
+   switch mid-page; if they want the other language they navigate to the other
+   URL. Removes a noisy top-corner control. Refines area B.
+2. **Per-chart Aramaic toggle is low-contrast until hover** (opacity ~0.4 →
+   1.0), matching the report-pill pattern. Available but no longer intrusive.
+   Refines area B.
+3. **Feedback iframe URL adds `&embed=1`** —
+   `<feedback_path>?ref=<sefaria-ref>&lang=<page-lang>&embed=1`. This is a hint
+   to the host site to render the form in a **chrome-free embed mode** so it
+   fits the modal. Refines area E.
+
+The two corresponding **site changes** (chazarah-side, not gemara-map-side) are:
+
+- `src/layouts/SiteLayout.astro` — the pre-paint inline script and the body
+  `applyLang` script should honor a `?lang=` URL query param first, then fall
+  back to localStorage, then to `DEFAULT_LANG`. URL becomes a per-load override;
+  `localStorage` remains the persistent preference. (`feedback.astro`'s local
+  `activeLang()` mirrors the same precedence for the variant badge.)
+- `src/layouts/SiteLayout.astro` — when `Astro.url.searchParams.get('embed') ===
+  '1'`, omit `<SiteHeader />` and `<SiteFooter />` from the rendered shell, and
+  collapse `.shell` padding so the slot fills the iframe.
+
+These are spec-only here; apply when convenient (independent of the gemara-map
+skill).
