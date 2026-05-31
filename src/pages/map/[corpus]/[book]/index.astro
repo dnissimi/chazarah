@@ -44,7 +44,12 @@ const t = strings[lang];
 
 const withCount = dapim.filter((d) => d.map !== null).length;
 const totalCount = dapim.length;
-const withoutCount = totalCount - withCount;
+
+// "Mapped" is the default landing view — visitors usually want to open a map,
+// not browse an empty list. But if this masechet has zero maps yet, "Mapped"
+// would render an empty page, so fall back to "All" so visitors can find the
+// daf they want and request a map for it.
+const defaultFilter: 'with' | 'all' = withCount > 0 ? 'with' : 'all';
 
 const pageTitle = `${masechet.name.he} — Chazarah`;
 ---
@@ -73,17 +78,25 @@ const pageTitle = `${masechet.name.he} — Chazarah`;
     <section class="browse-filter" aria-label={t.browseFilterLabel}>
       <span class="kicker" data-i18n="browseFilterLabel">{t.browseFilterLabel}</span>
       <div class="pills" role="tablist">
-        <button class="pill active" type="button" data-filter="all" role="tab" aria-selected="true">
-          <span data-i18n="browseFilterAll">{t.browseFilterAll}</span>
-          <span class="count">{totalCount}</span>
-        </button>
-        <button class="pill" type="button" data-filter="with" role="tab" aria-selected="false">
+        <button
+          class={`pill ${defaultFilter === 'with' ? 'active' : ''}`}
+          type="button"
+          data-filter="with"
+          role="tab"
+          aria-selected={defaultFilter === 'with' ? 'true' : 'false'}
+        >
           <span data-i18n="browseFilterWith">{t.browseFilterWith}</span>
           <span class="count">{withCount}</span>
         </button>
-        <button class="pill" type="button" data-filter="without" role="tab" aria-selected="false">
-          <span data-i18n="browseFilterWithout">{t.browseFilterWithout}</span>
-          <span class="count">{withoutCount}</span>
+        <button
+          class={`pill ${defaultFilter === 'all' ? 'active' : ''}`}
+          type="button"
+          data-filter="all"
+          role="tab"
+          aria-selected={defaultFilter === 'all' ? 'true' : 'false'}
+        >
+          <span data-i18n="browseFilterAll">{t.browseFilterAll}</span>
+          <span class="count">{totalCount}</span>
         </button>
       </div>
     </section>
@@ -94,10 +107,12 @@ const pageTitle = `${masechet.name.he} — Chazarah`;
         const filterKey = has ? 'with' : 'without';
         const mapHref = has ? `/map/${masechet.corpus}/${masechet.book}/${d.map!.location}` : null;
         const requestHref = `/request?ref=${encodeURIComponent(`${masechet.name.en} ${d.n}`)}`;
+        const hiddenOnLoad = defaultFilter === 'with' && !has;
         return (
           <li
             class={`browse-row ${has ? 'has-map' : 'no-map'}`}
             data-filter={filterKey}
+            hidden={hiddenOnLoad}
           >
             <div class="daf-num">
               <span class="daf-num-he">{d.hebrewNum}</span>
@@ -155,7 +170,7 @@ const pageTitle = `${masechet.name.he} — Chazarah`;
       pills.forEach((pill) => {
         pill.addEventListener('click', () => {
           const f = pill.getAttribute('data-filter');
-          if (f === 'all' || f === 'with' || f === 'without') apply(f);
+          if (f === 'all' || f === 'with') apply(f);
         });
       });
     })();
