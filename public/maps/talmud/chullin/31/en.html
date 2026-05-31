@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל״א</title>
+<meta name="description" content="מאיזה אורך סכין מותר להתיז, באילו כלים שוחטים, ודין נפלה סכין — שממנו לומדת הגמרא שאין צורך בכוונה לשחיטת חולין, ומשם לנדה שנאנסה וטבלה שלא בכוונה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="31">
+<meta name="gemara-map:sefaria-ref" content="Chullin 31">
+<meta name="gemara-map:topic-he" content="כוונה בשחיטה ובטבילה — נדה שנאנסה">
+<meta name="gemara-map:topic-en" content="Intent in slaughter and immersion">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל״א">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 31">
+<meta name="gemara-map:blurb-he" content="מאיזה אורך סכין מותר להתיז, באילו כלים שוחטים, ודין נפלה סכין — שממנו לומדת הגמרא שאין צורך בכוונה לשחיטת חולין, ומשם לנדה שנאנסה וטבלה שלא בכוונה.">
+<meta name="gemara-map:blurb-en" content="How long a knife must be to decapitate, which implements may slaughter, and the case of a knife that fell — from which the Gemara derives that slaughter of non-sacred animals needs no intent, leading to a woman who immersed without intent.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל״א</span><span data-when="en">Sugya map — Chullin 31</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל״א א–ל״ב א (ל״א א:ד–ל״ב א:ג) · חמש סוגיות · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 31a–32a (31a:4–32a:3) · five sugyot · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> העמוד פותח בפרטי שחיטה — כמה ארוכה הסכין הדרושה להתזה ובאילו כלים מותר לשחוט — וממשיך למשנת ׳נפלה סכין ושחטה׳. מן הדיוק במשנה (אילו הִפּילהּ — כשרה) לומדת הגמרא שאין צורך בכוונה לשחיטת חולין, ומזהה את רבי נתן כתנא. עיקרון זה מוביל לדיון ארוך אם חולין צריך כוונה — ומשם לדין נדה שנאנסה וטבלה שלא לדעת.</span>
+    <span data-when="en"><b>Bottom line:</b> The daf opens with slaughter mechanics — how long the knife must be to decapitate, and which implements may be used — then turns to the mishna of a knife that fell and slaughtered. From the inference in that mishna (had he dropped it, it would be valid) the Gemara derives that slaughter of non-sacred animals needs no intent, and identifies Rabbi Natan as its tanna. That principle drives a long discussion of whether non-sacred matters require intent — reaching the case of a menstruant who immersed without intent.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+    <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — חמש סוגיות</span><span data-when="en">Overview — five sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · אורך הסכין להתזה — מלא צואר וחוץ לצואר"]:::statement
+  O2["2 · במה שוחטים — איזמל ומחט"]:::statement
+  O3(["3 · משנה: נפלה סכין ושחטה — פסולה"]):::mishnah
+  O4["4 · כוונה בשחיטה? — רבי נתן"]:::statement
+  O5["5 · נדה שנאנסה וטבלה — כוונה בחולין"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · Knife length to decapitate — a full neck and beyond"]:::statement
+  O2["2 · Which implements may slaughter — scalpel and needle"]:::statement
+  O3(["3 · Mishna: a knife that fell and slaughtered is invalid"]):::mishnah
+  O4["4 · Does slaughter need intent? — Rabbi Natan"]:::statement
+  O5["5 · Immersion without intent — intent for non-sacred matters"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+      </script>
+    </div>
+  </section>
+
+    <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">אורך הסכין להתזה — מלא צואר וחוץ לצואר</span><span data-when="en">Knife length for decapitation</span>
+        <span class="ref">Chullin 31a:4-7</span></h2>
+    <div class="lead"><span data-when="he">ר׳ זירא קובע שכדי לשחוט בהתזה צריך סכין כרוחב הצוואר ועוד מעבר לו; הגמרא מסתפקת בכמה ׳חוץ לצואר׳ ופותרת מן המשנה.</span><span data-when="en">Rabbi Zeira holds that to slaughter by decapitation the knife must span a full neck and beyond; the Gemara asks how much ׳beyond׳ means and resolves it from the mishna.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ זירא: סכין מלא צואר וחוץ לצואר"]:::statement
+  Q2{"② ספק: ׳חוץ לצואר׳ — כמלוא צואר או כל שהוא?"}:::question
+  P3["③ תא שמע: ׳מלא צואר אחד׳ — חוץ לשני צווארין"]:::proof
+  C4(["④ מסקנה: ׳חוץ לצואר׳ — כרוחב צואר שלם"]):::conclusion
+  S1 -->|איבעיא| Q2
+  Q2 -->|תא שמע| P3
+  P3 -->|שמע מינה| C4
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Zeira: the knife = a full neck and beyond it"]:::statement
+  Q2{"② Dilemma: ׳beyond׳ — by a full neck, or any amount?"}:::question
+  P3["③ Proof: ׳one full neck׳ means beyond two necks"]:::proof
+  C4(["④ Resolved: ׳beyond׳ = a full neck's breadth"]):::conclusion
+  S1 -->|dilemma| Q2
+  Q2 -->|proof| P3
+  P3 -->|conclude| C4
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הָיָה שׁוֹחֵט וְהִתִּיז … מְלֹא צַוָּאר וְחוּץ לַצַּוָּאר"]:::statement
+  Q2{"② מְלֹא צַוָּאר … כִּמְלֹא צַוָּאר … אוֹ … מַשֶּׁהוּ?"}:::question
+  P3["③ תָּא שְׁמַע … מְלֹא צַוָּאר אֶחָד … חוּץ לִשְׁנֵי צַוָּארִין"]:::proof
+  C4(["④ שְׁמַע מִינַּהּ, מְלֹא צַוָּאר חוּץ לַצַּוָּאר"]):::conclusion
+  S1 -->|איבעיא| Q2
+  Q2 -->|תא שמע| P3
+  P3 -->|שמע מינה| C4
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״א א — Chullin 31a:4</span></div>
+      <div class="orig">הָיָה שׁוֹחֵט וְהִתִּיז, אָמַר רַבִּי זֵירָא: מְלֹא צַוָּאר וְחוּץ לַצַּוָּאר.</div>
+      <div class="trans" data-when="he">אם תוך כדי שחיטה הִתִּיז (חתך את הראש בבת אחת) — אמר ר׳ זירא: השחיטה כשרה רק אם אורך הסכין הוא כרוחב הצוואר כולו ועוד מעבר לצוואר.</div>
+      <div class="trans" data-when="en">§ The mishna teaches: In a case where one was in the process of slaughtering the animal in the standard manner and he decapitated the animal in one motion, if the length of the knife is equivalent to the breadth of the animal’s entire neck, the slaughter is valid. Rabbi Zeira says: The knife must be equivalent to the breadth of the animal’s entire neck and extend beyond the neck.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״א א — Chullin 31a:5</span></div>
+      <div class="orig">אִיבַּעְיָא לְהוּ: מְלֹא צַוָּאר וְחוּץ לַצַּוָּאר כִּמְלֹא צַוָּאר, דַּהֲווֹ לַהּ תְּרֵי צַוָּארֵי, אוֹ דִלְמָא מָלֵא צַוָּאר וְחוּץ לַצַּוָּאר מַשֶּׁהוּ?</div>
+      <div class="trans" data-when="he">נסתפקו: ׳וחוץ לצואר׳ — האם כרוחב צוואר שלם נוסף (ונמצא הסכין באורך שני צווארים), או שמא די בכל שהוא מעבר לצוואר?</div>
+      <div class="trans" data-when="en">A dilemma was raised before the Sages: Did Rabbi Zeira mean: Equivalent to the breadth of the animal’s entire neck and extend beyond the neck by an amount equivalent to the breadth of the entire neck, in which case the length of the knife would equal the breadth of two necks? Or perhaps he meant: Equivalent to the breadth of the entire neck and beyond the neck by any amount?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״א א — Chullin 31a:6</span></div>
+      <div class="orig">תָּא שְׁמַע: הָיָה שׁוֹחֵט וְהִתִּיז שְׁנֵי רָאשִׁין בְּבַת אַחַת, אִם יֵשׁ לַסַּכִּין מְלֹא צַוָּאר אֶחָד – כָּשֵׁר. מַאי מְלֹא צַוָּאר אֶחָד? אִילֵּימָא מְלֹא צַוָּאר אֶחָד וְתוּ לָא, הַשְׁתָּא בִּבְהֵמָה אַחַת בָּעֵינַן מְלֹא צַוָּאר וְחוּץ לַצַּוָּאר, בִּשְׁתֵּי בְּהֵמוֹת סַגִּי לְהוּ כִּמְלֹא צַוָּאר אֶחָד? אֶלָּא פְּשִׁיטָא מְלֹא צַוָּאר חוּץ לִשְׁנֵי צַוָּארִין.</div>
+      <div class="trans" data-when="he">תא שמע מהמשך המשנה: שחט שני ראשים כאחד והתיזם — אם יש בסכין ׳מלא צואר אחד׳ כשר. ומהו ׳מלא צואר אחד׳? לא ייתכן צוואר אחד בלבד — שהרי לבהמה אחת צריך מלא צואר וחוץ לצואר, וכי לשתיים די במלא צואר אחד?! אלא בהכרח: מלא צואר מעבר לשני הצווארים.</div>
+      <div class="trans" data-when="en">The Gemara suggests: Come and hear proof to resolve the dilemma from the continuation of the mishna: If one was in the process of slaughtering two animals simultaneously, and he decapitated two heads in one motion, if the length of the knife is equivalent to the breadth of an entire neck of one of the animals the slaughter is valid. The Gemara asks: What is the meaning of the phrase: The breadth of an entire neck of one of the animals? If we say that it means the breadth of one entire neck and nothing more, that is difficult. Now, for the slaughter of one animal, we require that the knife be equivalent to the breadth of the animal’s entire neck and extend beyond the neck; for the slaughter of two animals, is it possible that a knife whose length is equivalent to the breadth of one animal’s entire neck would be sufficient? Rather, it is obvious that it means that the length of the knife must be equivalent to the breadth of one entire neck beyond the breadth of two necks.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״א א — Chullin 31a:7</span></div>
+      <div class="orig">שְׁמַע מִינַּהּ, מְלֹא צַוָּאר חוּץ לַצַּוָּאר, שְׁמַע מִינַּהּ.</div>
+      <div class="trans" data-when="he">שמע מינה: כוונת ר׳ זירא ש׳חוץ לצואר׳ היינו כרוחב צוואר שלם נוסף. שמע מינה.</div>
+      <div class="trans" data-when="en">The Gemara suggests: Learn from the mishna that Rabbi Zeira means that the length of the knife must be equivalent to the breadth of the animal’s entire neck and extend beyond the neck by the breadth of the entire neck. The Gemara concludes: Indeed, learn from it that this was Rabbi Zeira’s intent.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">במה שוחטים — איזמל ומחט</span><span data-when="en">Which implements may slaughter</span>
+        <span class="ref">Chullin 31a:8-11</span></h2>
+    <div class="lead"><span data-when="he">המשנה מכשירה שחיטה במשיכה אף בכלי קטן; רב מנשה מסייג לאיזמל בלא קרניים ופוסל מחט, והגמרא מבררת מהו ׳כל שהוא׳.</span><span data-when="en">The mishna validates a back-and-forth cut even with a tiny blade; Rav Menashe limits it to a hornless scalpel and rejects a needle, and the Gemara clarifies what ׳any size׳ means.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① משנה: אף איזמל כשר — רב מנשה: איזמל שאין לו קרניים"]:::statement
+  Q2{"② רב אחא: מחט מהו?"}:::question
+  A2["② מחט מבזע בזע — פסולה"]:::answer
+  Q3{"③ מחט של אושכפי מהו?"}:::question
+  A3["③ ׳כל שהוא׳ = איזמל, פרושי קא מפרש"]:::answer
+  C4["④ הכי נמי מסתברא — ואיזמל אצטריך אטו קרניים, קמ״ל"]:::conclusion
+  S1 -.->|בעיא| Q2
+  Q2 -->|דחייה| A2
+  S1 -.->|בעיא| Q3
+  Q3 -->|תירוץ| A3
+  A3 -->|מסתברא| C4
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Mishna: even a scalpel is valid — Rav Menashe: one without protrusions"]:::statement
+  Q2{"② Rav Aḥa: what about a needle?"}:::question
+  A2["② A needle pierces — invalid"]:::answer
+  Q3{"③ What about a cobbler's needle?"}:::question
+  A3["③ ׳Any size׳ = the scalpel; the mishna explains itself"]:::answer
+  C4["④ Supported — the scalpel was needed lest a decree; it teaches not"]:::conclusion
+  S1 -.->|dilemma| Q2
+  Q2 -->|reject| A2
+  S1 -.->|dilemma| Q3
+  Q3 -->|answer| A3
+  A3 -->|stands to reason| C4
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בְּמֶה דְּבָרִים אֲמוּרִים … אֲפִילּוּ … אִיזְמֵל … אֵין לוֹ קַרְנַיִם"]:::statement
+  Q2{"② מַחְטָא מַאי?"}:::question
+  A2["② מַחְטָא מִבְזָע בָּזַע"]:::answer
+  Q3{"③ מַחְטָא דְּאוּשְׁכָּפֵי, מַאי?"}:::question
+  A3["③ מַאי ״כׇּל שֶׁהוּ״ – אִיזְמֵל, פָּרוֹשֵׁי קָא מְפָרֵשׁ"]:::answer
+  C4["④ הָכִי נָמֵי מִסְתַּבְּרָא … אִיזְמֵל אִצְטְרִיכָא … קָא מַשְׁמַע לַן"]:::conclusion
+  S1 -.->|בעיא| Q2
+  Q2 -->|דחייה| A2
+  S1 -.->|בעיא| Q3
+  Q3 -->|תירוץ| A3
+  A3 -->|מסתברא| C4
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״א א — Chullin 31a:8</span></div>
+      <div class="orig">בַּמֶּה דְּבָרִים אֲמוּרִים – בִּזְמַן שֶׁהוֹלִיךְ וְלֹא הֵבִיא וְכוּ׳. אָמַר רַב מְנַשֶּׁה: בְּאִיזְמֵל שֶׁאֵין לוֹ קַרְנַיִם.</div>
+      <div class="trans" data-when="he">המשנה: כל זה כשהוליך ולא הביא (משך לכיוון אחד בלבד); אבל הוליך והביא — אפילו בכלי כל שהוא, אפילו באיזמל, כשרה. אמר רב מנשה: דווקא באיזמל שאין לו קרניים (בליטות בצדדים), שמא יקרעו את הסימנים.</div>
+      <div class="trans" data-when="en">§ The mishna continues: In what case is this statement said? It is when one drew the knife back and did not draw it forth, or drew it forth and did not draw it back. But if he drew it back and forth, even if the knife was of any length, even if he slaughtered with a scalpel, the slaughter is valid. Rav Menashe said: This is the halakha in the case of a scalpel that does not have protrusions from the sides. If there are protrusions, since the scalpel is short, there is concern that the corners may perforate the simanim or enter between the simanim and invalidate the slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״א א — Chullin 31a:9</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַב אַחָא בְּרֵיהּ דְּרַב אַוְיָא לְרַב מְנַשֶּׁה: מַחְטָא מַאי? אֲמַר לֵיהּ: מַחְטָא מִבְזָע בָּזַע.</div>
+      <div class="trans" data-when="he">שאל רב אחא בריה דרב אויא את רב מנשה: ומה דין שחיטה במחט? השיב לו: מחט נוקבת (מבזעת) את הסימנים ואינה חותכת, ופסולה.</div>
+      <div class="trans" data-when="en">Rav Aḥa, son of Rav Avya, said to Rav Menashe: What is the halakha with regard to slaughter with a needle? Rav Menashe said to him: A needle pierces the simanim, as it perforates the neck instead of cutting it.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״א א — Chullin 31a:10</span></div>
+      <div class="orig">מַחְטָא דְּאוּשְׁכָּפֵי, מַאי? אֲמַר לֵיהּ: תְּנֵינָא ״אֲפִילּוּ כׇּל שֶׁהוּא״. מַאי לָאו מַחְטָא דְּאוּשְׁכָּפֵי? לָא, אִיזְמֵל. אִיזְמֵל בְּהֶדְיָא קָתָנֵי לַהּ! פָּרוֹשֵׁי קָא מְפָרֵשׁ: מַאי ״כׇּל שֶׁהוּ״ – אִיזְמֵל.</div>
+      <div class="trans" data-when="he">ומה דין מחט של אושכפי (של סנדלרים, רחבה וחדה)? השיב: כבר שנינו ׳אפילו כל שהוא׳. וכי ׳כל שהוא׳ היינו מחט של אושכפי? — לא, איזמל. והרי איזמל נשנה במפורש! אלא: ׳כל שהוא׳ מתפרש על האיזמל עצמו.</div>
+      <div class="trans" data-when="en">Rav Aḥa then asked Rav Menashe: What is the halakha with regard to slaughtering with a cobbler’s needle, which is flat and has sharp sides? Rav Menashe said to him: We already learn in the mishna: Even if the knife was of any length, the slaughter is valid. What, is it not referring to slaughter with a cobbler’s needle? The Gemara responds: No. The reference is to slaughtering with a scalpel, which is larger than a cobbler’s needle. The Gemara objects: The tanna teaches the case of a scalpel explicitly in the mishna. Therefore, the phrase in the mishna: A knife of any length, must be referring to an item smaller than a scalpel. The Gemara explains: The subsequent mention of the scalpel is explaining the phrase: Even if the knife was of any length. What is the knife of any length with which slaughter is valid? It is a scalpel.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״א א — Chullin 31a:11</span></div>
+      <div class="orig">הָכִי נָמֵי מִסְתַּבְּרָא, דְּאִי סָלְקָא דַעְתָּךְ מַחְטָא דְּאוּשְׁכָּפֵי, הַשְׁתָּא מַחְטָא דְּאוּשְׁכָּפֵי שַׁרְיָא, אִיזְמֵל מִיבַּעְיָא? אִיזְמֵל אִצְטְרִיכָא לֵיהּ, סָלְקָא דַּעְתָּךְ אָמֵינָא: לִיגְזַר אִיזְמֵל שֶׁאֵין לוֹ קַרְנַיִם אַטּוּ אִיזְמֵל שֶׁיֵּשׁ לוֹ קַרְנַיִם, קָא מַשְׁמַע לַן.</div>
+      <div class="trans" data-when="he">וכן מסתבר: אילו ׳כל שהוא׳ היה מחט של אושכפי — לאחר שהותרה בה השחיטה, למה צריך לומר שהאיזמל (הגדול ממנה) כשר? אלא האיזמל הוצרך: סלקא דעתך לגזור איזמל בלא קרניים אטו איזמל שיש לו קרניים — קא משמע לן שאין גוזרים.</div>
+      <div class="trans" data-when="en">This too stands to reason, as, if it enters your mind that the phrase: A knife of any length, is referring to a cobbler’s needle, now that it is permitted to slaughter with a cobbler’s needle, is it necessary for the tanna to teach that it is permitted to slaughter with a scalpel, which is larger than a cobbler’s needle? The Gemara rejects that reasoning: It is necessary for the mishna to teach both the case of a cobbler’s needle and the case of a scalpel, as it could enter your mind to say that it is prohibited to slaughter with a scalpel even though it is permitted to slaughter with a cobbler’s needle. The reasoning for this distinction would be: Let the Sages issue a decree prohibiting the use of a scalpel with no protrusions due to the prohibition against using a scalpel with protrusions. Therefore, the tanna teaches us that there is no decree and it is permitted to slaughter with a scalpel that has no protrusions.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+        <span data-when="he">משנה: נפלה סכין ושחטה</span><span data-when="en">Mishna: a knife that fell</span>
+        <span class="ref">Chullin 31a:12</span></h2>
+    <div class="lead"><span data-when="he">משנה חדשה: סכין שנפלה מאליה ושחטה — פסולה, שנדרש ׳וזבחת ואכלת׳: מה שאתה זובח אתה אוכל.</span><span data-when="en">A new mishna: a knife that fell on its own and slaughtered is invalid, as ׳you shall slaughter and eat׳ teaches: only what you actively slaughter may you eat.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: נפלה סכין ושחטה — פסולה; ׳וזבחת ואכלת׳"]):::mishnah
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: a knife that fell and slaughtered is invalid — ׳you shall slaughter and eat׳"]):::mishnah
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① נָפְלָה סַכִּין וְשָׁחֲטָה … פְּסוּלָה, שֶׁנֶּאֱמַר ״וְזָבַחְתָּ … וְאָכַלְתָּ״"]):::mishnah
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״א א — Chullin 31a:12</span></div>
+      <div class="orig">מַתְנִי׳ נָפְלָה סַכִּין וְשָׁחֲטָה, אַף עַל פִּי שֶׁשָּׁחֲטָה כְּדַרְכָּהּ – פְּסוּלָה, שֶׁנֶּאֱמַר: ״וְזָבַחְתָּ … וְאָכַלְתָּ״, מַה שֶּׁאַתָּה זוֹבֵחַ אַתָּה אוֹכֵל.</div>
+      <div class="trans" data-when="he">משנה: נפלה סכין מאליה ושחטה — אף שחתכה כדרכה — פסולה, שנאמר ׳וְזָבַחְתָּ … וְאָכַלְתָּ׳: מה שאתה זובח בפעולתך אתה אוכל, ולא מה שנשחט מאליו.</div>
+      <div class="trans" data-when="en">MISHNA: If a knife fell and slaughtered an animal, although the knife slaughtered the animal in the standard manner, the slaughter is not valid, as it is stated: “And you shall slaughter…and you shall eat” (Deuteronomy 27:7), from which it is derived: That which you slaughter you may eat, and that which was slaughtered on its own, you may not eat.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+        <span data-when="he">כוונה בשחיטה — רבי נתן</span><span data-when="en">Intent for slaughter — Rabbi Natan</span>
+        <span class="ref">Chullin 31a:13-17</span></h2>
+    <div class="lead"><span data-when="he">הגמרא מדייקת מן המשנה שאין צורך בכוונה לשחיטה ומזהה את רבי נתן כתנא, ושואלת מדוע הוצרך רבא לומר זאת פעמיים — ומתרצת בצריכותא.</span><span data-when="en">The Gemara infers that slaughter needs no intent, identifies Rabbi Natan as the tanna, and asks why Rava said this twice — answering that both cases are necessary.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① דיוק: דווקא נפלה; הא הפילהּ — כשרה, אף בלא כוונה"]:::statement
+  S2["② מאן תנא? רבא: רבי נתן — זרק סכין ושחטה"]:::statement
+  Q3{"③ והא אמרה רבא חדא זימנא — חרש שוטה וקטן!"}:::question
+  A4["④ צריכא: התם מתכוון לחתיכה; הכא לא"]:::answer
+  A5["⑤ ואי התם — מכוח בן דעת; הכא לא, צריכא"]:::answer
+  S1 -->|מאן תנא| S2
+  S2 -.->|קושיא| Q3
+  Q3 -->|צריכא| A4
+  A4 -->|צריכא| A5
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Inference: only ׳it fell׳; had he dropped it — valid, even without intent"]:::statement
+  S2["② Which tanna? Rava: Rabbi Natan — threw a knife and it slaughtered"]:::statement
+  Q3{"③ But Rava already said this once — deaf-mute, imbecile, minor!"}:::question
+  A4["④ Both needed: there he intends some cut; here, none at all"]:::answer
+  A5["⑤ And there it comes from a competent person; here not — so both"]:::answer
+  S1 -->|which tanna| S2
+  S2 -.->|objection| Q3
+  Q3 -->|both needed| A4
+  A4 -->|both needed| A5
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① טַעְמָא דְּנָפְלָה, הָא הִפִּילָהּ הוּא – כְּשֵׁרָה … דְּלָא מִיכַּוֵּין"]:::statement
+  S2["② מַאן תַּנָּא … אָמַר רָבָא: רַבִּי נָתָן … זָרַק סַכִּין … וְשָׁחֲטָה"]:::statement
+  Q3{"③ וְהָא אַמְרַהּ רָבָא חֲדָא זִימְנָא … וְכוּלָּן שֶׁשָּׁחֲטוּ"}:::question
+  A4["④ צְרִיכָא … מִיכַּוֵּין לְשׁוּם חֲתִיכָה … אֲבָל הָכָא … אֵימָא לָא"]:::answer
+  A5["⑤ מִשּׁוּם דְּקָאָתֵי מִכֹּחַ בֶּן דַּעַת … צְרִיכָא"]:::answer
+  S1 -->|מאן תנא| S2
+  S2 -.->|קושיא| Q3
+  Q3 -->|צריכא| A4
+  A4 -->|צריכא| A5
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״א א — Chullin 31a:13</span></div>
+      <div class="orig">גְּמָ׳ טַעְמָא דְּנָפְלָה, הָא הִפִּילָהּ הוּא – כְּשֵׁרָה, וְאַף עַל גַּב דְּלָא מִיכַּוֵּין.</div>
+      <div class="trans" data-when="he">גמרא: מדוע פסולה? משום שֶׁנָּפְלָה מאליה; הא אם הוא הִפּילהּ (הפיל את הסכין בכוונה לזורקה) ושחטה — כשרה, ואף על פי שלא נתכוון לשחוט.</div>
+      <div class="trans" data-when="en">GEMARA: The mishna teaches that if a knife fell and slaughtered an animal the slaughter is not valid. The Gemara notes: The reason the slaughter is not valid is that the knife fell. But by inference, if one dropped the knife the slaughter is valid, and that is the halakha even though when dropping the knife he did not intend to slaughter the animal.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״א א — Chullin 31a:14</span></div>
+      <div class="orig">מַאן תַּנָּא דְּלָא בָּעֵינַן כַּוָּונָה לִשְׁחִיטָה? אָמַר רָבָא: רַבִּי נָתָן הִיא, דְּתָנֵי אוֹשַׁעְיָא זְעֵירָא דְּמִן חַבְרַיָּא: זָרַק סַכִּין לְנוֹעֳצָהּ בַּכּוֹתֶל, וְהָלְכָה וְשָׁחֲטָה כְּדַרְכָּהּ – רַבִּי נָתָן מַכְשִׁיר, וַחֲכָמִים פּוֹסְלִים. הוּא תָּנֵי לַהּ, וְהוּא אָמַר לַהּ: הֲלָכָה כְּרַבִּי נָתָן.</div>
+      <div class="trans" data-when="he">מיהו התנא שאינו מצריך כוונה לשחיטה? אמר רבא: רבי נתן, כברייתא ששנה אושעיא זעירא: זרק סכין לנעצה בכותל והלכה ושחטה כדרכה — רבי נתן מכשיר וחכמים פוסלים; ואושעיא עצמו פסק הלכה כרבי נתן.</div>
+      <div class="trans" data-when="en">The Gemara asks: Who is the tanna who holds that we do not require intent for slaughter? Rava said: It is Rabbi Natan, as Oshaya, the youngest of the company of Sages, taught a baraita: If one threw a knife to embed it in the wall and in the course of its flight the knife went and slaughtered an animal in its proper manner, Rabbi Natan deems the slaughter valid and the Rabbis deem the slaughter not valid. Oshaya teaches the baraita and he says about it: The halakha is in accordance with the opinion of Rabbi Natan that there is no need for intent to perform a valid act of slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״א א — Chullin 31a:15</span></div>
+      <div class="orig">וְהָא אַמְרַהּ רָבָא חֲדָא זִימְנָא, דִּתְנַן: וְכוּלָּן שֶׁשָּׁחֲטוּ וַאֲחֵרִים רוֹאִין אוֹתָן – שְׁחִיטָתָן כְּשֵׁרָה. וְאָמְרִינַן: מַאן תַּנָּא דְּלָא בָּעֵי כַּוָּונָה לִשְׁחִיטָה? וְאָמַר רָבָא: רַבִּי נָתָן הִיא.</div>
+      <div class="trans" data-when="he">והרי כבר אמר רבא דבר זה פעם אחת: על המשנה (ב ע״א) ׳וכולן — חרש שוטה וקטן — ששחטו ואחרים רואים אותם, שחיטתן כשרה׳, שאל: מיהו התנא שאינו מצריך כוונה? ואמר רבא: רבי נתן. אם כן למה שתי הקביעות?</div>
+      <div class="trans" data-when="en">The Gemara asks: But didn’t Rava already say it one time that the mishna is in accordance with the opinion of Rabbi Natan? As we learned in a mishna (2a): And with regard to any of them, a deaf-mute, an imbecile, or a minor, who slaughtered an animal and others see and supervise them, their slaughter is valid even though they are incapable of intent. And we said: Who is the tanna who holds that we do not require intent for slaughter? And Rava said: It is Rabbi Natan.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״א א — Chullin 31a:16</span></div>
+      <div class="orig">צְרִיכָא, דְּאִי אַשְׁמְועִינַן הָתָם – מִשּׁוּם דְּקָא מִיכַּוֵּין לְשׁוּם חֲתִיכָה בְּעוֹלָם, אֲבָל הָכָא, דְּלָא קָא מִיכַּוֵּין – אֵימָא לָא.</div>
+      <div class="trans" data-when="he">תירוץ (צריכא): אילו השמיענו רק שם (חרש שוטה וקטן) — היינו אומרים שכשרה משום שמתכוון לחתיכה כלשהי; אבל כאן (זריקה לכותל), שאינו מתכוון לחתוך כלל — אימא לא.</div>
+      <div class="trans" data-when="en">The Gemara answers: Both statements are necessary. As had Rava taught us his statement there with regard to a deaf-mute, an imbecile, and a minor, one would have thought that the slaughter is valid due to the fact that although the individual lacks intent to slaughter the animal, he intends his action for the sake of cutting in general. But here, with regard to throwing a knife at the wall, where he does not intend to cut at all, say no, the slaughter is not valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״א א — Chullin 31a:17</span></div>
+      <div class="orig">וְאִי אַשְׁמְעִינַן הָכָא, מִשּׁוּם דְּקָאָתֵי מִכֹּחַ בֶּן דַּעַת, אֲבָל הָתָם דְּלָא קָאָתֵי מִכֹּחַ בֶּן דַּעַת – אֵימָא לָא, צְרִיכָא.</div>
+      <div class="trans" data-when="he">ואילו השמיענו רק כאן (זריקה) — היינו אומרים שכשרה משום שהשחיטה באה מכוח בן דעת; אבל שם (חרש שוטה וקטן) שאינה מכוח בן דעת — אימא לא. לכן צריכא: שתי ההלכות הכרחיות.</div>
+      <div class="trans" data-when="en">And had Rava taught us his statement here with regard to throwing the knife, one would have thought that the slaughter is valid is due to the fact that it comes due to the action of a mentally competent person. But there, with regard to slaughter by a deaf-mute, an imbecile, or a minor, where the slaughter does not come due to the action of a mentally competent person, say that the slaughter is not valid. Therefore, it is necessary for Rava to teach both cases.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+    <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+        <span data-when="he">נדה שנאנסה וטבלה — כוונה בחולין</span><span data-when="en">Immersion without intent — intent for non-sacred matters</span>
+        <span class="ref">Chullin 31a:18-32a:3</span></h2>
+    <div class="lead"><span data-when="he">עיקרון ׳חולין אינו צריך כוונה׳ מוליך לדיון ארוך: מחלוקת רב ורבי יוחנן בנדה שנאנסה וטבלה, סדרת ראיות והתקפות סביב כוונה בטבילה, וחזרה אל רבי נתן וחכמים — עד לדיני שחיטת פרה אדומה עם בהמה ודלעת.</span><span data-when="en">The principle that non-sacred matters need no intent drives a long discussion: the dispute of Rav and Rabbi Yoḥanan over a woman who immersed under compulsion, a chain of proofs and objections about intent in immersion, and a return to Rabbi Natan and the Rabbis — through to slaughtering the red heifer alongside an animal or a gourd.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  R1["① רב: טהורה לביתה, אסורה בתרומה"]:::statement
+  Y1["① ר׳ יוחנן: אף לביתה לא טהרה"]:::statement
+  Q2{"② רבא: כרת הותר — תרומה לא כל שכן?"}:::question
+  A3["③ רב נחמן: בעלה חולין — וחולין אין צריך כוונה"]:::answer
+  Q4{"④ דחייה: שמא יושב ומצפה — וכלים דומיא דאדם"}:::question
+  A5["⑤ אדרבה: מהו דתימא ליגזר — קמ״ל דלא גזרינן"]:::answer
+  P6["⑥ אלא מנלן? מכשירין: ידיו טהורות בלא כוונה"]:::proof
+  Q7{"⑦ איתיביה: ׳הוחזק לחולין׳ — משמע צריך כוונה"}:::question
+  A8["⑧ רב נחמן: ׳אף שהוחזק לחולין — אסור למעשר׳"]:::answer
+  Q9{"⑨ איתיביה: ׳לא הוחזק — כאילו לא טבל׳ כלל?"}:::question
+  A10["⑩ לא — אלא למעשר; וברייתא מפורשת כרב נחמן"]:::answer
+  Q11{"⑪ אביי: תיהוי תיובתא דר׳ יוחנן!"}:::question
+  A12["⑫ רב יוסף: ר׳ יוחנן כר׳ יונתן בן יוסף — טבילה לדעת"]:::answer
+  Q13{"⑬ רב שימי: והא ר׳ יוחנן הלכה כסתם משנה — נפלה סכין!"}:::question
+  A14["⑭ בשחיטה אף ר׳ יונתן מודה — מתעסק בקדשים פסול"]:::answer
+  S15["⑮ רבנן: כוונה לחתיכה; רבא: ׳וזבחת׳ ולא ׳וחתכת׳"]:::statement
+  Q16{"⑯ נדה שנאנסה — חברתה הטבילתה? ואוכלת בתרומה?"}:::question
+  A17["⑰ רב פפא: לר׳ נתן נפלה מן הגשר; לרבנן ירדה להקר"]:::answer
+  S18["⑱ רבא: פרה ובהמה — בכוונה לכו״ע פסולה; מאליה — מחלוקת"]:::statement
+  Q19{"⑲ פשיטא? — צריכא: ׳ושחט אותה׳, קמ״ל"}:::question
+  S20["⑳ דלעת — חתך עמה פסולה; נחתכה — כשרה"]:::statement
+  R1 -.->|מחלוקת| Y1
+  R1 -->|קושיא| Q2
+  Q2 -->|תירוץ| A3
+  A3 -.->|דחייה| Q4
+  Q4 -->|יישוב| A5
+  A5 -->|אלא| P6
+  P6 -.->|מיתיבי| Q7
+  Q7 -->|תירוץ| A8
+  A8 -.->|מיתיבי| Q9
+  Q9 -->|תירוץ| A10
+  A10 -->|לגבי ר׳ יוחנן| Q11
+  Q11 -->|תירוץ| A12
+  A12 -.->|מתקיף| Q13
+  Q13 -->|תירוץ| A14
+  A14 -->|המשך| S15
+  S15 -->|חזרה לנדה| Q16
+  Q16 -->|יישוב| A17
+  A17 -->|ממשיך רבא| S18
+  S18 -.->|פשיטא| Q19
+  Q19 -->|ועוד| S20
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  R1["① Rav: pure to her husband, but barred from teruma"]:::statement
+  Y1["① R. Yoḥanan: not purified even to her husband"]:::statement
+  Q2{"② Rava: karet was permitted — teruma all the more so?"}:::question
+  A3["③ Rav Naḥman: a husband is non-sacred — needs no intent"]:::answer
+  Q4{"④ Rejection: perhaps she waited — and vessels mirror a person"}:::question
+  A5["⑤ On the contrary: lest you decree — it teaches we do not"]:::answer
+  P6["⑥ Rather, from Makhshirin: hands purified without intent"]:::proof
+  Q7{"⑦ Objection: ׳assumed status for non-sacred׳ implies intent"}:::question
+  A8["⑧ Rav Naḥman: ׳though presumed pure, still barred from tithe׳"]:::answer
+  Q9{"⑨ Objection: ׳not presumed = as if he never immersed׳ at all?"}:::question
+  A10["⑩ No — only for tithe; a baraita matches Rav Naḥman"]:::answer
+  Q11{"⑪ Abaye: let this refute Rabbi Yoḥanan!"}:::question
+  A12["⑫ Rav Yosef: Yoḥanan follows R. Yonatan b. Yosef — intent needed"]:::answer
+  Q13{"⑬ Rav Shimi: but Yoḥanan rules like the unattributed mishna — the knife!"}:::question
+  A14["⑭ In slaughter even R. Yonatan concedes — no intent needed"]:::answer
+  S15["⑮ Rabbis: intent to cut; Rava: ׳slaughter,׳ not ׳cut,׳ is written"]:::statement
+  Q16{"⑯ The case? another woman immersed her? and she eats teruma?"}:::question
+  A17["⑰ Rav Pappa: per Natan she fell off a bridge; per Rabbis, to cool off"]:::answer
+  S18["⑱ Rava: heifer + animal — willful disqualifies; incidental disputed"]:::statement
+  Q19{"⑲ Obvious? — necessary: ׳and he shall slaughter it׳"}:::question
+  S20["⑳ A gourd: cut willfully disqualifies; cut incidentally is valid"]:::statement
+  R1 -.->|dispute| Y1
+  R1 -->|objection| Q2
+  Q2 -->|answer| A3
+  A3 -.->|rejection| Q4
+  Q4 -->|defense| A5
+  A5 -->|rather| P6
+  P6 -.->|objection| Q7
+  Q7 -->|answer| A8
+  A8 -.->|objection| Q9
+  Q9 -->|answer| A10
+  A10 -->|as for Yoḥanan| Q11
+  Q11 -->|answer| A12
+  A12 -.->|objection| Q13
+  Q13 -->|answer| A14
+  A14 -->|continues| S15
+  S15 -->|back to the woman| Q16
+  Q16 -->|resolution| A17
+  A17 -->|Rava continues| S18
+  S18 -.->|obvious?| Q19
+  Q19 -->|further| S20
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  R1["① אָמַר רַב יְהוּדָה אָמַר רַב: טְהוֹרָה לְבֵיתָהּ, וַאֲסוּרָה … בִּתְרוּמָה"]:::statement
+  Y1["① וְרַבִּי יוֹחָנָן אָמַר: אַף לְבֵיתָהּ לֹא טָהֲרָה"]:::statement
+  Q2{"② עֲוֹן כָּרֵת הִתַּרְתָּ, אִיסּוּר מִיתָה מִיבַּעְיָא?"}:::question
+  A3["③ בַּעְלָהּ חוּלִּין הוּא, וְחוּלִּין לָא בָּעֵי כַּוָּונָה"]:::answer
+  Q4{"④ דִּלְמָא בְּיוֹשֵׁב וּמְצַפֶּה … וְכֵלִים דּוּמְיָא דְּאָדָם"}:::question
+  A5["⑤ מַהוּ דְּתֵימָא לִיגְזַר … קָא מַשְׁמַע לַן דְּלָא גָּזְרִינַן"]:::answer
+  P6["⑥ אֶלָּא … מְנָלַן? … פֵּירוֹת שֶׁנָּפְלוּ … יָדָיו טְהוֹרוֹת"]:::proof
+  Q7{"⑦ אֵיתִיבֵיהּ … טָבַל לְחוּלִּין וְהוּחְזַק … אָסוּר לְמַעֲשֵׂר"}:::question
+  A8["⑧ אַף עַל פִּי שֶׁהוּחְזַק לְחוּלִּין – אָסוּר לְמַעֲשֵׂר"]:::answer
+  Q9{"⑨ אֵיתִיבֵיהּ: טָבַל וְלֹא הוּחְזַק – כְּאִילּוּ לֹא טָבַל"}:::question
+  A10["⑩ כְּאִילּוּ לֹא טָבַל לְמַעֲשֵׂר … נְפַק דָּק וְאַשְׁכַּח"]:::answer
+  Q11{"⑪ לֵימָא תֶּיהְוֵי תְּיוּבְתָּא דְּרַבִּי יוֹחָנָן?"}:::question
+  A12["⑫ רַבִּי יוֹחָנָן … כְּרַבִּי יוֹנָתָן בֶּן יוֹסֵף … לְדַעַת"]:::answer
+  Q13{"⑬ וּמִי אָמַר ר׳ יוֹחָנָן הָכִי? … הֲלָכָה כִּסְתַם מִשְׁנָה … נָפְלָה סַכִּין"}:::question
+  A14["⑭ בִּשְׁחִיטָה … ר׳ יוֹנָתָן … מוֹדֵי … מִתְעַסֵּק בְּקָדָשִׁים פָּסוּל"]:::answer
+  S15["⑮ לַחֲתִיכָה בָּעֵינַן … מִי כְּתִיב ״וְחָתַכְתָּ״? ״וְזָבַחְתָּ״ כְּתִיב"]:::statement
+  Q16{"⑯ הֵיכִי דָּמֵי … אַנְסַהּ חֲבִירְתַּהּ … אוֹכְלוֹת בִּתְרוּמָה"}:::question
+  A17["⑰ לְרַבִּי נָתָן, שֶׁנָּפְלָה מִן הַגֶּשֶׁר, וּלְרַבָּנַן, שֶׁיָּרְדָה לְהָקֵר"]:::answer
+  S18["⑱ שָׁחַט פָּרָה … בְּהֵמָה אַחֶרֶת עִמָּהּ … פְּסוּלָה … לְרַבִּי נָתָן … לְרַבָּנַן"]:::statement
+  Q19{"⑲ פְּשִׁיטָא! … ״וְשָׁחַט אוֹתָהּ״ … קָא מַשְׁמַע לַן"}:::question
+  S20["⑳ חָתַךְ דַּלַּעַת עִמָּהּ – פְּסוּלָה, נֶחְתְּכָה – כְּשֵׁרָה"]:::statement
+  R1 -.->|מחלוקת| Y1
+  R1 -->|קושיא| Q2
+  Q2 -->|תירוץ| A3
+  A3 -.->|דחייה| Q4
+  Q4 -->|יישוב| A5
+  A5 -->|אלא| P6
+  P6 -.->|מיתיבי| Q7
+  Q7 -->|תירוץ| A8
+  A8 -.->|מיתיבי| Q9
+  Q9 -->|תירוץ| A10
+  A10 -->|לגבי ר׳ יוחנן| Q11
+  Q11 -->|תירוץ| A12
+  A12 -.->|מתקיף| Q13
+  Q13 -->|תירוץ| A14
+  A14 -->|המשך| S15
+  S15 -->|חזרה לנדה| Q16
+  Q16 -->|יישוב| A17
+  A17 -->|ממשיך רבא| S18
+  S18 -.->|פשיטא| Q19
+  Q19 -->|ועוד| S20
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״א א — Chullin 31a:18</span></div>
+      <div class="orig">אִתְּמַר: נִדָּה שֶׁנֶּאֶנְסָה וְטָבְלָה, אָמַר רַב יְהוּדָה אָמַר רַב: טְהוֹרָה לְבֵיתָהּ, וַאֲסוּרָה לֶאֱכוֹל בִּתְרוּמָה. וְרַבִּי יוֹחָנָן אָמַר: אַף לְבֵיתָהּ לֹא טָהֲרָה.</div>
+      <div class="trans" data-when="he">אִתְּמַר: נדה שפסק דמהּ ונאנסה וטבלה (שלא מדעתה). רב יהודה אמר רב: טהורה לבעלה (לביתה), אך אסורה לאכול בתרומה. ורבי יוחנן אמר: אף לביתה לא טהרה.</div>
+      <div class="trans" data-when="en">§ The mishna is now cited as proof in an amoraic dispute. It was stated: With regard to a menstruating woman who, after the menstrual flow ended, was compelled against her will and immersed in a ritual bath, Rav Yehuda says that Rav says: She is ritually pure vis-à-vis her house, i.e., it is permitted for her to engage in intercourse with her husband, but it is prohibited for her to partake of teruma because the immersion is not considered valid for that purpose. And Rabbi Yoḥanan says: She was not purified even vis-à-vis her house.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״א א — Chullin 31a:19</span></div>
+      <div class="orig">אֲמַר לֵיהּ רָבָא לְרַב נַחְמָן, לְרַב דְּאָמַר: טְהוֹרָה לְבֵיתָהּ וַאֲסוּרָה לֶאֱכוֹל בִּתְרוּמָה – עֲוֹן כָּרֵת (הוּתְּרָה) [הִתַּרְתָּ], אִיסּוּר מִיתָה מִיבַּעְיָא?</div>
+      <div class="trans" data-when="he">אמר רבא לרב נחמן: לשיטת רב — קל וחומר תמוה: עוון כרת (ביאת נדה) הותר לה בטבילת אונס; איסור מיתה (תרומה), שקל ממנו, לא כל שכן שיותר? ומדוע אסר רב בתרומה?</div>
+      <div class="trans" data-when="en">Rava said to Rav Naḥman: According to the opinion of Rav, who says that she is ritually pure vis-à-vis her house but it is prohibited for her to partake of teruma, it is difficult. With regard to a transgression punishable by karet, i.e., intercourse with a menstruating woman, she was rendered permitted by immersion against her will; with regard to partaking of teruma, a prohibition punishable by death at the hand of Heaven, which is a lesser punishment, is it necessary to say that it is permitted for her through immersion against her will? Why then does Rav deem it prohibited for her to partake of teruma?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״א א — Chullin 31a:20</span></div>
+      <div class="orig">אֲמַר לֵיהּ: בַּעְלָהּ חוּלִּין הוּא, וְחוּלִּין לָא בָּעֵי כַּוָּונָה. וּמְנָא תֵּימְרָא? דִּתְנַן: גַּל שֶׁנִּתְלַשׁ וּבוֹ אַרְבָּעִים סְאָה וְנָפַל עַל הָאָדָם וְעַל הַכֵּלִים – טְהוֹרִין. מַאי לָאו אָדָם דּוּמְיָא דְּכֵלִים? מָה כֵּלִים דְּלָא מִיכַּוְּונִי, אַף אָדָם נָמֵי לָא בָּעֵי כַּוָּונָה.</div>
+      <div class="trans" data-when="he">אמר לו רב נחמן: בעלה — חולין הוא, וחולין אינו צריך כוונה. ומניין? ממשנה (מקואות): גל שנתלש ובו ארבעים סאה ונפל על אדם או על כלים — טהורין. ולא אדם דומה לכלים? מה כלים אינם מתכוונים ונטהרים, אף אדם אינו צריך כוונה.</div>
+      <div class="trans" data-when="en">Rav Naḥman said to him: The halakhic status of her husband is non-sacred, and non-sacred items do not require intent for purification. And from where do you say so? It is as we learned in a mishna (Mikvaot 5:6): In the case of a wave that was detached from the sea, and in it were forty se’a of water, and that wave fell on an impure person or on impure vessels, they are ritually pure. What, is it not that a person is similar to vessels? Just as vessels do not intend to be purified and they are purified by the wave, so too, a person does not require intent in order to be purified.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״א א — Chullin 31a:21</span></div>
+      <div class="orig">מִמַּאי? דִּלְמָא בְּיוֹשֵׁב וּמְצַפֶּה עָסְקִינַן, אֵימָתַי יִתָּלֵשׁ הַגַּל,</div>
+      <div class="trans" data-when="he">דוחה הגמרא: מניין שזו כוונת המשנה? שמא מדובר ביושב ומצפה מתי יתלש הגל — והרי זו כוונה,</div>
+      <div class="trans" data-when="en">The Gemara rejects that proof: From where is there proof that this is the meaning of the mishna? Perhaps we are dealing with the case of one who sits near the water and waits to determine when the wave will be detached, which is tantamount to having intent to immerse,</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״א ב — Chullin 31b:1</span></div>
+      <div class="orig">וְכֵלִים דּוּמְיָא דְּאָדָם, מָה אָדָם דְּבָעֵינַן כַּוָּונָה, אַף כֵּלִים נָמֵי דְּקָא מְכַוֵּין לְהוּ אָדָם!</div>
+      <div class="trans" data-when="he">וכלים דומים לאדם: מה אדם צריך כוונה, אף כלים — רק כשאדם מתכוון להטבילם. אם כן אין מכאן ראיה שחולין פטור מכוונה.</div>
+      <div class="trans" data-when="en">and vessels are similar to a person: Just as for a person, we require his intent for purification, so too for vessels, they are purified only in a case where a person intends for them to be purified.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״א ב — Chullin 31b:2</span></div>
+      <div class="orig">וְכִי תֵּימָא, בְּיוֹשֵׁב וּמְצַפֶּה, מַאי לְמֵימְרָא?</div>
+      <div class="trans" data-when="he">וכי תאמר שמדובר ביושב ומצפה — מה החידוש בכך? לכאורה פשוט.</div>
+      <div class="trans" data-when="en">And if you would say: If the mishna is referring to the case of one who sits and waits to determine when the wave will be detached, what is the purpose of stating this halakha? It is obvious and introduces no novel element.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״א ב — Chullin 31b:3</span></div>
+      <div class="orig">מַהוּ דְּתֵימָא: לִיגְזַר מִשּׁוּם חַרְדָּלִית שֶׁל גְּשָׁמִים, אִי נָמֵי לִיגְזַר רָאשִׁין אַטּוּ כִּיפִּין, קָא מַשְׁמַע לַן דְּלָא גָּזְרִינַן!</div>
+      <div class="trans" data-when="he">מהו דתימא: נגזור שגל תלוש לא יטהר, שמא יטעו להיטהר בחַרְדָּלִית (זרם מי גשמים), או נגזור שראשי הגלים לא יטהרו אטו כיפין (קשתות הגל באוויר) — קא משמע לן שאין גוזרים.</div>
+      <div class="trans" data-when="en">The Gemara responds that there is a novel element in this halakha. Lest you say: Let us issue a decree that a detached wave does not effect purification due to the concern that otherwise, one would receive the mistaken impression that one is purified in a cascade [ḥardalit] of rainwater containing forty se’a. The halakha is that rainwater purifies only when pooled in one place. Alternatively, let us issue a decree that the edges of the waves, which are in contact with the ground, are ineffective in purifying people and vessels standing on the ground due to the concern that otherwise one would receive the mistaken impression that vessels are purified even if one pushes them upward into the arc of the waves while the water remains airborne. Therefore, the tanna teaches us that we do not issue either of those decrees.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״א ב — Chullin 31b:4</span></div>
+      <div class="orig">וּמְנָא תֵּימְרָא דְּלָא מַטְבְּלִינַן בְּכִיפִּין? דִּתְנַן: מַטְבִּילִין בְּרָאשִׁין, וְאֵין מַטְבִּילִין בְּכִיפִּין, שֶׁאֵין מַטְבִּילִין בָּאֲוִיר.</div>
+      <div class="trans" data-when="he">ומניין שאין מטבילים בכיפין? ברייתא: מטבילין בראשין ואין מטבילין בכיפין, שאין מטבילין באוויר.</div>
+      <div class="trans" data-when="en">And from where do you say that we do not immerse in the arcs of waves? As we learned in a baraita: One may immerse in the edges of waves, but one may not immerse in their arcs, as one may not immerse in air. Immersion may be performed only on the ground.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״א ב — Chullin 31b:5</span></div>
+      <div class="orig">אֶלָּא חוּלִּין דְּלָא בָּעֵי כַּוָּונָה מִיהָא מְנָלַן? דִּתְנַן: פֵּירוֹת שֶׁנָּפְלוּ לְתוֹךְ אַמַּת הַמַּיִם, וּפָשַׁט מִי שֶׁיָּדָיו טְמֵאוֹת וּנְטָלָן – יָדָיו טְהוֹרוֹת, וּפֵירוֹת אֵינָן בְּ״כִי יוּתַּן״.</div>
+      <div class="trans" data-when="he">אלא חולין שאינו צריך כוונה — מניין באמת? ממשנה (מכשירין): פירות שנפלו לאמת המים, ופשט אדם שידיו טמאות ונטלם — ידיו טהורות (טבלו), והפירות אינם בכלל ׳כי יותן׳ (לא הוכשרו), שהרי לא נתכוון להרטיב ידיו.</div>
+      <div class="trans" data-when="en">The Gemara again asks: But in any event, from where do we derive that non-sacred items do not require intent? The Gemara answers: It is as we learned in a mishna (Makhshirin 4:7): Produce becomes susceptible to ritual impurity only if it is dampened by one of seven liquids and its owner was amenable to its dampening. This is derived from the verse: “But when water is placed on the seed, and some of their carcass shall fall on it, it is impure to you” (Leviticus 11:38). If produce fell into a stream, and one whose hands were ritually impure extended his hands and took the produce from the water channel, his hands are ritually pure through immersion in the stream, and this produce is not in the category of: “But when water is placed.” The produce is not susceptible to ritual impurity because the owner did not intend that his hands become wet.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״א ב — Chullin 31b:6</span></div>
+      <div class="orig">וְאִם בִּשְׁבִיל שֶׁיּוּדְחוּ יָדָיו – טְהוֹרוֹת, וּפֵירוֹת בְּ״כִי יוּתַּן״.</div>
+      <div class="trans" data-when="he">אבל אם פשט ידיו כדי שיודחו — ידיו טהורות והפירות בכלל ׳כי יותן׳. מן הרישא מוכח שידיו נטהרות אף בלא כוונה לטבול — הרי שחולין אינו צריך כוונה.</div>
+      <div class="trans" data-when="en">But if he placed his hands into the stream so that his hands would be rinsed and purified, his hands are ritually pure, and the produce is in the category of: “But when water is placed.” Since he was amenable to the dampening of his hands, the water on his hands renders the produce susceptible to ritual impurity. From the first case in the mishna it is clear that his hands are purified even though his intent was not to immerse them in the water.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״א ב — Chullin 31b:7</span></div>
+      <div class="orig">אֵיתִיבֵיהּ רָבָא לְרַב נַחְמָן: טָבַל לְחוּלִּין וְהוּחְזַק לְחוּלִּין – אָסוּר לְמַעֲשֵׂר. הוּחְזַק – אִין, לֹא הוּחְזַק – לָא.</div>
+      <div class="trans" data-when="he">איתיביה רבא לרב נחמן (ממשנה בחגיגה): טבל לחולין והוחזק לחולין — אסור למעשר. דייק: הוחזק — אין (מותר לחולין), לא הוחזק — לא; משמע שאף לחולין צריך כוונה (החזקה).</div>
+      <div class="trans" data-when="en">Rava raised an objection to Rav Naḥman from a mishna (Ḥagiga 18b): If one immersed for the purpose of eating non-sacred food and assumed the presumptive status of ritual purity for non-sacred food, it is prohibited for him to partake of second-tithe produce. The Gemara infers: If one assumed the presumptive status of ritual purity with regard to non-sacred food, yes, it is permitted for him to eat non-sacred food; if he did not assume the presumptive status, he may not eat non-sacred food. This indicates that even when immersing in order to partake of non-sacred food, one must intend to assume the presumptive status of ritual purity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״א ב — Chullin 31b:8</span></div>
+      <div class="orig">הָכִי קָאָמַר: אַף עַל פִּי שֶׁהוּחְזַק לְחוּלִּין – אָסוּר לְמַעֲשֵׂר.</div>
+      <div class="trans" data-when="he">דחה רב נחמן: אין הכוונה כך, אלא כך אמרה המשנה: אף על פי שהוחזק לחולין — אסור למעשר; ולעולם לחולין אין צריך כוונה.</div>
+      <div class="trans" data-when="en">Rav Naḥman rejects the proof from the mishna and says that no intent is required to assume the presumptive status of ritual purity in order to eat non-sacred food. Rather, this is what the mishna is saying: Although he assumes the presumptive status of ritual purity for non-sacred food, it is prohibited for him to partake of second-tithe produce.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״א ב — Chullin 31b:9</span></div>
+      <div class="orig">אֵיתִיבֵיהּ: טָבַל וְלֹא הוּחְזַק – כְּאִילּוּ לֹא טָבַל. מַאי לָאו: כְּאִילּוּ לֹא טָבַל כְּלָל?</div>
+      <div class="trans" data-when="he">איתיביה שוב: ׳טבל ולא הוחזק — כאילו לא טבל׳. וכי לאו פירושו כאילו לא טבל כלל, אף לחולין?</div>
+      <div class="trans" data-when="en">Rava raised an objection to Rav Naḥman from that same mishna: If one immersed without intent to assume the presumptive status of ritual purity, it is as though he did not immerse. What, is the meaning of the mishna not that it is as though he did not immerse at all?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״א ב — Chullin 31b:10</span></div>
+      <div class="orig">לָא, כְּאִילּוּ לֹא טָבַל לְמַעֲשֵׂר, אֲבָל טָבַל לְחוּלִּין. הוּא סָבַר: דַּיחוֹיֵי קָא מְדַחֵי לֵיהּ. נְפַק דָּק וְאַשְׁכַּח, דְּתַנְיָא: טָבַל וְלֹא הוּחְזַק – מוּתָּר לַחוּלִּין וְאָסוּר לַמַּעֲשֵׂר.</div>
+      <div class="trans" data-when="he">דחה רב נחמן: לא, ׳כאילו לא טבל׳ — למעשר, אבל לחולין טבל. רבא סבר שרק דוחהו בקש ואין זה פשט המשנה; יצא, דקדק, ומצא ברייתא מפורשת כרב נחמן: טבל ולא הוחזק — מותר לחולין ואסור למעשר.</div>
+      <div class="trans" data-when="en">Rav Naḥman rejects that proof as well. No, it means that if he immersed without intent it is as though he did not immerse to partake of second-tithe produce, but in that case, he immersed for non-sacred food, for which no intent is necessary. The Gemara comments: Rava believed that Rav Naḥman was merely putting him off with his claim that the formulation of the mishna does not conclusively support his objection; he believed that Rav Naḥman was not stating the real meaning of the mishna. Rava then went out, examined the sources, and discovered that it is taught in a baraita explicitly in accordance with the opinion of Rav Naḥman: If one immersed and had no intent to assume the presumptive status of ritual purity, it is permitted for him to eat non-sacred food, but it is prohibited for him to partake of second-tithe produce.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״א ב — Chullin 31b:11</span></div>
+      <div class="orig">אֲמַר לֵיהּ אַבָּיֵי לְרַב יוֹסֵף: לֵימָא תֶּיהְוֵי תְּיוּבְתָּא דְּרַבִּי יוֹחָנָן מֵהָא?</div>
+      <div class="trans" data-when="he">אמר אביי לרב יוסף: נאמר שמכאן תיובתא לרבי יוחנן! (הברייתא: טבילה בלא כוונה מועילה לחולין; ורבי יוחנן אמר שנדה שטבלה באונס אסורה לבעלה — והוא חולין.)</div>
+      <div class="trans" data-when="en">Abaye said to Rav Yosef: Let us say that there will be a conclusive refutation of the opinion of Rabbi Yoḥanan from this baraita. This baraita states that immersion without intent is effective for non-sacred items, while Rabbi Yoḥanan said (31a) that if a woman who is impure due to menstruation immerses without intent she is forbidden to her husband, who is non-sacred.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״א ב — Chullin 31b:12</span></div>
+      <div class="orig">אֲמַר לֵיהּ: רַבִּי יוֹחָנָן הוּא דְּאָמַר כְּרַבִּי יוֹנָתָן בֶּן יוֹסֵף.</div>
+      <div class="trans" data-when="he">אמר לו רב יוסף: רבי יוחנן אומר את דברו לשיטת רבי יונתן בן יוסף.</div>
+      <div class="trans" data-when="en">Rav Yosef said to him: Indeed, the baraita is contrary to his opinion, but Rabbi Yoḥanan is saying his opinion in accordance with the opinion of Rabbi Yonatan ben Yosef.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״א ב — Chullin 31b:13</span></div>
+      <div class="orig">דְּתַנְיָא: רַבִּי יוֹנָתָן בֶּן יוֹסֵף אוֹמֵר: ״וְכוּבַּס״, מָה תַּלְמוּד לוֹמַר ״שֵׁנִית״? מַקִּישׁ תִּכְבּוֹסֶת שְׁנִיָּה לְתִכְבּוֹסֶת רִאשׁוֹנָה: מָה תִּכְבּוֹסֶת רִאשׁוֹנָה לְדַעַת, אַף תִּכְבּוֹסֶת שְׁנִיָּה לְדַעַת.</div>
+      <div class="trans" data-when="he">כברייתא: רבי יונתן בן יוסף דורש בבגד מצורע ׳וְכֻבַּס … שֵׁנִית׳ — מה תלמוד לומר ׳שנית׳? מקיש תכבוסת שנייה (הטבילה) לתכבוסת ראשונה (הכיבוס): מה ראשונה לדעת, אף שנייה לדעת — בכוונה.</div>
+      <div class="trans" data-when="en">As it is taught in a baraita with regard to the verse dealing with the purification of a leprous garment, which must be laundered, quarantined for a week, and then immersed in a ritual bath: “And the garment…that you shall wash and the leprosy departed from them, and it shall be washed a second time and shall be pure” (Leviticus 13:58). Rabbi Yonatan ben Yosef says: It would have been sufficient for the verse to simply state: And it shall be washed and shall be pure. For what purpose does the verse state: “A second time”? The Torah juxtaposes the second washing, the immersion, with the first washing, the laundering. Just as the first washing is performed with intent, as it is written: “And the priest shall command that they wash the garment that has the leprous mark, and he shall quarantine it seven days more” (Leviticus 13:54), so too, the second washing, the immersion in a ritual bath, must be performed with intent.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״א ב — Chullin 31b:14</span></div>
+      <div class="orig">אִי מָה לְהַלָּן בָּעֵינַן דַּעַת כֹּהֵן, אַף כָּאן בָּעֵינַן דַּעַת כֹּהֵן? תַּלְמוּד לוֹמַר: ״וְטָהֵר״, מִכׇּל מָקוֹם.</div>
+      <div class="trans" data-when="he">ואם תאמר: כשם ששם צריך דעת כהן, אף כאן? תלמוד לומר ׳וְטָהֵר׳ — מכל מקום, די בכוונה אף בלא כהן. נמצא שלרבי יונתן אף טבילת חולין צריכה כוונה — ועליו סומך רבי יוחנן.</div>
+      <div class="trans" data-when="en">If so, based on the same juxtaposition, perhaps derive: Just as there, with regard to the first washing, we require the intent of a priest, who commands to wash the garment, so too here, with regard to the second washing, we require the intent of a priest. Therefore, the verse states: “And shall be pure” (Leviticus 13:58), indicating that there is purity in any case where there is intent, even without a command from a priest. In the opinion of Rabbi Yonatan ben Yosef, even the immersion of the non-sacred garment must be performed with intent. Rav Yosef states that Rabbi Yoḥanan bases his statement on Rabbi Yonatan ben Yosef’s opinion.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין ל״א ב — Chullin 31b:15</span></div>
+      <div class="orig">מַתְקֵיף לַהּ רַב שִׁימִי בַּר אָשֵׁי: וּמִי אָמַר רַבִּי יוֹחָנָן הָכִי? וְהָאָמַר רַבִּי יוֹחָנָן: הֲלָכָה כִּסְתַם מִשְׁנָה.</div>
+      <div class="trans" data-when="he">מתקיף רב שימי בר אשי: וכי אמר רבי יוחנן כן? והרי אמר רבי יוחנן ׳הלכה כסתם משנה׳!</div>
+      <div class="trans" data-when="en">Rav Shimi bar Ashi objects to the association of the statement of Rabbi Yoḥanan with the opinion of Rabbi Yonatan ben Yosef: Did Rabbi Yoḥanan say that immersion of a non-sacred garment requires intent? But doesn’t Rabbi Yoḥanan say that the halakha is in accordance with an unattributed mishna?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין ל״א ב — Chullin 31b:16</span></div>
+      <div class="orig">וּתְנַן: נָפְלָה סַכִּין וְשָׁחֲטָה, אַף עַל פִּי שֶׁשָּׁחֲטָה כְּדַרְכָּהּ – פְּסוּלָה. וְהָוֵינַן בָּהּ: טַעְמָא דְּנָפְלָה, הָא הִפִּילָהּ הוּא – כְּשֵׁרָה, וְאַף עַל גַּב דְּלָא מִיכַּוֵּין. וְאָמְרִינַן: מַאן תַּנָּא דְּלָא בָּעֵי כַּוָּונָה לִשְׁחִיטָה? אָמַר רָבָא: רַבִּי נָתָן הִיא.</div>
+      <div class="trans" data-when="he">ושנינו סתם משנה: ׳נפלה סכין ושחטה — פסולה׳, ודייקנו: טעמא דנפלה, הא הפילהּ — כשרה אף בלא כוונה; ומיהו התנא? אמר רבא: רבי נתן. אם כן היה לו לרבי יוחנן לפסוק כרבי נתן — שאין כוונה — ולא כרבי יונתן בן יוסף!</div>
+      <div class="trans" data-when="en">And we learned in the mishna: If a knife fell and slaughtered an animal, although the knife slaughtered the animal in the standard manner, the slaughter is not valid. And we discussed it: The reason the slaughter is not valid is that the knife fell. But by inference, if one dropped the knife the slaughter is valid, and that is the ruling even though when dropping the knife he did not intend to slaughter the animal. And we say: Who is the tanna who holds that we do not require intent for slaughter? Rava said: It is Rabbi Natan. Based on his principle that the halakha is in accordance with an unattributed mishna, Rabbi Yoḥanan should rule in accordance with the opinion of Rabbi Natan cited in the unattributed mishna, and not in accordance with the opinion of Rabbi Yonatan ben Yosef.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין ל״א ב — Chullin 31b:17</span></div>
+      <div class="orig">בִּשְׁחִיטָה, אֲפִילּוּ רַבִּי יוֹנָתָן בֶּן יוֹסֵף [מוֹדֵי], מִדְּגַלִּי רַחֲמָנָא מִתְעַסֵּק בְּקָדָשִׁים פָּסוּל – מִכְּלָל דְּחוּלִּין לָא בָּעֵינַן כַּוָּונָה.</div>
+      <div class="trans" data-when="he">תירוץ: בשחיטה אף רבי יונתן בן יוסף מודה שאין צריך כוונה — שכן גילתה התורה ׳מתעסק בקדשים פסול׳ (מ׳תזבחו לרצונכם׳), מכלל שבחולין אין צריך כוונה. ואין סתירה.</div>
+      <div class="trans" data-when="en">The Gemara answers: With regard to slaughter, even Rabbi Yonatan ben Yosef concedes that intent is not necessary. He learns this from the fact that the Merciful One revealed that if one acts unawares in performing the slaughter of sacrificial animals, with no intent to slaughter, the offering is disqualified. This is derived (13a) from the verse: “You shall slaughter it to your will” (Leviticus 19:5). By inference, conclude that with regard to the slaughter of non-sacred animals we do not require intent.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין ל״א ב — Chullin 31b:18</span></div>
+      <div class="orig">וְרַבָּנַן, נְהִי דְּלָא בָּעֵינַן כַּוָּונָה לִזְבִיחָה, לַחֲתִיכָה בָּעֵינַן.</div>
+      <div class="trans" data-when="he">ורבנן (החולקים על רבי נתן): אף שאין צריך כוונה לעצם הזביחה, צריך כוונה לחתיכה — וזריקה אינה כוונה לחתוך.</div>
+      <div class="trans" data-when="en">While on this subject the Gemara clarifies: And the Rabbis who disagree with Rabbi Natan and hold that slaughter of non-sacred animals requires intent would say: Although we do not require intent to slaughter non-sacred animals, we require intent to cut the neck of the animal. Throwing the knife down is not sufficient.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין ל״א ב — Chullin 31b:19</span></div>
+      <div class="orig">אָמַר רָבָא: בְּהָא זְכָנְהוּ רַבִּי נָתָן לְרַבָּנַן, מִי כְּתִיב ״וְחָתַכְתָּ״? ״וְזָבַחְתָּ״ כְּתִיב, אִי בָּעֵינַן כַּוָּונָה לַחֲתִיכָה – אֲפִילּוּ לִזְבִיחָה נָמֵי לִיבְעֵי, אִי לָא בָּעֵינַן כַּוָּונָה לִזְבִיחָה – לַחֲתִיכָה נָמֵי לָא לִיבְעֵי.</div>
+      <div class="trans" data-when="he">אמר רבא: בזה ניצח רבי נתן את חכמים: וכי ׳וְחָתַכְתָּ׳ כתיב? ׳וְזָבַחְתָּ׳ כתיב! אם צריך כוונה לחתיכה — תידרש אף לזביחה; ואם אין צריך לזביחה — אף לחתיכה לא.</div>
+      <div class="trans" data-when="en">Rava said that it was with this contention that Rabbi Natan overcame the Rabbis: He said: Is it written with regard to the slaughter of non-sacred animals: And you shall cut? It is written: “And you shall slaughter” (Deuteronomy 12:21). The Torah does not distinguish between cutting and slaughtering; if we require intent for cutting, we should require intent even for slaughtering. Conversely, if we do not require intent for slaughtering, we should also not require intent for cutting.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">חולין ל״א ב — Chullin 31b:20</span></div>
+      <div class="orig">הֵיכִי דָּמֵי נִדָּה שֶׁנֶּאֶנְסָה וְטָבְלָה? אִילֵימָא דְּאַנְסַהּ חֲבִירְתַּהּ וְאַטְבְּלַהּ, כַּוָּונָה דַּחֲבִרְתַּהּ כַּוָּונָה מְעַלַּיְיתָא הִיא.</div>
+      <div class="trans" data-when="he">ושבים לנדון: היכי דמי נדה שנאנסה וטבלה? אם חברתה כפאה והטבילתה — הרי כוונת חברתה כוונה גמורה היא, ותטהר אף לרבי יוחנן.</div>
+      <div class="trans" data-when="en">The Gemara revisits the matter of immersion without intent. What are the circumstances of a menstruating woman who, after the menstrual flow ended, was compelled against her will and immersed in a ritual bath? If we say that another woman compelled her and immersed her in a ritual bath, the immersion should be valid even according to the opinion of Rabbi Yoḥanan, as the intent of another woman is full-fledged intent.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">חולין ל״א ב — Chullin 31b:21</span></div>
+      <div class="orig">וְעוֹד, בִּתְרוּמָה נָמֵי אָכְלָה, דִּתְנַן: הַחֵרֶשֶׁת, וְהַשּׁוֹטָה, וְהַסּוֹמָא, וְשֶׁנִּטְרְפָה דַּעְתָּהּ, אִם יֵשׁ לָהֶן פִּקְּחוֹת מְתַקְּנוֹת אוֹתָן – אוֹכְלוֹת בִּתְרוּמָה.</div>
+      <div class="trans" data-when="he">ועוד, במקרה כזה אף תאכל בתרומה, כמשנה (נדה): החרשת, השוטה, הסומא, ושנטרפה דעתה — אם יש להן פיקחות המתקנות אותן (בודקות ומטבילות), אוכלות בתרומה.</div>
+      <div class="trans" data-when="en">And furthermore, in that case the immersion enables her to partake of teruma as well, as we learned in a mishna (Nidda 13b): In the case of a woman who is a deaf-mute, or an imbecile, or blind, or who went insane, and is therefore unable to examine herself reliably, if one of these women has a competent friend, that friend prepares her by examining her and immersing them in a ritual bath. And on that basis the incompetent woman may partake of teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">חולין ל״א ב — Chullin 31b:22</span></div>
+      <div class="orig">אָמַר רַב פָּפָּא: לְרַבִּי נָתָן, שֶׁנָּפְלָה מִן הַגֶּשֶׁר, וּלְרַבָּנַן, שֶׁיָּרְדָה לְהָקֵר.</div>
+      <div class="trans" data-when="he">אמר רב פפא: לרבי נתן (אין כוונה) — כגון שנפלה מן הגשר למים, בלא כוונה כלל; ולרבנן (צריך כוונה) — כגון שירדה להקר, לצנן עצמה, בלא כוונת טהרה.</div>
+      <div class="trans" data-when="en">Rav Pappa said: According to Rabbi Natan, who does not require intent for the slaughter of non-sacred animals, immersion against her will that renders it permitted for a woman to engage in intercourse with her husband is in a case where she fell from a bridge into a river, with no intent at all. According to the Rabbis, who require intent to cut for slaughter to be valid and intent to enter the water for immersion to be valid, it is referring to a case where she descended into the water to cool herself, with no thought of purification.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">חולין ל״א ב — Chullin 31b:23</span></div>
+      <div class="orig">אָמַר רָבָא: שָׁחַט פָּרָה וְשָׁחַט בְּהֵמָה אַחֶרֶת עִמָּהּ, לְדִבְרֵי הַכֹּל פְּסוּלָה.</div>
+      <div class="trans" data-when="he">אמר רבא: שחט פרה אדומה ושחט עמה בכוונה בהמה אחרת — לדברי הכל הפרה פסולה, שנעשתה בה מלאכה אחרת.</div>
+      <div class="trans" data-when="en">The Gemara continues its discussion of the dispute between Rabbi Natan and the Rabbis. Rava said: If one slaughtered a red heifer and in the same action slaughtered another animal together with it, everyone agrees that the red heifer is disqualified.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">חולין ל״ב א — Chullin 32a:1</span></div>
+      <div class="orig">נִשְׁחֲטָה בְּהֵמָה אַחֶרֶת עִמָּהּ, לְרַבִּי נָתָן – פָּרָה פְּסוּלָה בְּהֵמָה כְּשֵׁרָה, לְרַבָּנַן – פָּרָה כְּשֵׁרָה בְּהֵמָה פְּסוּלָה.</div>
+      <div class="trans" data-when="he">נשחטה בהמה אחרת עמה מאליה (בלא כוונה): לרבי נתן — הפרה פסולה והבהמה כשרה; לרבנן — הפרה כשרה והבהמה פסולה.</div>
+      <div class="trans" data-when="en">But if another animal was inadvertently slaughtered together with the red heifer in the same action, according to Rabbi Natan, who holds that the slaughter of non-sacred animals without intent is valid, the red heifer is disqualified, because an additional labor was performed with its slaughter, and the other animal is fit for consumption, as its slaughter was valid. According to the Rabbis, who hold that slaughter of non-sacred animals without intent is not considered slaughter, the red heifer is fit for use in the purification rite because no other labor was performed with its slaughter, and the other animal is unfit for consumption.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">חולין ל״ב א — Chullin 32a:2</span></div>
+      <div class="orig">פְּשִׁיטָא! נִשְׁחֲטָה בְּהֵמָה אַחֶרֶת לְרַבִּי נָתָן אִיצְטְרִיכָא לֵיהּ, סָלְקָא דַּעְתָּךְ אָמֵינָא: ״וְשָׁחַט אוֹתָהּ״ אָמַר רַחֲמָנָא, וְלֹא אוֹתָהּ וַחֲבֶירְתָּהּ, וְהֵיכִי דָּמֵי – כְּגוֹן שֶׁשָּׁחַט שְׁתֵּי פָּרוֹת בַּהֲדֵי הֲדָדֵי, אֲבָל בְּהֵמָה דְּחוּלִּין אֵימָא לָא, קָא מַשְׁמַע לַן.</div>
+      <div class="trans" data-when="he">פשיטא! ומשני: נשחטה בהמה אחרת — לרבי נתן אצטריך; סלקא דעתך אמינא ׳וְשָׁחַט אֹתָהּ׳ — ולא אותה וחברתה, היינו דווקא שתי פרות יחד, אבל בהמת חולין אימא לא תיפסל — קא משמע לן שאף היא פוסלת.</div>
+      <div class="trans" data-when="en">The Gemara asks: That is obvious; why did Rava have to teach that? The Gemara answers: It was necessary for Rava to teach the halakha according to the opinion of Rabbi Natan in the case where another animal was inadvertently slaughtered in the same action with the red heifer. It may enter your mind to say: The Merciful One states with regard to the slaughter of the red heifer: “And you shall give it to Elazar the priest…and he shall slaughter it before him” (Numbers 19:3), from which it is inferred: One may slaughter it, but not it and another animal simultaneously. And what are the circumstances of that prohibition? It is a case where one slaughtered two red heifers at the same time. But in a case where one slaughtered a red heifer together with a non-sacred animal, say no, that it does not disqualify the red heifer. Therefore, Rava teaches us that even slaughter with a non-sacred animal disqualifies the red heifer.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">20</span> <span class="ref">חולין ל״ב א — Chullin 32a:3</span></div>
+      <div class="orig">חָתַךְ דַּלַּעַת עִמָּהּ – דִּבְרֵי הַכֹּל פְּסוּלָה, נֶחְתְּכָה דַּלַּעַת עִמָּהּ – דִּבְרֵי הַכֹּל כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">ועוד רבא: חתך דלעת עם הפרה בכוונה — לדברי הכל פסולה; נחתכה דלעת עמה מאליה — לדברי הכל כשרה, שאין זו מלאכה הפוסלת ואינו בכלל ׳ושחט אותה׳.</div>
+      <div class="trans" data-when="en">Rava adds: If one slaughtered a red heifer and in the same action cut a gourd together with it, everyone agrees that the red heifer is disqualified. If one slaughtered a red heifer and a gourd was inadvertently cut together with it in the same action, everyone agrees that the red heifer is fit for use in the purification rite, as that is not labor that disqualifies a red heifer and it is also not excluded by the derivation from the verse “And he shall slaughter it.”</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+</body>
+</html>
