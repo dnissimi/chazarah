@@ -2,23 +2,49 @@
 import '../styles/global.css';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
-import { strings, DEFAULT_LANG, DIR, LANG_STORAGE_KEY } from '../i18n/strings';
+import { resolved, DIR, type Lang } from '../i18n/strings';
+import { alternates } from '../i18n/urls';
 
 interface Props {
+  /** Page language. Determines <html lang>/dir and which strings render. Each
+      route passes this explicitly (he at root, en under /en) — the page renders
+      its language SERVER-SIDE so crawlers see real content, not a JS swap. */
+  lang: Lang;
+  /** The full <title>. */
   title: string;
+  /** <meta name="description"> — per page, per language. */
+  description: string;
+  /** Language-neutral path of this logical page (e.g. '/', '/library',
+      '/map/talmud/megillah/26'). Drives canonical + hreflang + the language
+      switcher's destination URLs. */
+  canonicalPath: string;
+  /** og:type — 'website' for chrome, 'article' for map/info pages. */
+  ogType?: string;
+  /** Optional JSON-LD object (or array of objects) rendered as ld+json. */
+  jsonLd?: unknown;
 }
-const { title } = Astro.props;
-const lang = DEFAULT_LANG;
+
+const {
+  lang,
+  title,
+  description,
+  canonicalPath,
+  ogType = 'website',
+  jsonLd,
+} = Astro.props;
+
 const dir = DIR[lang];
+const t = resolved(lang);
+const alt = alternates(canonicalPath, lang);
+const ogLocale = lang === 'he' ? 'he_IL' : 'en_US';
+const ogLocaleAlt = lang === 'he' ? 'en_US' : 'he_IL';
+const jsonLdList = jsonLd == null ? [] : Array.isArray(jsonLd) ? jsonLd : [jsonLd];
 
 // `?embed=1` strips site chrome (header/footer) so the slot can fill an iframe
 // cleanly — used by the gemara-map "report a correction" modal (see
 // docs/specs/map-wiring.md refinement 2026-05-30). Detected client-side in the
-// pre-paint script below (this layout is wrapped by mostly-static pages, so a
-// server-side Astro.url check would be empty at build time).
-
-// Inline the strings table so the client-side switcher can read it without a fetch.
-const stringsJson = JSON.stringify(strings);
+// pre-paint script below because these pages are mostly prerendered, so a
+// server-side Astro.url check would be empty at build time.
 ---
 <!doctype html>
 <html lang={lang} dir={dir}>
@@ -26,6 +52,24 @@ const stringsJson = JSON.stringify(strings);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <link rel="canonical" href={alt.canonical} />
+    <link rel="alternate" hreflang="he" href={alt.he} />
+    <link rel="alternate" hreflang="en" href={alt.en} />
+    <link rel="alternate" hreflang="x-default" href={alt.xDefault} />
+
+    {/* Open Graph + Twitter — for link previews when a map is shared. */}
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={t.brand} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={alt.canonical} />
+    <meta property="og:locale" content={ogLocale} />
+    <meta property="og:locale:alternate" content={ogLocaleAlt} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,6 +77,10 @@ const stringsJson = JSON.stringify(strings);
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Assistant:wght@300;400;500;600;700&display=swap"
     />
+
+    {jsonLdList.map((obj) => (
+      <script type="application/ld+json" is:inline set:html={JSON.stringify(obj)} />
+    ))}
 
     {/* Embed mode (set by the pre-paint script when `?embed=1`): page is hosted
         inside an iframe (e.g. the gemara-map feedback modal) — hide outer chrome
@@ -45,126 +93,28 @@ const stringsJson = JSON.stringify(strings);
       html[data-embed="1"] .container{padding-block:1rem}
     </style>
 
-    {/* Apply language before paint so dir/lang don't flicker. URL `?lang=` is a
-        per-load override (lets the gemara-map iframe open /feedback in the calling
-        page's language); localStorage stays the persistent preference. */}
-    <script is:inline define:vars={{ key: LANG_STORAGE_KEY }}>
+    {/* Page language is fixed server-side by the URL (he at root, en under
+        /en) — there is no client-side language swap. The only thing this
+        pre-paint script does is flag `?embed=1` so the chrome-hiding CSS above
+        applies before first paint. */}
+    <script is:inline>
       try {
-        const params = new URLSearchParams(location.search);
-        // Language: URL `?lang=` is a per-load override (lets the gemara-map iframe
-        // open /feedback in the calling page's language); localStorage stays the
-        // persistent preference.
-        let lang = null;
-        const q = params.get('lang');
-        if (q === 'he' || q === 'en') {
-          lang = q;
-        } else {
-          const stored = localStorage.getItem(key);
-          if (stored === 'he' || stored === 'en') lang = stored;
-        }
-        if (lang) {
-          document.documentElement.lang = lang;
-          document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
-        }
-        // Embed mode: `?embed=1` flags this page as hosted inside an iframe (e.g.
-        // the gemara-map feedback modal). CSS hides the site chrome accordingly.
-        if (params.get('embed') === '1') {
+        if (new URLSearchParams(location.search).get('embed') === '1') {
           document.documentElement.dataset.embed = '1';
         }
       } catch (_) {
-        /* storage/URL unavailable — render in the default Hebrew. */
+        /* URL unavailable — render with chrome. */
       }
     </script>
   </head>
 
   <body>
     <div class="shell">
-      <SiteHeader />
+      <SiteHeader lang={lang} canonicalPath={canonicalPath} />
       <main class="site-main">
         <slot />
       </main>
-      <SiteFooter />
+      <SiteFooter lang={lang} />
     </div>
-
-    <script is:inline define:vars={{ stringsJson, storageKey: LANG_STORAGE_KEY }}>
-      const STRINGS = JSON.parse(stringsJson);
-
-      function currentLang() {
-        // URL `?lang=` is a per-load override (e.g. /feedback?lang=en in the
-        // gemara-map iframe); localStorage is the persistent preference.
-        try {
-          const q = new URLSearchParams(location.search).get('lang');
-          if (q === 'he' || q === 'en') return q;
-        } catch (_) { /* ignore */ }
-        const stored = localStorage.getItem(storageKey);
-        return stored === 'en' ? 'en' : 'he';
-      }
-
-      function applyLang(lang) {
-        const html = document.documentElement;
-        html.lang = lang;
-        html.dir = lang === 'he' ? 'rtl' : 'ltr';
-
-        const table = STRINGS[lang] || {};
-        const fallback = STRINGS.he;
-
-        document.querySelectorAll('[data-i18n]').forEach((el) => {
-          const k = el.getAttribute('data-i18n');
-          if (!k) return;
-          const value = table[k] ?? fallback[k];
-          if (value != null) el.textContent = value;
-        });
-
-        document.querySelectorAll('[data-i18n-aria-label]').forEach((el) => {
-          const k = el.getAttribute('data-i18n-aria-label');
-          if (!k) return;
-          const value = table[k] ?? fallback[k];
-          if (value != null) el.setAttribute('aria-label', value);
-        });
-
-        document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
-          const k = el.getAttribute('data-i18n-placeholder');
-          if (!k) return;
-          const value = table[k] ?? fallback[k];
-          if (value != null) el.setAttribute('placeholder', value);
-        });
-
-        // Bilingual per-page content (e.g. map title/blurb pulled from a YAML
-        // entry, not the strings table): values live on the element itself.
-        // Fall back to Hebrew when the active-language attribute is absent.
-        document.querySelectorAll('[data-i18n-he]').forEach((el) => {
-          const value = el.getAttribute('data-i18n-' + lang) ?? el.getAttribute('data-i18n-he');
-          if (value != null) el.textContent = value;
-        });
-
-        document.querySelectorAll('.lang-switcher button[data-lang]').forEach((btn) => {
-          if (btn.getAttribute('data-lang') === lang) {
-            btn.classList.add('active');
-            btn.setAttribute('aria-pressed', 'true');
-          } else {
-            btn.classList.remove('active');
-            btn.setAttribute('aria-pressed', 'false');
-          }
-        });
-      }
-
-      function setLang(lang) {
-        try {
-          localStorage.setItem(storageKey, lang);
-        } catch (_) {
-          /* swallow — switcher still works for the current page */
-        }
-        applyLang(lang);
-      }
-
-      document.querySelectorAll('.lang-switcher button[data-lang]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const lang = btn.getAttribute('data-lang');
-          if (lang === 'he' || lang === 'en') setLang(lang);
-        });
-      });
-
-      applyLang(currentLang());
-    </script>
   </body>
 </html>

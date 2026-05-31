@@ -1,0 +1,168 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import { resolved, type Lang } from '../../i18n/strings';
+import type { DafRow, MasechetInfo } from '../../lib/browse';
+
+interface Props {
+  lang: Lang;
+  masechet: MasechetInfo;
+  dapim: DafRow[];
+}
+const { lang, masechet, dapim } = Astro.props;
+const isEn = lang === 'en';
+const t = resolved(lang);
+const pfx = isEn ? '/en' : '';
+const homeHref = isEn ? '/en' : '/';
+
+const withCount = dapim.filter((d) => d.map !== null).length;
+const totalCount = dapim.length;
+
+// "Mapped" is the default landing view — visitors usually want to open a map,
+// not browse an empty list. But if this masechet has zero maps yet, "Mapped"
+// would render an empty page, so fall back to "All" so visitors can find the
+// daf they want and request a map for it.
+const defaultFilter: 'with' | 'all' = withCount > 0 ? 'with' : 'all';
+---
+<SiteLayout
+  lang={lang}
+  title={`${isEn ? masechet.name.en : masechet.name.he} — ${t.brand}`}
+  description={isEn ? masechet.summary.en : masechet.summary.he}
+  canonicalPath={`/map/${masechet.corpus}/${masechet.book}`}
+>
+  <article class="browse container">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href={homeHref}>{t.brand}</a>
+      <span class="sep">/</span>
+      <span>{t.corpusTalmud}</span>
+      <span class="sep">/</span>
+      <span>{isEn ? masechet.name.en : masechet.name.he}</span>
+    </nav>
+
+    <header class="browse-header">
+      <h1 class="browse-title">
+        <span>{t.browseMasechetLabel}</span>
+        <span>{isEn ? masechet.name.en : masechet.name.he}</span>
+      </h1>
+      <p class="browse-summary">{isEn ? masechet.summary.en : masechet.summary.he}</p>
+    </header>
+
+    <section class="browse-filter" aria-label={t.browseFilterLabel}>
+      <span class="kicker">{t.browseFilterLabel}</span>
+      <div class="pills" role="tablist">
+        <button
+          class={`pill ${defaultFilter === 'with' ? 'active' : ''}`}
+          type="button"
+          data-filter="with"
+          role="tab"
+          aria-selected={defaultFilter === 'with' ? 'true' : 'false'}
+        >
+          <span>{t.browseFilterWith}</span>
+          <span class="count">{withCount}</span>
+        </button>
+        <button
+          class={`pill ${defaultFilter === 'all' ? 'active' : ''}`}
+          type="button"
+          data-filter="all"
+          role="tab"
+          aria-selected={defaultFilter === 'all' ? 'true' : 'false'}
+        >
+          <span>{t.browseFilterAll}</span>
+          <span class="count">{totalCount}</span>
+        </button>
+      </div>
+    </section>
+
+    <ul class="browse-list">
+      {dapim.map((d) => {
+        const has = d.map !== null;
+        const filterKey = has ? 'with' : 'without';
+        const mapBase = has ? `/map/${masechet.corpus}/${masechet.book}/${d.map!.location}` : null;
+        const langs = has ? d.map!.languages : [];
+        const defaultLang = langs.includes(lang) ? lang : langs[0];
+        const mapHref = mapBase ? `${mapBase}/${defaultLang}` : null;
+        const requestHref = `${pfx}/request?ref=${encodeURIComponent(`${masechet.name.en} ${d.n}`)}`;
+        const hiddenOnLoad = defaultFilter === 'with' && !has;
+        return (
+          <li
+            class={`browse-row ${has ? 'has-map' : 'no-map'}`}
+            data-filter={filterKey}
+            hidden={hiddenOnLoad}
+          >
+            <div class="daf-num">
+              <span class="daf-num-he">{d.hebrewNum}</span>
+              <span class="daf-num-latin">{d.latin}</span>
+            </div>
+            <div class="daf-topic">
+              {has ? (
+                <a
+                  href={mapHref!}
+                  data-recent-link
+                  data-map-base={mapBase!}
+                  data-map-langs={langs.join(',')}
+                  data-i18n-he={d.map!.topic.he}
+                  data-i18n-en={d.map!.topic.en}
+                >{isEn ? d.map!.topic.en : d.map!.topic.he}</a>
+              ) : (
+                <span>{t.browseEmptyDaf}</span>
+              )}
+            </div>
+            <div class="daf-action">
+              {has ? (
+                <a
+                  href={mapHref!}
+                  data-recent-link
+                  data-map-base={mapBase!}
+                  data-map-langs={langs.join(',')}
+                >{t.browseOpenMap}</a>
+              ) : (
+                <a href={requestHref}>{t.browseRequestThis}</a>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  </article>
+
+  <script is:inline>
+    (function () {
+      const pills = document.querySelectorAll('.browse-filter .pill[data-filter]');
+      const rows = document.querySelectorAll('.browse-list .browse-row[data-filter]');
+      if (!pills.length || !rows.length) return;
+
+      function apply(filter) {
+        pills.forEach((p) => {
+          const on = p.getAttribute('data-filter') === filter;
+          p.classList.toggle('active', on);
+          p.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        rows.forEach((row) => {
+          const key = row.getAttribute('data-filter');
+          row.hidden = !(filter === 'all' || key === filter);
+        });
+      }
+
+      pills.forEach((pill) => {
+        pill.addEventListener('click', () => {
+          const f = pill.getAttribute('data-filter');
+          if (f === 'all' || f === 'with') apply(f);
+        });
+      });
+    })();
+
+    // Keep each row's topic/action link pointed at the variant matching the
+    // page language (fallback: the first language each map ships in).
+    (function () {
+      const links = document.querySelectorAll('[data-recent-link]');
+      if (!links.length) return;
+      const active = document.documentElement.lang === 'en' ? 'en' : 'he';
+      for (const a of links) {
+        const base = a.getAttribute('data-map-base') || '';
+        const langs = (a.getAttribute('data-map-langs') || '').split(',').filter(Boolean);
+        if (!base || langs.length === 0) continue;
+        const pick = langs.includes(active) ? active : langs[0];
+        a.setAttribute('href', `${base}/${pick}`);
+      }
+    })();
+  </script>
+</SiteLayout>

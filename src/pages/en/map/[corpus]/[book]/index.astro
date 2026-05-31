@@ -1,0 +1,14 @@
+---
+import MapBookIndexPage from '../../../../../components/pages/MapBookIndexPage.astro';
+import { buildMapBookStaticPaths } from '../../../../../lib/map-paths';
+import type { DafRow, MasechetInfo } from '../../../../../lib/browse';
+
+export const prerender = true;
+
+export async function getStaticPaths() {
+  return buildMapBookStaticPaths();
+}
+
+const { masechet, dapim } = Astro.props as { masechet: MasechetInfo; dapim: DafRow[] };
+---
+<MapBookIndexPage lang="en" masechet={masechet} dapim={dapim} />

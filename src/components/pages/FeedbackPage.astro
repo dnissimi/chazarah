@@ -1,0 +1,263 @@
+---
+import SiteLayout from '../../layouts/SiteLayout.astro';
+import { resolved, type Lang } from '../../i18n/strings';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = resolved(lang);
+const homeHref = lang === 'en' ? '/en' : '/';
+
+// Public sitekey, baked in at build time. Falls back to Turnstile's always-pass
+// test key for local dev / preview builds without the env var set.
+const TURNSTILE_SITEKEY =
+  import.meta.env.PUBLIC_TURNSTILE_SITEKEY || '1x00000000000000000000AA';
+---
+<SiteLayout
+  lang={lang}
+  title={`${t.feedbackTitle} — ${t.brand}`}
+  description={t.feedbackIntro}
+  canonicalPath="/feedback"
+>
+  <section class="feedback container narrow">
+    <div class="feedback-card" data-feedback-card>
+      <header class="feedback-header">
+        <h1>{t.feedbackTitle}</h1>
+        <p class="feedback-intro">{t.feedbackIntro}</p>
+      </header>
+
+      <form class="feedback-form" novalidate data-feedback-form>
+        <div class="feedback-banner" data-feedback-banner>
+          <span class="feedback-banner-label">{t.feedbackBannerLabel}</span>
+          <span class="feedback-banner-ref" data-feedback-ref></span>
+          <span class="chip feedback-banner-variant" data-feedback-variant hidden></span>
+        </div>
+
+        <div class="field">
+          <label for="fb-node">{t.feedbackNodeLabel}</label>
+          <input
+            type="text"
+            id="fb-node"
+            name="nodeOrQuote"
+            autocomplete="off"
+            data-feedback-node
+            placeholder={t.feedbackNodePlaceholder}
+          />
+        </div>
+
+        <div class="field">
+          <label for="fb-observation">{t.feedbackObservationLabel}</label>
+          <textarea
+            id="fb-observation"
+            name="observation"
+            rows="5"
+            required
+            aria-required="true"
+            data-feedback-observation
+            placeholder={t.feedbackObservationPlaceholder}
+          ></textarea>
+          <p class="error" data-feedback-observation-error hidden>{t.feedbackObservationRequired}</p>
+        </div>
+
+        <div class="field">
+          <label for="fb-email">{t.requestEmailLabel}</label>
+          <input
+            type="email"
+            id="fb-email"
+            name="email"
+            autocomplete="email"
+            data-feedback-email
+            placeholder={t.requestEmailPlaceholder}
+          />
+          <p class="hint">{t.feedbackEmailHint}</p>
+        </div>
+
+        <div class="field">
+          <div class="cf-turnstile turnstile" data-sitekey={TURNSTILE_SITEKEY}></div>
+        </div>
+
+        <p class="submit-error" data-feedback-error role="alert" hidden></p>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">{t.feedbackSubmitBtn}</button>
+          <a class="btn btn-ghost" href={homeHref}>{t.requestBackHomeBtn}</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="feedback-success" data-feedback-success hidden>
+      <div class="kicker">{t.requestSuccessKicker}</div>
+      <h1>{t.feedbackSuccessTitle}</h1>
+      <p>{t.feedbackSuccessBody}</p>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" data-feedback-reset>{t.feedbackSubmitAnother}</button>
+        <a class="btn btn-ghost" href={homeHref}>{t.requestBackHomeBtn}</a>
+      </div>
+    </div>
+  </section>
+
+  <script
+    is:inline
+    async
+    defer
+    src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+  ></script>
+
+  <script>
+    import {
+      parseFeedbackPrefill,
+      buildFeedbackPayload,
+      type FeedbackPrefill,
+    } from '../../lib/feedback-form';
+    import type { TargetLang } from '../../lib/request-form';
+    import { strings, DEFAULT_LANG, type Lang } from '../../i18n/strings';
+
+    const VARIANT_KEY: Record<TargetLang, 'mapInfoVariantLangHe' | 'mapInfoVariantLangEn' | 'mapInfoVariantLangYi'> = {
+      he: 'mapInfoVariantLangHe',
+      en: 'mapInfoVariantLangEn',
+      yi: 'mapInfoVariantLangYi',
+    };
+
+    // Page chrome language is fixed by the URL (<html lang>). In the embedded
+    // iframe (gemara-map modal) the map passes ?lang= so the form opens in the
+    // calling page's language — honor it as an override, else fall back to the
+    // server-set page language.
+    function activeLang(): Lang {
+      try {
+        const q = new URLSearchParams(window.location.search).get('lang');
+        if (q === 'he' || q === 'en') return q;
+      } catch {
+        /* ignore */
+      }
+      return document.documentElement.lang === 'en' ? 'en' : DEFAULT_LANG;
+    }
+
+    const form = document.querySelector<HTMLFormElement>('[data-feedback-form]');
+    const card = document.querySelector<HTMLElement>('[data-feedback-card]');
+    const successPanel = document.querySelector<HTMLElement>('[data-feedback-success]');
+    const refEl = document.querySelector<HTMLElement>('[data-feedback-ref]');
+    const variantEl = document.querySelector<HTMLElement>('[data-feedback-variant]');
+    const nodeInput = document.querySelector<HTMLInputElement>('[data-feedback-node]');
+    const observationInput = document.querySelector<HTMLTextAreaElement>('[data-feedback-observation]');
+    const observationError = document.querySelector<HTMLElement>('[data-feedback-observation-error]');
+    const emailInput = document.querySelector<HTMLInputElement>('[data-feedback-email]');
+    const resetBtn = document.querySelector<HTMLButtonElement>('[data-feedback-reset]');
+
+    let prefill: FeedbackPrefill = { ref: '', lang: null };
+
+    function applyPrefill() {
+      prefill = parseFeedbackPrefill(new URLSearchParams(window.location.search));
+      if (refEl) refEl.textContent = prefill.ref;
+      if (variantEl) {
+        if (prefill.lang) {
+          const key = VARIANT_KEY[prefill.lang];
+          variantEl.setAttribute('data-i18n', key);
+          variantEl.textContent = strings[activeLang()][key] ?? strings.he[key];
+          variantEl.hidden = false;
+        } else {
+          variantEl.removeAttribute('data-i18n');
+          variantEl.textContent = '';
+          variantEl.hidden = true;
+        }
+      }
+    }
+
+    function showSuccess() {
+      if (card) card.hidden = true;
+      if (successPanel) {
+        successPanel.hidden = false;
+        successPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function resetForm() {
+      if (form) form.reset();
+      if (observationError) observationError.hidden = true;
+      if (card) card.hidden = false;
+      if (successPanel) successPanel.hidden = true;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    observationInput?.addEventListener('input', () => {
+      if (observationError && !observationError.hidden && observationInput.value.trim() !== '') {
+        observationError.hidden = true;
+      }
+    });
+
+    const submitError = document.querySelector<HTMLElement>('[data-feedback-error]');
+
+    function resetTurnstile() {
+      try {
+        (window as unknown as { turnstile?: { reset: () => void } }).turnstile?.reset();
+      } catch {
+        /* widget not ready — nothing to reset */
+      }
+    }
+
+    function showSubmitError(status: number, code?: string) {
+      const table = strings[activeLang()] as Partial<Record<string, string>>;
+      const key =
+        status === 429 || code === 'rate-limited'
+          ? 'submitErrorRateLimited'
+          : 'submitErrorGeneric';
+      const msg = table[key] ?? strings.he[key as keyof typeof strings.he];
+      if (submitError) {
+        submitError.hidden = false;
+        submitError.textContent = msg ?? '';
+      }
+      resetTurnstile();
+    }
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const observation = observationInput?.value.trim() ?? '';
+      if (observation === '') {
+        if (observationError) observationError.hidden = false;
+        observationInput?.focus();
+        return;
+      }
+      if (observationError) observationError.hidden = true;
+      if (submitError) submitError.hidden = true;
+
+      const turnstileToken =
+        (form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value) ?? '';
+
+      const payload = buildFeedbackPayload({
+        ref: prefill.ref,
+        languageVariant: prefill.lang,
+        nodeOrQuote: nodeInput?.value.trim() ?? '',
+        observation,
+        email: emailInput?.value ?? '',
+        submittedAt: new Date().toISOString(),
+      });
+
+      const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ payload, turnstileToken }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          error?: string;
+        };
+        if (res.ok && data.ok) {
+          showSuccess();
+        } else {
+          showSubmitError(res.status, data.error);
+        }
+      } catch {
+        showSubmitError(0);
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+
+    resetBtn?.addEventListener('click', resetForm);
+
+    applyPrefill();
+  </script>
+</SiteLayout>

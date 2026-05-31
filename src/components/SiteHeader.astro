@@ -1,42 +1,66 @@
 ---
 import BrandMark from './BrandMark.astro';
-import { strings, DEFAULT_LANG } from '../i18n/strings';
+import { resolved, type Lang } from '../i18n/strings';
+import { normalizePath } from '../i18n/urls';
 
-const t = strings[DEFAULT_LANG];
+interface Props {
+  lang: Lang;
+  /** Language-neutral path of the current page — the language switcher links to
+      its he/en counterparts. */
+  canonicalPath: string;
+}
+const { lang, canonicalPath } = Astro.props;
+const t = resolved(lang);
+
+// Relative (same-host) paths for in-site links. Hebrew lives at root; English
+// under /en. Nav points within the active language so the visitor stays in it.
+const p = normalizePath(canonicalPath);
+const enHref = (path: string) => (path === '/' ? '/en' : `/en${path}`);
+const localized = (path: string) => (lang === 'en' ? enHref(path) : path);
+
+// The language switcher navigates to the SAME page in the other language — this
+// is what makes each language a real, indexable URL (no in-place JS swap).
+const hePageHref = p === '/' ? '/' : p;
+const enPageHref = enHref(p);
+const homeHref = localized('/');
 ---
 <header class="site-header">
   <div class="container">
     <div class="row">
-      <a class="brand" href="/">
+      <a class="brand" href={homeHref}>
         <span class="brand-icon"><BrandMark /></span>
-        <span class="brand-mark" data-i18n="brand">{t.brand}</span>
-        <span class="brand-sub" data-i18n="brandSub">{t.brandSub}</span>
+        <span class="brand-mark">{t.brand}</span>
+        <span class="brand-sub">{t.brandSub}</span>
       </a>
 
       <nav class="site-nav" aria-label="Site">
-        <a href="/" data-i18n="navHome">{t.navHome}</a>
-        <a href="/library" data-i18n="navBrowse">{t.navBrowse}</a>
-        <a href="/request" data-i18n="navRequest">{t.navRequest}</a>
+        <a href={homeHref}>{t.navHome}</a>
+        <a href={localized('/library')}>{t.navBrowse}</a>
       </nav>
 
-      <div
-        class="lang-switcher"
-        role="group"
-        data-i18n-aria-label="langGroupLabel"
-        aria-label={t.langGroupLabel}
-      >
-        {/* Two labels per button: the full word for desktop, a compact one-
-            letter form for mobile. CSS picks which is visible. No data-i18n
-            here on purpose — the language buttons always show their own name
-            in their own language, independent of the active chrome language. */}
-        <button type="button" data-lang="he" aria-label="עברית">
+      <div class="lang-switcher" role="group" aria-label={t.langGroupLabel}>
+        {/* Real navigation to the other-language URL of this same page. Each
+            button always shows its own language's name. The active language is
+            marked with aria-current; CSS shows a compact one-letter form on
+            mobile. */}
+        <a
+          href={hePageHref}
+          hreflang="he"
+          aria-current={lang === 'he' ? 'true' : undefined}
+          class={lang === 'he' ? 'active' : undefined}
+        >
           <span class="lang-toggle-full">עברית</span>
           <span class="lang-toggle-short" aria-hidden="true">ע</span>
-        </button>
-        <button type="button" data-lang="en" aria-label="English">
+        </a>
+        <a
+          href={enPageHref}
+          hreflang="en"
+          aria-current={lang === 'en' ? 'true' : undefined}
+          class={lang === 'en' ? 'active' : undefined}
+        >
           <span class="lang-toggle-full">English</span>
           <span class="lang-toggle-short" aria-hidden="true">EN</span>
-        </button>
+        </a>
       </div>
     </div>
   </div>
