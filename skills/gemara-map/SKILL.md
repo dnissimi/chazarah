@@ -301,7 +301,12 @@ chrome-free embed mode so it fits the modal. The `data-feedback-path` is
 If no feedback endpoint is wanted (standalone use), set `FEEDBACK` to empty — the map
 has no pill and stays fully self-contained.
 
-Save as `sugya_<book>_<daf>.html`. Tell the user the path. Then **sanity-check**: skim
+Save under `./gemara-map-workspace/<range-slug>/sugya_<book>_<daf>.html` — relative
+to the agent's cwd; create the dirs if missing. `<range-slug>` is the request range in
+kebab-case (e.g. `chullin-26-30`, `megillah-26-29`, `shabbat-112`); a single-daf request
+gets its own slug too. The workspace path stays cwd-relative so the skill is portable —
+in the chazarah repo the dir is gitignored, but the skill itself doesn't know or care
+which repo it's running in. Tell the user the path(s). Then **sanity-check**: skim
 the Mermaid for the gotchas; every node number has a matching citation and vice-versa;
 every authored element has **both** `he` and `en`; the Aramaic in `src-ar`/`.orig` is
 **verbatim** (ellipsis-spliced only in nodes, full in citations); the English citation

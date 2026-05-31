@@ -49,8 +49,10 @@ rolls it back in another minute.
 - **Submissions repo (close issue on success):** private `dnissimi/chazarah-submissions`
   — touched only when an `--issue` is supplied. The local `gh` auth must have
   Issues:write on it.
-- The map artifact usually lives in the gemara-map workspace
-  (`~/PycharmProjects/talmudmaps/gemara-map-workspace/<range>/sugya_<book>_<daf>.html`).
+- The map artifact lives in the gemara-map workspace, which gemara-map writes
+  cwd-relative: `./gemara-map-workspace/<range>/sugya_<book>_<daf>.html`. Run
+  from the chazarah working dir, so artifacts land at
+  `chazarah/gemara-map-workspace/...` (gitignored).
 
 ## Invocation
 
@@ -63,8 +65,9 @@ rolls it back in another minute.
   decision so a multi-daf range produces clean, independently-revertable history.
 - `--issue` / `--notes` come from a chazarah-fulfill handoff; omit them for a
   standalone gemara-map publish.
-- Bare `/chazarah-publish` (no path): list recent artifacts in the gemara-map
-  workspace and ask which to publish.
+- Bare `/chazarah-publish` (no path): list recent artifacts under
+  `./gemara-map-workspace/` (relative to the chazarah working dir) and ask
+  which to publish.
 
 ## The bundled scripts (use them — don't hand-parse)
 
