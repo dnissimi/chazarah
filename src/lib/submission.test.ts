@@ -86,7 +86,7 @@ describe('buildIssue', () => {
     const issue = buildIssue(parsed.data);
 
     expect(issue.title).toBe('[Request] Megillah 26 — EN');
-    expect(issue.labels).toEqual(['map-request', 'needs-triage']);
+    expect(issue.labels).toEqual(['map-request', 'ready-for-agent']);
 
     const json = issue.body.match(/```json\n([\s\S]*?)\n```/);
     expect(json).not.toBeNull();

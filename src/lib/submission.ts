@@ -72,7 +72,10 @@ export function buildIssue(s: Submission): IssueSpec {
     const refLabel = s.ref.resolved ?? s.ref.raw;
     return {
       title: `[Request] ${refLabel} — ${s.targetLanguage.toUpperCase()}`,
-      labels: ['map-request', 'needs-triage'],
+      // A map request carries nothing to triage — the ref + target language are
+      // the whole spec — so it is ready for an agent (gemara-map) immediately.
+      // Feedback still needs triage (the owner curates the change spec first).
+      labels: ['map-request', 'ready-for-agent'],
       body: [
         jsonBlock(s),
         '',
