@@ -74,7 +74,14 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
             <a
               class="btn btn-primary"
               data-dafyomi-action-map
-              href={fallbackMap ? `/map/${fallbackMap.data.corpus}/${fallbackMap.data.book}/${fallbackMap.data.location}` : '#'}
+              data-recent-link
+              data-map-base={fallbackMap
+                ? `/map/${fallbackMap.data.corpus}/${fallbackMap.data.book}/${fallbackMap.data.location}`
+                : ''}
+              data-map-langs={fallbackMap ? fallbackMap.data.languages.join(',') : ''}
+              href={fallbackMap
+                ? `/map/${fallbackMap.data.corpus}/${fallbackMap.data.book}/${fallbackMap.data.location}/${fallbackMap.data.languages.includes('he') ? 'he' : fallbackMap.data.languages[0]}`
+                : '#'}
               data-i18n="homeOpenMapCta"
               hidden={!fallbackMap}
             >{t.homeOpenMapCta}</a>
@@ -257,7 +264,13 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
         topicEl.setAttribute('data-i18n-he', mapEntry.topicHe);
         topicEl.setAttribute('data-i18n-en', mapEntry.topicEn);
         topicEl.textContent = lang === 'en' ? mapEntry.topicEn : mapEntry.topicHe;
-        mapLink.href = `/map/talmud/${mapEntry.book}/${mapEntry.location}`;
+        // Skip the info page — link straight to the active-lang variant.
+        // Stash the langs the map ships in so the lang switch can re-pick.
+        const langs = Array.isArray(mapEntry.languages) ? mapEntry.languages : [];
+        const pick = langs.includes(lang) ? lang : (langs[0] || 'he');
+        mapLink.href = `/map/talmud/${mapEntry.book}/${mapEntry.location}/${pick}`;
+        mapLink.setAttribute('data-map-base', `/map/talmud/${mapEntry.book}/${mapEntry.location}`);
+        mapLink.setAttribute('data-map-langs', langs.join(','));
         mapLink.hidden = false;
         requestLink.hidden = true;
       } else {
@@ -324,9 +337,12 @@ const tractateIndexJson = JSON.stringify(tractateIndex);
 
   const section = document.getElementById('visitor-recents');
   const ul = document.getElementById('visitor-recents-list');
+  // Cap the rendered list at the 5 most recently viewed maps. The store still
+  // tracks up to VISITOR_RECENTS_MAX (10), but the surface stays short.
+  const VISITOR_RECENTS_VISIBLE = 5;
   if (section && ul) {
     const storage = typeof window !== 'undefined' ? window.localStorage : null;
-    const entries = list(storage);
+    const entries = list(storage).slice(0, VISITOR_RECENTS_VISIBLE);
     if (entries.length > 0) {
       const lang = document.documentElement.lang === 'en' ? 'en' : 'he';
       for (const e of entries) {

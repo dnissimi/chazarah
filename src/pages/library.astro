@@ -275,6 +275,20 @@ const groups = groupBySeder();
                 href: `/request?ref=${encodeURIComponent(`${ref.tractate.en} ${ref.daf}`)}`,
               });
             }
+          } else {
+            // Masechet name alone — surface every existing map in that
+            // masechet so typing "מגילה" actually shows the four Megillah
+            // maps and not just a single "Browse all" link.
+            for (const m of topicIndex) {
+              if (m.book !== ref.tractate.slug) continue;
+              items.push({
+                kind: 'map',
+                label: lang === 'en' ? m.topicEn : m.topicHe,
+                ref: formatRef(m.book, m.location, lang),
+                refLang: lang,
+                href: `/map/talmud/${m.book}/${m.location}`,
+              });
+            }
           }
           items.push({
             kind: 'masechet',
