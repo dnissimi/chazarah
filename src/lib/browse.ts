@@ -106,4 +106,14 @@ export const MASECHTOT: readonly MasechetInfo[] = [
       en: "All folios of Tractate Shabbat (2 through 157). Browse what's mapped, request what isn't.",
     },
   },
+  {
+    corpus: 'talmud',
+    book: 'bava-kamma',
+    bounds: { firstDaf: 2, lastDaf: 119 },
+    name: { he: 'בבא קמא', en: 'Bava Kamma' },
+    summary: {
+      he: 'כל דפי מסכת בבא קמא (ב׳ עד קי״ט). אפשר לסקור מה כבר מופה, או לבקש מה שעדיין לא.',
+      en: "All folios of Tractate Bava Kamma (2 through 119). Browse what's mapped, request what isn't.",
+    },
+  },
 ];

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — בבא קמא ע׳</title>
+<meta name="description" content="מתי כותבים שטר הרשאה לגביית מיטלטלין; המקרים שבהם גנב משלם תשלומי ארבעה וחמישה; דרשת ׳דבר ולא חצי דבר׳ בעדות שני זוגות; וגנב שמכר בשבת — חייב או פטור.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="bava-kamma">
+<meta name="gemara-map:location" content="70">
+<meta name="gemara-map:sefaria-ref" content="Bava Kamma 70">
+<meta name="gemara-map:topic-he" content="הרשאה, תשלומי ד׳ וה׳, ועדות">
+<meta name="gemara-map:topic-en" content="Authorization, the 4/5 penalty, testimony">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — בבא קמא ע׳">
+<meta name="gemara-map:title-en" content="Sugya map — Bava Kamma 70">
+<meta name="gemara-map:blurb-he" content="מתי כותבים שטר הרשאה לגביית מיטלטלין; המקרים שבהם גנב משלם תשלומי ארבעה וחמישה; דרשת ׳דבר ולא חצי דבר׳ בעדות שני זוגות; וגנב שמכר בשבת — חייב או פטור.">
+<meta name="gemara-map:blurb-en" content="When an authorization document may be written to collect movable property; the cases in which a thief pays the fourfold or fivefold penalty; the exposition ׳a matter, not half a matter׳ for two pairs of witnesses; and a thief who sold on Shabbat — liable or exempt.">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — בבא קמא ע׳</span><span data-when="en">Sugya map — Bava Kamma 70</span></h1>
+    <div class="subtitle"><span data-when="he">בבא קמא ע׳ א–ע״א א (ע׳ א:ב–ע״א א:א) · ארבע סוגיות · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Bava Kamma 70a–71a (70a:2–71a:1) · four sugyot · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> העמוד פותח בדיני שטר הרשאה (ייפוי כוח) לגביית מיטלטלין: מתי כותבים אותו, מה לשונו הנדרשת, והאם המורשה שליח או שותף. אחר כך משנה חדשה המונה את המקרים שבהם גנב חייב בתשלומי ארבעה וחמישה — אף כשהמכירה או הטביחה כרוכות באיסור. הגמרא דנה בדרשת רבי עקיבא ׳דבר ולא חצי דבר׳ ומראה שאף לשיטתו חייב, ולבסוף מיישבת ברייתא הפוטרת ׳גנב ומכר בשבת׳ — שהיא במקרה שמעשה הקניין כרוך באיסור שבת שיש בו חיוב מיתה, ואף על פי כן הויא מכירה.</span>
+    <span data-when="en"><b>Bottom line:</b> The daf opens with the law of an authorization document (orakhta) for collecting movable property: when it may be written, the wording it requires, and whether the collector is an agent or a partner. Then a new mishna lists the cases in which a thief owes the fourfold or fivefold penalty — even when the sale or slaughter involved a transgression. The Gemara examines Rabbi Akiva's ׳a matter, not half a matter׳ and shows the thief is liable even on his view, and finally reconciles a baraita that exempts ׳stole and sold on Shabbat׳ — a case where the act of acquisition entails a capital Shabbat transgression, yet it is still a valid sale.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+    <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — ארבע סוגיות</span><span data-when="en">Overview — four sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · שטר הרשאה על מיטלטלין"]:::statement
+  O2(["2 · המשנה — תשלומי ארבעה וחמישה"]):::mishnah
+  O3["3 · ׳דבר ולא חצי דבר׳ — שני זוגות עדים"]:::statement
+  O4["4 · גנב ומכר בשבת — חייב או פטור"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · Authorization to collect movable property"]:::statement
+  O2(["2 · The mishna — the fourfold/fivefold penalty"]):::mishnah
+  O3["3 · ׳A matter, not half a matter׳ — two pairs of witnesses"]:::statement
+  O4["4 · Stole and sold on Shabbat — liable or exempt"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+      </script>
+    </div>
+  </section>
+
+    <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">שטר הרשאה על מיטלטלין</span><span data-when="en">Authorization to collect movable property</span>
+        <span class="ref">Bava Kamma 70a:2-8</span></h2>
+    <div class="lead"><span data-when="he">חכמי נהרדעא קובעים שאין כותבים שטר הרשאה (ייפוי כוח) לגביית מיטלטלין, וטעמם במימרת רבי יוחנן בדבר גזול שאינו ברשות הבעלים להקנותו. הגמרא מביאה נוסח חלופי, את תוספת אביי בהקנאת מקצת, ומחלוקת אמימר ורב אשי אם המורשה שליח או שותף — והלכה: שליח.</span><span data-when="en">The Sages of Neharde'a rule that one cannot write a document of authorization (orakhta) to collect movable property, grounding it in Rabbi Yoḥanan's principle that a stolen item is not in the owner's power to transfer. The Gemara brings an alternate version, Abaye's addition about conveying a fraction, and the Ameimar–Rav Ashi dispute over whether the collector is an agent or a partner — and the halakha: an agent.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① נהרדעא: אין כותבים הרשאה על מיטלטלין"]:::statement
+  S2["② טעם: מימרת ר׳ יוחנן — גזול אינו ברשות הבעלים להקנות"]:::statement
+  S3["③ איכא דאמרי: רק במיטלטלין שכָּפַר בהם — דמיחזי כשיקרא"]:::statement
+  S4["④ ועוד: הרשאה בלא ׳זיל דון וזכי׳ — לית בה ממשא"]:::statement
+  S5["⑤ אביי: כתב לו מחצה / שליש — מיגו דמשתעי אפלגא, אכולה"]:::statement
+  Q6{"⑥ תפס המורשה — מהו? אמימר: לא מפקינן; רב אשי: שליח שווייה"}:::question
+  C7(["⑦ ואיכא דאמר שותפא; נפקא מינה למיתפס פלגא — והלכתא שליח שווייה"]):::conclusion
+  S1 -->|מאי טעמא| S2
+  S1 -.->|לישנא אחרינא| S3
+  S3 -->|דין נוסף| S4
+  S4 -->|הוסיף אביי| S5
+  S5 -.->|בעיא| Q6
+  Q6 -->|מסקנה| C7
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Neharde'a: no authorization document is written for movable property"]:::statement
+  S2["② Reason — R. Yoḥanan: a stolen item is not in the owner's power to consecrate/convey"]:::statement
+  S3["③ Other version: only for property the holder has denied — it looks like falsehood"]:::statement
+  S4["④ Also: an orakhta lacking ׳go, judge, win and collect׳ has no force"]:::statement
+  S5["⑤ Abaye: convey even a half or third — litigating part forces litigating the whole"]:::statement
+  Q6{"⑥ If the agent seized it — Ameimar: we don't remove it; Rav Ashi: he is a mere agent"}:::question
+  C7(["⑦ Some say a partner; the difference is seizing half — and the halakha: a mere agent"]):::conclusion
+  S1 -->|the reason| S2
+  S1 -.->|other version| S3
+  S3 -->|further ruling| S4
+  S4 -->|Abaye adds| S5
+  S5 -.->|dilemma| Q6
+  Q6 -->|conclusion| C7
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמְרִי נְהַרְדָּעֵי: לָא כָּתְבִינַן אוֹרָכְתָּא אַמִּטַּלְטְלִי"]:::statement
+  S2["② מִשּׁוּם דְּרַבִּי יוֹחָנָן … זֶה … שֶׁאֵינוֹ שֶׁלּוֹ, וְזֶה … שֶׁאֵינוֹ בִּרְשׁוּתוֹ"]:::statement
+  S3["③ אִיכָּא דְּאָמְרִי … אַמִּטַּלְטְלִי דְּכַפְרֵיהּ … דְּמִיחֲזֵי כְּשִׁיקְרָא"]:::statement
+  S4["④ אוֹרָכְתָּא דְּלָא כְּתִיב בֵּיהּ ׳זִיל דּוּן וּזְכִי׳ – לֵית בֵּיהּ מְשָׁשָׁא"]:::statement
+  S5["⑤ אָמַר אַבָּיֵי: וְאִי כְּתִיב … לְמֶחֱצָה … מִיגּוֹ דְּמִשְׁתַּעֵי אַפַּלְגָא … אַכּוּלֵּהּ"]:::statement
+  Q6{"⑥ אִי תְּפַס – לָא מַפְּקִינַן … רַב אָשֵׁי: שָׁלִיחַ שַׁוְּיֵהּ"}:::question
+  C7(["⑦ אִיכָּא דְּאָמַר שׁוּתָּפָא … לְמִיתְפַּס פַּלְגָא; וְהִלְכְתָא: שָׁלִיחַ שַׁוְּיֵהּ"]):::conclusion
+  S1 -->|מאי טעמא| S2
+  S1 -.->|לישנא אחרינא| S3
+  S3 -->|דין נוסף| S4
+  S4 -->|הוסיף אביי| S5
+  S5 -.->|בעיא| Q6
+  Q6 -->|מסקנה| C7
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:2</span></div>
+      <div class="orig">אָמְרִי נְהַרְדָּעֵי: לָא כָּתְבִינַן אוֹרָכְתָּא אַמִּטַּלְטְלִי. אָמַר רַב אָשֵׁי לְאַמֵּימָר: מַאי טַעְמָא? אֲמַר לֵיהּ: מִשּׁוּם דְּרַבִּי יוֹחָנָן,</div>
+      <div class="trans" data-when="he">אמרו חכמי נהרדעא: אין כותבים שטר הרשאה (ייפוי כוח) לגבות מיטלטלין בעבור אחר. שאל רב אשי את אמימר: מהו הטעם? השיב לו: משום דברי רבי יוחנן.</div>
+      <div class="trans" data-when="en">§ The Sages of Neharde’a say: One cannot write a document of authorization [orakhta] to assign another to collect a debt or a deposit of movable property on his behalf. Rav Ashi said to Ameimar: What is the reason for this halakha? Ameimar said to him: It is due to a principle stated by Rabbi Yoḥanan.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:3</span></div>
+      <div class="orig">דְּאָמַר רַבִּי יוֹחָנָן: גָּזַל וְלֹא נִתְיָיאֲשׁוּ הַבְּעָלִים – שְׁנֵיהֶם אֵינָן יְכוֹלִין לְהַקְדִּישׁ; זֶה לְפִי שֶׁאֵינוֹ שֶׁלּוֹ, וְזֶה לְפִי שֶׁאֵינוֹ בִּרְשׁוּתוֹ.</div>
+      <div class="trans" data-when="he">שאמר רבי יוחנן: גזל ועדיין לא נתייאשו הבעלים — שניהם אינם יכולים להקדיש את החפץ: הגזלן — לפי שאינו שלו; והבעלים — לפי שאינו ברשותם. וכיוון שבהרשאה צריך להקנות את החפץ לשליח, ובמיטלטלין שביד אחר אין הבעלים יכולים להקנותם — לכן אין כותבים הרשאה עליהם.</div>
+      <div class="trans" data-when="en">As Rabbi Yoḥanan says: If one stole an item and the owners have not yet despaired of recovering it, neither of them is able to consecrate it: This one, the thief, cannot consecrate the item because it does not belong to him, and that one, the owner, cannot consecrate it because it is not in his possession. The granting of authority to collect a debt involves the transfer of ownership of the item or money from the owner to the collector; otherwise the debtor could refuse to convey it to the collector. In the case of movable property, as it is being held by another, it is not in the possession of the owner; just as the owner cannot consecrate this item he cannot transfer ownership of it.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:4</span></div>
+      <div class="orig">אִיכָּא דְּאָמְרִי, אָמְרִי נְהַרְדָּעֵי: לָא כָּתְבִינַן אוֹרָכְתָּא אַמִּטַּלְטְלִי דְּכַפְרֵיהּ. טַעְמָא דְּכַפְרֵיהּ, דְּמִיחֲזֵי כְּשִׁיקְרָא; אֲבָל לָא כַּפְרֵיהּ – כָּתְבִינַן.</div>
+      <div class="trans" data-when="he">איכא דאמרי (יש המוסרים בנוסח אחר): אמרו נהרדעא — אין כותבים הרשאה על מיטלטלין שהנתבע כָּפַר בהם, שהדבר נראה כשקר (כמקנה דבר שאחיזתו בו מסופקת); אבל אם לא כפר — כותבים.</div>
+      <div class="trans" data-when="en">There are those who state a different version of this halakha. The Sages of Neharde’a say: One cannot write a document of authorization for the collection of movable property that the bailee or debtor has denied owing. The Gemara infers: According to this version, the only reason the document cannot be written is that the bailee or debtor has denied owing the item, as a document written under these circumstances has the appearance of falsehood, since the purported owner is transferring ownership of an item over which his own ownership is in doubt. But it can be inferred that if the bailee or debtor did not deny owing the item, one can write a document of authorization.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:5</span></div>
+      <div class="orig">וְאָמְרִי נְהַרְדָּעֵי: אוֹרָכְתָּא דְּלָא כְּתִיב בֵּיהּ ״זִיל דּוּן וּזְכִי וְאַפֵּיק לְנַפְשָׁךְ״ – לֵית בֵּיהּ מְשָׁשָׁא. מַאי טַעְמָא? מִשּׁוּם דְּאָמַר לֵיהּ הַאיְךְ: לָאו בַּעַל דְּבָרִים דִּידִי אַתְּ.</div>
+      <div class="trans" data-when="he">ועוד אמרו נהרדעא: שטר הרשאה שלא נכתב בו ׳לֵךְ דוּן וּזְכֵה והוֹצֵא לעצמך׳ — אין בו ממש (אינו תקף). מהו הטעם? משום שיכול הנתבע לומר למורשה: ׳אין אתה בעל דברים שלי׳ (איני חייב להתדיין עמך).</div>
+      <div class="trans" data-when="en">And the Sages of Neharde’a state another halakha with regard to this kind of document: A document of authorization in which it is not written: Go and take legal action against so-and-so and take possession of the owed property and collect it from him for yourself, has no substance, i.e., it is not a valid document. What is the reason for this? It is because the other party, the bailee or debtor, can say to the collector who presents a document without this clause: I am not legally answerable to you; I am willing to deal only with the person to whom the item is owed. To avoid this situation, the authorization document must transfer actual ownership of the item to the collector, who is now claiming it for himself.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:6</span></div>
+      <div class="orig">אָמַר אַבָּיֵי: וְאִי כְּתִיב בֵּיהּ לְמֶחֱצָה לִשְׁלִישׁ וְלִרְבִיעַ, מִיגּוֹ דְּמִשְׁתַּעֵי דִּינָא אַפַּלְגָא, מִשְׁתַּעֵי דִּינָא אַכּוּלֵּהּ.</div>
+      <div class="trans" data-when="he">אמר אביי: ואם נכתב בו שהקנה לו רק מחצה, או שליש, או רביע מן החוב — די בכך; שמתוך (=כיוון) שהנתבע מתדיין עמו על המחצה שהוקנתה, מתדיין עמו על הכול.</div>
+      <div class="trans" data-when="en">Abaye said: And if it is written in the document that the owner transferred ownership of only half of the item to the collector, or a third or a quarter of it, this is sufficient. The reason is that since the bailee or debtor must relate to the judgment, i.e., engage in litigation with the collector, over the half or third or quarter of the item that has been transferred to the collector, he must relate to the judgment concerning all of it.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:7</span></div>
+      <div class="orig">אָמַר אַמֵּימָר: אִי תְּפַס – לָא מַפְּקִינַן מִינֵּיהּ. רַב אָשֵׁי אָמַר: כֵּיוָן דְּכַתְבֵיהּ לֵיהּ ״כֹּל דְּמִתְעֲנֵי מִן דִּינָא קַבֵּילִית עֲלַי״ – שָׁלִיחַ שַׁוְּיֵהּ.</div>
+      <div class="trans" data-when="he">אמר אמימר: אם תָּפַס המורשה את מה שגבה לעצמו — אין מוציאים זאת מידו (שהרי הוקנה לו בשטר). רב אשי חולק: כיוון שכתב לו ׳כל המתחייב בדין קיבלתי עליי׳ — עשאו שליח בלבד (ולא בעלים, ולכן אינו יכול לתפוס).</div>
+      <div class="trans" data-when="en">Ameimar said: If the collector who is empowered by the authorization seized the item he collected and kept it for himself, the court does not take it away from him, as the owner transferred ownership of the item to him in the document of authorization, as explained above. Rav Ashi disagreed with Ameimar and said: Since the owner wrote to the collector: I accept upon myself anything that develops as a result of this legal process, he has in effect rendered the collector an agent to act on his behalf, and therefore the agent cannot seize the item for himself.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:8</span></div>
+      <div class="orig">וְאִיכָּא דְּאָמַר: שׁוּתָּפָא שַׁוְּיֵהּ. לְמַאי נָפְקָא מִינַּהּ? לְמִיתְפַּס פַּלְגָא. וְהִלְכְתָא: שָׁלִיחַ שַׁוְּיֵהּ.</div>
+      <div class="trans" data-when="he">ואיכא דאמר: עשאו שותף (בחצי). למאי נפקא מינה? לעניין אם יכול לתפוס מחצה. והלכה: שליח עשאו (ואינו יכול לתפוס כלום).</div>
+      <div class="trans" data-when="en">And there is another opinion that states: The owner renders the collector a partner in the collected item, transferring ownership of half of it to him while maintaining ownership over the other half. The Gemara asks: What is the practical difference between this opinion and that of Rav Ashi? The Gemara answers: The difference is whether the collector has the power to seize half of the collected item for himself. If he is merely an agent of the owner, he cannot seize anything; if he is a partner he can seize up to half. The Gemara concludes: And the halakha is that the owner renders the collector his agent, and therefore this agent may not seize any portion of the collected item for himself.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">המשנה — מי משלם תשלומי ארבעה וחמישה</span><span data-when="en">The mishna — who pays the fourfold/fivefold penalty</span>
+        <span class="ref">Bava Kamma 70a:9-13</span></h2>
+    <div class="lead"><span data-when="he">משנה: מונה את המקרים שבהם הגנב חייב בתשלומי ארבעה וחמישה — גם כשעדי הטביחה אינם עדי הגניבה, ואף כשהמכירה או הטביחה נעשו באיסור (שבת, עבודה זרה, יום הכיפורים), או בשחיטה שאינה ראויה. רבי שמעון פוטר בשוחט שנמצאת טריפה ובשוחט חולין בעזרה.</span><span data-when="en">A mishna lists the cases in which a thief owes the fourfold or fivefold payment — even when the slaughter witnesses are not the theft witnesses, and even when the sale or slaughter involved a transgression (Shabbat, idolatry, Yom Kippur) or an unfit slaughter. Rabbi Shimon exempts the thief who slaughters and finds a tereifa, and who slaughters a non-sacred animal in the Temple courtyard.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① גנב ע״פ שניים וטבח ומכר ע״פ שניים אחרים — משלם ד׳ וה׳"]):::mishnah
+  M2["② גנב ומכר בשבת / לע״ז / וטבח ביו״כ — משלם ד׳ וה׳"]:::statement
+  M3["③ גנב משל אביו וירש / טבח והקדיש — משלם ד׳ וה׳"]:::statement
+  M4["④ גנב וטבח לרפואה או לכלבים / נמצאת טריפה / חולין בעזרה — חייב"]:::statement
+  M5["⑤ רבי שמעון פוטר בשני אלו (שחיטה שאינה ראויה)"]:::statement
+  M1 -->|המשך| M2
+  M2 -->|המשך| M3
+  M3 -->|המשך| M4
+  M4 -.->|מחלוקת| M5
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Stole by two witnesses, slaughtered/sold by other two — pays the 4 or 5"]):::mishnah
+  M2["② Stole and sold on Shabbat / for idolatry / slaughtered on Yom Kippur — pays"]:::statement
+  M3["③ Stole his father's and inherited / slaughtered then consecrated — pays"]:::statement
+  M4["④ Slaughtered for medicine or dogs / found a tereifa / non-sacred in the courtyard — pays"]:::statement
+  M5["⑤ Rabbi Shimon exempts in these last two (a slaughter not fit for its purpose)"]:::statement
+  M1 -->|continues| M2
+  M2 -->|continues| M3
+  M3 -->|continues| M4
+  M4 -.->|dispute| M5
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① גָּנַב עַל פִּי שְׁנַיִם … עַל פִּי שְׁנַיִם אֲחֵרִים – מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה"]):::mishnah
+  M2["② גָּנַב וּמָכַר בְּשַׁבָּת … לַעֲבוֹדָה זָרָה … וְטָבַח בְּיוֹם הַכִּפּוּרִים"]:::statement
+  M3["③ גָּנַב מִשֶּׁל אָבִיו … וְאַחַר כָּךְ מֵת אָבִיו … הִקְדִּישׁ – מְשַׁלֵּם … אַרְבָּעָה וַחֲמִשָּׁה"]:::statement
+  M4["④ גָּנַב וְטָבַח לִרְפוּאָה אוֹ לִכְלָבִים … נִמְצֵאת טְרֵיפָה … חוּלִּין בַּעֲזָרָה"]:::statement
+  M5["⑤ רַבִּי שִׁמְעוֹן פּוֹטֵר בִּשְׁנֵי אֵלּוּ"]:::statement
+  M1 -->|המשך| M2
+  M2 -->|המשך| M3
+  M3 -->|המשך| M4
+  M4 -.->|מחלוקת| M5
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:9</span></div>
+      <div class="orig">מַתְנִי׳ גָּנַב עַל פִּי שְׁנַיִם, וְטָבַח וּמָכַר עַל פִּיהֶם, אוֹ עַל פִּי שְׁנַיִם אֲחֵרִים – מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה.</div>
+      <div class="trans" data-when="he">משנה: גנב על פי שני עדים, וטבח ומכר על פיהם או על פי שני עדים אחרים — משלם תשלומי ארבעה וחמישה (ארבעה על שֶׂה וחמישה על שור).</div>
+      <div class="trans" data-when="en">MISHNA: The mishna lists a series of cases in which a thief is required to pay the fourfold or fivefold penalty. If one stole an animal, as established based on the testimony of two witnesses, and he subsequently slaughtered the animal or sold it, also based on the testimony of the same witnesses, or based on the testimony of two other witnesses, he pays the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:10</span></div>
+      <div class="orig">גָּנַב וּמָכַר בְּשַׁבָּת; גָּנַב וּמָכַר לַעֲבוֹדָה זָרָה; גָּנַב וְטָבַח בְּיוֹם הַכִּפּוּרִים;</div>
+      <div class="trans" data-when="he">גנב ומכר בשבת; גנב ומכר לצורך עבודה זרה; גנב וטבח ביום הכיפורים — משלם תשלומי ארבעה וחמישה (ואין הטביחה או המכירה האסורות פוטרות אותו מן התשלום).</div>
+      <div class="trans" data-when="en">If one stole an animal and sold it on Shabbat, or if he stole it and sold it for idol worship, or if he stole it and slaughtered it on Yom Kippur, he pays the fourfold or fivefold payment. Although his sale or slaughter in these circumstances involved a sin, he is not liable to receive the death penalty for the sale and must consequently pay the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:11</span></div>
+      <div class="orig">גָּנַב מִשֶּׁל אָבִיו וְטָבַח וּמָכַר, וְאַחַר כָּךְ מֵת אָבִיו; גָּנַב וְטָבַח, וְאַחַר כָּךְ הִקְדִּישׁ – מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה.</div>
+      <div class="trans" data-when="he">גנב משל אביו וטבח ומכר, ואחר כך מת אביו (וירשו); גנב וטבח ואחר כך הקדיש — משלם תשלומי ארבעה וחמישה.</div>
+      <div class="trans" data-when="en">If one stole an animal of his father’s and then slaughtered it or sold it, and afterward his father died and he inherited his father’s estate either on his own or in partnership with his brothers, or if he stole an animal and slaughtered it and afterward he consecrated it, he pays the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:12</span></div>
+      <div class="orig">גָּנַב וְטָבַח לִרְפוּאָה אוֹ לִכְלָבִים; הַשּׁוֹחֵט וְנִמְצֵאת טְרֵיפָה; הַשּׁוֹחֵט חוּלִּין בַּעֲזָרָה – מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה.</div>
+      <div class="trans" data-when="he">גנב וטבח לרפואה או למאכל כלבים; השוחט ונמצאת הבהמה טריפה; השוחט חולין בעזרה — משלם תשלומי ארבעה וחמישה.</div>
+      <div class="trans" data-when="en">In the case of one who stole an animal and slaughtered it, not for the purpose of eating its meat, but to use it for medicinal purposes or to feed the meat to dogs, and likewise a thief who slaughters the animal to eat its meat but it was found to be an animal with a condition that will cause it to die within twelve months [tereifa], or a thief who slaughters a non-sacred animal in the Temple courtyard, he pays the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:13</span></div>
+      <div class="orig">רַבִּי שִׁמְעוֹן פּוֹטֵר בִּשְׁנֵי אֵלּוּ.</div>
+      <div class="trans" data-when="he">רבי שמעון פוטר בשני אלו (בשוחט שנמצאת טריפה ובשוחט חולין בעזרה), שלדעתו שחיטה שאינה ראויה אינה נחשבת שחיטה.</div>
+      <div class="trans" data-when="en">Rabbi Shimon exempts the thief from the fourfold or fivefold payment in these last two cases, as he maintains that the legal status of an act of slaughter that is not fit for accomplishing its full ritual purpose is not considered an act of slaughter.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+        <span data-when="he">עדות בשני זוגות — ׳דבר ולא חצי דבר׳</span><span data-when="en">Two pairs of witnesses — ׳a matter, not half a matter׳</span>
+        <span class="ref">Bava Kamma 70a:14-70b:9</span></h2>
+    <div class="lead"><span data-when="he">הגמרא שואלת אם המשנה דלא כרבי עקיבא, הדורש ׳דבר ולא חצי דבר׳ — שהרי עדי הטביחה לבדם מעידים על חצי הדבר. אביי דוחה: אף רבי עקיבא מודה, שכן עדי הגניבה אינם צריכים לעדי הטביחה (כדמיון לעדי קידושין וביאה), ו׳דבר׳ קורא בהם. ומבררת מה ממעט הכתוב לדעת חכמים.</span><span data-when="en">The Gemara asks whether the mishna contradicts Rabbi Akiva, who requires ׳a matter, not half a matter׳ — since the slaughter witnesses alone testify to only half. Abaye rejects this: even Rabbi Akiva concedes, for the theft witnesses do not require the slaughter witnesses (parallel to witnesses of betrothal and intercourse), so it counts as a whole matter; and it clarifies what the verse excludes according to the Rabbis.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① לימא מתניתין דלא כר׳ עקיבא?"}:::question
+  S2["② ר׳ עקיבא: ׳דבר׳ ולא חצי דבר — עדי טביחה לבד חצי דבר"]:::statement
+  P3["③ ראיה: מעשה חלפתא ור׳ יוחנן בן נורי — חזקת ג׳ שנים בעדים שונים"]:::proof
+  A4["④ אביי: אפילו כר׳ עקיבא — והלוא מודה ב׳קידש׳ ו׳בעל׳"]:::answer
+  A5["⑤ עדי קידושין אינם צריכים לעדי ביאה — ׳דבר׳ קרינא ביה"]:::answer
+  A6["⑥ הכא: עדי גניבה אינם צריכים לעדי טביחה — ׳דבר׳ קרינא ביה"]:::answer
+  Q7{"⑦ ולרבנן — ׳דבר ולא חצי דבר׳ למעוטי מאי?"}:::question
+  A8["⑧ אחד ׳שערה בגבה׳ ואחד ׳בכרסה׳"]:::answer
+  Q9{"⑨ האי חצי דבר וחצי עדות הוא!"}:::question
+  C10(["⑩ אלא: שניים ׳בגבה׳ ושניים ׳בכרסה׳ — הני קטנה והני קטנה"]):::conclusion
+  Q1 -->|דאי ר׳ עקיבא| S2
+  S2 -->|דתניא| P3
+  P3 -.->|דחייה| A4
+  A4 -->|טעם| A5
+  A5 -->|הכי נמי| A6
+  A6 -.->|וְרַבָּנַן| Q7
+  Q7 -->|תירוץ| A8
+  A8 -.->|דחייה| Q9
+  Q9 -->|אלא| C10
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Shall we say the mishna is not like Rabbi Akiva?"}:::question
+  S2["② R. Akiva: ׳a matter׳, not half a matter — the slaughter witnesses alone are half"]:::statement
+  P3["③ Proof: Ḥalafta & R. Yoḥanan b. Nuri — three-year possession by different witnesses"]:::proof
+  A4["④ Abaye: even like R. Akiva — he concedes ׳betrothed׳ + ׳had intercourse׳"]:::answer
+  A5["⑤ The betrothal witnesses need no intercourse witnesses — we call it a whole matter"]:::answer
+  A6["⑥ So here: theft witnesses need no slaughter witnesses — a whole matter"]:::answer
+  Q7{"⑦ And for the Rabbis — what does ׳not half a matter׳ exclude?"}:::question
+  A8["⑧ One says ׳a hair on her back׳, one says ׳on her abdomen׳"]:::answer
+  Q9{"⑨ But that is half a matter and half a testimony!"}:::question
+  C10(["⑩ Rather: two say ׳on her back׳ and two ׳on her abdomen׳ — each says she is a minor"]):::conclusion
+  Q1 -->|for if R. Akiva| S2
+  S2 -->|as taught| P3
+  P3 -.->|rejected| A4
+  A4 -->|reason| A5
+  A5 -->|so too here| A6
+  A6 -.->|and the Rabbis?| Q7
+  Q7 -->|answer| A8
+  A8 -.->|rejected| Q9
+  Q9 -->|rather| C10
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① לֵימָא מַתְנִיתִין דְּלָא כְּרַבִּי עֲקִיבָא?"}:::question
+  S2["② דְּאִי רַבִּי עֲקִיבָא … ׳דָּבָר׳ – וְלֹא חֲצִי דָבָר"]:::statement
+  P3["③ דְּתַנְיָא … כְּשֶׁהָלַךְ אַבָּא חֲלַפְתָּא אֵצֶל רַבִּי יוֹחָנָן בֶּן נוּרִי … הֲרֵי זוֹ חֲזָקָה"]:::proof
+  A4["④ אָמַר אַבָּיֵי: אֲפִילּוּ תֵּימָא רַבִּי עֲקִיבָא – מִי לָא מוֹדֶה … ׳קִידֵּשׁ׳ … ׳בָּעַל׳"]:::answer
+  A5["⑤ כֵּיוָן דְּעֵדֵי קִדּוּשִׁין לָא צְרִיכִי לְעֵדֵי בִיאָה – ׳דָּבָר׳ קָרֵינָא בֵּיהּ"]:::answer
+  A6["⑥ הָכָא נָמֵי … עֵדֵי גְנֵיבָה לָא צְרִיכִי לְעֵדֵי טְבִיחָה – ׳דָּבָר׳ קָרֵינָא בֵּיהּ"]:::answer
+  Q7{"⑦ וְרַבָּנַן – ׳דָּבָר׳ וְלֹא חֲצִי דָבָר, לְמַעוֹטֵי מַאי?"}:::question
+  A8["⑧ אֶחָד … אֶחָד בְּגַבָּהּ, וְאֶחָד … אֶחָד בִּכְרֵיסָהּ"]:::answer
+  Q9{"⑨ הַאי חֲצִי דָבָר וַחֲצִי עֵדוּת הוּא!"}:::question
+  C10(["⑩ אֶלָּא … שְׁנַיִם … בְּגַבָּהּ, וּשְׁנַיִם … בִּכְרֵיסָהּ – הָנֵי … קְטַנָּה … וְהָנֵי … קְטַנָּה"]):::conclusion
+  Q1 -->|דאי ר׳ עקיבא| S2
+  S2 -->|דתניא| P3
+  P3 -.->|דחייה| A4
+  A4 -->|טעם| A5
+  A5 -->|הכי נמי| A6
+  A6 -.->|וְרַבָּנַן| Q7
+  Q7 -->|תירוץ| A8
+  A8 -.->|דחייה| Q9
+  Q9 -->|אלא| C10
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:14</span></div>
+      <div class="orig">גְּמָ׳ לֵימָא מַתְנִיתִין דְּלָא כְּרַבִּי עֲקִיבָא?</div>
+      <div class="trans" data-when="he">גמרא: נאמר שמשנתנו אינה כשיטת רבי עקיבא? (שהרי המשנה מחייבת אף כשעדי הטביחה אינם עדי הגניבה.)</div>
+      <div class="trans" data-when="en">GEMARA: The mishna teaches that if two witnesses testify about the theft of an animal and two others testify about its slaughter or sale, the thief pays the fourfold or fivefold payment. The Gemara suggests: Let us say that the mishna is not in accordance with the opinion of Rabbi Akiva, in his exposition of the verse: “Based on the testimony of two witnesses or on the testimony of three witnesses shall a matter be established” (Deuteronomy 19:15).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:15</span></div>
+      <div class="orig">דְּאִי רַבִּי עֲקִיבָא, הָאָמַר: ״דָּבָר״ – וְלֹא חֲצִי דָבָר!</div>
+      <div class="trans" data-when="he">שאם כשיטת רבי עקיבא — הרי אמר: ׳דָּבָר׳ ולא חצי דבר! (עדות צריכה לְעַיֵּין על עניין שלם; ועדי הטביחה לבדם מעידים רק על חצי הדבר.)</div>
+      <div class="trans" data-when="en">The Gemara elaborates: As, if it is in accordance with the opinion of Rabbi Akiva, the thief would be exempt from the fourfold or fivefold payment, as doesn’t Rabbi Akiva say that this verse teaches that witnesses’ testimony must refer to an entire matter, and not part of a matter? In the case discussed by the mishna the second set of witnesses testifies only that this man slaughtered or sold an ox or sheep, not that he stole it, and therefore their testimony alone would not render the thief liable to pay anything.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע׳ א — Bava Kamma 70a:16</span></div>
+      <div class="orig">דְּתַנְיָא, אָמַר רַבִּי יוֹסֵי: כְּשֶׁהָלַךְ אַבָּא חֲלַפְתָּא אֵצֶל רַבִּי יוֹחָנָן בֶּן נוּרִי לִלְמוֹד תּוֹרָה, וְאָמְרִי לַהּ: רַבִּי יוֹחָנָן בֶּן נוּרִי אֵצֶל אַבָּא</div>
+      <div class="trans" data-when="he">כפי ששנינו בברייתא: אמר רבי יוסי — כשהלך אבא חלפתא אצל רבי יוחנן בן נורי ללמוד תורה, ויש אומרים: רבי יוחנן בן נורי אצל אבא</div>
+      <div class="trans" data-when="en">As it is taught in the Tosefta (Bava Batra 2:4) that Rabbi Yosei said: When father Ḥalafta went to study Torah with Rabbi Yoḥanan ben Nuri, and some say that he said: When Rabbi Yoḥanan ben Nuri went to study Torah with father</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:1</span></div>
+      <div class="orig">חֲלַפְתָּא, אָמַר לוֹ:</div>
+      <div class="trans" data-when="he">חלפתא — אמר לו (במהלך דיון בדיני חזקת קרקעות):</div>
+      <div class="trans" data-when="en">Ḥalafta, he said to him the following in the course of their discussion of the halakhot of possession.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:2</span></div>
+      <div class="orig">הֲרֵי שֶׁאֲכָלָהּ שָׁנָה רִאשׁוֹנָה בִּפְנֵי שְׁנַיִם, שְׁנִיָּה בִּפְנֵי שְׁנַיִם, שְׁלִישִׁית בִּפְנֵי שְׁנַיִם, מַהוּ?</div>
+      <div class="trans" data-when="he">׳הרי שאכל אדם את פירות השדה שנה ראשונה בפני שני עדים, שנה שנייה בפני שני עדים אחרים, ושנה שלישית בפני שני עדים אחרים — מהו? האם הוחזקה לו השדה?׳</div>
+      <div class="trans" data-when="en">If one has been in possession of real estate for three years, this serves as proof of his claim that he is the legal owner. One who is able to prove uninterrupted possession for the necessary period is not required to produce documentary evidence of his legal title to the property. Rabbi Yoḥanan ben Nuri or father Ḥalafta asked: If one harvested and ate the produce of a field that he claims as his own the first year of the three years required for establishing possession of the land in the presence of two witnesses, and subsequently ate the produce of the second year in the presence of two other witnesses, and finally ate the produce of the third year in the presence of yet two other witnesses, what is the halakha? Can the three testimonies combine to establish full testimony that he ate the produce of three years, thereby confirming his ownership of the field?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:3</span></div>
+      <div class="orig">אָמַר לוֹ: הֲרֵי זוֹ חֲזָקָה. אָמַר לוֹ: אַף אֲנִי אוֹמֵר כֵּן, אֶלָּא שֶׁרַבִּי עֲקִיבָא חוֹלֵק בַּדָּבָר. שֶׁהָיָה רַבִּי עֲקִיבָא אוֹמֵר: ״דָּבָר״ – וְלֹא חֲצִי דָבָר.</div>
+      <div class="trans" data-when="he">אמר לו: הרי זו חזקה. אמר לו: אף אני אומר כן, אלא שרבי עקיבא חולק בדבר, שהיה רבי עקיבא אומר: ׳דָּבָר׳ — ולא חצי דבר (וכל זוג עדים מעיד רק על שנה אחת, חצי הדבר).</div>
+      <div class="trans" data-when="en">Rabbi Ḥalafta said to Rabbi Yoḥanan ben Nuri, or vice versa: This is considered to establish presumptive ownership by the one who ate the produce. The other Sage said to him: I too say that this is so, but Rabbi Akiva disputes this matter, as Rabbi Akiva would say: The Torah requires that witnesses must testify with regard to a complete matter and not part of a matter. Since there must be testimony concerning consumption of the produce over three years, and each set of witnesses establishes only that it took place for one year, their separate testimonies do not combine. If so, the mishna is apparently not in accordance with the opinion of Rabbi Akiva.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:4</span></div>
+      <div class="orig">אָמַר אַבָּיֵי: אֲפִילּוּ תֵּימָא רַבִּי עֲקִיבָא – מִי לָא מוֹדֶה רַבִּי עֲקִיבָא בִּשְׁנַיִם אוֹמְרִים ״קִידֵּשׁ״ וּשְׁנַיִם אוֹמְרִים ״בָּעַל״,</div>
+      <div class="trans" data-when="he">אמר אביי: אפילו תאמר שמשנתנו כרבי עקיבא — וכי אין רבי עקיבא מודה בשניים אומרים ׳קידֵּשׁ׳ (פלוני אשה) ושניים אומרים ׳בָּעַל׳ (אחֵר בָּעַל אותה), שזו עדות על ביאת איסור?</div>
+      <div class="trans" data-when="en">The Gemara rejects this assertion. Abaye said: You can even say that the mishna is in accordance with the opinion of Rabbi Akiva. Doesn’t Rabbi Akiva concede that in a case where two witnesses say: So-and-so betrothed a certain woman, and two other witnesses say: Someone else subsequently engaged in sexual intercourse with that same woman, this is proof that the act of intercourse was adulterous?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:5</span></div>
+      <div class="orig">דְּאַף עַל גַּב דְּעֵדֵי בִיאָה צְרִיכִי לְעֵדֵי קִדּוּשִׁין – כֵּיוָן דְּעֵדֵי קִדּוּשִׁין לָא צְרִיכִי לְעֵדֵי בִיאָה, ״דָּבָר״ קָרֵינָא בֵּיהּ?</div>
+      <div class="trans" data-when="he">שאף על פי שעדי הביאה צריכים לעדי הקידושין (שאין משמעות לעדותם בלא הקידושין) — כיוון שעדי הקידושין אינם צריכים לעדי הביאה (ועדותם עומדת בפני עצמה) — ׳דָּבָר׳ שלם קורא אני בה.</div>
+      <div class="trans" data-when="en">The reason for this is that even though the witnesses testifying about the intercourse require the witnesses who testify about the betrothal, i.e., the testimony of the second set of witnesses is meaningless without the testimony of the first witnesses, nevertheless, since the witnesses testifying about the betrothal do not require the witnesses who testify about the intercourse, i.e., their testimony by itself establishes a halakhic status, we call the testimony of each pair a complete matter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:6</span></div>
+      <div class="orig">הָכָא נָמֵי, אַף עַל גַּב דְּעֵדֵי טְבִיחָה צְרִיכִי לְעֵדֵי גְנֵיבָה – כֵּיוָן דְּעֵדֵי גְנֵיבָה לָא צְרִיכִי לְעֵדֵי טְבִיחָה, ״דָּבָר״ קָרֵינָא בֵּיהּ.</div>
+      <div class="trans" data-when="he">כך גם כאן: אף על פי שעדי הטביחה צריכים לעדי הגניבה — כיוון שעדי הגניבה אינם צריכים לעדי הטביחה (ועדותם לבדה מחייבת כפל) — ׳דָּבָר׳ שלם קורא אני בה. ולכן אף לרבי עקיבא חייב.</div>
+      <div class="trans" data-when="en">Here too, the same logic applies in the case of a thief who steals an animal and subsequently slaughters or sells it: Even though the witnesses who testify about the slaughter require the testimony of the witnesses about the theft in order for their testimony to have any halakhic significance, since the witnesses testifying about the theft do not require the testimony of the witnesses who testify about the slaughter, as their testimony alone establishes that person as a thief who is liable to pay the double payment, we call the testimony of each pair a complete matter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:7</span></div>
+      <div class="orig">וְרַבָּנַן – הַאי ״דָּבָר״ וְלֹא חֲצִי דָבָר, לְמַעוֹטֵי מַאי? לְמַעוֹטֵי אֶחָד אוֹמֵר אֶחָד בְּגַבָּהּ, וְאֶחָד אוֹמֵר אֶחָד בִּכְרֵיסָהּ.</div>
+      <div class="trans" data-when="he">ולחכמים (החולקים על רבי עקיבא ואינם דורשים ׳דבר ולא חצי דבר׳) — מה בא הכתוב ׳דָּבָר׳ למעט? למעט: אחד אומר ׳שׂערה אחת בגבּהּ׳ ואחד אומר ׳שׂערה אחת בכרֵסהּ׳ (לעניין סימני בגרות של נערה).</div>
+      <div class="trans" data-when="en">The Gemara asks: And according to the opinion of the Rabbis, who disagree with Rabbi Akiva that the Torah stipulates that testimony must be about a matter and not half of a matter, the term “matter” (Deuteronomy 19:15) serves to exclude what? The Gemara answers: It serves to exclude a case involving testimony that a girl has reached majority, in which one witness says that he saw one hair on her lower back, and one witness says that he saw one hair on her lower abdomen. A girl is considered to have reached maturity when she has two pubic hairs. In this case, two witnesses separately testify that they have each seen one hair, and therefore each testimony is halakhically meaningless on its own. The Rabbis derive from the verse that these testimonies do not combine.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:7</span></div>
+      <div class="orig">וְרַבָּנַן – הַאי ״דָּבָר״ וְלֹא חֲצִי דָבָר, לְמַעוֹטֵי מַאי? לְמַעוֹטֵי אֶחָד אוֹמֵר אֶחָד בְּגַבָּהּ, וְאֶחָד אוֹמֵר אֶחָד בִּכְרֵיסָהּ.</div>
+      <div class="trans" data-when="he">ולחכמים (החולקים על רבי עקיבא ואינם דורשים ׳דבר ולא חצי דבר׳) — מה בא הכתוב ׳דָּבָר׳ למעט? למעט: אחד אומר ׳שׂערה אחת בגבּהּ׳ ואחד אומר ׳שׂערה אחת בכרֵסהּ׳ (לעניין סימני בגרות של נערה).</div>
+      <div class="trans" data-when="en">The Gemara asks: And according to the opinion of the Rabbis, who disagree with Rabbi Akiva that the Torah stipulates that testimony must be about a matter and not half of a matter, the term “matter” (Deuteronomy 19:15) serves to exclude what? The Gemara answers: It serves to exclude a case involving testimony that a girl has reached majority, in which one witness says that he saw one hair on her lower back, and one witness says that he saw one hair on her lower abdomen. A girl is considered to have reached maturity when she has two pubic hairs. In this case, two witnesses separately testify that they have each seen one hair, and therefore each testimony is halakhically meaningless on its own. The Rabbis derive from the verse that these testimonies do not combine.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:8</span></div>
+      <div class="orig">הַאי חֲצִי דָבָר וַחֲצִי עֵדוּת הוּא!</div>
+      <div class="trans" data-when="he">מקשה הגמרא: זה הרי חצי דבר וגם חצי עדות (כל עד מעיד על שׂערה אחת בלבד, ובעד יחיד)! ופשיטא שאינה עדות.</div>
+      <div class="trans" data-when="en">The Gemara raises a difficulty: In this case each testimony is obviously invalid, as it is half a matter and also half a testimony. Not only does each testimony refer to one hair, which is half a matter, it is submitted by one witness, which is half a testimony. Consequently, it is obvious that the girl is not considered of age in this case.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:9</span></div>
+      <div class="orig">אֶלָּא לְמַעוֹטֵי שְׁנַיִם אוֹמְרִים אֶחָד בְּגַבָּהּ, וּשְׁנַיִם אוֹמְרִים אֶחָד בִּכְרֵיסָהּ – הָנֵי אָמְרִי קְטַנָּה הִיא, וְהָנֵי אָמְרִי קְטַנָּה הִיא.</div>
+      <div class="trans" data-when="he">אלא — בא למעט: שניים אומרים ׳שׂערה אחת בגבּהּ׳ ושניים אומרים ׳שׂערה אחת בכרֵסהּ׳ — שאלו אומרים בעצם ׳קטנה היא׳ ואלו אומרים ׳קטנה היא׳ (כל זוג מעיד על שׂערה אחת, חצי הדבר, ואין מצטרפים).</div>
+      <div class="trans" data-when="en">The Gemara therefore rejects this explanation. Rather, the Rabbis maintain that the term “matter” serves to exclude a case in which two witnesses say that they saw one hair on a girl’s back, and two other witnesses say that they saw one hair on her lower abdomen. In this case the testimony of either set of witnesses concerns only one hair, and therefore these witnesses are essentially saying that she is still a minor and those witnesses are saying that she is still a minor. Therefore, each testimony concerns only half of a matter.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+        <span data-when="he">גנב ומכר בשבת — חייב או פטור</span><span data-when="en">Stole and sold on Shabbat — liable or exempt</span>
+        <span class="ref">Bava Kamma 70b:10-71a:1</span></h2>
+    <div class="lead"><span data-when="he">המשנה מחייבת בגנב ומכר בשבת, אך ברייתא פוטרת. רמי בר חמא ורב פפא מעמידים את הברייתא במקרה שבו מעשה הקניין כרוך באיסור שבת שיש בו חיוב מיתה (קטיפת תאנה / זריקה לחצר), ורבא מוכיח מאֶתְנָן שאף מעשה שאין כופים עליו בדין נחשב מכירה תקפה — והגנב חייב.</span><span data-when="en">The mishna holds a thief who steals and sells on Shabbat liable, but a baraita exempts him. Rami bar Ḥama and Rav Pappa explain the baraita as a case where the act of acquisition involves a capital Shabbat transgression (picking a fig / throwing into the courtyard), and Rava proves from a harlot's fee that even an act the court will not compel is still a valid sale — so the thief pays.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① ׳גנב ומכר בשבת׳ — והתניא: פטור!"]):::mishnah
+  A2["② רמי בר חמא: ב׳עֲקוֹץ תאנה … ותיקנֵה לי גניבותיך׳ — מתחייב בנפשו"]:::answer
+  Q3{"③ דחייה: אם כן אין זו מכירה כלל — ולא יקראנה ׳מכירה׳!"}:::question
+  A4["④ רב פפא: ב׳זְרוֹק גניבותיך לחצֵרי ותיקנֵה לי׳"]:::answer
+  S5["⑤ כמאן? כר׳ עקיבא — קלוטה כמי שהונחה דמיא"]:::statement
+  Q6{"⑥ דאי כרבנן — קנה בקלוטת אוויר קודם שיתחייב בשבת!"}:::question
+  A7["⑦ ב׳לא תיקנֵה לי עד שתנוח׳ — קניין וחיוב כאחד"]:::answer
+  S8["⑧ רבא: לעולם כרמי בר חמא — אתנן אסרה תורה אף בבא על אמו"]:::statement
+  C9(["⑨ אף שאין כופים בדין — כיוון דמקנֵי ליה בהכי — הויא מכירה, וחייב"]):::conclusion
+  M1 -->|תירוץ| A2
+  A2 -.->|דחייה| Q3
+  Q3 -->|אלא| A4
+  A4 -->|כמאן| S5
+  S5 -.->|דאי כרבנן| Q6
+  Q6 -->|תירוץ| A7
+  A2 -->|לישנא אחרינא| S8
+  S8 -->|מסקנה| C9
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① ׳Stole and sold on Shabbat׳ — but a baraita teaches: exempt!"]):::mishnah
+  A2["② Rami b. Ḥama: ׳pick a fig … and acquire my stolen animal׳ — a capital Shabbat act"]:::answer
+  Q3{"③ Rejected: then it is no sale at all — the baraita wouldn't call it a ׳sale׳!"}:::question
+  A4["④ Rav Pappa: ׳throw your stolen animal into my courtyard and acquire it for me׳"]:::answer
+  S5["⑤ Like whom? R. Akiva — an item in the airspace is as if at rest"]:::statement
+  Q6{"⑥ For if the Rabbis — he acquires in the airspace before the Shabbat liability!"}:::question
+  A7["⑦ ׳don't acquire until it rests׳ — acquisition and liability are simultaneous"]:::answer
+  S8["⑧ Rava: actually like Rami b. Ḥama — the Torah bans a harlot's fee even with one's mother"]:::statement
+  C9(["⑨ Though the court won't compel — since he conveys it thereby, it is a valid sale, so he pays"]):::conclusion
+  M1 -->|answer| A2
+  A2 -.->|rejected| Q3
+  Q3 -->|rather| A4
+  A4 -->|like whom| S5
+  S5 -.->|if the Rabbis| Q6
+  Q6 -->|answer| A7
+  A2 -->|other approach| S8
+  S8 -->|conclusion| C9
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① גָּנַב וּמָכַר בְּשַׁבָּת … וְהָתַנְיָא: פָּטוּר!"]):::mishnah
+  A2["② רָמֵי בַּר חָמָא … ׳עֲקוֹץ לְךָ תְּאֵינָה … וְתִיקְּנֵי לִי גְּנֵיבוּתָיךְ׳"]:::answer
+  Q3{"③ הָא מְכִירָה נָמֵי לָאו מְכִירָה הִיא!"}:::question
+  A4["④ אָמַר רַב פָּפָּא … ׳זְרוֹק גְּנֵיבוּתָיךְ לַחֲצֵרִי, וְתִיקְּנֵי לִי גְּנֵיבוּתָיךְ׳"]:::answer
+  S5["⑤ כְּמַאן? כְּרַבִּי עֲקִיבָא … קְלוּטָה כְּמִי שֶׁהוּנְּחָה דָּמְיָא"]:::statement
+  Q6{"⑥ דְּאִי כְּרַבָּנַן … קָנָה … לְעִנְיַן שַׁבָּת – לָא מְחַיַּיב עַד דְּמָטְיָא לְאַרְעָא!"}:::question
+  A7["⑦ בְּאוֹמֵר: ׳לֹא תִּיקְּנֵי לִי גְּנֵיבוּתָיךְ עַד שֶׁתָּנוּחַ׳"]:::answer
+  S8["⑧ רָבָא אָמַר … אֶתְנַן אָסְרָה תּוֹרָה – וַאֲפִילּוּ בָּא עַל אִמּוֹ"]:::statement
+  C9(["⑨ כֵּיוָן דְּקָא מַקְנֵי לֵיהּ בְּהָכִי – הָוְיָא מְכִירָה"]):::conclusion
+  M1 -->|תירוץ| A2
+  A2 -.->|דחייה| Q3
+  Q3 -->|אלא| A4
+  A4 -->|כמאן| S5
+  S5 -.->|דאי כרבנן| Q6
+  Q6 -->|תירוץ| A7
+  A2 -->|לישנא אחרינא| S8
+  S8 -->|מסקנה| C9
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:10</span></div>
+      <div class="orig">גָּנַב וּמָכַר בְּשַׁבָּת [וְכוּ׳]. וְהָתַנְיָא: פָּטוּר!</div>
+      <div class="trans" data-when="he">המשנה: ׳גנב ומכר בשבת וכו׳ — חייב׳. מקשה הגמרא: והרי שנינו בברייתא שהוא פטור!</div>
+      <div class="trans" data-when="en">§ The mishna teaches: If one stole an animal and sold it on Shabbat, he pays the fourfold or fivefold payment. The Gemara asks: But isn’t it taught in a baraita that in this case he is exempt from the fourfold or fivefold payment?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:11</span></div>
+      <div class="orig">אָמַר רָמֵי בַּר חָמָא: כִּי תַּנְיָא הָהִיא דְּפָטוּר – בְּאוֹמֵר לוֹ: ״עֲקוֹץ לְךָ תְּאֵינָה מִתְּאֵינָתִי, וְתִיקְּנֵי לִי גְּנֵיבוּתָיךְ״.</div>
+      <div class="trans" data-when="he">אמר רמי בר חמא: הברייתא הפוטרת עוסקת כשאמר לו הקונה: ׳עֲקוֹץ (קְטוֹף) לך תאנה מתאנתי בשבת, ובכך תיקְנֶה לי את גניבתך׳ — נמצא שמעשה הקניין כרוך באיסור שבת שיש בו חיוב מיתה, ולכן פטור מן התשלום.</div>
+      <div class="trans" data-when="en">Rami bar Ḥama said: When it is taught in that baraita that he is exempt, this is referring to a case where the purchaser says to the thief: Pick off a fig for yourself from my fig tree on Shabbat, and through performing this act your stolen animal shall be acquired by me. Since the act of acquisition of the animal involved the type of Shabbat desecration for which one is liable to receive the death penalty, the thief is exempt from the monetary obligations he would ordinarily incur from this act, i.e., the fourfold or fivefold payment to the animal’s prior owner. This is in accordance with the principle that one who commits two or more transgressions by means of a single act, both of which entail punishment, is exempt from the lesser punishment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:12</span></div>
+      <div class="orig">אָמְרִי: וְכֵיוָן דְּכִי תָבַע לֵיהּ קַמַּן בְּדִינָא לָא אָמְרִינַן לֵיהּ: ״זִיל שַׁלֵּים״ – דְּמִחַיַּיב בְּנַפְשׁוֹ הוּא; הָא מְכִירָה נָמֵי לָאו מְכִירָה הִיא!</div>
+      <div class="trans" data-when="he">אמרו (מקשים): וכיוון שאם יתבע הקונה את הגנב לפנינו בדין לא נאמר לו ׳לך שלם׳ — לפי שהוא מתחייב בנפשו (חייב מיתה) — אם כן אף המכירה אינה מכירה, ולא הייתה הברייתא קוראת לה ׳מכירה׳!</div>
+      <div class="trans" data-when="en">The Sages say, questioning this explanation of the baraita: But since, if the purchaser would bring a legal claim against the thief before us, to force him to deliver the animal acquired by means of picking the fig, the court would not say to the thief: Go and pay him the animal you owe him, because the thief is liable to receive the death penalty for his desecration of Shabbat, this shows that the sale is not a valid sale at all. Therefore, the baraita would not call this exchange a sale and this interpretation of the baraita cannot be correct.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:13</span></div>
+      <div class="orig">אֶלָּא אָמַר רַב פָּפָּא, בְּאוֹמֵר לוֹ: ״זְרוֹק גְּנֵיבוּתָיךְ לַחֲצֵרִי, וְתִיקְּנֵי לִי גְּנֵיבוּתָיךְ״.</div>
+      <div class="trans" data-when="he">אלא אמר רב פפא: הברייתא עוסקת כשאמר לו: ׳זְרוֹק את גניבתך לחצֵרי, ובכך תיקְנֶה לי את גניבתך׳ — שבהעברת הבהמה מרשות הרבים לחצרו יש איסור שבת שיש בו חיוב מיתה, ולכן פטור.</div>
+      <div class="trans" data-when="en">Rather, Rav Pappa said: The baraita is discussing a case where the purchaser said to the thief: Throw your stolen animal from the public domain into my enclosed courtyard, and your stolen animal will thereby be acquired by me. One can acquire an item if it is placed on his property. In this case, when the thief places the animal on the purchaser’s property he moves it from the public domain into the private domain, which is a desecration of Shabbat that entails the death penalty. Consequently, he is exempt from the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:14</span></div>
+      <div class="orig">כְּמַאן? כְּרַבִּי עֲקִיבָא, דְּאָמַר: קְלוּטָה – כְּמִי שֶׁהוּנְּחָה דָּמְיָא.</div>
+      <div class="trans" data-when="he">כמאן (כשיטת מי)? כרבי עקיבא, שאמר: ׳קלוטה כמי שהונחה דמיא׳ (חפץ באוויר הרשות כאילו נח בה) — ולכן הקניין והחיוב על השבת חלים כאחד.</div>
+      <div class="trans" data-when="en">The Gemara asks: If this is the correct explanation of the baraita, in accordance with whose opinion is the baraita taught? It is in accordance with the opinion of Rabbi Akiva, who says: An item in the airspace of a certain area is considered as though it were at rest in that area.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:15</span></div>
+      <div class="orig">דְּאִי כְּרַבָּנַן, כֵּיוָן דְּמָטְיָא לַחֲצַר בֵּיתוֹ – קָנָה, לְעִנְיַן שַׁבָּת – לָא מְחַיַּיב עַד דְּמָטְיָא לְאַרְעָא!</div>
+      <div class="trans" data-when="he">שאם כשיטת חכמים — כיוון שהבהמה הגיעה לאוויר חצֵרו כבר קנה אותה (שאדם קונה בקלוטת אוויר חצרו), ואילו לעניין שבת אינו מתחייב עד שתנוח בקרקע — נמצא שהקניין קודם לחיוב המיתה, ואינו פטור!</div>
+      <div class="trans" data-when="en">As, if the baraita is in accordance with the opinion of the Rabbis, who hold that an item in the airspace of a certain area is not considered as though it were at rest in that area, once the animal reaches the airspace of the courtyard of the purchaser’s house he has acquired it, as one can acquire items that are in the airspace of his courtyard just like those on its ground, whereas with regard to moving an item from one domain to another on Shabbat the thief is not liable for Shabbat desecration until it reaches the ground. Since the thief’s monetary liability is not simultaneous with his incurring of the death penalty, he would not be exempt from payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:16</span></div>
+      <div class="orig">בְּאוֹמֵר: ״לֹא תִּיקְּנֵי לִי גְּנֵיבוּתָיךְ עַד שֶׁתָּנוּחַ״.</div>
+      <div class="trans" data-when="he">מתרצים: אפשר אף כחכמים, כשאמר לו: ׳לא תיקְנֶה לי גניבתך עד שֶׁתָּנוּחַ׳ — וכך הקניין וחיוב השבת חלים כאחד.</div>
+      <div class="trans" data-when="en">The Gemara answers: It is possible that the baraita is in accordance with the opinion of the Rabbis as well, as one can explain that it is speaking of a case in which the purchaser says to the thief: Your stolen animal shall not be acquired by me until it rests on the ground. In that case, the acquisition of the animal and the Shabbat desecration are simultaneous.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:17</span></div>
+      <div class="orig">רָבָא אָמַר: לְעוֹלָם כְּרָמֵי בַּר חָמָא; אֶתְנַן אָסְרָה תּוֹרָה – וַאֲפִילּוּ בָּא עַל אִמּוֹ; וְאִי תָּבְעָה לֵיהּ קַמַּן בְּדִינָא, מִי אָמְרִינַן לֵיהּ: ״קוּם הַב לַהּ אֶתְנַן״?!</div>
+      <div class="trans" data-when="he">רבא אמר: לעולם אפשר כרמי בר חמא (בקטיפת התאנה), והקושיא ׳אין זו מכירה׳ נדחית — שהרי אֶתְנָן (שכר זונה) אסרה התורה אפילו בא על אמו (שהוא חייב מיתה); ואם תתבע אותו בדין, וכי נאמר לו ׳קום תן לה אתנן׳?!</div>
+      <div class="trans" data-when="en">Rava said: Actually, it is possible to explain the baraita as Rami bar Ḥama did, that the animal was acquired through the picking of a fig on Shabbat. And the objection raised earlier, that this act should not be considered a sale at all, is incorrect. This can be demonstrated by the fact that the Torah prohibits one to bring as an offering an animal given as the payment to a prostitute for services rendered (Deuteronomy 23:19). And this prohibition applies even if the man in question engaged in intercourse with his own mother, which is a capital offense. But if she would bring a legal claim before us, demanding the payment of the animal that was agreed upon as her fee, would we say to him: Arise and pay her the animal? The court would not say this, as the monetary liability was incurred simultaneously with the commission of a capital crime.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">בבא קמא ע׳ ב — Bava Kamma 70b:18</span></div>
+      <div class="orig">אֶלָּא אַף עַל גַּב דְּכִי קָא תָבְעָה לֵיהּ בְּדִינָא – לָא אָמְרִינַן לֵיהּ ״זִיל הַב לָהּ״, כֵּיוָן דְּכִי יָהֵיב לַהּ – הָוֵי אֶתְנַן; הָכָא נָמֵי, אַף עַל גַּב דִּלְעִנְיַן תַּשְׁלוּמִין – אִי תָּבַע [לֵיהּ] בְּדִינָא קַמַּן לָא אָמְרִינַן לֵיהּ ״זִיל שַׁלֵּים״,</div>
+      <div class="trans" data-when="he">אלא — אף על פי שאם תתבע אותו בדין לא נאמר לו ׳לך תן לה׳, מכל מקום כיוון שאם יִתֵּן לה הרי זה אתנן (אסור) — הרי שגם דבר שאין בית דין כופים עליו נחשב מעשה תקף; כך גם כאן: אף שלעניין תשלומין, אם יתבע הקונה את הגנב בדין לא נאמר לו ׳לך שלם׳,</div>
+      <div class="trans" data-when="en">Rather, one must say that even though if she brings a legal claim against him demanding the payment of the animal that was agreed upon as her fee we do not say to him: Go and pay her, nevertheless, since if he does give it to her it is considered payment to a prostitute, it cannot be used as an offering. Here too, in the case of the acquisition of the animal through picking a fig, even though with regard to payment, if the purchaser would bring a legal claim before us against the thief, seeking to force him to deliver the animal, we would not say to him: Go pay,</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:1</span></div>
+      <div class="orig">אֲפִילּוּ הָכִי כֵּיוָן דְּקָא מַקְנֵי לֵיהּ בְּהָכִי – הָוְיָא מְכִירָה.</div>
+      <div class="trans" data-when="he">אף על פי כן — כיוון שהגנב מקנה לו את הבהמה במעשה זה — הרי זו מכירה (תקפה), וחייב בתשלומי ארבעה וחמישה.</div>
+      <div class="trans" data-when="en">and even so, since the thief transfers ownership to the purchaser in this manner, it is considered a valid sale, and he is required to pay the fourfold or fivefold payment.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+</body>
+</html>
