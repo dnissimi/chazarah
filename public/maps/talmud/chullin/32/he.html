@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל״ב</title>
+<meta name="description" content="מתי הפסקה באמצע השחיטה פוסלת — ׳כדי שחיטה׳ ו׳כדי ביקור׳; חיתוך הסימנים שלא כסדר — נבילה או טריפה; ודין שחיטת הקנה שניקבה אחריו הריאה, ובני המעיים שישראל מזמנין עליהם.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="32">
+<meta name="gemara-map:sefaria-ref" content="Chullin 32">
+<meta name="gemara-map:topic-he" content="שהייה בשחיטה ובני מעיים">
+<meta name="gemara-map:topic-en" content="Interrupted slaughter; carcass vs. tereifa">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל״ב">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 32">
+<meta name="gemara-map:blurb-he" content="מתי הפסקה באמצע השחיטה פוסלת — ׳כדי שחיטה׳ ו׳כדי ביקור׳; חיתוך הסימנים שלא כסדר — נבילה או טריפה; ודין שחיטת הקנה שניקבה אחריו הריאה, ובני המעיים שישראל מזמנין עליהם.">
+<meta name="gemara-map:blurb-en" content="When a pause mid-slaughter disqualifies — ׳a slaughter's duration׳ and ׳an examination's duration׳; cutting the simanim out of order — carcass or tereifa; and slaughter when the windpipe is cut and the lung or innards are then pierced.">
+<meta name="gemara-map:sugya-count" content="3">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל״ב</span><span data-when="en">Sugya map — Chullin 32</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל״ב א–ל״ג א (ל״ב א:ד–ל״ג א:ח) · שלוש סוגיות · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 32a–33a (32a:4–33a:8) · three sugyot · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> העמוד עוסק תחילה בשהיית השחיטה: מתי הפסקה באמצע פוסלת — ׳כדי שחיטה׳ לדעת חכמים (ומחלוקת כיצד משערים) ו׳כדי ביקור׳ לרבי שמעון. אחר כך משנה חדשה: החותך את הסימנים שלא כסדר או הממית את הבהמה תוך כדי — רבי ישבב מטמא כנבילה ורבי עקיבא כטריפה, והגמרא מיישבת סתירה ממשנת ׳אלו טרפות׳. לבסוף, מדברי ריש לקיש (שחט הקנה וניקבה הריאה) נלמד דין בני המעיים — שישראל מזמנין עליהם בעוד הבהמה מפרכסת, ולא הגויים.</span>
+    <span data-when="en"><b>Bottom line:</b> The daf first treats interruptions in slaughter: when a mid-slaughter pause disqualifies — ׳the duration of a slaughter׳ for the Rabbis (with a dispute over how it is measured) and ׳the duration of an examination׳ for Rabbi Shimon. Then a new mishna: one who cuts the simanim out of order or lets the animal die mid-slaughter — Rabbi Yeshevav rules it an impure carcass and Rabbi Akiva a tereifa, and the Gemara reconciles a contradiction with the ׳these are tereifot׳ mishna. Finally, from Reish Lakish’s case — the windpipe cut and the lung then pierced — the law of the innards is derived: Jews may be invited to eat them while the animal still convulses, but gentiles may not.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+    <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — שלוש סוגיות</span><span data-when="en">Overview — three sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1(["1 · שהייה בשחיטה — כדי שחיטה וכדי ביקור"]):::mishnah
+  O2(["2 · נבילה או טריפה — סדר חיתוך הסימנים"]):::mishnah
+  O3["3 · בני מעיים — שחט הקנה וניקבה הריאה"]:::statement
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1(["1 · Interrupting the slaughter — a slaughter's vs an examination's duration"]):::mishnah
+  O2(["2 · Carcass or tereifa — cutting the simanim out of order"]):::mishnah
+  O3["3 · The innards — windpipe cut, then the lung is pierced"]:::statement
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+      </script>
+    </div>
+  </section>
+
+    <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">שהייה בשחיטה — כדי שחיטה וכדי ביקור</span><span data-when="en">Interrupting the slaughter</span>
+        <span class="ref">Chullin 32a:4-16</span></h2>
+    <div class="lead"><span data-when="he">המשנה פוסלת שחיטה שהופסקה באמצעהּ ׳כדי שחיטה׳; הגמרא מבררת מהו השיעור (מחלוקת רב, שמואל ורבי יוחנן, ועוד דעות), מביאה את דברי רבא בסכין רעה ובצירוף שהיות, ומסיימת בשיעורו של רבי שמעון — ׳כדי ביקור׳.</span><span data-when="en">The mishna invalidates a slaughter interrupted mid-act for ׳the duration of a slaughter׳; the Gemara works out that measure (a dispute of Rav, Shmuel and R. Yoḥanan, with further views), brings Rava on a dull knife and on combining pauses, and closes with Rabbi Shimon's measure — ׳the duration of an examination׳.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: שהה ׳כדי שחיטה׳ — פסולה; ר״ש: ׳כדי ביקור׳"]):::mishnah
+  S2["② מאי ׳כדי שחיטה׳? רב: כדי שחיטת בהמה אחרת"]:::statement
+  Q3{"③ בעיא: בהמה לבהמה ועוף לעוף, או אף בהמה לעוף?"}:::question
+  S4["④ איתמר: רב — בהמה לבהמה; שמואל ור׳ יוחנן — אף בהמה לעוף"]:::statement
+  S5["⑤ ר׳ חנניא: כדי שיביא בהמה אחרת וישחוט"]:::statement
+  S6["⑥ רב פפא: נפקא מינה — עומדת להטיל"]:::statement
+  S7["⑦ במערבא משום ר׳ יוסי בר׳ חנינא: יגביה, ירביץ וישחוט — לפי הבהמה"]:::statement
+  S8["⑧ רבא: שוחט בסכין רעה כל היום — כשרה בלא שהייה"]:::statement
+  Q9{"⑨ בעי רבא: שהיות — מהו שיצטרפו?"}:::question
+  A10["⑩ התם בדלא שהה — הוליך והביא"]:::answer
+  C11(["⑪ רב הונא בריה דרב נתן: שהה במיעוט סימנין — תיקו"]):::conclusion
+  S12["⑫ ר״ש: ׳כדי ביקור׳ — כביקור טבח חכם"]:::statement
+  M1 -->|מאי כדי שחיטה| S2
+  S2 -->|איבעיא| Q3
+  Q3 -->|איתמר| S4
+  S4 -->|דעה| S5
+  S5 -->|נפקא מינה| S6
+  S4 -->|דעה| S7
+  M1 -->|דין נוסף| S8
+  S8 -.->|בעיא| Q9
+  Q9 -->|יישוב| A10
+  A10 -.->|בעיא| C11
+  M1 -.->|לשון ר״ש| S12
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: paused ׳a slaughter's duration׳ → invalid; R. Shimon: ׳an examination's׳"]):::mishnah
+  S2["② What is ׳a slaughter's duration׳? Rav: the time to slaughter another animal"]:::statement
+  Q3{"③ Dilemma: animal-for-animal & bird-for-bird, or animal-measure even for a bird?"}:::question
+  S4["④ Dispute: Rav — matched kind; Shmuel & R. Yoḥanan — even animal-measure for a bird"]:::statement
+  S5["⑤ R. Ḥananya: the time to bring another animal and slaughter it"]:::statement
+  S6["⑥ Rav Pappa: the difference — an animal standing ready to be cast down"]:::statement
+  S7["⑦ In the West, R. Yosei b. Ḥanina: lift, lay down, and slaughter — by the animal's size"]:::statement
+  S8["⑧ Rava: slaughtering with a dull knife all day is valid — if there is no pause"]:::statement
+  Q9{"⑨ Rava's dilemma: do separate pauses combine to disqualify?"}:::question
+  A10["⑩ There he never paused — he drew the knife back and forth"]:::answer
+  C11(["⑪ Rav Huna b. Rav Natan: paused at the minority of the simanim — teiku"]):::conclusion
+  S12["⑫ R. Shimon's ׳examination׳ = a sage-slaughterer's inspection of the knife"]:::statement
+  M1 -->|what is the measure| S2
+  S2 -->|dilemma| Q3
+  Q3 -->|it was stated| S4
+  S4 -->|view| S5
+  S5 -->|the difference| S6
+  S4 -->|view| S7
+  M1 -->|further ruling| S8
+  S8 -.->|dilemma| Q9
+  Q9 -->|resolve| A10
+  A10 -.->|dilemma| C11
+  M1 -.->|R. Shimon's clause| S12
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① נָפְלָה סַכִּין … אִם שָׁהָה כְּדֵי שְׁחִיטָה – פְּסוּלָה"]):::mishnah
+  S2["② מַאי כְּדֵי שְׁחִיטָה? … כְּדֵי שְׁחִיטַת בְּהֵמָה אַחֶרֶת"]:::statement
+  Q3{"③ כְּדֵי שְׁחִיטַת בְּהֵמָה לִבְהֵמָה … אוֹ דִלְמָא אַף בְּהֵמָה לְעוֹף?"}:::question
+  S4["④ רַב … בְּהֵמָה לִבְהֵמָה … וּשְׁמוּאֵל … אֲפִילּוּ בְּהֵמָה לְעוֹף"]:::statement
+  S5["⑤ רַבִּי חֲנַנְיָא … כְּדֵי שֶׁיָּבִיא בְּהֵמָה אַחֶרֶת וְיִשְׁחוֹט"]:::statement
+  S6["⑥ אָמַר רַב פָּפָּא: עוֹמֶדֶת לְהַטִּיל אִיכָּא בֵּינַיְיהוּ"]:::statement
+  S7["⑦ כְּדֵי שֶׁיַּגְבִּיהֶנָּה וְיַרְבִּיצֶנָּה וְיִשְׁחוֹט, דַּקָּה לְדַקָּה וְגַסָּה לְגַסָּה"]:::statement
+  S8["⑧ הַשּׁוֹחֵט בְּסַכִּין רָעָה, אֲפִילּוּ כׇּל הַיּוֹם כּוּלּוֹ – כְּשֵׁרָה"]:::statement
+  Q9{"⑨ שְׁהִיּוֹת, מַהוּ שֶׁיִּצְטָרְפוּ?"}:::question
+  A10["⑩ הָתָם בִּדְלָא שְׁהָה"]:::answer
+  C11(["⑪ שָׁהָה בְּמִיעוּט סִימָנִין, מַהוּ? תֵּיקוּ"]):::conclusion
+  S12["⑫ מַאי כְּדֵי בִיקּוּר? … כְּדֵי בִּיקּוּר טַבָּח חָכָם"]:::statement
+  M1 -->|מאי כדי שחיטה| S2
+  S2 -->|איבעיא| Q3
+  Q3 -->|איתמר| S4
+  S4 -->|דעה| S5
+  S5 -->|נפקא מינה| S6
+  S4 -->|דעה| S7
+  M1 -->|דין נוסף| S8
+  S8 -.->|בעיא| Q9
+  Q9 -->|יישוב| A10
+  A10 -.->|בעיא| C11
+  M1 -.->|לשון ר״ש| S12
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ב א — Chullin 32a:4</span></div>
+      <div class="orig">מַתְנִי׳ נָפְלָה סַכִּין וְהִגְבִּיהָהּ, נָפְלוּ כֵּלָיו וְהִגְבִּיהָן, הִשְׁחִיז אֶת הַסַּכִּין וְעָף, בָּא חֲבֵירוֹ וְשָׁחַט, אִם שָׁהָה כְּדֵי שְׁחִיטָה – פְּסוּלָה. רַבִּי שִׁמְעוֹן אוֹמֵר: אִם שָׁהָה כְּדֵי בִיקּוּר.</div>
+      <div class="trans" data-when="he">משנה: נפלה הסכין מאליה תוך כדי שחיטה והגביההּ, או נפלו בגדיו והגביהן, או שהשחיז (חידד) את הסכין ונתעייף, ובא חברו והשלים את השחיטה — אם שהה (הפסיק) כדי זמן שחיטה, פסולה. רבי שמעון אומר: פסולה רק אם שהה כדי זמן בדיקת הסכין.</div>
+      <div class="trans" data-when="en">MISHNA: If, when one was in the middle of slaughtering an animal, the knife fell and he lifted it and then completed the slaughter, or if his garments fell and he lifted them and then completed the slaughter, or if he had honed the knife and grew weary before completing the slaughter and another came and slaughtered the animal, if he interrupted the slaughter in one of these ways or in a different way for an interval equivalent to the duration of an act of slaughter, the slaughter is not valid. Rabbi Shimon says: The slaughter is not valid if he interrupted the slaughter for an interval equivalent to the duration of an examination.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ב א — Chullin 32a:5</span></div>
+      <div class="orig">גְּמָ׳ מַאי כְּדֵי שְׁחִיטָה? אָמַר רַב: כְּדֵי שְׁחִיטַת בְּהֵמָה אַחֶרֶת.</div>
+      <div class="trans" data-when="he">גמרא: מהו ׳כדי שחיטה׳? אמר רב: כדי זמן שחיטה של בהמה אחרת (לא הזמן הדרוש להשלמת השחיטה שנפסקה).</div>
+      <div class="trans" data-when="en">GEMARA: The Gemara asks: What is the meaning of an interval equivalent to the duration of an act of slaughter? Rav said: It means an interval equivalent to the duration of an act of slaughter of another animal, not the duration required to complete the act of slaughter that was interrupted.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ב א — Chullin 32a:6</span></div>
+      <div class="orig">אָמְרִי לֵיהּ רַב כָּהֲנָא וְרַב אַסִּי לְרַב: כְּדֵי שְׁחִיטַת בְּהֵמָה לִבְהֵמָה, וְעוֹף לְעוֹף, אוֹ דִלְמָא אַף בְּהֵמָה לְעוֹף?</div>
+      <div class="trans" data-when="he">שאלו רב כהנא ורב אסי את רב: ׳כדי שחיטה׳ — האם כדי שחיטת בהמה כששוחט בהמה ועוף כששוחט עוף, או שמא אף שיעור שחיטת בהמה (הגדול) אף בעוף?</div>
+      <div class="trans" data-when="en">Rav Kahana and Rav Asi said to Rav: Is the interruption that invalidates the slaughter an interval equivalent to the duration of an act of slaughter of another animal for an animal, i.e., in a case where an animal was being slaughtered, and an interval equivalent to the duration of an act of slaughter of another bird for a bird? Or perhaps it is an interval equivalent to the duration of an act of slaughter of an animal even for a bird, and if the interruption is any shorter it does not invalidate the slaughter?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ב א — Chullin 32a:7</span></div>
+      <div class="orig">אֲמַר לְהוּ: לָא הֲוָה בְּדִיחְנָא בֵּיהּ בְּחַבִּיבִי, דֶּאֱישַׁיְּילֵיהּ.</div>
+      <div class="trans" data-when="he">השיב להם רב: לא הייתי קרוב דיי אצל דודי האהוב (רבי חייא) כדי לשואלו — כלומר רב מסר את הדין אך לא ידע להכריע בספקם.</div>
+      <div class="trans" data-when="en">Rav said to them: When we studied this topic I did not feel sufficiently intimate with my beloved uncle, Rabbi Ḥiyya, such that I could ask him that question. Rav was able only to transmit that which he heard from Rabbi Ḥiyya, but was unable to resolve their dilemma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ב א — Chullin 32a:8</span></div>
+      <div class="orig">אִתְּמַר: אָמַר רַב: כְּדֵי שְׁחִיטַת בְּהֵמָה לִבְהֵמָה, וְעוֹף לְעוֹף, וּשְׁמוּאֵל אָמַר: אֲפִילּוּ בְּהֵמָה לְעוֹף, וְכֵן כִּי אֲתָא רָבִין אָמַר רַבִּי יוֹחָנָן: אֲפִילּוּ בְּהֵמָה לְעוֹף.</div>
+      <div class="trans" data-when="he">נאמרה מחלוקת: רב — כדי שחיטת בהמה לבהמה ועוף לעוף; ושמואל — אפילו שיעור בהמה לעוף; וכן כשבא רבין אמר משום רבי יוחנן: אפילו שיעור בהמה לעוף.</div>
+      <div class="trans" data-when="en">It was stated that there is an amoraic dispute with regard to this matter. Rav said: An interval equivalent to the duration of an act of slaughter of another animal for an animal, and an interval equivalent to the duration of an act of slaughter of another bird for a bird. And Shmuel said: An interval equivalent to the duration of an act of slaughter of an animal even for a bird. And likewise, when Ravin came from Eretz Yisrael to Babylonia he said that Rabbi Yoḥanan said: An interval equivalent to the duration of an act of slaughter of an animal even for a bird.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ב א — Chullin 32a:9</span></div>
+      <div class="orig">רַבִּי חֲנַנְיָא אָמַר: כְּדֵי שֶׁיָּבִיא בְּהֵמָה אַחֶרֶת וְיִשְׁחוֹט. יָבִיא אֲפִילּוּ מֵעָלְמָא? נָתַתָּ דְּבָרֶיךָ לְשִׁיעוּרִין!</div>
+      <div class="trans" data-when="he">רבי חנניא אמר: כדי הזמן שיביא בהמה אחרת וישחטנה. מקשה הגמרא: יביא מכל מקום שהוא? אם כן ׳נתת דבריך לשיעורין׳ — השיעור משתנה לפי המרחק.</div>
+      <div class="trans" data-when="en">Rabbi Ḥananya said: An interval equivalent to the period in which one can bring another animal and slaughter it. The Gemara asks: Does that mean the time in which one can bring an animal even from anywhere else, regardless of the distance? Occasionally, there is no animal available in close proximity. If so, you have rendered your statement subject to circumstances; it does not apply uniformly to all cases.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ב א — Chullin 32a:10</span></div>
+      <div class="orig">אָמַר רַב פָּפָּא: עוֹמֶדֶת לְהַטִּיל אִיכָּא בֵּינַיְיהוּ.</div>
+      <div class="trans" data-when="he">אמר רב פפא: הנפקא מינה בין רבי חנניא לחכמים — בבהמה העומדת מוכנה לפניו וצריך רק להפילהּ ולשחטה. רבי חנניא משער בזמן ההפלה והשחיטה; וחכמים פוסלים כבר בשיעור שחיטה לבדה.</div>
+      <div class="trans" data-when="en">Rav Pappa said: The practical difference between the opinion of Rabbi Ḥananya and that of the other Sages is in a case where there is an animal standing before the slaughterer and it is necessary to cast it to the ground in order to slaughter it. Even Rabbi Ḥananya disregards the time required to bring the animal from elsewhere. But Rabbi Ḥananya holds that the slaughter is invalidated only if the interruption lasts an interval equivalent to the duration of the act of casting the animal to the ground and slaughtering it. The Rabbis invalidate the slaughter even if an interval has elapsed that is equivalent to the duration of the act of slaughtering the animal, without casting it to the ground.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ב א — Chullin 32a:11</span></div>
+      <div class="orig">אָמְרִי בְּמַעְרְבָא מִשְּׁמֵיהּ דְּרַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: כְּדֵי שֶׁיַּגְבִּיהֶנָּה וְיַרְבִּיצֶנָּה וְיִשְׁחוֹט, דַּקָּה לְדַקָּה וְגַסָּה לְגַסָּה.</div>
+      <div class="trans" data-when="he">אמרו במערב (ארץ ישראל) משום רבי יוסי ברבי חנינא: כדי שיגביה את הבהמה, ירביצנה (ישכיבנה) וישחט — דקה (קטנה) לפי דקה, וגסה (גדולה) לפי גסה.</div>
+      <div class="trans" data-when="en">The Gemara cites an additional opinion with regard to the duration of the interruption that invalidates slaughter. They said in the West, Eretz Yisrael, in the name of Rabbi Yosei, son of Rabbi Ḥanina: The duration of the interruption that invalidates slaughter is equivalent to the period in which he can lift the animal from the ground and then lay it back on the ground and slaughter it. The interval is calculated based on the size of the animal in question. The duration of the interruption that invalidates slaughter of a small animal is equivalent to the period necessary to lift, lay down, and slaughter a small animal. And the duration of the interruption that invalidates slaughter of a large animal is equivalent to the period necessary to lift, lay down, and slaughter a large animal.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ב א — Chullin 32a:12</span></div>
+      <div class="orig">אָמַר רָבָא: הַשּׁוֹחֵט בְּסַכִּין רָעָה, אֲפִילּוּ כׇּל הַיּוֹם כּוּלּוֹ – כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">אמר רבא: השוחט בסכין רעה (קהה/פגומה) — אפילו נמשכה השחיטה כל היום כולו, כשרה, ובלבד שלא הפסיק באמצע.</div>
+      <div class="trans" data-when="en">§ Rava said: In the case of one who slaughters with a blunt knife, even if the completion of the slaughter lasts the entire day, the slaughter is valid provided there is no interruption in the midst of the slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ב א — Chullin 32a:13</span></div>
+      <div class="orig">בָּעֵי רָבָא: שְׁהִיּוֹת, מַהוּ שֶׁיִּצְטָרְפוּ?</div>
+      <div class="trans" data-when="he">הסתפק רבא: כמה הפסקות קצרות בשחיטה אחת — האם מצטרפות יחד לפסול, אם סך כולן עולה על שיעור ההפסק המותר?</div>
+      <div class="trans" data-when="en">Rava raises a dilemma: If there were several short interruptions during a single act of slaughter, what is the halakha in terms of whether they join together to invalidate the slaughter if the sum of the durations of all the interruptions is greater than the maximum permitted interruption?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ב א — Chullin 32a:14</span></div>
+      <div class="orig">וְתִפְשׁוֹט לַהּ מִדִּידֵיהּ! הָתָם בִּדְלָא שְׁהָה.</div>
+      <div class="trans" data-when="he">ותפשוט לו מדבריו! (שהרי התיר שחיטה הנמשכת כל היום, ובה ודאי הפסקות קצרות) — משמע שאינן מצטרפות. ומשיב: שם מדובר שלא הפסיק כלל, אלא הוליך והביא את הסכין ברציפות.</div>
+      <div class="trans" data-when="en">The Gemara challenges: And let Rava resolve the dilemma from his own statement, as he permitted an act of slaughter that lasts the entire day, during which there were presumably brief interruptions throughout. Apparently, the interruptions do not join together. The Gemara responds: There, Rava was referring to a case where there was no interruption, as the slaughterer drew the knife back and forth throughout.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ב א — Chullin 32a:15</span></div>
+      <div class="orig">בָּעֵי רַב הוּנָא בְּרֵיהּ דְּרַב נָתָן: שָׁהָה בְּמִיעוּט סִימָנִין, מַהוּ? תֵּיקוּ.</div>
+      <div class="trans" data-when="he">הסתפק רב הונא בריה דרב נתן: שהה לאחר שחתך את מיעוט הסימנים (טרם השלים את רובם) — מהו? תיקו (לא הוכרע).</div>
+      <div class="trans" data-when="en">Rav Huna, son of Rav Natan, raises a dilemma: If one cut the majority of the simanim and then interrupted the slaughter before proceeding to cut the minority of the simanim, what is the halakha? The Gemara answers: The dilemma shall stand unresolved.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ב א — Chullin 32a:16</span></div>
+      <div class="orig">רַבִּי שִׁמְעוֹן אוֹמֵר: אִם שָׁהָה [כְּדֵי בִיקּוּר]. מַאי כְּדֵי בִיקּוּר? אָמַר רַבִּי יוֹחָנָן: כְּדֵי בִּיקֻּרוֹ שֶׁל חָכָם. אִם כֵּן, נָתַתָּ דְּבָרֶיךָ לְשִׁיעוּרִין! אֶלָּא, כְּדֵי בִּיקּוּר טַבָּח חָכָם.</div>
+      <div class="trans" data-when="he">המשנה: רבי שמעון אומר ׳אם שהה כדי ביקור׳. מהו ׳כדי ביקור׳? אמר רבי יוחנן: כדי בדיקת הסכין בידי חכם. ומקשים: אם כן ׳נתת דבריך לשיעורין׳ (לפי קרבת החכם)! אלא: כדי בדיקת טבח שהוא חכם, ואין מחשבים את זמן ההליכה אליו.</div>
+      <div class="trans" data-when="en">§ The mishna teaches that Rabbi Shimon says: The slaughter is not valid if he interrupted the slaughter for an interval equivalent to the duration of an examination. The Gemara asks: What is an interval equivalent to the duration of an examination? Rabbi Yoḥanan said: It is an interval equivalent to the duration of an examination of the knife by a Sage prior to the slaughter of the animal. The Gemara objects: If so, you have rendered your statement subject to circumstances, as sometimes the Sage is near and sometimes the Sage is far, and the time required for examination varies accordingly. The Gemara responds: Rather, the reference is to an interval equivalent to the duration of an examination performed by a slaughterer who is a Sage. In that case, travel time is not factored in; only the time of the examination itself is considered, and this does not vary.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">נבילה או טריפה — סדר חיתוך הסימנים</span><span data-when="en">Carcass or tereifa</span>
+        <span class="ref">Chullin 32a:17-32b:11</span></h2>
+    <div class="lead"><span data-when="he">משנה: החותך את הסימנים שלא כסדר, או הממית את הבהמה תוך כדי — רבי ישבב מטמא כנבילה ורבי עקיבא כטריפה, והודה לו. הגמרא מקשה סתירה ממשנת ׳אלו טרפות׳ ומיישבת בכמה דרכים (רבא, ריש לקיש), עד למסקנת רבי יוחנן ׳משנה לא זזה ממקומה׳.</span><span data-when="en">A mishna: one who cuts the simanim out of order, or lets the animal die mid-slaughter — Rabbi Yeshevav rules it a carcass and Rabbi Akiva a tereifa, and concedes. The Gemara raises a contradiction from the ׳these are tereifot׳ mishna and resolves it several ways (Rava, Reish Lakish), reaching R. Yoḥanan's ׳a mishna never moves from its place.׳</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: שחט הוושט ופסק הגרגרת… ר׳ ישבב — נבילה; ר׳ עקיבא — טריפה"]):::mishnah
+  S2["② כלל ר׳ ישבב: נפסלה בשחיטתה — נבילה; דבר אחר — טריפה; והודה ר׳ עקיבא"]:::statement
+  Q3{"③ ורמינהי: ׳אלו טרפות׳ — פסוקת הגרגרת טריפה, לא נבילה!"}:::question
+  A4["④ רבא: שחט ולבסוף פסק — נבילה; פסק ולבסוף שחט — טריפה"]:::answer
+  Q5{"⑤ איתיביה מברייתא: שני הסדרים — נבילה!"}:::question
+  A6["⑥ רבא: אימא — וכבר שחט הוושט מעיקרא"]:::answer
+  Q7{"⑦ שתי תשובות: היינו קמייתא, והא תנן ׳ואחר כך׳"}:::question
+  A8["⑧ אלא רבא: ׳אלו אסורות׳ קתני — יש נבילות ויש טריפות"]:::answer
+  Q9{"⑨ וליחשוב נמי דחזקיה ודר׳ אלעזר!"}:::question
+  A10["⑩ כי קתני נבילה — דלא מטמאה מחיים"]:::answer
+  S11["⑪ ריש לקיש: במקום חתך — נבילה; שלא במקום חתך — טריפה"]:::statement
+  Q12{"⑫ ומי אמר ר״ל הכי? והא ׳שחט הקנה … כשרה׳!"}:::question
+  C13(["⑬ ר׳ יוחנן: קודם חזרה / לאחר חזרה — משנה לא זזה"]):::conclusion
+  M1 -->|כלל| S2
+  S2 -.->|ורמינהי| Q3
+  Q3 -->|תירוץ| A4
+  A4 -.->|מיתיבי| Q5
+  Q5 -->|אימא| A6
+  A6 -.->|נדחה| Q7
+  Q7 -->|אלא| A8
+  A8 -.->|קושיא| Q9
+  Q9 -->|תירוץ| A10
+  A8 -->|דעה אחרת| S11
+  S11 -.->|סתירה| Q12
+  Q12 -->|אלא| C13
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: cut the gullet then severed the windpipe… R. Yeshevav: carcass; R. Akiva: tereifa"]):::mishnah
+  S2["② R. Yeshevav's rule: unfit during slaughter = carcass; else = tereifa — R. Akiva conceded"]:::statement
+  Q3{"③ Contradiction: ׳these are tereifot׳ — a severed windpipe is a tereifa, not a carcass!"}:::question
+  A4["④ Rava: cut-then-severed = carcass; severed-then-cut = tereifa (order decides)"]:::answer
+  Q5{"⑤ Objection from a baraita: both orders give a carcass!"}:::question
+  A6["⑥ Rava: read it as — he had already cut the gullet first"]:::answer
+  Q7{"⑦ Refuted: that doubles the first case, and the baraita says ׳thereafter׳"}:::question
+  A8["⑧ Rava: ׳forbidden׳ is taught generally — some carcasses, some tereifot"]:::answer
+  Q9{"⑨ Then list Ḥizkiya's split carcass and R. Elazar's removed thigh too!"}:::question
+  A10["⑩ It lists only a carcass that is not impure while still alive"]:::answer
+  S11["⑪ Reish Lakish: cut at the windpipe's place = carcass; elsewhere = tereifa"]:::statement
+  Q12{"⑫ But R.L. holds the windpipe-cut lung is ׳as if in a basket׳ — contradiction!"}:::question
+  C13(["⑬ R. Yoḥanan: before vs. after R. Akiva's retraction — a mishna never moves"]):::conclusion
+  M1 -->|principle| S2
+  S2 -.->|contradiction| Q3
+  Q3 -->|answer| A4
+  A4 -.->|objection| Q5
+  Q5 -->|re-read| A6
+  A6 -.->|refuted| Q7
+  Q7 -->|rather| A8
+  A8 -.->|objection| Q9
+  Q9 -->|answer| A10
+  A8 -->|another view| S11
+  S11 -.->|contradiction| Q12
+  Q12 -->|rather| C13
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① שָׁחַט אֶת הַוֶּושֶׁט וּפָסַק אֶת הַגַּרְגֶּרֶת … רַבִּי יְשֵׁבָב … נְבֵלָה, רַבִּי עֲקִיבָא … טְרֵפָה"]):::mishnah
+  S2["② כֹּל שֶׁנִּפְסְלָה בִּשְׁחִיטָתָהּ – נְבֵלָה … וְהוֹדָה לוֹ רַבִּי עֲקִיבָא"]:::statement
+  Q3{"③ וּרְמִינְהִי: אֵלּוּ טְרֵפוֹת … נְקוּבַת הַוֶּושֶׁט וּפְסוּקַת הַגַּרְגֶּרֶת!"}:::question
+  A4["④ כָּאן שֶׁשָּׁחַט וּלְבַסּוֹף פָּסַק, כָּאן שֶׁפָּסַק וּלְבַסּוֹף שָׁחַט"]:::answer
+  Q5{"⑤ שָׁחַט … וּפָסַק … פָּסַק … וְאַחַר כָּךְ שָׁחַט … נְבֵלָה!"}:::question
+  A6["⑥ אֵימָא: וּכְבָר שָׁחַט אֶת הַוֶּושֶׁט מֵעִיקָּרָא"]:::answer
+  Q7{"⑦ שְׁתֵּי תְּשׁוּבוֹת בַּדָּבָר … הָא תְּנַן ״וְאַחַר כָּךְ״!"}:::question
+  A8["⑧ אֵלּוּ אֲסוּרוֹת קָתָנֵי … יֵשׁ מֵהֶן נְבֵלוֹת, וְיֵשׁ מֵהֶן טְרֵפוֹת"]:::answer
+  Q9{"⑨ וְלִיחְשׁוֹב נָמֵי דְּחִזְקִיָּה … וְלִיחְשׁוֹב נָמֵי דְּרַבִּי אֶלְעָזָר"}:::question
+  A10["⑩ כִּי קָתָנֵי נְבֵלָה, דְּלָא מְטַמְּאָה מֵחַיִּים"]:::answer
+  S11["⑪ כָּאן – שֶׁשָּׁחַט בִּמְקוֹם חֲתָךְ, כָּאן – שֶׁלֹּא בִּמְקוֹם חֲתָךְ"]:::statement
+  Q12{"⑫ וּמִי אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ הָכִי? … שָׁחַט אֶת הַקָּנֶה … כְּשֵׁרָה!"}:::question
+  C13(["⑬ כָּאן קוֹדֶם חֲזָרָה, כָּאן לְאַחַר חֲזָרָה, וּמִשְׁנָה לֹא זָזָה מִמְּקוֹמָהּ"]):::conclusion
+  M1 -->|כלל| S2
+  S2 -.->|ורמינהי| Q3
+  Q3 -->|תירוץ| A4
+  A4 -.->|מיתיבי| Q5
+  Q5 -->|אימא| A6
+  A6 -.->|נדחה| Q7
+  Q7 -->|אלא| A8
+  A8 -.->|קושיא| Q9
+  Q9 -->|תירוץ| A10
+  A8 -->|דעה אחרת| S11
+  S11 -.->|סתירה| Q12
+  Q12 -->|אלא| C13
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ב א — Chullin 32a:17</span></div>
+      <div class="orig">מַתְנִי׳ שָׁחַט אֶת הַוֶּושֶׁט, וּפָסַק אֶת הַגַּרְגֶּרֶת, אוֹ פָסַק אֶת הַגַּרְגֶּרֶת וְאַחַר כָּךְ שָׁחַט אֶת הַוֶּושֶׁט, אוֹ שָׁחַט אֶחָד מֵהֶן וְהִמְתִּין לָהּ עַד שֶׁמֵּתָה, אוֹ שֶׁהֶחְלִיד אֶת הַסַּכִּין תַּחַת הַשֵּׁנִי וּפְסָקוֹ – רַבִּי יְשֵׁבָב אוֹמֵר: נְבֵלָה, רַבִּי עֲקִיבָא אוֹמֵר: טְרֵפָה.</div>
+      <div class="trans" data-when="he">משנה: שחט את הוושט (כדרכו) ופסק (חתך שלא כדרך שחיטה) את הגרגרת, או שפסק את הגרגרת ואחר כך שחט את הוושט, או ששחט אחד מן הסימנים והמתין עד שמתה הבהמה, או שהחליד (הטמין) את הסכין תחת הסימן השני ופסקו מלמטה — רבי ישבב אומר: נבילה (ומטמאה במגע ובמשא); רבי עקיבא אומר: טריפה (אסורה באכילה אך אינה מטמאה).</div>
+      <div class="trans" data-when="en">MISHNA: If one cut the gullet in the standard manner of slaughter with a back-and-forth movement, and he severed the windpipe not in the standard manner, or if one severed the windpipe and thereafter cut the gullet, or if one cut one of the simanim and waited until the animal died, or if one cut one siman and concealed the knife beneath the second siman and severed it from below, Rabbi Yeshevav says: The animal is an unslaughtered carcass and imparts ritual impurity through contact with it and carrying it. Rabbi Akiva says: The animal is a tereifa, and although eating it is prohibited, it does not transmit ritual impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ב א — Chullin 32a:18</span></div>
+      <div class="orig">כְּלָל אָמַר רַבִּי יְשֵׁבָב מִשּׁוּם רַבִּי יְהוֹשֻׁעַ: כֹּל שֶׁנִּפְסְלָה בִּשְׁחִיטָתָהּ – נְבֵלָה, כֹּל שֶׁשְּׁחִיטָתָהּ כָּרָאוּי וְדָבָר אַחֵר גָּרַם לָהּ לִיפָּסֵל – טְרֵפָה, וְהוֹדָה לוֹ רַבִּי עֲקִיבָא.</div>
+      <div class="trans" data-when="he">כלל אמר רבי ישבב משום רבי יהושע: כל שנפסלה בעת שחיטתה (מחמת השחיטה עצמה) — נבילה; וכל ששחיטתה נעשתה כראוי ודבר אחר גרם לפסילתה — טריפה. והודה לו רבי עקיבא.</div>
+      <div class="trans" data-when="en">Rabbi Yeshevav stated a principle in the name of Rabbi Yehoshua: Any animal that was rendered unfit during its slaughter because the slaughter was not performed properly is an unslaughtered carcass; any animal whose slaughter was performed properly and another matter caused it to become unfit is a tereifa. And Rabbi Akiva conceded to his opinion.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ב א — Chullin 32a:19</span></div>
+      <div class="orig">גְּמָ׳ שָׁחַט אֶת הַוֶּושֶׁט וְכוּ׳. וְהוֹדָה לוֹ רַבִּי עֲקִיבָא. וּרְמִינְהִי: אֵלּוּ טְרֵפוֹת בַּבְּהֵמָה</div>
+      <div class="trans" data-when="he">גמרא: ׳שחט את הוושט … והודה לו רבי עקיבא׳. ומקשים מן המשנה (תחילת פרק ׳אלו טרפות׳, מב ע״א): ׳אלו טרפות בבהמה …׳</div>
+      <div class="trans" data-when="en">GEMARA: The mishna teaches: If one cut the gullet…and Rabbi Akiva conceded to his opinion. And the Gemara raises a contradiction from a mishna at the beginning of the next chapter (42a): These wounds constitute tereifot in an animal:</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ב ב — Chullin 32b:1</span></div>
+      <div class="orig">נְקוּבַת הַוֶּושֶׁט וּפְסוּקַת הַגַּרְגֶּרֶת!</div>
+      <div class="trans" data-when="he">׳נקובת הוושט ופסוקת הגרגרת׳ — הרי שפסוקת הגרגרת עושה טריפה ולא נבילה! ואם חזר בו רבי עקיבא והודה לרבי ישבב — כדברי מי אותה משנה?</div>
+      <div class="trans" data-when="en">An animal that has a perforated gullet, where the perforation goes through the wall of the gullet, or one with a severed windpipe. According to this mishna, the severed windpipe renders the animal a tereifa and not an unslaughtered carcass. If Rabbi Akiva reconsidered his opinion and conceded to Rabbi Yeshevav, in accordance with the opinion of which tanna is that mishna?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ב ב — Chullin 32b:2</span></div>
+      <div class="orig">אָמַר רָבָא: לָא קַשְׁיָא, כָּאן שֶׁשָּׁחַט וּלְבַסּוֹף פָּסַק, כָּאן שֶׁפָּסַק וּלְבַסּוֹף שָׁחַט. שָׁחַט וּלְבַסּוֹף פָּסַק – נִפְסֶלֶת בִּשְׁחִיטָה הִיא, פָּסַק וּלְבַסּוֹף שָׁחַט – כִּי דָּבָר אַחֵר גָּרַם לָהּ לִיפָּסֵל דָּמְיָא.</div>
+      <div class="trans" data-when="he">אמר רבא: לא קשיא. כאן (משנתנו) — ששחט את הוושט ולבסוף פסק את הגרגרת, ונפסלה בשחיטתה — נבילה; כאן (מב ע״א) — שפסק את הגרגרת תחילה ולבסוף שחט את הוושט, ודבר אחר גרם — טריפה.</div>
+      <div class="trans" data-when="en">Rava said: This is not difficult. Here, the mishna is referring to a case where one cut the gullet and ultimately severed the windpipe not in the standard manner. There, the mishna in the next chapter is referring to a case where he severed the windpipe not in the standard manner, and ultimately cut the gullet. If he cut the gullet and ultimately severed the windpipe, the animal was rendered unfit during its slaughter; therefore, it assumes the status of an unslaughtered carcass, according to the principle of Rabbi Yeshevav. But if he severed the windpipe and ultimately cut the gullet, it is as though another matter caused the animal to become unfit; therefore, it assumes the status of a tereifa.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ב ב — Chullin 32b:3</span></div>
+      <div class="orig">אֵיתִיבֵיהּ רַב אַחָא בַּר הוּנָא לְרָבָא: שָׁחַט אֶת הַוֶּושֶׁט וּפָסַק אֶת הַגַּרְגֶּרֶת, פָּסַק אֶת הַגַּרְגֶּרֶת וְאַחַר כָּךְ שָׁחַט אֶת הַוֶּושֶׁט – נְבֵלָה!</div>
+      <div class="trans" data-when="he">הקשה רב אחא בר הונא לרבא מברייתא: ׳שחט את הוושט ופסק את הגרגרת, פסק את הגרגרת ואחר כך שחט את הוושט — נבילה׳! משמע שאין הסדר קובע, ואף בפסק הגרגרת תחילה — נבילה.</div>
+      <div class="trans" data-when="en">Rav Aḥa bar Huna raised an objection to Rava from a baraita: If one cut the gullet and then severed the windpipe, or if one severed the windpipe and cut the gullet thereafter, the animal is an unslaughtered carcass. Apparently, contrary to Rava’s statement, the order is irrelevant, and even if the windpipe is severed first, the animal assumes the status of an unslaughtered carcass.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ב ב — Chullin 32b:4</span></div>
+      <div class="orig">אֵימָא: וּכְבָר שָׁחַט אֶת הַוֶּושֶׁט מֵעִיקָּרָא.</div>
+      <div class="trans" data-when="he">אמר רבא: אֵימָא (פרש) שהבבא השנייה אינה ׳ואחר כך שחט׳, אלא שכבר שחט את הוושט מתחילה (ורק אז פסק את הגרגרת).</div>
+      <div class="trans" data-when="en">Rava said: Say that the latter case in the baraita means not that he cut the gullet thereafter; rather, it is a case where one severed the windpipe and had already cut the gullet at the outset.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ב ב — Chullin 32b:5</span></div>
+      <div class="orig">אֲמַר לֵיהּ: שְׁתֵּי תְּשׁוּבוֹת בַּדָּבָר, חֲדָא דְּהַיְינוּ קַמַּיְיתָא, וְעוֹד הָא תְּנַן ״וְאַחַר כָּךְ״!</div>
+      <div class="trans" data-when="he">אמר לו רב אחא: שתי תשובות בדבר — אחת, שאם כן היינו הבבא הראשונה (כפילות); ועוד, הרי שנינו במפורש ׳ואחר כך׳!</div>
+      <div class="trans" data-when="en">Rav Aḥa bar Huna said to him: There are two refutations of the statement, i.e., of your attempt to answer the difficulty from the baraita: One is that if the second case in the baraita is one where he initially cut the gullet, then that is identical to the first case in the baraita. And furthermore, didn’t we learn explicitly in the baraita: Or if one severed the windpipe and cut the gullet thereafter, the animal is an unslaughtered carcass?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ב ב — Chullin 32b:6</span></div>
+      <div class="orig">אֶלָּא אָמַר רָבָא: אֵלּוּ אֲסוּרוֹת קָתָנֵי, וְיֵשׁ מֵהֶן נְבֵלוֹת, וְיֵשׁ מֵהֶן טְרֵפוֹת.</div>
+      <div class="trans" data-when="he">אלא אמר רבא: ׳אלו אסורות׳ קתני (ולא ׳טרפות׳ דווקא) — התנא מונה דברים האוסרים את הבהמה, ויש בהם נבילות (כפסוקת הגרגרת) ויש בהם טריפות.</div>
+      <div class="trans" data-when="en">Rather, Rava said: The use of the term: Tereifot, in the mishna in the next chapter is not to the exclusion of unslaughtered carcasses; rather, the tanna teaches that term in a general sense, meaning: These wounds serve to render an animal forbidden; and there are some of them that are unslaughtered carcasses, e.g., an animal with a severed windpipe, and there are some of them that are tereifot.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ב ב — Chullin 32b:7</span></div>
+      <div class="orig">וְלִיחְשׁוֹב נָמֵי דְּחִזְקִיָּה, דְּאָמַר חִזְקִיָּה: עֲשָׂאָהּ גִּיסְטְרָא – נְבֵלָה, וְלִיחְשׁוֹב נָמֵי דְּרַבִּי אֶלְעָזָר, דְּאָמַר רַבִּי אֶלְעָזָר: נִטְּלָה יָרֵךְ וְחָלָל שֶׁלָּהּ – נְבֵלָה.</div>
+      <div class="trans" data-when="he">מקשים: אם מונה אף נבילות — ימנה גם דין חזקיה (עשאה גיסטרא, חתכה לשניים לרוחבה — נבילה) ודין רבי אלעזר (ניטל הירך וחלל שלה ניכר — נבילה)!</div>
+      <div class="trans" data-when="en">The Gemara objects to that interpretation: If the mishna is listing those circumstances that render the animal an unslaughtered carcass, let the tanna consider the circumstance of Ḥizkiyya as well, as Ḥizkiyya says: If one rendered the animal like a shard by cutting it into two widthwise, its halakhic status is that of an unslaughtered carcass even while it is convulsing before its death. And let the tanna consider the circumstance of Rabbi Elazar as well, as Rabbi Elazar said: If the thigh, the hind leg of the animal, was removed and its recess is obvious (see 21a), it is an unslaughtered carcass.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ב ב — Chullin 32b:8</span></div>
+      <div class="orig">כִּי קָתָנֵי נְבֵלָה, דְּלָא מְטַמְּאָה מֵחַיִּים, אֲבָל נְבֵלָה דִּמְטַמְּאָה מֵחַיִּים – לָא קָתָנֵי.</div>
+      <div class="trans" data-when="he">מתרצים: כשמנה ׳נבילה׳ — נבילה שאינה מטמאה מחיים; אבל נבילה המטמאה כבר מחיים (כחזקיה ורבי אלעזר) — לא מנה.</div>
+      <div class="trans" data-when="en">The Gemara explains: When the mishna teaches the case of an unslaughtered carcass, it is a case where the animal does not assume that status and imparts impurity while alive. But the tanna does not teach the case of an unslaughtered carcass where the animal assumes that status and imparts impurity while alive, e.g., the cases of Ḥizkiyya and Rabbi Elazar.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ב ב — Chullin 32b:9</span></div>
+      <div class="orig">רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אָמַר: כָּאן – שֶׁשָּׁחַט בִּמְקוֹם חֲתָךְ, כָּאן – שֶׁשָּׁחַט שֶׁלֹּא בִּמְקוֹם חֲתָךְ. שָׁחַט בִּמְקוֹם חֲתָךְ – נִפְסְלָה בִּשְׁחִיטָה הִיא, שֶׁלֹּא בִּמְקוֹם חֲתָךְ – כִּי דָּבָר אַחֵר גָּרַם לָהּ לִיפָּסֵל דָּמְיָא.</div>
+      <div class="trans" data-when="he">רבי שמעון בן לקיש תירץ: כאן (נבילה) — ששחט את הוושט במקום החתך של הגרגרת; כאן (טריפה) — שלא במקום החתך. במקום החתך נפסלה בשחיטתה — נבילה; שלא במקום החתך — כדבר אחר שגרם — טריפה.</div>
+      <div class="trans" data-when="en">Rabbi Shimon ben Lakish resolved the apparent contradiction between the mishna here and the mishna on 42a, and said: Here, the tanna is referring to a case where one cut the gullet in the same place as the initial cut in the windpipe. There, on 42a, the tanna is referring to a case where he cut the gullet not in the same place as the initial cut in the windpipe. The reason for the distinction is that if one cut the gullet in the same place as the initial cut in the windpipe, it is an animal that was rendered unfit during its slaughter and it assumes the status of an unslaughtered carcass. By contrast, if he cut the gullet not in the same place as the initial cut in the windpipe it is like a case where another matter caused the animal to become unfit. Therefore, cutting the gullet renders it a tereifa and prevents it from imparting ritual impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ב ב — Chullin 32b:10</span></div>
+      <div class="orig">וּמִי אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ הָכִי? וְהָאָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: שָׁחַט אֶת הַקָּנֶה וְאַחַר כָּךְ נִיקְּבָה הָרֵיאָה כְּשֵׁרָה! אַלְמָא כְּמַאן דְּמַנְּחָא בְּדִיקּוּלָא דָּמְיָא, הָכָא נָמֵי כְּמַאן דְּמַנְּחָא בְּדִיקּוּלָא דָּמְיָא.</div>
+      <div class="trans" data-when="he">ומקשים: וכי אמר ריש לקיש כך? והרי אמר ריש לקיש: שחט את הקנה ואחר כך ניקבה הריאה — כשרה, ׳כמאן דמנחא בדיקולא דמיא׳ (כאילו הריאה מונחת בסל, בטלה)! אם כן אף כאן, משנפסק הקנה הוי כסימן אחד בלבד — ולא תיפסל בנבילה.</div>
+      <div class="trans" data-when="en">The Gemara asks: And did Rabbi Shimon ben Lakish say this, that slaughter can be effective to prevent impurity after the windpipe was severed? But doesn’t Rabbi Shimon ben Lakish say: If one cut the windpipe and the lung was perforated thereafter before he cut the gullet, the animal is fit for consumption? Apparently, after cutting the windpipe, the status of the lungs, whose existence is dependent upon the windpipe, is like that of an item that is placed in a basket; they are irrelevant to the determination of the animal’s status. Here too, when the windpipe is severed at the beginning of the slaughter the windpipe should be considered like an item that is placed in a basket in the sense that the animal is considered to have only one siman, the gullet, and cutting of one siman does not affect the animal’s status.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין ל״ב ב — Chullin 32b:11</span></div>
+      <div class="orig">אֶלָּא אָמַר רַבִּי חִיָּיא בַּר אַבָּא אָמַר רַבִּי יוֹחָנָן: לָא קַשְׁיָא, כָּאן קוֹדֶם חֲזָרָה, כָּאן לְאַחַר חֲזָרָה, וּמִשְׁנָה לֹא זָזָה מִמְּקוֹמָהּ.</div>
+      <div class="trans" data-when="he">אלא אמר רבי חייא בר אבא אמר רבי יוחנן: לא קשיא — כאן (מב ע״א, טריפה) קודם שחזר בו רבי עקיבא; כאן (משנתנו, נבילה) לאחר שחזר בו. ואף שחזר בו — ׳משנה לא זזה ממקומה׳ (משנשנתה נשארה כפי שהיא).</div>
+      <div class="trans" data-when="en">Rather, Rabbi Ḥiyya bar Abba said that Rabbi Yoḥanan said: The apparent contradiction is not difficult. There (42a), where it is stated that an animal with a severed windpipe is a tereifa, the mishna presents the opinion of Rabbi Akiva before retraction of his opinion. Here, the mishna presents the opinion of Rabbi Akiva after retraction of his opinion. And even though Rabbi Akiva retracted his opinion, a mishna does not move from its place. Once this version of the mishna was learned in the study hall, it remained valuable, even though it is no longer current.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+        <span data-when="he">בני מעיים — שחט הקנה וניקבה הריאה</span><span data-when="en">The innards after the windpipe is cut</span>
+        <span class="ref">Chullin 32b:12-33a:8</span></h2>
+    <div class="lead"><span data-when="he">חוזרים לדברי ריש לקיש: שחט הקנה ואחר כך ניקבה הריאה — כשרה; רבא מצמצם לריאה בלבד, רבי זירא משיג וחוזר בו, ומדבריו לומד רב אחא בר יעקב שישראל מזמנין על בני המעיים בעוד הבהמה מפרכסת ואין הגויים מזמנין — וברייתא חולקת.</span><span data-when="en">Back to Reish Lakish: if the windpipe was cut and the lung then pierced, the animal is valid; Rava limits this to the lung, Rabbi Zeira objects and retracts, and from his words Rav Aḥa b. Yaakov derives that Jews may be invited to eat the innards while the animal still convulses but gentiles may not — and a baraita disagrees.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ריש לקיש: שחט הקנה וניקבה הריאה — כשרה; רבא: דווקא ריאה, לא בני מעיים"]:::statement
+  Q2{"② מתקיף ר׳ זירא: סימני טריפה לאחר שחיטה התרת — מה לי ריאה ומה לי מעיים?"}:::question
+  S3["③ וחזר בו — בעיא: ניקבו מעיים בין סימן לסימן, מי מצטרף?"]:::statement
+  Q4{"④ = בעיית אילפא: הוציא עובר ידו בין סימן לסימן — מהו?"}:::question
+  A5["⑤ רק לטהר מנבילה; אבל באכילה — אסורה לכו״ע"]:::answer
+  S6["⑥ רב אחא בר רב: שמא לא חזר — לדבריו דרבא אמר"]:::statement
+  S7["⑦ רב אחא בר יעקב: מזמנין ישראל על בני מעיים, ולא גוי"]:::statement
+  S8["⑧ טעם: ישראל בשחיטה, גוי במיתה — כאבר מן החי"]:::statement
+  Q9{"⑨ רב פפא: יש מותר לישראל ואסור לגוי? — ולא שאל"}:::question
+  P10["⑩ תניא דלא כוותיה: חותך, מולח, מדיח — גוי וישראל מותרין"]:::proof
+  C11(["⑪ מסייע לרב אידי בר אבין: הרוצה שיבריא — כן"]):::conclusion
+  S1 -.->|מתקיף| Q2
+  Q2 -->|הדר ביה| S3
+  S3 -->|היינו דאילפא| Q4
+  Q4 -->|לענין אכילה| A5
+  S3 -.->|איכא דדחי| S6
+  S1 -->|שמע מינה| S7
+  S7 -->|מאי טעמא| S8
+  S8 -.->|רב פפא| Q9
+  S7 -.->|תניא דלא כוותיה| P10
+  P10 -->|מסייע| C11
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Reish Lakish: windpipe cut, lung pierced after → valid; Rava: only the lung, not the innards"]:::statement
+  Q2{"② R. Zeira: if tereifa-signs arising mid-slaughter are permitted, why differ lung vs innards?"}:::question
+  S3["③ R. Zeira retracts — his dilemma: innards pierced between the two simanim, do they join?"]:::statement
+  Q4{"④ = Ilfa's dilemma: a fetus put out its foreleg between the two simanim — what is the law?"}:::question
+  A5["⑤ Only for purity from carcass-impurity; for eating, all agree it is forbidden"]:::answer
+  S6["⑥ Rav Aḥa b. Rav: perhaps R. Zeira never retracted — he spoke per Rava, not himself"]:::statement
+  S7["⑦ Rav Aḥa b. Yaakov: invite Jews to eat the innards, but not gentiles"]:::statement
+  S8["⑧ Reason: for Jews it hinges on slaughter; for gentiles, on death — like a living limb"]:::statement
+  Q9{"⑨ Rav Pappa: is anything permitted to a Jew yet forbidden to a gentile? — left unasked"}:::question
+  P10["⑩ Baraita against him: cut, salt, rinse, wait — permitted to gentile and Jew alike"]:::proof
+  C11(["⑪ Supports Rav Idi b. Avin: the same, for one seeking to recuperate"]):::conclusion
+  S1 -.->|objection| Q2
+  Q2 -->|retracts| S3
+  S3 -->|= Ilfa's dilemma| Q4
+  Q4 -->|as for eating| A5
+  S3 -.->|alternatively| S6
+  S1 -->|infer from it| S7
+  S7 -->|the reason| S8
+  S8 -.->|Rav Pappa| Q9
+  S7 -.->|a baraita disagrees| P10
+  P10 -->|supports| C11
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שָׁחַט אֶת הַקָּנֶה … נִיקְּבָה הָרֵיאָה – כְּשֵׁרָה … אֲבָל בִּבְנֵי מֵעַיִים – לָא"]:::statement
+  Q2{"② מֵאַחַר שֶׁנּוֹלְדוּ בָּהּ סִימָנֵי טְרֵפָה הִתַּרְתָּ, מָה לִי בְּרֵיאָה, מָה לִי בִּבְנֵי מֵעַיִים!"}:::question
+  S3["③ נִיקְּבוּ בְּנֵי מֵעַיִים בֵּין סִימָן לְסִימָן, מַהוּ? מִי מִצְטָרֵף …"]:::statement
+  Q4{"④ הוֹצִיא עוּבָּר אֶת יָדוֹ בֵּין סִימָן לְסִימָן, מַהוּ?"}:::question
+  A5["⑤ לְטַהֲרָהּ מִידֵי נְבֵלָה, אֲבָל בַּאֲכִילָה – אֲסוּרָה"]:::answer
+  S6["⑥ דִּלְמָא לְעוֹלָם לָא הֲדַר בֵּיהּ … לִדְבָרָיו דְּרָבָא קָאָמַר"]:::statement
+  S7["⑦ מְזַמְּנִין יִשְׂרָאֵל עַל בְּנֵי מֵעַיִין, וְאֵין מְזַמְּנִין גּוֹי"]:::statement
+  S8["⑧ יִשְׂרָאֵל דְּבִשְׁחִיטָה תַּלְיָא … גּוֹיִם … כְּאֵבֶר מִן הַחַי דָּמוּ"]:::statement
+  Q9{"⑨ מִי אִיכָּא מִידֵּי דִּלְיִשְׂרָאֵל שְׁרֵי וּלְגוֹיִם אָסוּר?"}:::question
+  P10["⑩ הָרוֹצֶה לֶאֱכוֹל … חוֹתֵךְ כְּזַיִת … אֶחָד גּוֹי וְאֶחָד יִשְׂרָאֵל מוּתָּרִין"]:::proof
+  C11(["⑪ מְסַיַּיע לֵיהּ לְרַב אִידִי בַּר אָבִין … הָרוֹצֶה שֶׁיַּבְרִיא"]):::conclusion
+  S1 -.->|מתקיף| Q2
+  Q2 -->|הדר ביה| S3
+  S3 -->|היינו דאילפא| Q4
+  Q4 -->|לענין אכילה| A5
+  S3 -.->|איכא דדחי| S6
+  S1 -->|שמע מינה| S7
+  S7 -->|מאי טעמא| S8
+  S8 -.->|רב פפא| Q9
+  S7 -.->|תניא דלא כוותיה| P10
+  P10 -->|מסייע| C11
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ב ב — Chullin 32b:12</span></div>
+      <div class="orig">גּוּפָא, אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: שָׁחַט אֶת הַקָּנֶה וְאַחַר כָּךְ נִיקְּבָה הָרֵיאָה – כְּשֵׁרָה. אָמַר רָבָא: לָא אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אֶלָּא בְּרֵיאָה, הוֹאִיל וְחַיֵּי רֵיאָה תְּלוּיִן בַּקָּנֶה, אֲבָל בִּבְנֵי מֵעַיִים – לָא.</div>
+      <div class="trans" data-when="he">(גופא — הדיון בעצמו) אמר ריש לקיש: שחט את הקנה ואחר כך ניקבה הריאה — כשרה. אמר רבא: לא אמר ריש לקיש אלא בריאה, שחיי הריאה תלויים בקנה (ומשנשחט הקנה כאילו ניטלה); אבל בבני מעיים (שאינם תלויים בקנה) — לא, ונעשית טריפה.</div>
+      <div class="trans" data-when="en">§ The Gemara discusses the matter itself that was cited previously. Rabbi Shimon ben Lakish says: If one cut the windpipe and the lung was perforated thereafter before he cut the gullet, the animal is fit for consumption. Rava said: Rabbi Shimon ben Lakish states this principle only with regard to a lung, since the function of the lung is dependent upon the windpipe. Once the windpipe is severed it is as though the lungs were removed from the animal. But with regard to innards that were perforated after the windpipe was cut but before the slaughter was completed, no, the animal becomes a tereifa, because the function of the innards is not dependent on the windpipe.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ב ב — Chullin 32b:13</span></div>
+      <div class="orig">מַתְקֵיף לַהּ רַבִּי זֵירָא: מֵאַחַר שֶׁנּוֹלְדוּ בָּהּ סִימָנֵי טְרֵפָה הִתַּרְתָּ, מָה לִי בְּרֵיאָה, מָה לִי בִּבְנֵי מֵעַיִים!</div>
+      <div class="trans" data-when="he">מתקיף רבי זירא: מאחר שמשנולדו סימני טריפה לאחר תחילת השחיטה התרת — מה לי ריאה ומה לי בני מעיים?</div>
+      <div class="trans" data-when="en">Rabbi Zeira objects to Rava’s distinction. Since when signs of being a tereifa developed in the animal after the slaughter began, you permitted the animal and deemed the slaughter valid, what difference is there to me if the perforation was in the lung, and what difference is there to me if the perforation was in the innards? In either case, the animal should not be deemed a tereifa if the signs developed once the slaughter began.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ב ב — Chullin 32b:14</span></div>
+      <div class="orig">וַהֲדַר בֵּיהּ רַבִּי זֵירָא, דְּבָעֵי רַבִּי זֵירָא: נִיקְּבוּ בְּנֵי מֵעַיִים בֵּין סִימָן לְסִימָן, מַהוּ? מִי מִצְטָרֵף סִימָן רִאשׁוֹן לְסִימָן שֵׁנִי לְטַהֲרָהּ מִידֵי נְבֵלָה, אוֹ לָא?</div>
+      <div class="trans" data-when="he">וחזר בו רבי זירא, כפי שהסתפק: ניקבו בני מעיים בין חיתוך סימן ראשון לסימן שני — מהו? האם מצטרף הסימן הראשון לסימן השני לטהרהּ מידי נבילה, או לא?</div>
+      <div class="trans" data-when="en">But Rabbi Zeira retracted his objection, as Rabbi Zeira raises a dilemma: If the innards were perforated between the cutting of the first siman and the second siman what is the halakha? Does the first siman join together with the second siman to purify the animal from the impurity of an unslaughtered carcass or not?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ב ב — Chullin 32b:15</span></div>
+      <div class="orig">וְאָמְרִינַן: לָאו הַיְינוּ דְּבָעֵי אִילְפָא: הוֹצִיא עוּבָּר אֶת יָדוֹ בֵּין סִימָן לְסִימָן, מַהוּ?</div>
+      <div class="trans" data-when="he">ואומרים: הלוא זו שאלת אילפא: הוציא העובר את ידו בין סימן לסימן (ונעשתה היד טריפה) — מהו?</div>
+      <div class="trans" data-when="en">And we say: Isn’t this the dilemma that Ilfa raises: If a fetus extended its foreleg outside the womb while the mother was being slaughtered, between the cutting of the first siman, the windpipe, and the second siman, the gullet, thereby causing the foreleg to have the status of a tereifa, what is the halakha?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ג א — Chullin 33a:1</span></div>
+      <div class="orig">מִי מִצְטָרֵף סִימָן רִאשׁוֹן לְסִימָן שֵׁנִי לְטַהֲרָהּ מִידֵי נְבֵלָה, אוֹ לָא?</div>
+      <div class="trans" data-when="he">כלומר: האם מצטרף הסימן הראשון לשני לטהר מידי טומאת נבילה, או לא?</div>
+      <div class="trans" data-when="en">The Gemara clarifies this dilemma: Does the first siman join together with the second siman to purify the animal from the impurity of an unslaughtered carcass or not? In both cases the dilemma is: Does the cutting of the first siman, which serves the dual purpose of being a component of permitting consumption and preventing impurity of the animal, join together with the cutting of the second siman, which serves only the purpose of preventing impurity, in order to constitute a single act of slaughter and thereby prevent the animal from assuming the impurity of an unslaughtered carcass? Or perhaps because the cutting of each siman is performed for a different purpose they do not join together?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ג א — Chullin 33a:2</span></div>
+      <div class="orig">עַד כָּאן לָא אִיבַּעְיָא לַן, אֶלָּא לְטַהֲרָהּ מִידֵי נְבֵלָה, אֲבָל בַּאֲכִילָה – אֲסוּרָה.</div>
+      <div class="trans" data-when="he">מכל מקום — לא נסתפקנו אלא לטהר מטומאת נבילה; אבל באכילה — אסורה (טריפה), והכל מודים, ואף רבי זירא חוזר בו.</div>
+      <div class="trans" data-when="en">In any event, we raise the dilemma only in order to purify the foreleg from the impurity of an unslaughtered carcass. But with regard to eating the slaughtered animal, all agree that it is forbidden, as even Rabbi Zeira concedes that the animal is a tereifa and retracts his objection to the distinction that Rava proposed between the lungs and the innards.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ג א — Chullin 33a:3</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַב אַחָא בַּר רַב לְרָבִינָא: דִּלְמָא לְעוֹלָם לָא הֲדַר בֵּיהּ, וְרַבִּי זֵירָא לִדְבָרָיו דְּרָבָא קָאָמַר, וְלֵיהּ לָא סְבִירָא לֵיהּ.</div>
+      <div class="trans" data-when="he">אמר רב אחא בר רב לרבינא: שמא לעולם לא חזר בו רבי זירא, אלא אמר את השגתו לפי שיטת רבא, ולדידיה (לעצמו) אינו סובר כן — אין חילוק בין ריאה לבני מעיים.</div>
+      <div class="trans" data-when="en">Rav Aḥa bar Rav said to Ravina: Perhaps Rabbi Zeira actually did not retract his opinion, as even initially he held that there is no distinction between lungs and innards. If either is perforated after one siman was cut, the animal is a tereifa. And Rabbi Zeira stated his objection to the distinction of Rava in accordance with the statement of Rava, but he himself does not hold accordingly.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ג א — Chullin 33a:4</span></div>
+      <div class="orig">אָמַר רַב אַחָא בַּר יַעֲקֹב: שְׁמַע מִינַּהּ מִדְּרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, מְזַמְּנִין יִשְׂרָאֵל עַל בְּנֵי מֵעַיִין, וְאֵין מְזַמְּנִין גּוֹי עַל בְּנֵי מֵעַיִין.</div>
+      <div class="trans" data-when="he">אמר רב אחא בר יעקב: שמע מינה מדברי ריש לקיש — מזמנין ישראל זה את זה על בני מעיים (לאוכלם בעוד הבהמה מפרכסת), ואין מזמנין גוי על בני מעיים, שאסורים לו.</div>
+      <div class="trans" data-when="en">The Gemara continues its analysis of the statement of Reish Lakish, who said that after the windpipe is cut, the lung is considered as though it was placed in a basket, and if it is perforated before the slaughter is completed, the animal does not become a tereifa. Rav Aḥa bar Yaakov said: Learn from the statement of Rabbi Shimon ben Lakish that one may invite Jews to eat the innards of an animal that was slaughtered, but one may not invite gentiles to eat the innards of an animal that was slaughtered, because they are forbidden to gentiles.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ג א — Chullin 33a:5</span></div>
+      <div class="orig">מַאי טַעְמָא? יִשְׂרָאֵל דְּבִשְׁחִיטָה תַּלְיָא מִילְּתָא, כֵּיוָן דְּאִיכָּא שְׁחִיטָה מְעַלַּיְיתָא – אִישְׁתְּרִי לְהוּ; גּוֹיִם דְּבִנְחִירָה סַגִּי לְהוּ וּבְמִיתָה תַּלְיָא מִילְּתָא, הָנֵי – כְּאֵבֶר מִן הַחַי דָּמוּ.</div>
+      <div class="trans" data-when="he">מאי טעמא? ישראל — הכשר הבשר תלוי בשחיטה, ומשנעשתה שחיטה כשרה הותר אף בעודה מפרכסת; אבל גוי — די לו בנחירה והכשרו תלוי במיתה, ולכן בני המעיים (לאחר חיתוך שני הסימנים) כאבר מן החי הם לו, ואסורים.</div>
+      <div class="trans" data-when="en">What is the reason? For Jews the matter of rendering the meat of the animal fit for consumption is dependent upon the performance of a valid act of slaughter. Once there is full-fledged slaughter and both simanim are cut, the innards are permitted to them even if the animal is convulsing. But with regard to gentiles, for whom stabbing is sufficient and slaughter is not required, the innards are permitted only after the animal is completely dead, since the matter of rendering the meat of the animal fit for consumption is dependent upon its death. Therefore, if the animal is still convulsing, these innards, which are considered to be outside the body after the cutting of the two simanim, are considered like a limb from a living animal and it is forbidden for gentiles to eat them.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ג א — Chullin 33a:6</span></div>
+      <div class="orig">אָמַר רַב פָּפָּא: הֲוָה יָתֵיבְנָא קַמֵּיהּ דְּרַב אַחָא בַּר יַעֲקֹב, וּבְעַי דְּאֵימָא לֵיהּ, מִי אִיכָּא מִידֵּי דִּלְיִשְׂרָאֵל שְׁרֵי וּלְגוֹיִם אָסוּר? וְלָא אֲמַרִי לֵיהּ, דְּאָמֵינָא: הָא טַעְמָא קָאָמַר.</div>
+      <div class="trans" data-when="he">אמר רב פפא: ישבתי לפני רב אחא בר יעקב ורציתי לשואלו — וכי יש דבר המותר לישראל ואסור לגוי? אך לא אמרתי לו, שאמרתי בלבי: הרי טעם נתן לדבריו (ואין להקשות).</div>
+      <div class="trans" data-when="en">Rav Pappa said: I was sitting before Rav Aḥa bar Yaakov and I sought to say to him that his statement is difficult: Is there anything that is permitted for a Jew but prohibited for a gentile? But I did not say that to him, as I said to myself: Didn’t he say a reason for his ruling? Therefore, there is no reason to ask the question.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ג א — Chullin 33a:7</span></div>
+      <div class="orig">תַּנְיָא דְּלָא כְּרַב אַחָא בַּר יַעֲקֹב: הָרוֹצֶה לֶאֱכוֹל מִבְּהֵמָה קוֹדֶם שֶׁתֵּצֵא נַפְשָׁהּ – חוֹתֵךְ כְּזַיִת בָּשָׂר מִבֵּית הַשְּׁחִיטָה, וּמוֹלְחוֹ יָפֶה יָפֶה, וּמְדִיחוֹ יָפֶה יָפֶה, וּמַמְתִּין לָהּ עַד שֶׁתֵּצֵא נַפְשָׁהּ, וְאוֹכְלוֹ, אֶחָד גּוֹי וְאֶחָד יִשְׂרָאֵל מוּתָּרִין בּוֹ.</div>
+      <div class="trans" data-when="he">שנינו ברייתא שלא כרב אחא בר יעקב: הרוצה לאכול מן הבהמה קודם שתצא נפשה — חותך כזית בשר מבית השחיטה (מאזור החתך), מולחו היטב היטב, מדיחו היטב היטב, ממתין עד שתצא נפשה, ואוכלו; ואחד גוי ואחד ישראל מותרים בו (ללא חילוק).</div>
+      <div class="trans" data-when="en">The Gemara notes: It is taught in a baraita not in accordance with the opinion of Rav Aḥa bar Yaakov: One who seeks to eat from the meat of an animal before its soul departs may cut an olive-bulk of meat from the area of the slaughter, the neck, and salt it very well, i.e., more than is normally required, and rinse it very well in water to remove the salt and the blood, and wait until the animal’s soul departs, and eat it. It is permitted for both a gentile and a Jew to eat it. Contrary to the statement of Rav Aḥa bar Yaakov, there is no distinction between Jew and gentile.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ג א — Chullin 33a:8</span></div>
+      <div class="orig">מְסַיַּיע לֵיהּ לְרַב אִידִי בַּר אָבִין, דְּאָמַר רַב אִידִי בַּר אָבִין אָמַר רַב יִצְחָק בַּר אַשְׁיָאן: הָרוֹצֶה שֶׁיַּבְרִיא, חוֹתֵךְ כְּזַיִת בָּשָׂר מִבֵּית שְׁחִיטָתָהּ שֶׁל בְּהֵמָה, וּמוֹלְחוֹ יָפֶה יָפֶה, וּמְדִיחוֹ יָפֶה יָפֶה, וּמַמְתִּין לָהּ עַד שֶׁתֵּצֵא נַפְשָׁהּ, אֶחָד גּוֹי וְאֶחָד יִשְׂרָאֵל מוּתָּרִין בּוֹ.</div>
+      <div class="trans" data-when="he">מסייעת ברייתא זו לרב אידי בר אבין, שאמר משום רב יצחק בר אשיאן: הרוצה להבריא (מחוליו) — חותך כזית בשר מבית שחיטתה של הבהמה, מולחו היטב, מדיחו היטב, וממתין עד שתצא נפשה; ואחד גוי ואחד ישראל מותרים בו.</div>
+      <div class="trans" data-when="en">This baraita supports the statement of Rav Idi bar Avin, as Rav Idi bar Avin says that Rav Yitzḥak bar Ashyan says: One who seeks to recuperate from an illness should cut an olive-bulk of meat from the area of slaughter, i.e., the neck, of an animal, and salt it very well, and rinse it very well, and wait until the animal’s soul departs, and eat it. It is permitted for both a gentile and a Jew to eat it.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+</body>
+</html>
