@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — בבא קמא ע״א</title>
+<meta name="description" content="מתי השוחט בהמה גנובה באיסור (יום הכיפורים, שבת, עבודה זרה, שור הנסקל) חייב ארבעה וחמשה — לדעת רבי מאיר ולדעת חכמים, ובשחיטה על ידי שליח; וספק ׳חמשה בקר ולא חמשה חצאי בקר׳ בגונב שור של שותפין והודה לאחד מהם.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="bava-kamma">
+<meta name="gemara-map:location" content="71">
+<meta name="gemara-map:sefaria-ref" content="Bava Kamma 71">
+<meta name="gemara-map:topic-he" content="טבח באיסור וחמשה חצאי בקר">
+<meta name="gemara-map:topic-en" content="Forbidden slaughter; five half-oxen">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — בבא קמא ע״א">
+<meta name="gemara-map:title-en" content="Sugya map — Bava Kamma 71">
+<meta name="gemara-map:blurb-he" content="מתי השוחט בהמה גנובה באיסור (יום הכיפורים, שבת, עבודה זרה, שור הנסקל) חייב ארבעה וחמשה — לדעת רבי מאיר ולדעת חכמים, ובשחיטה על ידי שליח; וספק ׳חמשה בקר ולא חמשה חצאי בקר׳ בגונב שור של שותפין והודה לאחד מהם.">
+<meta name="gemara-map:blurb-en" content="When one who slaughters a stolen animal in a forbidden way (Yom Kippur, Shabbat, idolatry, a condemned ox) owes the fourfold/fivefold payment — per Rabbi Meir and per the Rabbis, and where the slaughter is done by an agent; and the ׳five oxen, not five half-oxen׳ dilemma of one who stole a partners' ox and admitted to one partner.">
+<meta name="gemara-map:sugya-count" content="2">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — בבא קמא ע״א</span><span data-when="en">Sugya map — Bava Kamma 71</span></h1>
+    <div class="subtitle"><span data-when="he">בבא קמא ע״א א–ע״ב א (ע״א א:ב–ע״ב א:ג) · שתי סוגיות · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Bava Kamma 71a–72a (71a:2–72a:3) · two sugyot · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> הדף ממשיך את משנת הגונב וטובח. תחילה: מדוע חייב ארבעה וחמשה השוחט ביום הכיפורים — והרי לוקה, ואין לוקה ומשלם? הגמרא מעמידה כרבי מאיר ומיישבת ברייתא (שבת, עבודה זרה, שור הנסקל) בשחיטה על ידי שליח, ומבררת לאורך את טעם חכמים הפוטרין (שחיטה שאינה ראויה, איסור מעשה שבת לרבי יוחנן הסנדלר) ואת טעמי חיובו של רבי מאיר. אחר כך, על המשנה ׳גנב משל אביו׳, מסתפק רבא: גנב שור של שותפין והודה לאחד — האם ׳חמשה בקר׳ ולא חצאי בקר; רב נחמן חוזר בו למחרת ומחייב אף חצאי בקר, ומחלק בין רישא לסיפא לפי ׳וטבחו כולו באיסורא׳.</span>
+    <span data-when="en"><b>Bottom line:</b> The daf continues the mishna of one who steals and slaughters. First: why does one who slaughters on Yom Kippur owe the fourfold/fivefold payment — he is flogged, and one is not both flogged and made to pay? The Gemara establishes the mishna as Rabbi Meir and reconciles a baraita (Shabbat, idolatry, a condemned ox) through slaughter by an agent, working through the Rabbis’ reason for exempting (an unfit slaughter; the product of Shabbat per R. Yoḥanan HaSandlar) and Rava’s grounds for R. Meir’s liability. Then, on the mishna of one who stole his father’s animal, Rava poses a dilemma: one who stole a partners’ ox and admitted to one partner — is it ׳five oxen׳ and not half-oxen? Rav Naḥman retracts the next morning to obligate half-oxen, distinguishing the clauses by whether the slaughter was ׳wholly in a forbidden manner.׳</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+    <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — שתי סוגיות</span><span data-when="en">Overview — two sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1(["1 · טבח באיסור — לוקה ומשלם, ושחיטה ע״י אחר"]):::mishnah
+  O2(["2 · חמשה בקר או חמשה חצאי בקר"]):::mishnah
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1(["1 · Slaughter forbidden by another penalty — and slaughter through an agent"]):::mishnah
+  O2(["2 · Five oxen or five half-oxen"]):::mishnah
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+      </script>
+    </div>
+  </section>
+
+    <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">טבח באיסור — לוקה ומשלם, ושחיטה ע״י אחר</span><span data-when="en">Slaughter forbidden by another penalty</span>
+        <span class="ref">Bava Kamma 71a:2-71b:12</span></h2>
+    <div class="lead"><span data-when="he">המשנה מחייבת ארבעה וחמשה גם בשוחט ביום הכיפורים. הגמרא מתקשה — הרי לוקה, ואין לוקה ומשלם; מעמידה כרבי מאיר, נדחקת בברייתא (שבת, עבודה זרה, שור הנסקל) ומפרשתהּ ׳בטובח על ידי אחר׳. משם נפתחים בירורי השליחות, טעם חכמים (שחיטה שאינה ראויה / רבי יוחנן הסנדלר ואיסור מעשה שבת), וטעמי חיובו של רבי מאיר בעבודה זרה ובשור הנסקל.</span><span data-when="en">The mishna obligates the fourfold/fivefold payment even for slaughter on Yom Kippur. The Gemara objects — he is flogged, and one is not both flogged and made to pay; it establishes the mishna as Rabbi Meir, struggles with a baraita (Shabbat, idolatry, a condemned ox) and reinterprets it as ׳slaughtering through an agent.׳ From there flow the agency derivations, the Rabbis' reasoning (an unfit slaughter / R. Yoḥanan HaSandlar and the product of Shabbat), and Rava's grounds for R. Meir's liability for idolatry and the condemned ox.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: גנב וטבח ביום הכיפורים — משלם ד׳ וה׳"]):::mishnah
+  Q2{"② קושיא: והרי לוקה — ואין לוקה ומשלם!"}:::question
+  A3["③ תירוץ: ר׳ מאיר היא — לוקה ומשלם"]:::answer
+  Q4{"④ קושיא: א״כ אף בשבת (חייב מיתה) יתחייב!"}:::question
+  P5["⑤ ברייתא: שבת, ע״ז, שור הנסקל — ר״מ מחייב, חכמים פוטרין"]:::proof
+  A6["⑥ ר׳ יוחנן: בטובח על ידי אחר (שליח)"]:::answer
+  Q7{"⑦ זה חוטא וזה מתחייב?!"}:::question
+  A8["⑧ רבא: ׳וטבחו או מכרו׳ — אף טביחה ע״י אחר"]:::answer
+  S9["⑨ דבי ר׳ ישמעאל: ׳או׳; דבי חזקיה: ׳תחת׳ — לרבות שליח"]:::statement
+  Q10{"⑩ מר זוטרא: יש שעושהו בעצמו פטור, ושלוחו חייב?!"}:::question
+  A11["⑪ רב אשי: שם פטור משום קם ליה בדרבה מיניה"]:::answer
+  Q12{"⑫ ואם בשליח — מ״ט דרבנן דפטרי?"}:::question
+  A13["⑬ ר׳ שמעון: שחיטה שאינה ראויה — לא שמה שחיטה"]:::answer
+  Q14{"⑭ שבת — שחיטה ראויה היא (חולין יד)!"}:::question
+  A15["⑮ סבר כר׳ יוחנן הסנדלר (אוסר באכילה)"]:::answer
+  S16["⑯ מח׳ מעשה שבת: מבשל בשבת — מח׳ ר״מ, ר״י, ר״י הסנדלר"]:::statement
+  S17["⑰ דרשת ר׳ חייא: ׳קדש׳ — אסור באכילה; ׳לכם׳ — מותר בהנאה; ׳מות יומת׳ — מזיד ולא שוגג"]:::statement
+  S18["⑱ פליגי רב אחא ורבינא: מעשה שבת — דאורייתא / דרבנן"]:::statement
+  Q19{"⑲ למ״ד דרבנן — אמאי פטרי רבנן?"}:::question
+  A20["⑳ אשארא — אע״ז ושור הנסקל"]:::answer
+  Q21{"㉑ ור׳ מאיר — אמאי מחייב בע״ז (נאסרה בשחיטה)?"}:::question
+  A22["㉒ רבא: באומר בגמר זביחה הוא עובדהּ"]:::answer
+  Q23{"㉓ שור הנסקל — אסורי הנאה, לאו דמריה קא טבח!"}:::question
+  A24["㉔ רבא: מסרו לשומר, ונגמר דינו בבית השומר; ר״מ כר׳ יעקב וכר׳ שמעון"]:::answer
+  S25["㉕ כר׳ יעקב: משנגמר דינו, החזירו השומר — מוחזר"]:::statement
+  S26["㉖ כר׳ שמעון: דבר הגורם לממון כממון דמי"]:::statement
+  P27["㉗ ראיה: ר׳ שמעון — קדשים שחייב באחריותן — חייב"]:::proof
+  C28(["㉘ רב כהנא לרב זביד: מסיפא ׳ר״ש פוטר בשני אלו׳ — כר״מ דווקא"]):::conclusion
+  M1 -->|אמאי| Q2
+  Q2 -->|תירוץ| A3
+  A3 -.->|קושיא| Q4
+  Q4 -->|מברייתא| P5
+  P5 -->|אוקימתא| A6
+  A6 -.->|קושיא| Q7
+  Q7 -->|דרשה| A8
+  A8 -->|תנאים| S9
+  A6 -.->|מתקיף| Q10
+  Q10 -->|יישוב| A11
+  A6 -.->|בעיא| Q12
+  Q12 -->|מאן חכמים| A13
+  A13 -.->|קושיא| Q14
+  Q14 -->|יישוב| A15
+  A15 -->|מקור| S16
+  S16 -->|טעם| S17
+  S17 -->|מחלוקת| S18
+  S18 -.->|קושיא| Q19
+  Q19 -->|יישוב| A20
+  P5 -.->|קושיא| Q21
+  Q21 -->|יישוב| A22
+  P5 -.->|קושיא| Q23
+  Q23 -->|יישוב| A24
+  A24 -->|דעה| S25
+  A24 -->|דעה| S26
+  S26 -->|ראיה| P27
+  A24 -.->|מסקנה| C28
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: stole & slaughtered on Yom Kippur — pays fourfold/fivefold"]):::mishnah
+  Q2{"② Question: but he is flogged — and one is not flogged and pays!"}:::question
+  A3["③ Answer: it is R. Meir — flogged and pays"]:::answer
+  Q4{"④ Question: then even on Shabbat (capital) he should pay!"}:::question
+  P5["⑤ Baraita: Shabbat, idolatry, condemned ox — R. Meir liable, Rabbis exempt"]:::proof
+  A6["⑥ R. Yoḥanan: it speaks of slaughtering through an agent"]:::answer
+  Q7{"⑦ This one sins and that one is liable?!"}:::question
+  A8["⑧ Rava: ׳slaughter or sell׳ — slaughter through another too"]:::answer
+  S9["⑨ R. Yishmael: ׳or׳; Ḥizkiyya: ׳for׳ — to include the agent"]:::statement
+  Q10{"⑩ Mar Zutra: can an agent be liable where the doer himself is not?!"}:::question
+  A11["⑪ Rav Ashi: there he is excused by the greater punishment"]:::answer
+  Q12{"⑫ But if via an agent — why do the Rabbis exempt?"}:::question
+  A13["⑬ R. Shimon: an unfit slaughter is not a slaughter"]:::answer
+  Q14{"⑭ But Shabbat slaughter is fit (Ḥullin 14a)!"}:::question
+  A15["⑮ He holds like R. Yoḥanan HaSandlar (forbids eating)"]:::answer
+  S16["⑯ Cooking-on-Shabbat dispute: R. Meir, R. Yehuda, R. Y. HaSandlar"]:::statement
+  S17["⑰ R. Ḥiyya's derivation: ׳holy׳ — no eating; ׳to you׳ — benefit ok; ׳put to death׳ — only intentional"]:::statement
+  S18["⑱ Rav Aḥa & Ravina: product of Shabbat — Torah law / rabbinic law"]:::statement
+  Q19{"⑲ Per ׳rabbinic׳ — why do the Rabbis exempt?"}:::question
+  A20["⑳ On the rest — on idolatry and the condemned ox"]:::answer
+  Q21{"㉑ And R. Meir — why liable for idolatry (forbidden once begun)?"}:::question
+  A22["㉒ Rava: where he says he worships it only at slaughter's end"]:::answer
+  Q23{"㉓ Condemned ox — benefit forbidden, not his to slaughter!"}:::question
+  A24["㉔ Rava: entrusted to a bailee, condemned in the bailee's house; R. Meir like R. Yaakov & R. Shimon"]:::answer
+  S25["㉕ Like R. Yaakov: returned by the bailee after sentencing — counts as returned"]:::statement
+  S26["㉖ Like R. Shimon: a cause of monetary loss is as money"]:::statement
+  P27["㉗ Proof: R. Shimon — consecrated animals one is responsible for — liable"]:::proof
+  C28(["㉘ Rav Kahana to Rav Zevid: from the last clause — only like R. Meir"]):::conclusion
+  M1 -->|why| Q2
+  Q2 -->|answer| A3
+  A3 -.->|question| Q4
+  Q4 -->|from a baraita| P5
+  P5 -->|reinterpret| A6
+  A6 -.->|question| Q7
+  Q7 -->|derivation| A8
+  A8 -->|tannaim| S9
+  A6 -.->|objection| Q10
+  Q10 -->|resolve| A11
+  A6 -.->|dilemma| Q12
+  Q12 -->|who are the Rabbis| A13
+  A13 -.->|question| Q14
+  Q14 -->|resolve| A15
+  A15 -->|source| S16
+  S16 -->|reason| S17
+  S17 -->|dispute| S18
+  S18 -.->|question| Q19
+  Q19 -->|resolve| A20
+  P5 -.->|question| Q21
+  Q21 -->|resolve| A22
+  P5 -.->|question| Q23
+  Q23 -->|resolve| A24
+  A24 -->|view| S25
+  A24 -->|view| S26
+  S26 -->|proof| P27
+  A24 -.->|conclusion| C28
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① גָּנַב וְטָבַח בְּיוֹם הַכִּפּוּרִים … מְשַׁלֵּם אַרְבָּעָה וַחֲמִשָּׁה"]):::mishnah
+  Q2{"② אַמַּאי? … מַלְקוֹת מִיהָא אִיכָּא … דְּאֵינוֹ לוֹקֶה וּמְשַׁלֵּם!"}:::question
+  A3["③ הָא מַנִּי – רַבִּי מֵאִיר הִיא, דְּאָמַר: לוֹקֶה וּמְשַׁלֵּם"]:::answer
+  Q4{"④ אִי רַבִּי מֵאִיר, אֲפִילּוּ טָבַח בְּשַׁבָּת!"}:::question
+  P5["⑤ גָּנַב וְטָבַח בַּשַּׁבָּת … מְשַׁלֵּם … דִּבְרֵי רַבִּי מֵאִיר. וַחֲכָמִים פּוֹטְרִין!"]:::proof
+  A6["⑥ … בְּטוֹבֵחַ עַל יְדֵי אַחֵר"]:::answer
+  Q7{"⑦ וְכִי זֶה חוֹטֵא וְזֶה מִתְחַיֵּיב?!"}:::question
+  A8["⑧ רָבָא: ״וּטְבָחוֹ וּמְכָרוֹ״ – מָה מְכִירָה … אַף טְבִיחָה עַל יְדֵי אַחֵר"]:::answer
+  S9["⑨ דְּבֵי ר׳ יִשְׁמָעֵאל: ״אוֹ״; דְּבֵי חִזְקִיָּה: ״תַּחַת״ – לְרַבּוֹת אֶת הַשָּׁלִיחַ"]:::statement
+  Q10{"⑩ מָר זוּטְרָא: מִי אִיכָּא … אִיהוּ לָא מִיחַיַּיב, וְעָבֵיד שָׁלִיחַ וּמִיחַיַּיב?"}:::question
+  A11["⑪ רַב אָשֵׁי: … אֶלָּא דְּקָם לֵיהּ בִּדְרַבָּה מִינֵּיהּ"]:::answer
+  Q12{"⑫ וְאִי בְּטוֹבֵחַ עַל יְדֵי אַחֵר, מַאי טַעְמָא דְּרַבָּנַן דְּפָטְרִי?"}:::question
+  A13["⑬ ר׳ שִׁמְעוֹן: שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה – לֹא שְׁמָהּ שְׁחִיטָה"]:::answer
+  Q14{"⑭ שַׁבָּת – שְׁחִיטָה רְאוּיָה הִיא! … שְׁחִיטָתוֹ כְּשֵׁירָה"}:::question
+  A15["⑮ סָבַר לַהּ כְּרַבִּי יוֹחָנָן הַסַּנְדְּלָר"]:::answer
+  S16["⑯ הַמְבַשֵּׁל בַּשַּׁבָּת … ר״מ … ר׳ יְהוּדָה … ר׳ יוֹחָנָן הַסַּנְדְּלָר"]:::statement
+  S17["⑰ ״כִּי קֹדֶשׁ הִוא לָכֶם״ … ״לָכֶם״ … ״מְחַלְּלֶיהָ מוֹת יוּמָת״ – בְּמֵזִיד"]:::statement
+  S18["⑱ פְּלִיגִי רַב אַחָא וְרָבִינָא … דְּאוֹרָיְיתָא … דְּרַבָּנַן"]:::statement
+  Q19{"⑲ לְמַאן דְּאָמַר דְּרַבָּנַן, אַמַּאי פָּטְרִי רַבָּנַן?"}:::question
+  A20["⑳ אַשְּׁאָרָא – אַעֲבוֹדָה זָרָה וְשׁוֹר הַנִּסְקָל"]:::answer
+  Q21{"㉑ וְרַבִּי מֵאִיר – אַמַּאי מְחַיֵּיב שׁוֹחֵט לַעֲבוֹדָה זָרָה?"}:::question
+  A22["㉒ רָבָא: בְּאוֹמֵר בִּגְמַר זְבִיחָה הוּא עוֹבְדָהּ"]:::answer
+  Q23{"㉓ שׁוֹר הַנִּסְקָל – אִיסּוּרֵי הֲנָאָה … לָאו דְּמָרֵיהּ קָא טָבַח!"}:::question
+  A24["㉔ רָבָא: שֶׁמְּסָרוֹ לְשׁוֹמֵר … נִגְמַר דִּינוֹ בְּבֵית שׁוֹמֵר … כְּרַבִּי יַעֲקֹב … וּכְרַבִּי שִׁמְעוֹן"]:::answer
+  S25["㉕ כְּרַבִּי יַעֲקֹב – מִשֶּׁנִּגְמַר דִּינוֹ, הֶחְזִירוֹ שׁוֹמֵר … מוּחְזָר"]:::statement
+  S26["㉖ כְּרַבִּי שִׁמְעוֹן – דָּבָר הַגּוֹרֵם לְמָמוֹן כְּמָמוֹן דָּמֵי"]:::statement
+  P27["㉗ ר׳ שִׁמְעוֹן: קֳדָשִׁים שֶׁחַיָּיב בְּאַחְרָיוּתָן – חַיָּיב"]:::proof
+  C28(["㉘ רַב כָּהֲנָא … ר׳ שִׁמְעוֹן פּוֹטֵר בִּשְׁנֵי אֵלּוּ … מוֹדֵה בְּטָבַח וּמָכַר לִרְפוּאָה"]):::conclusion
+  M1 -->|אמאי| Q2
+  Q2 -->|תירוץ| A3
+  A3 -.->|קושיא| Q4
+  Q4 -->|מברייתא| P5
+  P5 -->|אוקימתא| A6
+  A6 -.->|קושיא| Q7
+  Q7 -->|דרשה| A8
+  A8 -->|תנאים| S9
+  A6 -.->|מתקיף| Q10
+  Q10 -->|יישוב| A11
+  A6 -.->|בעיא| Q12
+  Q12 -->|מאן חכמים| A13
+  A13 -.->|קושיא| Q14
+  Q14 -->|יישוב| A15
+  A15 -->|מקור| S16
+  S16 -->|טעם| S17
+  S17 -->|מחלוקת| S18
+  S18 -.->|קושיא| Q19
+  Q19 -->|יישוב| A20
+  P5 -.->|קושיא| Q21
+  Q21 -->|יישוב| A22
+  P5 -.->|קושיא| Q23
+  Q23 -->|יישוב| A24
+  A24 -->|דעה| S25
+  A24 -->|דעה| S26
+  S26 -->|ראיה| P27
+  A24 -.->|מסקנה| C28
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="num">2</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:2</span></div>
+      <div class="orig">גָּנַב וְטָבַח בְּיוֹם הַכִּפּוּרִים וְכוּ׳. אָמְרִי: אַמַּאי? נְהִי דִּקְטָלָא לֵיכָּא, מַלְקוֹת מִיהָא אִיכָּא – וְקַיְימָא לַן דְּאֵינוֹ לוֹקֶה וּמְשַׁלֵּם!</div>
+      <div class="trans" data-when="he">גמרא (על מה שנינו ׳גנב וטבח ביום הכיפורים — משלם ארבעה וחמשה׳): אמרו, מדוע משלם? אמת שאין כאן עונש מיתה, אך מלקות יש (השוחט ביום הכיפורים לוקה) — והרי קיימא לן שאין אדם לוקה ומשלם על מעשה אחד!</div>
+      <div class="trans" data-when="en">§ The mishna teaches: If one stole an animal and slaughtered it on Yom Kippur he pays the fourfold or fivefold payment. The Sages say, questioning this ruling: Why is he liable to pay it? Although there is no penalty of execution for slaughtering on Yom Kippur, nevertheless there is the penalty of lashes; and we maintain that one is not sentenced to be flogged and obligated to pay for the same act.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:3</span></div>
+      <div class="orig">אָמְרִי: הָא מַנִּי – רַבִּי מֵאִיר הִיא, דְּאָמַר: לוֹקֶה וּמְשַׁלֵּם.</div>
+      <div class="trans" data-when="he">אמרו (בתירוץ): כדעת מי המשנה? רבי מאיר היא, הסובר: אדם לוקה ומשלם (שני העונשים יחד) על מעשה אחד.</div>
+      <div class="trans" data-when="en">The Sages say in response: In accordance with whose opinion is this mishna taught? It is taught in accordance with the opinion of Rabbi Meir, who says: One is sentenced to be flogged and obligated to pay for the same action.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:4</span></div>
+      <div class="orig">אִי רַבִּי מֵאִיר, אֲפִילּוּ טָבַח בְּשַׁבָּת! וְכִי תֵּימָא: לוֹקֶה וּמְשַׁלֵּם אִית לֵיהּ, מֵת וּמְשַׁלֵּם לֵית לֵיהּ;</div>
+      <div class="trans" data-when="he">מקשים: אם המשנה כרבי מאיר, אם כן אפילו טבח בשבת (שחייב מיתה) יתחייב בתשלומי ארבעה וחמשה — והרי שנינו (עד ע״ב) שפטור! ושמא תאמר: רבי מאיר סובר ׳לוקה ומשלם׳ אך אינו סובר ׳מת ומשלם׳ —</div>
+      <div class="trans" data-when="en">The Gemara asks: If the mishna is in accordance with the opinion of Rabbi Meir, then even if he slaughtered the animal on Shabbat, which is a capital offense, he should be obligated to pay the fourfold or fivefold payment, whereas the mishna (74b) states that in this case he is exempt. And if you would say that Rabbi Meir holds that one is sentenced to be flogged and obligated to pay for the same act, but he does not hold that one is sentenced to the death penalty and obligated to pay for the same act, this is incorrect.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:5</span></div>
+      <div class="orig">וְלָא?! וְהָתַנְיָא: גָּנַב וְטָבַח בַּשַּׁבָּת; גָּנַב וְטָבַח לַעֲבוֹדָה זָרָה; גָּנַב שׁוֹר הַנִּסְקָל וּטְבָחוֹ – מְשַׁלֵּם אַרְבָּעָה וַחֲמִשָּׁה, דִּבְרֵי רַבִּי מֵאִיר. וַחֲכָמִים פּוֹטְרִין!</div>
+      <div class="trans" data-when="he">וכי לא?! והרי שנינו בברייתא: גנב וטבח בשבת, גנב וטבח לעבודה זרה, גנב שור הנסקל וטבחו — משלם ארבעה וחמשה, דברי רבי מאיר; וחכמים פוטרין! (משמע שרבי מאיר מחייב תשלומין אף במקום חיוב מיתה.)</div>
+      <div class="trans" data-when="en">And is it correct to say that Rabbi Meir does not maintain that one can be sentenced to the death penalty and to pay for the same act? But isn’t it taught in a baraita: If one stole an animal and slaughtered it on Shabbat, or if he stole an animal and slaughtered it for idol worship, or if he stole an ox that is sentenced to be stoned, from which it is prohibited to derive any benefit, and he slaughtered it, he pays the fourfold or fivefold payment; this is the statement of Rabbi Meir. And the Rabbis exempt him from this payment. Apparently Rabbi Meir maintains that one can be held liable for monetary payment and for capital punishment for the same act, e.g., slaughtering on Shabbat or slaughtering for idol worship.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:6</span></div>
+      <div class="orig">אָמְרִי: בַּר מִינַּהּ דְּהַהִיא, דְּהָא אִתְּמַר עֲלַהּ: אָמַר רַבִּי יַעֲקֹב אָמַר רַבִּי יוֹחָנָן, וְאָמְרִי לַהּ אָמַר רַבִּי יִרְמְיָה אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, רַבִּי אָבִין וְרַבִּי אִלְעָא וְכֹל חֲבוּרָתָא מִשְּׁמֵיהּ דְּרַבִּי יוֹחָנָן אָמְרִי: בְּטוֹבֵחַ עַל יְדֵי אַחֵר.</div>
+      <div class="trans" data-when="he">אמרו: הוצא ברייתא זו מן הכלל (אל תפרשה כפשוטה), שהרי נאמר עליה משום רבי יוחנן (ויש אומרים משום ריש לקיש), רבי אבין ורבי אלעא וכל החבורה משמו של רבי יוחנן: מדובר בטובח על ידי אחר — שהגנב שילח אחר לשחוט, והשליח שחט בשבת או לעבודה זרה; הגנב משלם, שהוא עצמו לא עבר עבירה שחייבין עליה מיתה.</div>
+      <div class="trans" data-when="en">The Sages say in response: Stand apart from this baraita, i.e., this baraita should not be understood in a straightforward manner, as it was stated concerning it: Rabbi Ya’akov says that Rabbi Yoḥanan says, and some say it was Rabbi Yirmeya who says that Rabbi Shimon ben Lakish says, and Rabbi Avin and Rabbi Ela and the entire group of disciples of Rabbi Yoḥanan also say in the name of Rabbi Yoḥanan: The baraita is speaking of a thief who slaughters the stolen animal through the agency of another person, i.e., he instructed another to slaughter it, and that agent did so on Shabbat or for idolatrous purposes. The thief pays the fourfold or fivefold payment because he himself did not commit a capital offense.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:7</span></div>
+      <div class="orig">וְכִי זֶה חוֹטֵא וְזֶה מִתְחַיֵּיב?!</div>
+      <div class="trans" data-when="he">מקשים: וכי זה (השליח) חוטא וזה (הגנב) מתחייב בתשלומין?!</div>
+      <div class="trans" data-when="en">The Gemara asks: How can it be that a thief is liable to pay the fourfold or fivefold payment if another person slaughters the stolen animal for him? But is it so that this one sins and that one becomes liable?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:8</span></div>
+      <div class="orig">אָמַר רָבָא: שָׁאנֵי הָכָא, דְּאָמַר קְרָא: ״וּטְבָחוֹ וּמְכָרוֹ״ – מָה מְכִירָה עַל יְדֵי אַחֵר, אַף טְבִיחָה עַל יְדֵי אַחֵר.</div>
+      <div class="trans" data-when="he">אמר רבא: שאני הכא, שאמר הכתוב ׳וטבחו או מכרו׳ — מה מכירה נעשית על ידי אחר (הקונה), אף טביחה שעל ידי אחר מחייבת.</div>
+      <div class="trans" data-when="en">The Gemara provides several reasons why in the case of fourfold or fivefold payment it is possible for the thief to be liable for another’s actions. Rava said: It is different here, as the verse states: “And slaughter it or sell it” (Exodus 21:37), thereby juxtaposing the two acts of slaughtering and selling. It is derived that just as there is liability for the fourfold or fivefold payment through selling, which by definition is performed by means of another party, so too, there is liability for slaughtering when it is performed by means of another party.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:9</span></div>
+      <div class="orig">דְּבֵי רַבִּי יִשְׁמָעֵאל תָּנָא: ״אוֹ״ – לְרַבּוֹת אֶת הַשָּׁלִיחַ. דְּבֵי חִזְקִיָּה תָּנָא: ״תַּחַת״ – לְרַבּוֹת אֶת הַשָּׁלִיחַ.</div>
+      <div class="trans" data-when="he">דבי רבי ישמעאל תָנא: ׳או׳ (בפסוק ׳וטבחו או מכרו׳) — לרבות את השליח. דבי חזקיה תָנא: ׳תחת׳ (בפסוק ׳חמשה בקר תחת השור׳) — לרבות את השליח.</div>
+      <div class="trans" data-when="en">The school of Rabbi Yishmael teaches: The word “or” in the phrase: “And slaughter it or sell it,” serves to include a case in which the agent slaughters or sells the animal at the behest of the thief. The school of Ḥizkiyya teaches: The separate word “for” [taḥat] in the phrase: “He shall pay five oxen for an ox, and four sheep for a sheep,” which could have been avoided by using the mere prefix of the letter beit, serves to include a case in which the agent slaughters the animal on behalf of the thief.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:10</span></div>
+      <div class="orig">מַתְקֵיף לַהּ מָר זוּטְרָא: מִי אִיכָּא מִידֵּי דְּאִילּוּ עָבֵיד אִיהוּ – לָא מִיחַיַּיב, וְעָבֵיד שָׁלִיחַ וּמִיחַיַּיב?</div>
+      <div class="trans" data-when="he">מתקיף לה מר זוטרא: וכי יש דבר שאילו עשהו הוא עצמו אינו מתחייב, ואילו עשהו שלוחו — מתחייב? (וכי יש כוח לשליח יותר מן המשלח?)</div>
+      <div class="trans" data-when="en">Mar Zutra objects to this explanation of the baraita: Is there anything with regard to which if one performs it himself he is not liable, and if his agent performs it on his behalf one is liable? How is it possible for an agent to have more power than the one who appointed him? Can it be that if the thief himself slaughtered the animal on Shabbat he would be exempt, whereas if he has it slaughtered by another he is liable?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:11</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַב אָשֵׁי: הָתָם לָאו מִשּׁוּם דְּלָא מִיחַיַּיב הוּא, אֶלָּא דְּקָם לֵיהּ בִּדְרַבָּה מִינֵּיהּ.</div>
+      <div class="trans" data-when="he">אמר לו רב אשי: שם (כשהגנב טובח בעצמו בשבת) אין הפטור משום שאינו מתחייב, אלא משום ׳קם ליה בדרבה מיניה׳ (חיוב המיתה החמור פוטרו מן הממון); אך כששלח אחר — אין עליו חיוב מיתה, ולכן משלם.</div>
+      <div class="trans" data-when="en">Rav Ashi said to him: There, in the case of the thief who slaughters a stolen animal on Shabbat, it is not because he is not liable that he does not pay the fourfold or fivefold payment; rather, he is liable but he is excused from payment because he receives the greater of the two punishments, i.e., execution, for desecrating Shabbat. When he appoints an agent he has no liability for desecrating Shabbat, and therefore he pays for the slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:12</span></div>
+      <div class="orig">וְאִי בְּטוֹבֵחַ עַל יְדֵי אַחֵר, מַאי טַעְמָא דְּרַבָּנַן דְּפָטְרִי?</div>
+      <div class="trans" data-when="he">מקשים: ואם הברייתא עוסקת בטובח על ידי אחר, מהו טעמם של חכמים הפוטרין (הרי הגנב עצמו לא עשה מעשה שחייבין עליו מיתה)?</div>
+      <div class="trans" data-when="en">The Gemara asks: But if the baraita is speaking about a thief who slaughters through the agency of another person, what is the reason of the Rabbis, who exempt the thief from payment? The thief did not himself do any act for which he is liable to receive the death penalty.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:13</span></div>
+      <div class="orig">אָמְרִי: מַאן חֲכָמִים – רַבִּי שִׁמְעוֹן, דְּאָמַר: שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה – לֹא שְׁמָהּ שְׁחִיטָה.</div>
+      <div class="trans" data-when="he">אמרו: מאן ׳חכמים׳ — רבי שמעון, שאמר: שחיטה שאינה ראויה (להתיר את הבשר באכילה) — אינה נחשבת שחיטה; ולכן (בשבת ובעבודה זרה, ששם הבשר אסור) אין חיוב תשלומין.</div>
+      <div class="trans" data-when="en">The Sages say in explanation: Who are these Rabbis of the baraita? It is Rabbi Shimon, who said: The legal status of an act of slaughter that is not fit for accomplishing its full ritual purpose is not considered an act of slaughter. Since slaughtering on Shabbat or slaughtering for idolatrous purposes does not render the meat fit for consumption, Rabbi Shimon rules that there is no liability for the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:14</span></div>
+      <div class="orig">אָמְרִי: בִּשְׁלָמָא עֲבוֹדָה זָרָה וְשׁוֹר הַנִּסְקָל – שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה הִיא; אֶלָּא שַׁבָּת – שְׁחִיטָה רְאוּיָה הִיא! דִּתְנַן: הַשּׁוֹחֵט בַּשַּׁבָּת וּבְיוֹם הַכִּפּוּרִים, אַף עַל פִּי שֶׁמִּתְחַיֵּיב בְּנַפְשׁוֹ – שְׁחִיטָתוֹ כְּשֵׁירָה!</div>
+      <div class="trans" data-when="he">מקשים: בשלמא עבודה זרה ושור הנסקל — שחיטה שאינה ראויה היא (הבשר אסור בהנאה); אבל שבת — שחיטה ראויה היא! שהרי שנינו (חולין יד): השוחט בשבת וביום הכיפורים, אף על פי שמתחייב בנפשו — שחיטתו כשרה (והבשר מותר)!</div>
+      <div class="trans" data-when="en">The Sages say, questioning this explanation: Granted, slaughtering for idol worship and slaughtering an ox that is sentenced to be stoned are cases of slaughter that is not fit, as in both of these cases it is prohibited to derive any benefit from the animal’s flesh. But slaughtering on Shabbat is a fit slaughter. As we learned in a mishna (Ḥullin 14a): In the case of one who slaughters an animal on Shabbat or on Yom Kippur, although he is liable to receive the death penalty for desecrating Shabbat, his slaughter is valid and the meat may be eaten.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:15</span></div>
+      <div class="orig">אָמְרִי: סָבַר לַהּ כְּרַבִּי יוֹחָנָן הַסַּנְדְּלָר.</div>
+      <div class="trans" data-when="he">אמרו: רבי שמעון סובר כרבי יוחנן הסנדלר (החולק על אותה משנה ואוסר באכילה בשר שנשחט בשבת).</div>
+      <div class="trans" data-when="en">The Sages say in response: Rabbi Shimon holds in accordance with the opinion of Rabbi Yoḥanan HaSandlar, who disagrees with that mishna and prohibits eating the meat of an animal slaughtered on Shabbat.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:16</span></div>
+      <div class="orig">דִּתְנַן: הַמְבַשֵּׁל בַּשַּׁבָּת – בְּשׁוֹגֵג יֵאָכֵל, בְּמֵזִיד לֹא יֵאָכֵל; דִּבְרֵי רַבִּי מֵאִיר. רַבִּי יְהוּדָה אוֹמֵר: בְּשׁוֹגֵג – יֵאָכֵל בְּמוֹצָאֵי שַׁבָּת, בְּמֵזִיד – לֹא יֵאָכֵל עוֹלָמִית.</div>
+      <div class="trans" data-when="he">שהרי שנינו: המבשל בשבת — בשוגג ייאכל, במזיד לא ייאכל; דברי רבי מאיר. רבי יהודה אומר: בשוגג ייאכל במוצאי שבת, במזיד לא ייאכל לעולם (לו, אך לאחרים מותר).</div>
+      <div class="trans" data-when="en">As we learned in a mishna (Terumot 2:3): In the case of one who cooks food on Shabbat, if he acted unwittingly he may eat the food, but if he acted intentionally he may not eat it; this is the statement of Rabbi Meir. Rabbi Yehuda says: If he acted unwittingly he may eat the food only upon the conclusion of Shabbat, and if he acted intentionally he may not eat it ever, although others may partake of it.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:17</span></div>
+      <div class="orig">רַבִּי יוֹחָנָן הַסַּנְדְּלָר אוֹמֵר: בְּשׁוֹגֵג – יֵאָכֵל לְמוֹצָאֵי שַׁבָּת לַאֲחֵרִים, וְלֹא לוֹ; בְּמֵזִיד – לֹא יֵאָכֵל עוֹלָמִית, לֹא לוֹ וְלֹא לַאֲחֵרִים.</div>
+      <div class="trans" data-when="he">רבי יוחנן הסנדלר אומר: בשוגג — ייאכל במוצאי שבת לאחרים אך לא לו; במזיד — לא ייאכל לעולם, לא לו ולא לאחרים. (אם כן שחיטה במזיד בשבת לעולם אסורה באכילה — ולרבי שמעון אין בה חיוב ארבעה וחמשה.)</div>
+      <div class="trans" data-when="en">Rabbi Yoḥanan HaSandlar says: If he cooked the food unwittingly it may be eaten upon the conclusion of Shabbat by others only, but not by him; and if he acted intentionally it may not be eaten ever, neither by him nor by others. Slaughter, like cooking, is a desecration of Shabbat that entails the death penalty. It follows that Rabbi Yoḥanan HaSandlar maintains that the meat of an animal intentionally slaughtered on Shabbat may never be eaten. If so, this is a slaughter that does not render the meat fit for consumption, and therefore according to the opinion of Rabbi Shimon there is no fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:18</span></div>
+      <div class="orig">מַאי טַעְמָא דְּרַבִּי יוֹחָנָן הַסַּנְדְּלָר? כִּדְדָרֵישׁ רַבִּי חִיָּיא אַפִּיתְחָא דְּבֵי נְשִׂיאָה: ״וּשְׁמַרְתֶּם אֶת הַשַּׁבָּת כִּי קֹדֶשׁ הִוא לָכֶם״ – מָה קֹדֶשׁ אָסוּר בַּאֲכִילָה, אַף מַעֲשֵׂה שַׁבָּת אֲסוּרִין בַּאֲכִילָה.</div>
+      <div class="trans" data-when="he">מהו טעמו של רבי יוחנן הסנדלר? כפי שדרש רבי חייא בפתח בית הנשיא: ׳ושמרתם את השבת כי קדש היא לכם׳ — מה קודש אסור באכילה, אף מעשה שבת (מה שנעשה באיסור בשבת) אסור באכילה.</div>
+      <div class="trans" data-when="en">The Gemara asks: What is the reason for the opinion of Rabbi Yoḥanan HaSandlar? The Gemara explains: This is as Rabbi Ḥiyya taught at the entrance to the house of the Nasi. It is written: “And you shall observe Shabbat, for it is holy [kodesh] to you; one who profanes it shall be put to death” (Exodus 31:14). Just as it is prohibited to eat a sacred item consecrated to the Temple [kodesh], so too is it prohibited to eat food produced though action that desecrates Shabbat.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:19</span></div>
+      <div class="orig">אִי – מָה קֹדֶשׁ אָסוּר בַּהֲנָאָה, אַף מַעֲשֵׂה שַׁבָּת אָסוּר בַּהֲנָאָה?! תַּלְמוּד לוֹמַר: ״לָכֶם״ – שֶׁלָּכֶם יְהֵא.</div>
+      <div class="trans" data-when="he">ואם תאמר: מה קודש אסור אף בהנאה, אף מעשה שבת ייאסר בהנאה? — תלמוד לומר ׳לכם׳: שלכם יהא (מותר בהנאה).</div>
+      <div class="trans" data-when="en">The Gemara asks: If so, perhaps the analogy should be extended: Just as it is prohibited to derive benefit from a sacred item, so too should it be prohibited to derive benefit from a product of an action that desecrates Shabbat. The Gemara answers: The verse states: “It is holy to you” (Exodus 31:14), indicating that it shall be yours for deriving benefit. Although food cooked on Shabbat may not be eaten, it is permitted to benefit from it in other ways.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:20</span></div>
+      <div class="orig">יָכוֹל אֲפִילּוּ בְּשׁוֹגֵג? תַּלְמוּד לוֹמַר: ״מְחַלְּלֶיהָ מוֹת יוּמָת״ – בְּמֵזִיד אָמַרְתִּי לְךָ, וְלֹא בְּשׁוֹגֵג.</div>
+      <div class="trans" data-when="he">יכול אפילו בשוגג ייאסר? — תלמוד לומר ׳מחלליה מות יומת׳: במזיד (החייב מיתה) אמרתי לך, ולא בשוגג.</div>
+      <div class="trans" data-when="en">The Gemara further asks: Based on the analogy between a sacred item and the product of an action that desecrates Shabbat, one might have thought that even if the action were performed unwittingly it should be prohibited to consume the product, like a sacred item. To counter this, the verse states: “One who profanes it shall be put to death” (Exodus 31:14), indicating that it is with regard to one who desecrates Shabbat intentionally that I said this analogy to you, as the verse clearly is referring to one who is liable to receive the death penalty, but not one who desecrates Shabbat unwittingly, who is not executed.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:21</span></div>
+      <div class="orig">פְּלִיגִי בַּהּ רַב אַחָא וְרָבִינָא, חַד אָמַר: מַעֲשֵׂה שַׁבָּת דְּאוֹרָיְיתָא, וְחַד אָמַר: מַעֲשֵׂה שַׁבָּת דְּרַבָּנַן.</div>
+      <div class="trans" data-when="he">נחלקו בה רב אחא ורבינא: אחד אמר — איסור מעשה שבת (באכילה) מן התורה, ואחד אמר — מדרבנן.</div>
+      <div class="trans" data-when="en">The Gemara comments: Rav Aḥa and Ravina disagree with regard to this matter. One said that the product of an action that constitutes a desecration of Shabbat is forbidden by Torah law, and one said that the product of an action that constitutes a desecration of Shabbat is forbidden by rabbinic law.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:22</span></div>
+      <div class="orig">מַאן דְּאָמַר דְּאוֹרָיְיתָא – כְּדַאֲמַרַן. וּמַאן דְּאָמַר דְּרַבָּנַן – אָמַר קְרָא: ״קֹדֶשׁ הוּא״ – הוּא קֹדֶשׁ, וְאֵין מַעֲשָׂיו קֹדֶשׁ.</div>
+      <div class="trans" data-when="he">מאן דאמר מן התורה — כפי שאמרנו (מדרשת רבי חייא). ומאן דאמר מדרבנן — דורש ׳קדש הוא׳: הוא (היום) קדש, ואין מעשיו קדש (ולכן מן התורה מותר באכילה, ורק חכמים אסרו).</div>
+      <div class="trans" data-when="en">The Gemara elaborates: The one who says it is forbidden by Torah law explains as we said, that the prohibition is based on the verse as interpreted by Rabbi Ḥiyya. And the one who says it is forbidden by rabbinic law would say that the verse states: “It is holy,” from which he infers: It, the day itself, is holy but the products of its prohibited actions are not holy, and therefore they are not compared to sacred items and may be eaten by Torah law.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">בבא קמא ע״א א — Bava Kamma 71a:23</span></div>
+      <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר דְּאוֹרָיְיתָא, אַמְּטוּ</div>
+      <div class="trans" data-when="he">מקשים: בשלמא למאן דאמר (איסור מעשה שבת) מן התורה — משום כך</div>
+      <div class="trans" data-when="en">The Gemara asks: Granted, according to the one who said that products of a prohibited act are prohibited by Torah law, it is for</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:1</span></div>
+      <div class="orig">לְהָכִי פָּטְרִי רַבָּנַן; אֶלָּא לְמַאן דְּאָמַר דְּרַבָּנַן, אַמַּאי פָּטְרִי רַבָּנַן?</div>
+      <div class="trans" data-when="he">פוטרין חכמים (את הטובח בשבת על ידי אחר, שהבשר אסור מן התורה ושחיטה שאינה ראויה היא); אלא למאן דאמר מדרבנן (והבשר מותר מן התורה) — מדוע פוטרין חכמים?</div>
+      <div class="trans" data-when="en">this reason that the Rabbis exempt the thief from the fourfold or fivefold payment when he slaughters the animal on Shabbat, as slaughter on Shabbat does not render the meat permitted for consumption. But according to the one who says that the product of a prohibited act on Shabbat may be eaten by Torah law but is forbidden by rabbinic law, why do the Rabbis exempt the thief when he appoints an agent to slaughter the animal for him and the agent performs this action on Shabbat?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">20</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:2</span></div>
+      <div class="orig">אַשְּׁאָרָא – אַעֲבוֹדָה זָרָה וְשׁוֹר הַנִּסְקָל.</div>
+      <div class="trans" data-when="he">מתרצים: כשפוטרין חכמים — אין כוונתם לשבת, אלא לשאר המקרים שבברייתא: לעבודה זרה ולשור הנסקל (ששם הבשר אסור בהנאה ממש).</div>
+      <div class="trans" data-when="en">The Gemara answers: When the Rabbis exempt him from the fourfold or fivefold payment, they are not referring to the case where the thief’s agent slaughters the animal on Shabbat. Rather, they were speaking of the rest of the cases listed in the baraita, namely, an agent who slaughters the animal for idol worship and one who slaughters an ox that is sentenced to be stoned.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">21</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:3</span></div>
+      <div class="orig">וְרַבִּי מֵאִיר – אַמַּאי מְחַיֵּיב שׁוֹחֵט לַעֲבוֹדָה זָרָה?</div>
+      <div class="trans" data-when="he">מקשים על רבי מאיר: נהי שסובר ׳שחיטה שאינה ראויה שמה שחיטה׳ — אך מדוע מחייב את הטובח לעבודה זרה (הרי הבהמה נאסרה בהנאה תוך כדי השחיטה)?</div>
+      <div class="trans" data-when="en">The Gemara asks another question with regard to the interpretation of the baraita presented above: And with regard to Rabbi Meir, granted he maintains that the legal status of an act of slaughter not fit for accomplishing its full ritual purpose is nevertheless considered an act of slaughter. But why is the thief liable to pay the fourfold or fivefold payment when his agent slaughters the animal for idol worship?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">21</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:4</span></div>
+      <div class="orig">כֵּיוָן דִּשְׁחַט בַּהּ פּוּרְתָּא – אַסְרַהּ; אִידַּךְ – אִיסּוּרֵי הֲנָאָה הוּא, וְלָא דְּמָרַיהּ קָא טָבַח (וְלָא דִּידֵיהּ קָא טָבַח)!</div>
+      <div class="trans" data-when="he">שהרי כיון ששחט בה מעט — כבר אסרהּ (כתקרובת עבודה זרה); וכשגומר את השחיטה כבר היא אסורת הנאה — ׳ולא דמריה קא טבח׳ (אין זו בהמת בעליה ששוחט, ואף לא שלו)!</div>
+      <div class="trans" data-when="en">Once he slaughtered the animal a bit, at the very start of the act of slaughter, he has prohibited the animal, with regard to deriving benefit, as an animal sacrificed to idolatry. When he slaughters the other part it is already prohibited with regard to deriving benefit, which means that it is not an animal that belongs to its owner that he slaughters, and it is not an animal that belongs to him that he slaughters. Since deriving benefit from the animal is prohibited, it has no value; therefore, there is no ownership.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">22</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:5</span></div>
+      <div class="orig">אָמַר רָבָא: בְּאוֹמֵר בִּגְמַר זְבִיחָה הוּא עוֹבְדָהּ.</div>
+      <div class="trans" data-when="he">אמר רבא: מדובר באומר ׳בגמר זביחה אני עובדהּ׳ (מקדישהּ לעבודה זרה רק בסיום השחיטה) — ולכן האיסור חל רק בסוף, יחד עם חיוב התשלומין.</div>
+      <div class="trans" data-when="en">Rava said: This is referring to one who says prior to the slaughter that only with the completion of the slaughter does he worship the idolatry. Therefore, the prohibition does not take effect until that stage, which is also when the liability to pay the fourfold or fivefold payment is incurred.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">23</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:6</span></div>
+      <div class="orig">שׁוֹר הַנִּסְקָל – אִיסּוּרֵי הֲנָאָה נִינְהוּ; לָאו דְּמָרֵיהּ קָא טָבַח, וְלָאו דִּידֵיהּ קָא טָבַח!</div>
+      <div class="trans" data-when="he">מקשים על שור הנסקל: אסור הנאה הוא; ׳לאו דמריה קא טבח ולאו דידיה קא טבח׳ (אין זו בהמת בעליה ולא בהמתו) — מדוע מחייב רבי מאיר?</div>
+      <div class="trans" data-when="en">The Gemara raises a question with regard to another of the cases of the baraita: An ox that is sentenced to be stoned is an item from which deriving benefit is prohibited. Consequently, when a thief or his agent slaughters this animal, it is not an animal that belongs to its owner that he slaughters, and it is not an animal that belongs to him that he slaughters. Why does Rabbi Meir obligate him to pay the fourfold or fivefold payment?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">24</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:7</span></div>
+      <div class="orig">אָמַר רָבָא: הָכָא בְּמַאי עָסְקִינַן – כְּגוֹן שֶׁמְּסָרוֹ לְשׁוֹמֵר; וְהִזִּיק בְּבֵית שׁוֹמֵר, וְהוּעַד בְּבֵית שׁוֹמֵר, וְנִגְמַר דִּינוֹ בְּבֵית שׁוֹמֵר. וְרַבִּי מֵאִיר סָבַר לַהּ כְּרַבִּי יַעֲקֹב, וְסָבַר לַהּ כְּרַבִּי שִׁמְעוֹן;</div>
+      <div class="trans" data-when="he">אמר רבא: הכא במאי עסקינן — כגון שמסרו הבעלים לשומר, והזיק השור בבית השומר, והועד בבית השומר, ונגמר דינו בבית השומר (ואז גנבו הגנב מבית השומר); ורבי מאיר סובר כרבי יעקב וסובר כרבי שמעון.</div>
+      <div class="trans" data-when="en">Rava said: With what are we dealing here? This is a case where the owners entrusted the ox to a bailee and the ox fatally injured someone while in the bailee’s house, and it was forewarned while in the bailee’s house, and it was sentenced to be stoned while in the bailee’s house, and the thief then stole it from the bailee’s house and slaughtered it. Rava continues: And Rabbi Meir holds in accordance with the opinion of Rabbi Ya’akov, and he also holds in accordance with the opinion of Rabbi Shimon.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">25</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:8</span></div>
+      <div class="orig">סָבַר לַהּ כְּרַבִּי יַעֲקֹב – דְּאָמַר: אַף מִשֶּׁנִּגְמַר דִּינוֹ, הֶחְזִירוֹ שׁוֹמֵר לַבְּעָלִים – מוּחְזָר.</div>
+      <div class="trans" data-when="he">סובר כרבי יעקב — שאמר: אף משנגמר דינו (להיסקל), אם החזירו השומר לבעלים — מוחזר (יצא השומר ידי חובת ההשבה, אף שהשור חסר ערך).</div>
+      <div class="trans" data-when="en">He holds in accordance with the opinion of Rabbi Ya’akov, who says: Even after the ox was sentenced to be stoned, if the bailee returned it to its owners before it was killed, it is considered returned. Although the ox is now worthless, as no benefit may be derived from it, since the bailee returned a physically intact ox, the owner has no claim against him.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">26</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:9</span></div>
+      <div class="orig">וְסָבַר לַהּ כְּרַבִּי שִׁמְעוֹן – דְּאָמַר: דָּבָר הַגּוֹרֵם לְמָמוֹן, כְּמָמוֹן דָּמֵי.</div>
+      <div class="trans" data-when="he">וסובר כרבי שמעון — שאמר: דבר הגורם לממון, כממון דמי (אף שהשור עצמו חסר ערך, מאחר ששחיטתו מחייבת את השומר לשלם לבעלים — יש לו ערך לגבי השומר).</div>
+      <div class="trans" data-when="en">And Rabbi Meir also holds in accordance with the opinion of Rabbi Shimon, who says: An item whose elimination causes financial loss is considered to have monetary value. With regard to an item that is otherwise worthless, if its elimination causes monetary loss due to the fact that it must be replaced, it is considered to be of value. In this case, although the ox is worthless in and of itself, when the thief slaughters it he prevents the bailee from returning it intact to the owner and causes him to be obligated to pay the owner the value of the ox before it was sentenced to be stoned. Consequently, the thief must reimburse the bailee, as the ox effectively has value for that bailee.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">27</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:10</span></div>
+      <div class="orig">דִּתְנַן, רַבִּי שִׁמְעוֹן אוֹמֵר: קֳדָשִׁים שֶׁחַיָּיב בְּאַחְרָיוּתָן – חַיָּיב; אַלְמָא דָּבָר הַגּוֹרֵם לְמָמוֹן – כְּמָמוֹן דָּמֵי.</div>
+      <div class="trans" data-when="he">שהרי שנינו: רבי שמעון אומר — קדשים שחייב באחריותן (להחליפם אם אבדו), הגונב ושוחט אותם חייב ארבעה וחמשה; אלמא דבר הגורם לממון, כממון דמי.</div>
+      <div class="trans" data-when="en">As we learned in a mishna (74b): Rabbi Shimon says: In the case of sacrificial animals for which the owner bears financial responsibility to replace any of them with another animal if it is lost or it dies, the thief is obligated to pay the fourfold or fivefold payment if he slaughters the animal. Although one is generally not liable to pay the double payment for stealing consecrated items, Rabbi Shimon maintains that this case is different, since as a result of the animal’s theft the owner sustains a loss by being required to substitute another animal for it. Since the animal’s loss has financial ramifications for the owner apart from any inherent value it has, it has value for him. Apparently, Rabbi Shimon holds that an item whose elimination causes financial loss is considered to have monetary value.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">28</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:11</span></div>
+      <div class="orig">אָמַר רַב כָּהֲנָא, אַמְרִיתָא לִשְׁמַעְתָּא קַמֵּיהּ דְּרַב זְבִיד מִנְּהַרְדְּעָא: מִי מָצֵית מוֹקְמַתְּ מַתְנִיתִין כְּרַבִּי מֵאִיר, וְלָא כְּרַבִּי שִׁמְעוֹן? וְהָא קָתָנֵי סֵיפָא: רַבִּי שִׁמְעוֹן פּוֹטֵר בִּשְׁנֵי אֵלּוּ; מִכְּלָל דִּבְכוּלַּהּ מַתְנִיתִין מוֹדֵה!</div>
+      <div class="trans" data-when="he">אמר רב כהנא: אמרתי שמועה זו (שהמשנה כרבי מאיר ולא כרבי שמעון) לפני רב זביד מנהרדעא; וכי יכול אתה להעמיד את המשנה כרבי מאיר ולא כרבי שמעון? והרי שנינו בסיפא: ׳רבי שמעון פוטר בשני אלו׳ — מכלל שבכל שאר המשנה מודה (שמשלם)!</div>
+      <div class="trans" data-when="en">Rav Kahana said: I recited this halakha, according to which the mishna follows the opinion of Rabbi Meir, in front of Rav Zevid of Neharde’a, and I asked him: Is it correct to say that you can establish the mishna in accordance with the opinion of Rabbi Meir, and not in accordance with the opinion of Rabbi Shimon? But isn’t it taught in the last clause of the mishna: Rabbi Shimon exempts the thief from the fourfold or fivefold payment in these last two cases. One can learn by inference that in all the rest of the cases in the mishna, apart from these two, Rabbi Shimon concedes that the thief pays the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">28</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:12</span></div>
+      <div class="orig">אֲמַר לֵיהּ: לָא; מִכְּלָל דְּמוֹדֵה בְּטָבַח וּמָכַר לִרְפוּאָה וְלִכְלָבִים.</div>
+      <div class="trans" data-when="he">אמר לו: לא; מכלל הדבר אין ללמוד אלא שמודה רבי שמעון בטבח ומכר לרפואה ולכלבים (המקרים הסמוכים שם), ולכן אפשר להעמיד את המשנה כרבי מאיר.</div>
+      <div class="trans" data-when="en">Rav Zevid said to him: No; that is not the correct inference from the mishna. Rather, by inference one can learn only that Rabbi Shimon concedes that the thief pays the fourfold or fivefold payment in the cases mentioned immediately prior to this one, specifically in a case where the thief slaughtered or sold the animal in order that it should be used for medicinal purposes or for feeding to dogs. Therefore, it can be correct to establish the mishna in accordance with the opinion of Rabbi Meir and not in accordance with the opinion of Rabbi Shimon.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">חמשה בקר או חמשה חצאי בקר</span><span data-when="en">Five oxen or five half-oxen</span>
+        <span class="ref">Bava Kamma 71b:13-72a:3</span></h2>
+    <div class="lead"><span data-when="he">המשנה: גנב משל אביו, טבח ומכר, ואחר כך מת אביו — משלם ארבעה וחמשה ליורשים האחרים. רבא שואל את רב נחמן על גונב שור של שותפין שהודה לאחד מהם: האם ׳חמשה בקר׳ ולא חצאי בקר (פטור), או אף חצאי בקר. רב נחמן פוטר, נדחק במשנה, ולמחרת חוזר בו ומחייב חצאי בקר — ומחלק בין רישא לסיפא לפי ׳וטבחו כולו באיסור׳.</span><span data-when="en">The mishna: one who stole his father's animal, slaughtered or sold it, and then his father died, pays the fourfold/fivefold to the other heirs. Rava asks Rav Naḥman about a thief of a partners' ox who admitted to one partner: is it ׳five oxen׳ and not half-oxen (exempt), or even half-oxen? Rav Naḥman exempts, is pressed from the mishna, and the next morning retracts to obligate half-oxen — distinguishing the clauses by whether the slaughter was ׳wholly in a forbidden manner.׳</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: גנב משל אביו וטבח ומכר, ואח״כ מת אביו — משלם ד׳ וה׳"]):::mishnah
+  Q2{"② בעי רבא: גנב שור של שותפין, והודה לאחד — מהו לשני?"}:::question
+  A3["③ רב נחמן: ׳חמשה בקר׳ — ולא חמשה חצאי בקר (פטור)"]:::answer
+  Q4{"④ איתיביה מהמשנה: מת אביו = כהודה לאחד — ומשלם!"}:::question
+  A5["⑤ רב נחמן: בשעמד אביו בדין (התחייב בחייו)"]:::answer
+  Q6{"⑥ אבל לא עמד בדין — לא? א״כ ליפלוג בדידיה!"}:::question
+  A7["⑦ רב נחמן: הכי נמי; אגב לשון הרישא נקט הסיפא"]:::answer
+  C8(["⑧ לצפרא חזר בו: ׳חמשה בקר׳ — ואפילו חצאי בקר; אמש לא אכלתי בשר שור"]):::conclusion
+  Q9{"⑨ א״כ מאי שנא רישא ומאי שנא סיפא?"}:::question
+  C10(["⑩ רישא — ׳וטבחו׳ כולו באיסור; סיפא — חלקו כבר שלו, בהיתר"]):::conclusion
+  M1 -.->|בעיא| Q2
+  Q2 -->|תירוץ| A3
+  A3 -.->|מיתיבי| Q4
+  Q4 -->|יישוב| A5
+  A5 -.->|קושיא| Q6
+  Q6 -->|יישוב| A7
+  A3 -.->|חזרה| C8
+  C8 -.->|קושיא| Q9
+  Q9 -->|יישוב| C10
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: stole his father's animal & slaughtered, then father died — pays fourfold/fivefold"]):::mishnah
+  Q2{"② Rava's dilemma: stole partners' ox, admitted to one — what of the other?"}:::question
+  A3["③ Rav Naḥman: ׳five oxen׳ — not five half-oxen (exempt)"]:::answer
+  Q4{"④ Objection from the mishna: father's death = admitting to one — yet he pays!"}:::question
+  A5["⑤ Rav Naḥman: where the father stood trial (liable in his lifetime)"]:::answer
+  Q6{"⑥ But if he did not stand trial — no? Then let it distinguish within the case!"}:::question
+  A7["⑦ Rav Naḥman: indeed; the clause echoes the first clause's wording"]:::answer
+  C8(["⑧ Next morning he retracts: ׳five oxen׳ — even half-oxen; last night I'd not eaten ox meat"]):::conclusion
+  Q9{"⑨ Then what is different in the first vs. the last clause?"}:::question
+  C10(["⑩ First — ׳slaughter it׳ wholly forbidden; last — his portion was already his, permitted"]):::conclusion
+  M1 -.->|dilemma| Q2
+  Q2 -->|answer| A3
+  A3 -.->|objection| Q4
+  Q4 -->|resolve| A5
+  A5 -.->|question| Q6
+  Q6 -->|resolve| A7
+  A3 -.->|retraction| C8
+  C8 -.->|question| Q9
+  Q9 -->|resolve| C10
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① גָּנַב מִשֶּׁל אָבִיו וְטָבַח וּמָכַר … מְשַׁלֵּם אַרְבָּעָה וַחֲמִשָּׁה"]):::mishnah
+  Q2{"② בְּעָא … גָּנַב שׁוֹר שֶׁל שְׁנֵי שׁוּתָּפִין, וּטְבָחוֹ, וְהוֹדָה לְאֶחָד מֵהֶן, מַהוּ?"}:::question
+  A3["③ ״חֲמִשָּׁה בָּקָר״ … וְלֹא חֲמִשָּׁה חֲצָאֵי בָקָר"]:::answer
+  Q4{"④ אֵיתִיבֵיהּ … כֵּיוָן דְּמֵת אָבִיו – כְּמוֹ שֶׁקָּדַם וְהוֹדָה … וְקָתָנֵי: מְשַׁלֵּם"}:::question
+  A5["⑤ הָכָא … כְּגוֹן שֶׁעָמַד אָבִיו בַּדִּין"]:::answer
+  Q6{"⑥ אֲבָל לֹא עָמַד בַּדִּין, מַאי? … נִיפְלוֹג בְּדִידֵיהּ!"}:::question
+  A7["⑦ הָכִי נָמֵי; אַיְּידֵי דְּנָסֵיב רֵישָׁא … נָסֵיב סֵיפָא נָמֵי"]:::answer
+  C8(["⑧ לְצַפְרָא … ״חֲמִשָּׁה בָּקָר״ … וַאֲפִילּוּ חֲמִשָּׁה חֲצָאֵי בָּקָר … דְּלָא אֲכַלִי בִּשְׂרָא דְתוֹרָא"]):::conclusion
+  Q9{"⑨ וְאֶלָּא מַאי שְׁנָא רֵישָׁא וּמַאי שְׁנָא סֵיפָא?"}:::question
+  C10(["⑩ רֵישָׁא קָרֵינָא בֵּיהּ ״וּטְבָחוֹ״ כּוּלּוֹ בְּאִיסּוּרָא, סֵיפָא לָא קָרֵינָא בַּיהּ"]):::conclusion
+  M1 -.->|בעיא| Q2
+  Q2 -->|תירוץ| A3
+  A3 -.->|מיתיבי| Q4
+  Q4 -->|יישוב| A5
+  A5 -.->|קושיא| Q6
+  Q6 -->|יישוב| A7
+  A3 -.->|חזרה| C8
+  C8 -.->|קושיא| Q9
+  Q9 -->|יישוב| C10
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="num">2</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:13</span></div>
+      <div class="orig">גָּנַב מִשֶּׁל אָבִיו וְטָבַח וּמָכַר וְכוּ׳. בְּעָא מִינֵּיהּ רָבָא מֵרַב נַחְמָן: גָּנַב שׁוֹר שֶׁל שְׁנֵי שׁוּתָּפִין, וּטְבָחוֹ, וְהוֹדָה לְאֶחָד מֵהֶן, מַהוּ?</div>
+      <div class="trans" data-when="he">גמרא (על ׳גנב משל אביו וטבח ומכר׳): בעא מיניה רבא מרב נחמן — גנב שור של שני שותפין וטבחו, והודה לאחד מהם (ובכך נפטר מתשלום ארבעה וחמשה כלפיו, שמודה בקנס פטור) — מהו לגבי השותף האחר?</div>
+      <div class="trans" data-when="en">§ The mishna teaches: If one stole an animal of his father’s and then slaughtered or sold it, and afterward his father died, he pays the fourfold or fivefold payment to his father’s other heirs. Rava raised a dilemma before Rav Naḥman: If one stole an ox belonging to two partners and slaughtered it, and subsequently admitted the theft to one of the partners, which means that he is exempt from paying the fourfold or fivefold payment to that partner, in accordance with the principle that one who admits his own guilt is exempt from fines, what is the halakha with regard to payment to the other partner?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:14</span></div>
+      <div class="orig">״חֲמִשָּׁה בָּקָר״ אָמַר רַחֲמָנָא – וְלֹא חֲמִשָּׁה חֲצָאֵי בָקָר; אוֹ דִּלְמָא, ״חֲמִשָּׁה בָּקָר״ אָמַר רַחֲמָנָא – וַאֲפִילּוּ חֲמִשָּׁה חֲצָאֵי בָקָר? אֲמַר לֵיהּ: ״חֲמִשָּׁה בָּקָר״ אָמַר רַחֲמָנָא – וְלֹא חֲמִשָּׁה חֲצָאֵי בָקָר.</div>
+      <div class="trans" data-when="he">צדדי הספק: ׳חמשה בקר׳ אמר הכתוב — ולא חמשה חצאי בקר (ולכן פטור אף כלפי השני)? או דלמא ׳חמשה בקר׳ — ואפילו חמשה חצאי בקר (וישלם לשני את חלקו)? אמר לו (רב נחמן): ׳חמשה בקר׳ — ולא חמשה חצאי בקר.</div>
+      <div class="trans" data-when="en">The Gemara explains the sides of the dilemma: The Merciful One states in the Torah: “He shall pay five oxen for an ox” (Exodus 21:37), which indicates five full oxen, but not five half-oxen. Or perhaps when the Merciful One states “five oxen,” this means that even five half-oxen must be paid in a case of this kind. Rav Naḥman said to Rava: The Merciful One states: “Five oxen,” which means five full oxen, but not five half-oxen.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:15</span></div>
+      <div class="orig">אֵיתִיבֵיהּ: גָּנַב מִשֶּׁל אָבִיו, וְטָבַח וּמָכַר, וְאַחַר כָּךְ מֵת אָבִיו – מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה. וְהָא הָכָא, כֵּיוָן דְּמֵת אָבִיו – כְּמוֹ שֶׁקָּדַם וְהוֹדָה לְאֶחָד מֵהֶן דָּמֵי, וְקָתָנֵי: מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה!</div>
+      <div class="trans" data-when="he">איתיביה (רבא) מן המשנה: גנב משל אביו וטבח ומכר ואחר כך מת אביו — משלם תשלומי ארבעה וחמשה. והרי כאן, כיון שמת אביו (וירש חלק), הוא כמי שקדם והודה לאחד מהם — ובכל זאת שנינו שמשלם ארבעה וחמשה (חצאי בקר)!</div>
+      <div class="trans" data-when="en">Rava raised an objection to him from the mishna: If one stole an animal of his father’s and then slaughtered or sold it, and afterward his father died, he pays the fourfold or fivefold payment. But here, since his father died and the thief has inherited part of the stolen animal himself, it is similar to the case of one who stole from two partners and went ahead and admitted the theft to one of them, i.e., to himself. In the case of the mishna he is exempt from paying the portion of the fine that is for himself, and yet the mishna teaches that he pays the other heirs their portion of the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:16</span></div>
+      <div class="orig">אֲמַר לֵיהּ: הָכָא בְּמַאי עָסְקִינַן – כְּגוֹן שֶׁעָמַד אָבִיו בַּדִּין.</div>
+      <div class="trans" data-when="he">אמר לו: הכא במאי עסקינן — כגון שעמד אביו בדין (בעוד אביו חי נגמר הדין לחיוב, ואז התחייב בחמשה בקר שלמים).</div>
+      <div class="trans" data-when="en">Rav Naḥman said to Rava: With what are we dealing here? With a case where his father stood against his son the thief in his trial, and the son was convicted for the theft and slaughter of his father’s animal. In this case, the liability to pay the fourfold or fivefold payment was established before the father’s death, and at that time the payment was five full oxen.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:17</span></div>
+      <div class="orig">אֲבָל לֹא עָמַד בַּדִּין, מַאי – אֵינוֹ מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה? אִי הָכִי, אַדְּתָנֵי סֵיפָא: גָּנַב מִשֶּׁל אָבִיו, וָמֵת, וְאַחַר כָּךְ טָבַח וּמָכַר – אֵינוֹ מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה; נִיפְלוֹג בְּדִידֵיהּ: בַּמֶּה דְּבָרִים אֲמוּרִים – כְּשֶׁעָמַד בַּדִּין, אֲבָל לֹא עָמַד בַּדִּין – אֵינוֹ מְשַׁלֵּם תַּשְׁלוּמֵי אַרְבָּעָה וַחֲמִשָּׁה!</div>
+      <div class="trans" data-when="he">מקשה רבא: אבל אם לא עמד בדין מאי — אינו משלם? אם כן, במקום ששנה הסיפא ׳גנב משל אביו ומת ואחר כך טבח ומכר — אינו משלם׳, יפלוג ויתני בדידיה (באותו מקרה עצמו): במה דברים אמורים — כשעמד בדין, אבל לא עמד בדין — אינו משלם!</div>
+      <div class="trans" data-when="en">Rava asked him: And if the thief had not yet stood trial before the father’s death, what would be the halakha, according to your opinion? Would he not be required to pay the fourfold or fivefold payment? If so, rather than teaching in the latter clause of the mishna (74b): If one stole his father’s animal and the father died, and afterward he slaughtered or sold it, he does not pay the fourfold or fivefold payment; let the mishna make a distinction within the same type of case, as follows: In what case is this statement, i.e., that the thief is required to pay the fourfold or fivefold payment, said? It is when the thief stood trial in his father’s lifetime; but if he did not stand trial in his father’s lifetime he does not pay the fourfold or fivefold payment.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:18</span></div>
+      <div class="orig">אֲמַר לֵיהּ: הָכִי נָמֵי; אַיְּידֵי דְּנָסֵיב רֵישָׁא: גָּנַב מִשֶּׁל אָבִיו, וְטָבַח וּמָכַר, וְאַחַר כָּךְ מֵת אָבִיו; נָסֵיב סֵיפָא נָמֵי: גָּנַב מִשֶּׁל אָבִיו, וּמֵת אָבִיו, וְאַחַר כָּךְ טָבַח וּמָכַר.</div>
+      <div class="trans" data-when="he">אמר לו: הכי נמי (אכן יכול היה לחלק כך); אלא אגב שנקט ברישא ׳גנב משל אביו וטבח ומכר ואחר כך מת אביו׳, נקט אף בסיפא בלשון דומה: ׳גנב משל אביו ומת אביו ואחר כך טבח ומכר׳.</div>
+      <div class="trans" data-when="en">Rav Naḥman said to him: Indeed, the mishna could have mentioned that case. However, since the tanna of the mishna has to cite the first clause, which discusses one who stole an animal of his father’s and slaughtered or sold it, and afterward his father died, he cites the latter clause as well, by means of a similar case: If one stole his father’s animal and his father died, and afterward he slaughtered or sold the animal.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">בבא קמא ע״א ב — Bava Kamma 71b:19</span></div>
+      <div class="orig">לְצַפְרָא אֲמַר לֵיהּ: ״חֲמִשָּׁה בָּקָר״ אָמַר רַחֲמָנָא – וַאֲפִילּוּ חֲמִשָּׁה חֲצָאֵי בָּקָר. וְהַאי דְּלָא אֲמַרִי לָךְ בְּאוּרְתָּא –</div>
+      <div class="trans" data-when="he">לצפרא (למחרת בבוקר) אמר לו (רב נחמן, חזר בו): ׳חמשה בקר׳ אמר הכתוב — ואפילו חמשה חצאי בקר; וזה שלא אמרתי לך כן אמש —</div>
+      <div class="trans" data-when="en">This discussion between Rava and Rav Naḥman occurred in the evening. On the following morning, Rav Naḥman retracted his statement and said to Rava: The Merciful One states: “Five oxen,” and this means that even five half-oxen are included. Rav Naḥman explained his change of mind: And the reason that I did not say this to you last night</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">בבא קמא ע״ב א — Bava Kamma 72a:1</span></div>
+      <div class="orig">דְּלָא אֲכַלִי בִּשְׂרָא דְתוֹרָא.</div>
+      <div class="trans" data-when="he">משום שלא אכלתי בשר שור (כלומר צמתי אתמול ולא יכולתי לכוון דעתי כראוי).</div>
+      <div class="trans" data-when="en">is because I had not eaten ox meat. In other words, I was fasting yesterday and was unable to concentrate properly.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">בבא קמא ע״ב א — Bava Kamma 72a:2</span></div>
+      <div class="orig">וְאֶלָּא מַאי שְׁנָא רֵישָׁא וּמַאי שְׁנָא סֵיפָא?</div>
+      <div class="trans" data-when="he">ואם כן (אם משלם אף חצאי בקר), מאי שנא רישא (שמשלם) ומאי שנא סיפא (שפטור)?</div>
+      <div class="trans" data-when="en">Rava responded to him: But if the Torah requires even a partial payment of the fourfold or fivefold payment, what is different in the first clause, in which the son must pay, and what is different in the latter clause, where he is exempt?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">בבא קמא ע״ב א — Bava Kamma 72a:3</span></div>
+      <div class="orig">אֲמַר לֵיהּ: רֵישָׁא קָרֵינָא בֵּיהּ ״וּטְבָחוֹ״ כּוּלּוֹ בְּאִיסּוּרָא, סֵיפָא לָא קָרֵינָא בַּיהּ ״וּטְבָחוֹ״ כּוּלּוֹ בְּאִיסּוּרָא.</div>
+      <div class="trans" data-when="he">אמר לו: ברישא (גנב וטבח בחיי אביו) קורא אני בו ׳וטבחו׳ — כולו נשחט באיסור; בסיפא (שמת אביו ואז טבח) אין אני קורא בו ׳וטבחו׳ כולו באיסור, שהרי חלקו שלו כבר היה, וחלק זה נשחט בהיתר.</div>
+      <div class="trans" data-when="en">Rav Naḥman said to him: In the first clause, where the father’s animal was stolen and slaughtered in his lifetime, I read about this case the verse: “If a man steal an ox or a sheep, and slaughter it” (Exodus 21:37), which indicates that the thief slaughtered the ox or the sheep entirely in a prohibited manner. In the latter clause, where the animal was slaughtered after the father’s death, I do not read about this case the verse: “And slaughter it,” which describes a slaughter that was performed entirely in a prohibited manner, because the animal already partially belonged to him, and his own portion of the ox was slaughtered in a permitted manner.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+</body>
+</html>
