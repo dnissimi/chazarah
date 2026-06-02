@@ -809,13 +809,20 @@ graph TD
 
   applyPageLang();
 </script>
+
 <style id="xref-crosslink-style">
-  /* Cross-link: shapes <-> their reference entries. Behavior layered on the
-     existing circled-numeral (①) <-> .num correspondence; no content change. */
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
   section.sugya .chart .node,
   section.sugya .chart .node * { cursor: pointer; }
-  .xref-cite-head { cursor: pointer; }
-  .xref-cite-head:hover .ref { text-decoration: underline; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* Touch devices have no :hover to reveal the faint meaning<->original toggle,
+     so show it at full strength there. */
+  @media (hover: none) {
+    .chart .lang-toggle { opacity: 1; }
+  }
   @keyframes xref-cite-flash {
     0%   { background: #fde68a; }
     100% { background: transparent; }
@@ -844,7 +851,7 @@ graph TD
     return null;
   }
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function scrollTo(el) {
+  function scrollToEl(el) {
     if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
   }
   function flash(el, cls) {
@@ -854,10 +861,18 @@ graph TD
     el.classList.add(cls);
     setTimeout(function () { el.classList.remove(cls); }, 1400);
   }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
   function findNode(chart, n) {
-    var nodes = chart.querySelectorAll('.node');
-    for (var i = 0; i < nodes.length; i++) {
-      if (numFromText(nodes[i].textContent) === n) return nodes[i];
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
     }
     return null;
   }
@@ -873,71 +888,70 @@ graph TD
     var s = window.getSelection && window.getSelection();
     return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
   }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
 
-  function wireSection(sec) {
+  function wire(sec) {
     var chart = sec.querySelector('.chart');
-    if (!chart) return;
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
 
-    // Reference line (badge + ref name) -> its shape. Wired once per line.
-    var quotes = sec.querySelectorAll('.quote');
-    for (var i = 0; i < quotes.length; i++) {
-      var badge = quotes[i].querySelector('.num');
-      if (!badge) continue;
-      var head = badge.parentNode;        // the <div> holding .num + .ref
-      if (!head || head.getAttribute('data-xref') === '1') continue;
-      head.setAttribute('data-xref', '1');
-      head.classList.add('xref-cite-head');
-      (function (head, badge) {
-        head.addEventListener('click', function () {
-          if (selectionInside(head)) return;       // let the user select the ref text
-          var n = parseInt(badge.textContent, 10);
-          if (isNaN(n)) return;
-          var node = findNode(chart, n);
-          if (node) { scrollTo(node); flash(node, 'xref-flash-node'); }
-        });
-      })(head, badge);
-    }
-
-    // Shape -> its reference line. Nodes are recreated on each (re)render,
-    // so this re-runs and wires the fresh elements.
-    var nodes = chart.querySelectorAll('.node');
-    for (var j = 0; j < nodes.length; j++) {
-      var node = nodes[j];
-      if (node.getAttribute('data-xref') === '1') continue;
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
       var n = numFromText(node.textContent);
-      if (n == null) continue;
-      node.setAttribute('data-xref', '1');
-      (function (node) {
-        node.addEventListener('click', function () {
-          var nn = numFromText(node.textContent);
-          if (nn == null) return;
-          var q = findQuote(sec, nn);
-          if (q) { scrollTo(q); flash(q, 'xref-flash-cite'); }
-        });
-      })(node);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
     }
-  }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
 
-  function wireAll() {
-    var secs = document.querySelectorAll('section.sugya');
-    for (var i = 0; i < secs.length; i++) wireSection(secs[i]);
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
   }
 
   function start() {
-    wireAll();
-    // Re-wire whenever a chart (re)renders — initial Mermaid render and the
-    // meaning<->original toggle both replace the SVG. Self-contained: no
-    // dependency on the template's render code.
-    var charts = document.querySelectorAll('section.sugya .chart');
-    for (var i = 0; i < charts.length; i++) {
-      (function (chart) {
-        var sec = chart.closest('section.sugya');
-        var mo = new MutationObserver(function () { wireSection(sec); });
-        mo.observe(chart, { childList: true, subtree: true });
-      })(charts[i]);
-    }
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
   }
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);
   } else {

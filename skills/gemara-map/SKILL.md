@@ -361,7 +361,11 @@ Citation (one per segment; original full, both translations):
     (`<script id="xref-crosslink">`): clicking a chart shape smooth-scrolls to its
     citation below, and clicking a citation's head line (number badge + ref) scrolls
     back up to its shape (each with a brief highlight). It keys off the existing
-    circled-numeral ① ↔ `.num` correspondence (scoped per `section.sugya`), re-wires on
-    every render via a MutationObserver (so it survives the toggle and `/he`↔`/en`), and
-    needs **no change to your authored content** — just keep node numerals and citation
-    `.num` badges matching, as you already do.
+    circled-numeral ① ↔ `.num` correspondence (scoped per `section.sugya`) via event
+    delegation on the stable `.chart`/`section` (so it survives the toggle and
+    `/he`↔`/en` with no re-binding), and uses pointer events with a tap test so it
+    works with **touch** as well as mouse (plain `click` doesn't fire on SVG nodes in
+    iOS Safari). The same block also makes the faint meaning⇄original toggle full
+    opacity on touch devices (which have no `:hover` to reveal it). Needs **no change
+    to your authored content** — just keep node numerals and citation `.num` badges
+    matching, as you already do.
