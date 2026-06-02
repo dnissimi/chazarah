@@ -385,8 +385,15 @@ button { font-family: inherit; }
   margin: 20px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  /* Three across on desktop, so the 6 capped tiles form a clean 3×2 grid. */
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+}
+@media (max-width: 760px) {
+  .recents-list { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 460px) {
+  .recents-list { grid-template-columns: 1fr; }
 }
 .recents-item { margin: 0; }
 .recents-link {
@@ -1180,10 +1187,21 @@ html[lang="en"] .browse-row .daf-num-latin {
     grid-template-columns: auto 1fr;
     gap: 8px 16px;
     padding: 16px 4px;
+    position: relative;   /* anchor the whole-row stretched link below */
   }
   .browse-row .daf-num { grid-row: 1; grid-column: 1; }
   .browse-row .daf-topic { grid-row: 1; grid-column: 2; }
   .browse-row .daf-action { grid-row: 2; grid-column: 1 / -1; }
+  /* On mobile the tap target was a tiny link; make the entire row clickable.
+     The row's primary link (the map for mapped dapim, the request for the rest)
+     stretches to cover the whole row — a real link, no markup change. */
+  .browse-row.has-map .daf-topic a::before,
+  .browse-row.no-map .daf-action a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
 }
 
 /* Submission error message (request + feedback forms) */
