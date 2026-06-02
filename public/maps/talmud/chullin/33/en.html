@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל״ג</title>
+<meta name="description" content="מתי דם השחיטה מכשיר את הבשר לקבל טומאה, ומדוע ידיים טמאות אינן פוסלות חולין; ידיים תחילות לדעת רבי שמעון בן אלעזר; וחולין שנעשו על טהרת הקודש במחלוקת רבי אליעזר ורבי יהושע.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="33">
+<meta name="gemara-map:sefaria-ref" content="Chullin 33">
+<meta name="gemara-map:topic-he" content="הכשר בדם וטומאת ידיים">
+<meta name="gemara-map:topic-en" content="Blood, susceptibility, and impure hands">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל״ג">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 33">
+<meta name="gemara-map:blurb-he" content="מתי דם השחיטה מכשיר את הבשר לקבל טומאה, ומדוע ידיים טמאות אינן פוסלות חולין; ידיים תחילות לדעת רבי שמעון בן אלעזר; וחולין שנעשו על טהרת הקודש במחלוקת רבי אליעזר ורבי יהושע.">
+<meta name="gemara-map:blurb-en" content="When the blood of slaughter renders meat susceptible to impurity and why impure hands do not disqualify non-sacred food; first-degree hands per Rabbi Shimon ben Elazar; and non-sacred food prepared at sacred purity in the R. Eliezer–R. Yehoshua dispute.">
+<meta name="gemara-map:sugya-count" content="3">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל״ג</span><span data-when="en">Sugya map — Chullin 33</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל״ג א:ט׳–ל״ד ב:ה׳ · שלוש סוגיות · מקור: ספריא · מהדורת William Davidson · הורחב לכלול את הסוגיא בשלמותה</span><span data-when="en">Chullin 33a:9–34b:5 · three sugyot · Source: Sefaria · William Davidson Edition · expanded to complete the whole sugya</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> העמוד פותח במשנה: בהמה חיה ועוף שלא יצא מהם דם בשחיטה נאכלים אף בידיים טמאות, לפי שלא הוכשרו לקבל טומאה — ורבי שמעון חולק. מכאן יורדת הגמרא לדיון ארוך בדיני טומאה: מדוע ידיים שניות אינן פוסלות חולין, ומתי בכל זאת כן — בחולין שבכסף מעשר (רב נחמן), או בידיים תחילות כרבי שמעון בן אלעזר (רב פפא), או בחולין שנעשו על טהרת הקודש (רבי אלעזר משום רבי הושעיא). הפירוש האחרון פותח את הוויכוח הגדול בין רבי אליעזר לרבי יהושע — האם דרגת האדם האוכל מאכל טמא כדרגת המאכל — עד מחלוקת האמוראים בדעת רבי יוחנן.</span>
+    <span data-when="en"><b>Bottom line:</b> The daf opens with a mishna: an animal or bird from which no blood emerged during slaughter may be eaten even with impure hands, since it was never rendered susceptible to impurity — and Rabbi Shimon disagrees. From here the Gemara descends into a long discussion of ritual impurity: why second-degree hands do not disqualify non-sacred food, and when they nonetheless do — food bought with second-tithe money (Rav Naḥman), or first-degree hands per Rabbi Shimon ben Elazar (Rav Pappa), or food prepared at the purity-level of sacred food (Rabbi Elazar in the name of Rabbi Hoshaya). That last reading opens the great debate between Rabbi Eliezer and Rabbi Yehoshua — whether one who eats impure food takes on the food\u2019s own degree of impurity — down to the amora\u2019im\u2019s dispute over Rabbi Yoḥanan\u2019s view.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+    <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — שלוש סוגיות</span><span data-when="en">Overview — three sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1(["1 · הכשר בדם — המשנה ופתיחת הגמרא"]):::mishnah
+  O2["2 · ידיים תחילות — משנת ר׳ מאיר ובית המנוגע"]:::statement
+  O3["3 · חולין על טהרת הקודש — מחלוקת ר״א ור״י"]:::statement
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1(["1 · Blood renders susceptible — mishna and opening"]):::mishnah
+  O2["2 · First-degree hands — R. Meir's mishna and the leprous house"]:::statement
+  O3["3 · Non-sacred food at sacred purity — R. Eliezer vs R. Yehoshua"]:::statement
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+      </script>
+    </div>
+  </section>
+
+    <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">הכשר בדם — המשנה ופתיחת הגמרא</span><span data-when="en">Blood renders susceptible</span>
+        <span class="ref">Chullin 33a:9-14</span></h2>
+    <div class="lead"><span data-when="he">המשנה: בהמה חיה ועוף שלא יצא מהם דם נאכלים אף בידיים טמאות, שלא הוכשרו לקבל טומאה; ורבי שמעון חולק. הגמרא מדייקת שאילו יצא דם אינם נאכלים כן, ומקשה — הרי ידיים שניות ואין שני עושה שלישי בחולין; מבררת שמדובר בחולין, דוחה כמה הצעות, ומעמידהּ רב נחמן בחולין שבכסף מעשר.</span><span data-when="en">The mishna: an animal or bird from which no blood emerged may be eaten even with impure hands, since it was never rendered susceptible to impurity; Rabbi Shimon disagrees. The Gemara infers that with blood they could not be so eaten, and asks — hands are only second-degree and a second makes no third in non-sacred food; it establishes the case is non-sacred food, rejects several readings, and Rav Naḥman sets it as food bought with second-tithe money.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: לא יצא דם — נאכלים בידיים טמאות; ר״ש: הוכשרו בשחיטה"]):::mishnah
+  Q2{"② קושיא: יצא דם ואינם נאכלים — והרי ידיים שניות, ואין שני עושה שלישי בחולין!"}:::question
+  S3["③ ובחולין עסקינן: ׳חיה׳ אין בקדשים, וקדשים צריכים דם"]:::statement
+  Q4{"④ ועוד: דם קדשים אינו מכשיר (׳תשפכנו כמים׳)"}:::question
+  Q5{"⑤ ועוד: ואם לא יצא דם — יוכשרו בחיבת הקודש!"}:::question
+  A6["⑥ רב נחמן משום רבה בר אבוה: בחולין שבכסף מעשר, ודלא כר׳ מאיר"]:::answer
+  M1 -->|דיוק וקושיא| Q2
+  Q2 -->|בירור| S3
+  S3 -.->|ותו| Q4
+  Q4 -.->|ותו| Q5
+  Q2 -->|תירוץ| A6
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: no blood emerged → eaten with impure hands; R. Shimon: slaughter makes it susceptible"]):::mishnah
+  Q2{"② Question: if blood emerged it isn't eaten so — but hands are second-degree, and second makes no third in non-sacred food!"}:::question
+  S3["③ It is non-sacred food: ׳undomesticated animal׳ has no place in offerings, which need blood"]:::statement
+  Q4{"④ Moreover: blood of offerings does not render susceptible (׳pour it like water׳)"}:::question
+  Q5{"⑤ Moreover: with no blood, let regard-for-sanctity render it susceptible!"}:::question
+  A6["⑥ Rav Naḥman / Rabba b. Avuh: food bought with tithe money — not R. Meir"]:::answer
+  M1 -->|inference & question| Q2
+  Q2 -->|clarify| S3
+  S3 -.->|further| Q4
+  Q4 -.->|further| Q5
+  Q2 -->|answer| A6
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① הַשּׁוֹחֵט … וְלֹא יָצָא מֵהֶן דָּם – כְּשֵׁרִים … רַבִּי שִׁמְעוֹן … הוּכְשְׁרוּ בַּשְּׁחִיטָה"]):::mishnah
+  Q2{"② הָא יָצָא מֵהֶן דָּם … אַמַּאי? יָדַיִם שְׁנִיּוֹת הֵן, וְאֵין שֵׁנִי עוֹשֶׂה שְׁלִישִׁי בְּחוּלִּין!"}:::question
+  S3["③ מִמַּאי דִּבְחוּלִּין? דְּקָתָנֵי חַיָּה … הוּא עַצְמוֹ לַדָּם הוּא צָרִיךְ"]:::statement
+  Q4{"④ דַּם קָדָשִׁים … ׳עַל הָאָרֶץ תִּשְׁפְּכֶנּוּ כַּמָּיִם׳ … שֶׁאֵינוֹ נִשְׁפָּךְ"}:::question
+  Q5{"⑤ כִּי לֹא יָצָא … לִיתַּכְשְׁרוּ בְּחִיבַּת הַקֹּדֶשׁ!"}:::question
+  A6["⑥ הָכָא בְּחוּלִּין שֶׁלְּקָחָן בְּכֶסֶף מַעֲשֵׂר … וּדְלָא כְּרַבִּי מֵאִיר"]:::answer
+  M1 -->|דיוק וקושיא| Q2
+  Q2 -->|בירור| S3
+  S3 -.->|ותו| Q4
+  Q4 -.->|ותו| Q5
+  Q2 -->|תירוץ| A6
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ג א — Chullin 33a:9</span></div>
+      <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט בְּהֵמָה חַיָּה וָעוֹף וְלֹא יָצָא מֵהֶן דָּם – כְּשֵׁרִים, וְנֶאֱכָלִין בְּיָדַיִם מְסוֹאָבוֹת, לְפִי שֶׁלֹּא הוּכְשְׁרוּ בַּדָּם. רַבִּי שִׁמְעוֹן אוֹמֵר: הוּכְשְׁרוּ בַּשְּׁחִיטָה.</div>
+      <div class="trans" data-when="he">משנה: השוחט בהמה, חיה ועוף ולא יצא מהם דם בשעת השחיטה — כשרים, ונאכלים בידיים טמאות (׳מסואבות׳), לפי שלא הוכשרו לקבל טומאה בדם (שהוא אחד משבעת המשקים המכשירים). רבי שמעון אומר: הוכשרו לקבל טומאה בשחיטה עצמה.</div>
+      <div class="trans" data-when="en">MISHNA: In the case of one who slaughters a domesticated animal, an undomesticated animal, or a bird, and blood did not emerge from them during the slaughter, all of these are permitted for consumption and do not require the ritual washing of the hands as they may be eaten with ritually impure [mesoavot] hands, because they were not rendered susceptible to ritual impurity through contact with blood, which is one of the seven liquids that render food susceptible to impurity. Rabbi Shimon says: They were rendered susceptible to ritual impurity by means of the slaughter itself.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ג א — Chullin 33a:10</span></div>
+      <div class="orig">גְּמָ׳ טַעְמָא דְּלֹא יָצָא מֵהֶן דָּם, הָא יָצָא מֵהֶן דָּם – אֵין נֶאֱכָלִים בְּיָדַיִם מְסוֹאָבוֹת. אַמַּאי? יָדַיִם שְׁנִיּוֹת הֵן, וְאֵין שֵׁנִי עוֹשֶׂה שְׁלִישִׁי בְּחוּלִּין!</div>
+      <div class="trans" data-when="he">גמרא: מדיוק המשנה — דווקא לפי שלא יצא דם נאכלים בידיים טמאות, הא אם יצא דם — אין נאכלים בידיים טמאות. ומקשים: מדוע? הרי הידיים הן ׳שניות׳ לטומאה, ואין שני עושה שלישי בחולין (השוחט ידיו טמאות בדרגה שנייה ואינן יכולות לטמא חולין)!</div>
+      <div class="trans" data-when="en">GEMARA: The reason that they may be eaten with ritually impure hands is that blood did not emerge from the animals or birds during the slaughter; but if blood emerged from them during slaughter, they may not be eaten with ritually impure hands. The Gemara asks: Why not? Ordinary hands are impure with second-degree ritual impurity and an item of second-degree impurity cannot impart third-degree impurity to non-sacred items with which it comes into contact.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ג א — Chullin 33a:11</span></div>
+      <div class="orig">וּמִמַּאי דִּבְחוּלִּין עָסְקִינַן? דְּקָתָנֵי חַיָּה, דְּאִילּוּ קָדָשִׁים – חַיָּה בְּקָדָשִׁים מִי אִיכָּא? וְתוּ, אִי בְּקָדָשִׁים, כִּי לֹא יָצָא מֵהֶן דָּם – כְּשֵׁרָה? הוּא עַצְמוֹ לַדָּם הוּא צָרִיךְ!</div>
+      <div class="trans" data-when="he">ומניין שמדובר בחולין? מכך ששנינו ׳חיה׳ — ובקדשים אין חיה (אין מקריבים חיה). ועוד: אם בקדשים — כשלא יצא דם הקרבן כשר? והרי הקרבן עצמו צריך דם (להזאת הדם על המזבח)!</div>
+      <div class="trans" data-when="en">The Gemara clarifies: From where is it ascertained that we are dealing in the mishna with non-sacred food, and not with the slaughter of an offering? That is clear, as the tanna teaches in the list of those slaughtered: An undomesticated animal. As, if the tanna is referring to the slaughter of sacrificial animals and birds, is there any undomesticated animal included in the framework of sacrificial animals? And furthermore, if the tanna is referring to sacrificial animals, when no blood emerges from them are the offerings valid? The offering itself requires blood, as it is only through the presenting of the blood upon the altar that the offering is accepted.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ג א — Chullin 33a:12</span></div>
+      <div class="orig">וְתוּ, אִי בְּקָדָשִׁים, כִּי יָצָא מֵהֶן דָּם מִי מַכְשִׁיר? וְהָאָמַר רַבִּי חִיָּיא בַּר אַבָּא אָמַר רַבִּי יוֹחָנָן: מִנַּיִן לְדַם קָדָשִׁים שֶׁאֵינוֹ מַכְשִׁיר? שֶׁנֶּאֱמַר: ״עַל הָאָרֶץ תִּשְׁפְּכֶנּוּ כַּמָּיִם״, דָּם שֶׁנִּשְׁפָּךְ כַּמַּיִם מַכְשִׁיר, שֶׁאֵינוֹ נִשְׁפָּךְ כַּמַּיִם אֵינוֹ מַכְשִׁיר!</div>
+      <div class="trans" data-when="he">ועוד: אם בקדשים — כשיצא דם, וכי הדם מכשיר לקבל טומאה? והרי אמר רבי חייא בר אבא משום רבי יוחנן: דם קדשים אינו מכשיר, שנאמר ׳על הארץ תשפכנו כמים׳ — דם הנשפך כמים (כדם חולין) מכשיר, ולא דם קדשים שאינו נשפך אלא נזרק על המזבח.</div>
+      <div class="trans" data-when="en">And furthermore, if the tanna is referring to sacrificial animals, when blood emerges from them, does it render them susceptible to ritual impurity? But doesn’t Rabbi Ḥiyya bar Abba say that Rabbi Yoḥanan says: From where is it derived that the blood of sacrificial animals does not render food susceptible to ritual impurity? It is derived from a verse, as it is stated: “You shall not eat it; you shall pour it upon the earth like water” (Deuteronomy 12:24). Blood of a non-sacred animal, which is poured like water when it is slaughtered, renders food susceptible to ritual impurity. By contrast, blood of a sacrificial animal, which is not poured like water but is presented on the altar, does not render food susceptible to ritual impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ג א — Chullin 33a:13</span></div>
+      <div class="orig">וְתוּ, אִי בְּקָדָשִׁים, כִּי לֹא יָצָא מֵהֶם דָּם לָא מִתַּכְשְׁרִי, (לִיתַּכְשְׁרִי) [לִיתַּכְשְׁרוּ] בְּחִיבַּת הַקֹּדֶשׁ! דְּקַיְימָא לַן חִיבַּת הַקֹּדֶשׁ מַכְשַׁרְתָּן.</div>
+      <div class="trans" data-when="he">ועוד: אם בקדשים — כשלא יצא מהם דם, יוכשרו לקבל טומאה ב׳חיבת הקודש׳! שהרי קיימא לן שחיבת הקודש (חשיבות הקרבן) מכשרת אף בלא מגע משקה.</div>
+      <div class="trans" data-when="en">And furthermore, if the tanna is referring to sacrificial animals, when blood does not emerge from them are they not nevertheless rendered susceptible to ritual impurity? Let them be rendered susceptible to ritual impurity by means of regard for sanctity, as we maintain that regard for sanctity renders food suceptible to ritual impurity even in the absence of contact with any of the seven liquids.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ג א — Chullin 33a:14</span></div>
+      <div class="orig">אָמַר רַב נַחְמָן אָמַר רַבָּה בַּר אֲבוּהּ: הָכָא בְּחוּלִּין שֶׁלְּקָחָן בְּכֶסֶף מַעֲשֵׂר עָסְקִינַן, וּדְלָא כְּרַבִּי מֵאִיר, דִּתְנַן:</div>
+      <div class="trans" data-when="he">אמר רב נחמן אמר רבה בר אבוה: כאן מדובר בחולין שלקחם בכסף מעשר שני (בירושלים), שדינם כמעשר שני המקבל טומאה שלישית ממגע ידיים שהן שניות; והמשנה שלא כרבי מאיר, כמו ששנינו במשנה:</div>
+      <div class="trans" data-when="en">Rav Naḥman said that Rabba bar Avuh said: Here we are dealing with non-sacred food that one purchased in Jerusalem with second-tithe money, which assumes the status of the second-tithe produce. This produce, in turn, assumes third-degree impurity through contact with hands that have second-degree impurity. And this mishna is not in accordance with the opinion of Rabbi Meir, as we learned in a mishna (Para 11:5):</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">ידיים תחילות — משנת ר׳ מאיר ובית המנוגע</span><span data-when="en">First-degree hands</span>
+        <span class="ref">Chullin 33b:1-13</span></h2>
+    <div class="lead"><span data-when="he">הגמרא מביאה את משנת רבי מאיר (טעון ביאת מים — שני) שעליה נסמך רב נחמן, ורב שימי בר אשי מקשה. רב פפא מעמיד את משנתנו בידיים תחילות (ראשונות) כרבי שמעון בן אלעזר, ומכאן לדיון אם יש ׳ידיים תחילות׳ — ממחלוקת רבי עקיבא וחכמים בבית המנוגע — ומדוע לא העמיד רב פפא כרבי עקיבא.</span><span data-when="en">The Gemara cites Rabbi Meir's mishna (one needing entry into water is second-degree), on which Rav Naḥman relied, and Rav Shimi bar Ashi objects. Rav Pappa sets our mishna as a case of first-degree hands, per Rabbi Shimon ben Elazar, leading to whether ׳first-degree hands׳ exist — from the R. Akiva–Rabbis dispute over a leprous house — and why Rav Pappa did not read it per R. Akiva.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① משנת ר׳ מאיר: טעון ביאת מים — שני; חכמים אוסרים במעשר"]:::statement
+  Q2{"② מתקיף רב שימי: שמא נחלקו רק באכילת מעשר, לא בנגיעה"}:::question
+  Q3{"③ והרי ׳נאכלין׳ — מגע הוא (חברו מאכילו)"}:::question
+  A4["④ אלא רב פפא: בידיים תחילות, וכר׳ שמעון בן אלעזר"]:::answer
+  S5["⑤ דיוק: תחילות אף לחולין; שניות — לתרומה בלבד"]:::statement
+  Q6{"⑥ ומי איכא ידיים תחילות?"}:::question
+  P7["⑦ אין: הכניס ידיו לבית המנוגע — ר״ע תחילות, חכמים שניות"]:::proof
+  S8["⑧ ביאה במקצת לא שמה ביאה — גזירת ידיו אטו גופו"]:::statement
+  Q9{"⑨ ולוקמה כר״ע? — ר״ע ׳תחילות׳ רק בתרומה וקדשים"}:::question
+  Q10{"⑩ וליהוו שניות וכר״ע — הא ר״ע ׳שני עושה שלישי בחולין׳!"}:::question
+  P11["⑪ דרש ר״ע: ׳יטמא׳ — ככר שני עושה שלישי בחולין"]:::proof
+  C12(["⑫ דחייה: הני מילי בדאורייתא, אבל בדרבנן — לא"]):::conclusion
+  S1 -.->|מתקיף| Q2
+  Q2 -->|והא נגיעה| Q3
+  Q3 -->|אלא| A4
+  A4 -->|דיוק| S5
+  S5 -.->|בעיא| Q6
+  Q6 -->|אין| P7
+  P7 -->|ביאור| S8
+  A4 -.->|ולוקמה| Q9
+  Q9 -.->|וליהוו| Q10
+  Q10 -->|דתנן| P11
+  P11 -.->|דחייה| C12
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Meir's mishna: one needing washing = second-degree; Rabbis forbid contact with tithe"]:::statement
+  Q2{"② Rav Shimi objects: maybe they disagree only on eating tithe, not on contact"}:::question
+  Q3{"③ But ׳are eaten׳ implies contact — another feeds him"}:::question
+  A4["④ Rather Rav Pappa: first-degree hands, per R. Shimon b. Elazar"]:::answer
+  S5["⑤ Inference: first-degree even for non-sacred; second-degree only for teruma"]:::statement
+  Q6{"⑥ Are there first-degree hands at all?"}:::question
+  P7["⑦ Yes: hands into a leprous house — R. Akiva first-degree, Rabbis second"]:::proof
+  S8["⑧ Partial entry isn't entry — a decree on hands lest the body enter"]:::statement
+  Q9{"⑨ So why not read it per R. Akiva? — his ׳first-degree׳ is only teruma/sacred"}:::question
+  Q10{"⑩ Let them be second-degree per R. Akiva — but he holds ׳second makes third in non-sacred׳!"}:::question
+  P11["⑪ R. Akiva expounded ׳yitma׳ — a second-degree loaf makes a third in non-sacred food"]:::proof
+  C12(["⑫ Rejected: that is only by Torah law, not for rabbinic impurity"]):::conclusion
+  S1 -.->|objects| Q2
+  Q2 -->|but it is contact| Q3
+  Q3 -->|rather| A4
+  A4 -->|infer| S5
+  S5 -.->|asks| Q6
+  Q6 -->|yes| P7
+  P7 -->|explain| S8
+  A4 -.->|why not| Q9
+  Q9 -.->|let them be| Q10
+  Q10 -->|as taught| P11
+  P11 -.->|rejected| C12
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① כׇּל הַטָּעוּן בִּיאַת מַיִם … שֵׁנִי … וַחֲכָמִים אוֹסְרִים בַּמַּעֲשֵׂר"]:::statement
+  Q2{"② מַתְקֵיף רַב שִׁימִי … דִּלְמָא … בִּנְגִיעָה דְּמַעֲשֵׂר וַאֲכִילָה דְחוּלִּין – לָא פְּלִיגִי"}:::question
+  Q3{"③ וְהָא נְגִיעָה הִיא … דְּקָא סָפֵי לֵיהּ חַבְרֵיהּ"}:::question
+  A4["④ אֶלָּא … בְּיָדַיִם תְּחִלּוֹת … וְרַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר הִיא"]:::answer
+  S5["⑤ תְּחִלּוֹת – אַף לְחוּלִּין, שְׁנִיּוֹת – לִתְרוּמָה אִין, לְחוּלִּין – לָא"]:::statement
+  Q6{"⑥ וּמִי אִיכָּא יָדַיִם תְּחִלּוֹת?"}:::question
+  P7["⑦ הִכְנִיס יָדָיו לְבַיִת הַמְנוּגָּע … רַבִּי עֲקִיבָא … וַחֲכָמִים אוֹמְרִים שְׁנִיּוֹת"]:::proof
+  S8["⑧ בִּיאָה בְּמִקְצָת לֹא שְׁמָהּ בִּיאָה … גְּזֵירָה יָדָיו אַטּוּ גּוּפוֹ"]:::statement
+  Q9{"⑨ וְלוֹקְמַהּ כְּרַבִּי עֲקִיבָא? … הָנֵי מִילֵּי בִּתְרוּמָה וְקָדָשִׁים"}:::question
+  Q10{"⑩ וְלִיהֶוְיָין נָמֵי שְׁנִיּוֹת … שֵׁנִי עוֹשֶׂה שְׁלִישִׁי בְּחוּלִּין!"}:::question
+  P11["⑪ דָּרַשׁ רַבִּי עֲקִיבָא ׳יִטְמָא׳ … כִּכָּר שֵׁנִי שֶׁעוֹשֶׂה שְׁלִישִׁי בְּחוּלִּין"]:::proof
+  C12(["⑫ דִּלְמָא הָנֵי מִילֵּי בְּטוּמְאָה דְּאוֹרָיְיתָא, אֲבָל בִּדְרַבָּנַן לָא"]):::conclusion
+  S1 -.->|מתקיף| Q2
+  Q2 -->|והא נגיעה| Q3
+  Q3 -->|אלא| A4
+  A4 -->|דיוק| S5
+  S5 -.->|בעיא| Q6
+  Q6 -->|אין| P7
+  P7 -->|ביאור| S8
+  A4 -.->|ולוקמה| Q9
+  Q9 -.->|וליהוו| Q10
+  Q10 -->|דתנן| P11
+  P11 -.->|דחייה| C12
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ג ב — Chullin 33b:1</span></div>
+      <div class="orig">כׇּל הַטָּעוּן בִּיאַת מַיִם מִדִּבְרֵי סוֹפְרִים מְטַמֵּא אֶת הַקֹּדֶשׁ, וּפוֹסֵל אֶת הַתְּרוּמָה, וּמוּתָּר בַּחוּלִּין וּבַמַּעֲשֵׂר, דִּבְרֵי רַבִּי מֵאִיר.</div>
+      <div class="trans" data-when="he">כל הטעון ביאת מים (טבילה או נטילה) מדברי סופרים, אף שטהור מן התורה — נחשב שני לטומאה: מטמא את הקודש, ופוסל את התרומה (אך אינו מטמאהּ לטמא תרומה אחרת), ומותר בחולין ובמעשר (אינו מטמאם) — דברי רבי מאיר.</div>
+      <div class="trans" data-when="en">With regard to anything that by rabbinic law requires entry into water, i.e., either immersion or ritual washing of the hands, although it is pure by Torah law, it is accorded second-degree impurity. Therefore, such an item renders sacrificial food impure, meaning that the sacrificial food becomes impure and transmits impurity to other sacrificial food, and disqualifies teruma, meaning that it renders the teruma itself impure, but not to the extent that the teruma can render other teruma impure. And it is permitted for non-sacred food and for second-tithe produce to come in contact with such an item, and no impurity is thereby transmitted. This is the statement of Rabbi Meir.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ג ב — Chullin 33b:2</span></div>
+      <div class="orig">וַחֲכָמִים אוֹסְרִים בַּמַּעֲשֵׂר.</div>
+      <div class="trans" data-when="he">וחכמים אוסרים את המעשר (סוברים שנטמא), כלומר מעשר שני חמור מחולין ומקבל טומאה שלישית ממגע ידיים שניות — וזו דעת המשנה שלנו.</div>
+      <div class="trans" data-when="en">And the Rabbis prohibit items that require entry into water from coming in contact with second-tithe produce, as they hold that the produce is thereby rendered impure. According to the Rabbis, the status of second-tithe produce is more stringent than that of non-sacred food, and second-tithe produce assumes third-degree impurity upon contact with an item of second-degree impurity, which is in accordance with the opinion of the mishna.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ג ב — Chullin 33b:3</span></div>
+      <div class="orig">מַתְקֵיף לַהּ רַב שִׁימִי בַּר אָשֵׁי: מִמַּאי? דִּלְמָא עַד כָּאן לָא פְּלִיגִי רַבָּנַן עֲלֵיהּ דְּרַבִּי מֵאִיר, אֶלָּא בַּאֲכִילַת מַעֲשֵׂר, אֲבָל בִּנְגִיעָה דְּמַעֲשֵׂר וַאֲכִילָה דְחוּלִּין – לָא פְּלִיגִי.</div>
+      <div class="trans" data-when="he">מתקיף רב שימי בר אשי: ומניין? שמא חכמים חולקים על רבי מאיר רק באכילת מעשר (בידיים טמאות), אבל בנגיעה במעשר ובאכילת חולין — אינם חולקים, ואם כן אין ראיה שמדובר במגע.</div>
+      <div class="trans" data-when="en">Rav Shimi bar Ashi objects to this interpretation of that mishna. From where is it clear that it is contact that the Rabbis prohibit? Perhaps the Rabbis disagree with Rabbi Meir only with regard to a person with second-degree impurity partaking of second-tithe produce. But with regard to contact of an individual with second-degree impurity with second-tithe produce or his eating non-sacred food, they do not disagree.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ג ב — Chullin 33b:4</span></div>
+      <div class="orig">וְהָא נְגִיעָה הִיא, מִדְּקָתָנֵי נֶאֱכָלִין בְּיָדַיִם מְסוֹאָבוֹת, מִי לָא עָסְקִינַן דְּקָא סָפֵי לֵיהּ חַבְרֵיהּ?</div>
+      <div class="trans" data-when="he">והרי במשנתנו מדובר במגע, מדקתני ׳נאכלין׳ (בלשון סביל) — וכי לא נעסוק אף בכגון שחברו (טמא ידיים) מאכילו, והאוכל עצמו טהור ואינו נוגע? (אם כן הטומאה היא מן המגע, ולא תיתכן בחולין שבכסף מעשר, שבהם חכמים מתירים את הנגיעה.)</div>
+      <div class="trans" data-when="en">And this case in the mishna is a case involving contact with the flesh of the slaughtered animal, from the fact that it teaches: They may be eaten with ritually impure hands, in the passive form, and not: One may eat them with impure hands. Are we not dealing with a case where another with impure hands fed him, but the one eating it was ritually pure and did not touch it? Therefore, the case in the mishna here, which indicates that it is forbidden for one with impure hands to touch the flesh if it has come in contact with the blood, cannot be referring to an animal purchased in Jerusalem with second-tithe money. The reason is that in that case, the Rabbis concede that contact with second-tithe produce, even produce rendered susceptible to ritual impurity by the blood, is permitted for one whose hands are impure with second-degree ritual impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ג ב — Chullin 33b:5</span></div>
+      <div class="orig">אֶלָּא אָמַר רַב פָּפָּא: הָכָא בְּיָדַיִם תְּחִלּוֹת עָסְקִינַן, וְרַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר הִיא, דְּתַנְיָא: אֵין יָדַיִם תְּחִלּוֹת לַחוּלִּין, רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹמֵר מִשּׁוּם רַבִּי מֵאִיר: יָדַיִם תְּחִלּוֹת לַחוּלִּין, וּשְׁנִיּוֹת לַתְּרוּמָה.</div>
+      <div class="trans" data-when="he">אלא אמר רב פפא: כאן מדובר בידיים תחילות (ראשונות לטומאה, המטמאות אף חולין), ורבי שמעון בן אלעזר היא, כמו ששנינו: אין ידיים תחילות לחולין; רבי שמעון בן אלעזר אומר משום רבי מאיר: ידיים תחילות לחולין, ושניות לתרומה.</div>
+      <div class="trans" data-when="en">Rather Rav Pappa said: Here, in the mishna, we are dealing with hands that are impure with first-degree ritual impurity, which render even non-sacred food impure. And the mishna is in accordance with the opinion of Rabbi Shimon ben Elazar, as it is taught in a baraita: In those cases where hands have first-degree impurity, it is not that they render non-sacred food impure; rather, it means that they impart to teruma and sacrificial food second-degree impurity rather than third-degree impurity. Rabbi Shimon ben Elazar says in the name of Rabbi Meir: In those cases where hands have first-degree impurity, it means that they render non-sacred food impure. And in those cases where hands have second-degree impurity it means that they invalidate teruma and impart to it third-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ג ב — Chullin 33b:6</span></div>
+      <div class="orig">תְּחִלּוֹת לְחוּלִּין – אִין, לִתְרוּמָה – לָא? הָכִי קָאָמַר: תְּחִלּוֹת – אַף לְחוּלִּין, שְׁנִיּוֹת – לִתְרוּמָה אִין, לְחוּלִּין – לָא.</div>
+      <div class="trans" data-when="he">ומדייקים: ׳תחילות לחולין — אין, לתרומה — לא׳? אלא כך אמר: תחילות — אף לחולין (וכל שכן לתרומה); שניות — לתרומה אין, לחולין לא.</div>
+      <div class="trans" data-when="en">The Gemara asks: Did Rabbi Shimon ben Elazar say that in those cases where hands have first-degree impurity, with regard to non-sacred food, yes, they render it impure, but with regard to teruma, hands do not render it impure? The Gemara answers: This is what Rabbi Shimon ben Elazar is saying: In those cases where hands have first-degree impurity, it means that they render even non-sacred food impure, and all the more so they render teruma impure. But in those cases where hands have second-degree impurity, it means that with regard to teruma, yes, the hands invalidate teruma and impart third-degree impurity, but with regard to non-sacred food, hands do not render it impure.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ג ב — Chullin 33b:7</span></div>
+      <div class="orig">וּמִי אִיכָּא יָדַיִם תְּחִלּוֹת? אִין, דְּתַנְיָא: הִכְנִיס יָדָיו לְבַיִת הַמְנוּגָּע – יָדָיו תְּחִלּוֹת, דִּבְרֵי רַבִּי עֲקִיבָא, וַחֲכָמִים אוֹמְרִים: יָדָיו שְׁנִיּוֹת.</div>
+      <div class="trans" data-when="he">ומקשים: וכי יש ידיים תחילות (ראשונות)? ומשיבים: אין, כמו ששנינו — הכניס ידיו לבית המנוגע: ידיו תחילות, דברי רבי עקיבא; וחכמים אומרים: ידיו שניות.</div>
+      <div class="trans" data-when="en">The Gemara asks: And are there cases where hands assume first-degree impurity? The Gemara answers: Yes, as it is taught in a mishna (Yadayim 3:1): If one inserts his hands into a leprous house (see Leviticus 14:33–53) his hands assume first-degree impurity as though his entire body entered the house; this is the statement of Rabbi Akiva. And the Rabbis say: His hands assume second-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ג ב — Chullin 33b:8</span></div>
+      <div class="orig">דְּכוּלֵּי עָלְמָא בִּיאָה בְּמִקְצָת לֹא שְׁמָהּ בִּיאָה, וְהָכָא בִּגְזֵירָה יָדָיו אַטּוּ גּוּפוֹ קָא מִיפַּלְגִי.</div>
+      <div class="trans" data-when="he">מבארים: לכולי עלמא ביאה במקצת (הכנסת היד בלבד) אינה ׳ביאה׳ (מן התורה), וכאן נחלקו בגזירת חכמים — לטמא את ידיו אטו (משום) ביאת כל גופו.</div>
+      <div class="trans" data-when="en">The Gemara elaborates: Everyone agrees that in principle, partial entry into a leprous house is not characterized as entry in terms of rendering one who enters impure. Therefore, one who inserted his hands into the house is not impure by Torah law. And here, it is with regard to a rabbinic decree that renders his hands impure that they disagree: The Sages issued a decree that if one inserted his hands into a leprous house, his hands are impure due to the impurity by Torah law that one assumes when he enters the house with his entire body. The objective of the decree is to prevent him from entering the leprous house.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ג ב — Chullin 33b:9</span></div>
+      <div class="orig">מָר סָבַר: יָדָיו – כְּגוּפוֹ שַׁוִּינְהוּ רַבָּנַן, וּמָר סָבַר: יָדַיִם – כְּיָדַיִם דְּעָלְמָא שַׁוִּינְהוּ רַבָּנַן.</div>
+      <div class="trans" data-when="he">מר (רבי עקיבא) סבר: ידיו — כגופו עשאום חכמים (ולכן ראשונות); ומר (חכמים) סבר: ידיים — כידיים דעלמא עשאום (סתם ידיים שניות).</div>
+      <div class="trans" data-when="en">One Sage, Rabbi Akiva, holds that when the Sages issued the decree they determined that the status of his hands inserted into the house is like the status of his body that enters the house, first-degree impurity. And one Sage, the Rabbis, holds that the Sages rendered the status of hands inserted into the house like the status of hands in general, with regard to which they issued a decree of second-degree impurity, even if they had been washed.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ג ב — Chullin 33b:10</span></div>
+      <div class="orig">וְלוֹקְמַהּ כְּרַבִּי עֲקִיבָא, דְּאָמַר: יָדָיו תְּחִלּוֹת הָוְיָין? דִּלְמָא כִּי קָאָמַר רַבִּי עֲקִיבָא הָנֵי מִילֵּי בִּתְרוּמָה וְקָדָשִׁים, דַּחֲמִירִי, אֲבָל לְחוּלִּין – שְׁנִיּוֹת הָוְיָין.</div>
+      <div class="trans" data-when="he">ומקשים: ולוקמה (יעמיד רב פפא את משנתנו) כרבי עקיבא, שאמר ׳ידיו תחילות׳? ומשיבים: שמא רבי עקיבא אמר ׳תחילות׳ רק בתרומה וקדשים החמורים, אבל לחולין — שניות הן.</div>
+      <div class="trans" data-when="en">The Gemara asks: And why did Rav Pappa interpret the mishna in accordance with the opinion of Rabbi Shimon ben Elazar? Let Rav Pappa interpret the mishna in accordance with the opinion of Rabbi Akiva, who says: If one inserts his hands into a leprous house, his hands assume first-degree impurity. The Gemara answers: Perhaps when Rabbi Akiva says that one’s hands assume first-degree impurity, that statement applies only in cases of teruma and sacrificial food, which are stringent. But with regard to non-sacred food, perhaps hands are impure only with second-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ג ב — Chullin 33b:11</span></div>
+      <div class="orig">וְלִיהֶוְיָין נָמֵי שְׁנִיּוֹת, דְּהָא שָׁמְעִינַן לֵיהּ לְרַבִּי עֲקִיבָא דְּאָמַר: שֵׁנִי עוֹשֶׂה שְׁלִישִׁי בְּחוּלִּין.</div>
+      <div class="trans" data-when="he">ומקשים: וליהוויין נמי שניות, ותעמיד כרבי עקיבא — שהרי שמענו לרבי עקיבא שאמר: שני עושה שלישי בחולין (ואם כן אף ידיים שניות יטמאו את החולין)!</div>
+      <div class="trans" data-when="en">The Gemara objects: And let hands also be impure only with second-degree impurity and the mishna could still be in accordance with the opinion of Rabbi Akiva. As we heard that Rabbi Akiva says: An item of second-degree impurity imparts third-degree impurity to non-sacred items.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ג ב — Chullin 33b:12</span></div>
+      <div class="orig">דִּתְנַן, בּוֹ בְּיוֹם דָּרַשׁ רַבִּי עֲקִיבָא: ״וְכׇל כְּלִי חֶרֶשׂ וְגוֹ׳ יִטְמָא״, ״טָמֵא״ לֹא נֶאֱמַר, אֶלָּא ״יִטְמָא״ – לְטַמֵּא אֲחֵרִים, לִימֵּד עַל כִּכָּר שֵׁנִי שֶׁהוּא עוֹשֶׂה שְׁלִישִׁי בְּחוּלִּין.</div>
+      <div class="trans" data-when="he">כמו ששנינו: בו ביום דרש רבי עקיבא ׳וכל כלי חרש … יטמא׳ — ׳טמא׳ לא נאמר אלא ׳יטמא׳, לטמא אחרים; לימד על ככר שני שהוא עושה שלישי בחולין.</div>
+      <div class="trans" data-when="en">As we learned in a mishna (Sota 27b): On that day, when Rabbi Elazar ben Azarya was appointed Nasi in Yavne, Rabbi Akiva taught: “And every earthenware vessel into which any of them falls, whatever is in it shall be impure, and you shall break it” (Leviticus 11:33). With regard to the item rendered impure in the vessel, it is not stated: It is impure [tameh]; rather, the term “it shall be impure [yitma]” is stated, indicating that the item has the capacity to transmit impurity to other items. This verse teaches about a loaf with second-degree impurity that had been rendered impure in the airspace of an earthenware vessel in which there was a creeping animal, that through contact it renders non-sacred food impure with third-degree ritual impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ג ב — Chullin 33b:13</span></div>
+      <div class="orig">דִּלְמָא הָנֵי מִילֵּי בְּטוּמְאָה דְּאוֹרָיְיתָא, אֲבָל בִּדְרַבָּנַן לָא.</div>
+      <div class="trans" data-when="he">ודוחים: שמא דין זה (שני עושה שלישי בחולין) רק בטומאה דאורייתא (כשרץ), אבל בטומאה דרבנן (כטומאת ידיים) — לא.</div>
+      <div class="trans" data-when="en">The Gemara explains: Perhaps this statement, that non-sacred food becomes impure with third-degree ritual impurity, applies only with regard to impurity by Torah law, e.g., a creeping animal; but with regard to impurity by rabbinic law, e.g., impurity of hands, that is not the halakha.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+        <span data-when="he">חולין על טהרת הקודש — מחלוקת ר״א ור״י</span><span data-when="en">Non-sacred food at sacred purity</span>
+        <span class="ref">Chullin 33b:14-34b:5</span></h2>
+    <div class="lead"><span data-when="he">פירוש שלישי (רבי אלעזר משום רבי הושעיא): חולין שנעשו על טהרת הקודש, שלא כרבי יהושע. מכאן נפרשׂ הוויכוח הארוך בין רבי אליעזר לרבי יהושע — האם האוכל כמאכל בדרגת טומאתו — דרך דברי עולא ורבה בר בר חנה, ועד מחלוקת רבי זירא ורבי אסי בדעת רבי יוחנן.</span><span data-when="en">A third explanation (Rabbi Elazar in the name of Rabbi Hoshaya): the case is non-sacred food prepared at the purity-level of sacred food, not in accordance with Rabbi Yehoshua. This unfolds the long debate between Rabbi Eliezer and Rabbi Yehoshua — whether the eater takes the food's degree of impurity — through Ulla and Rabba bar bar Ḥana, down to the dispute of Rabbi Zeira and Rabbi Asi over Rabbi Yoḥanan's view.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ אלעזר משום ר׳ הושעיא: בחולין שעל טהרת הקודש, ודלא כר׳ יהושע"]:::statement
+  S2["② מחלוקת: ר׳ אליעזר — אוכל כמאכל; ר׳ יהושע — שני בלבד"]:::statement
+  S3["③ דיוק: על טהרת תרומה — אין שלישי; על טהרת הקודש — אין שלישי (לר׳ יהושע)"]:::statement
+  Q4{"④ ולוקמה בטהרת תרומה וכר׳ יהושע? — והא ׳בשר׳ אין בתרומה"}:::question
+  A5["⑤ אלא בטהרת קודש — בשר מתחלף בבשר, לא בפירות"]:::answer
+  S6["⑥ עולא: חבריי — טהרת קודש ודלא כר׳ יהושע; ואני — כר׳ יהושע ב׳לא מיבעיא׳"]:::statement
+  S7["⑦ מאן חבריי? רבה בר בר חנה משום ר׳ יוחנן — נחלקו ר״א ור״י"]:::statement
+  S8["⑧ ר״א: אוכל חמור (נבלת עוף טהור); ר״י: מאכל חמור (שיעורים)"]:::statement
+  Q9{"⑨ ר״א: משיעורים אין למדים; ועוד — אכל שני נעשה שני, למה?"}:::question
+  A10["⑩ ר״י: שני עושה שני ע״י משקין; ר״א: והרי משקים נעשים תחילה!"]:::answer
+  Q11{"⑪ ועוד: שלישי נעשה שני, למה?"}:::question
+  A12["⑫ ר״י: רק בטהרת תרומה, שטהרתה טומאה אצל הקודש"]:::answer
+  S13["⑬ ר׳ זירא משום ר׳ ינאי: אוכל שלישי שעל טהרת הקודש — גופו שני לקודש"]:::statement
+  Q14{"⑭ איתיביה ר׳ זירא: ׳שלישי שני לקודש׳ — בטהרת תרומה, הא קודש לא!"}:::question
+  C15(["⑮ ר׳ אסי: ׳לא מיבעיא׳ קאמר; אמוראי נינהו אליבא דר׳ יוחנן"]):::conclusion
+  S1 -->|מחלוקת| S2
+  S2 -->|דיוק| S3
+  S3 -.->|ולוקמה| Q4
+  Q4 -->|תירוץ| A5
+  A5 -->|עולא| S6
+  S6 -->|מאן חבריי| S7
+  S7 -->|פירוט| S8
+  S8 -.->|השגה| Q9
+  Q9 -->|תשובה| A10
+  A10 -.->|ועוד| Q11
+  Q11 -->|יישוב| A12
+  A12 -->|מימרא| S13
+  S13 -.->|מיתיבי| Q14
+  Q14 -->|תירוץ| C15
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Elazar / R. Hoshaya: food prepared at the purity-level of sacred food, not R. Yehoshua"]:::statement
+  S2["② Dispute: R. Eliezer — eater like the food; R. Yehoshua — only second-degree"]:::statement
+  S3["③ Inference: at teruma-purity yes a third; at sacred-purity no third (per R. Yehoshua)"]:::statement
+  Q4{"④ Read it at teruma-purity per R. Yehoshua? — but ׳meat׳ is not eaten at teruma-purity"}:::question
+  A5["⑤ Rather, sacred-purity: meat is interchanged with meat, not with produce"]:::answer
+  S6["⑥ Ulla: colleagues — sacred-purity, not R. Yehoshua; I say — R. Yehoshua, ׳no need to say׳"]:::statement
+  S7["⑦ Who are the colleagues? Rabba b. b. Ḥana / R. Yoḥanan — R. Eliezer & R. Yehoshua's exchange"]:::statement
+  S8["⑧ R. Eliezer: eater is stricter (kosher-bird carcass); R. Yehoshua: food is stricter (measures)"]:::statement
+  Q9{"⑨ R. Eliezer: don't learn from measures; and — ate a second yet stays second, why?"}:::question
+  A10["⑩ R. Yehoshua: a second makes a second via liquids; R. Eliezer: but liquids become first!"]:::answer
+  Q11{"⑪ And further: a third becomes a second — why?"}:::question
+  A12["⑫ R. Yehoshua: only at teruma-purity, whose purity is impurity toward the sacred"]:::answer
+  S13["⑬ R. Zeira / R. Yannai: one eating a third at sacred-purity — his body is second toward the sacred"]:::statement
+  Q14{"⑭ R. Zeira objects: ׳a third is second toward the sacred׳ is said at teruma-purity, so not the sacred!"}:::question
+  C15(["⑮ R. Asi: it is ׳no need to say׳; they are amora'im disputing R. Yoḥanan's view"]):::conclusion
+  S1 -->|dispute| S2
+  S2 -->|infer| S3
+  S3 -.->|read it| Q4
+  Q4 -->|answer| A5
+  A5 -->|Ulla| S6
+  S6 -->|who are they| S7
+  S7 -->|detail| S8
+  S8 -.->|challenge| Q9
+  Q9 -->|reply| A10
+  A10 -.->|further| Q11
+  Q11 -->|resolve| A12
+  A12 -->|statement| S13
+  S13 -.->|objection| Q14
+  Q14 -->|answer| C15
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַבִּי אֶלְעָזָר אָמַר רַבִּי הוֹשַׁעְיָא: בְּחוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת הַקֹּדֶשׁ … וּדְלָא כְּרַבִּי יְהוֹשֻׁעַ"]:::statement
+  S2["② רַבִּי אֱלִיעֶזֶר … רִאשׁוֹן רִאשׁוֹן … רַבִּי יְהוֹשֻׁעַ … שֵׁנִי"]:::statement
+  S3["③ עַל טׇהֳרַת תְּרוּמָה – אִין … עַל טׇהֳרַת הַקֹּדֶשׁ – לָא … לֵית בְּהוּ שְׁלִישִׁי"]:::statement
+  Q4{"④ וְלוֹקְמַהּ … עַל טׇהֳרַת תְּרוּמָה … דְּקָתָנֵי ׳בָּשָׂר׳, דְּאִי בִּתְרוּמָה בָּשָׂר מִי אִיכָּא?"}:::question
+  A5["⑤ בָּשָׂר בְּבָשָׂר מִיחַלַּף, בָּשָׂר בְּפֵירֵי לָא מִיחַלַּף"]:::answer
+  S6["⑥ אָמַר עוּלָּא … חַבְרַיָּא … עַל טׇהֳרַת הַקֹּדֶשׁ … וַאֲנָא אָמֵינָא רַבִּי יְהוֹשֻׁעַ הִיא"]:::statement
+  S7["⑦ מַאן חַבְרַיָּא? רַבָּה בַּר בַּר חָנָה … מַאי אַהְדַּרוּ רַבִּי אֱלִיעֶזֶר וְרַבִּי יְהוֹשֻׁעַ"]:::statement
+  S8["⑧ נִבְלַת עוֹף טָהוֹר … וְאָנוּ הֵיאַךְ לֹא נַעֲשֶׂה אוֹכֵל כַּמַּאֲכָל … הַמַּאֲכָל חָמוּר"]:::statement
+  Q9{"⑨ מִשִּׁיעוּרִין לָא גָּמְרִינַן … שֵׁנִי שֵׁנִי לְמָה?"}:::question
+  A10["⑩ הַשֵּׁנִי עוֹשֶׂה שֵׁנִי עַל יְדֵי מַשְׁקִין … וְהָא מַשְׁקִין נָמֵי תְּחִלָּה הָווּ"]:::answer
+  Q11{"⑪ וְעוֹד, שְׁלִישִׁי שֵׁנִי לָמָה?"}:::question
+  A12["⑫ לֹא אָמַרְתִּי אֶלָּא בִּתְרוּמָה, שֶׁטׇּהֳרָתָהּ טוּמְאָה הִיא אֵצֶל הֶקְדֵּשׁ"]:::answer
+  S13["⑬ הָאוֹכֵל שְׁלִישִׁי שֶׁל חוּלִּין … עַל טׇהֳרַת הַקֹּדֶשׁ – נַעֲשָׂה גּוּפוֹ שֵׁנִי לַקֹּדֶשׁ"]:::statement
+  Q14{"⑭ אֵיתִיבֵיהּ … שְׁלִישִׁי שֵׁנִי לַקֹּדֶשׁ … עַל טׇהֳרַת תְּרוּמָה … הַקֹּדֶשׁ – לָא!"}:::question
+  C15(["⑮ לָא מִיבַּעְיָא קָאָמַר … אָמוֹרָאֵי נִינְהוּ וְאַלִּיבָּא דְּרַבִּי יוֹחָנָן"]):::conclusion
+  S1 -->|מחלוקת| S2
+  S2 -->|דיוק| S3
+  S3 -.->|ולוקמה| Q4
+  Q4 -->|תירוץ| A5
+  A5 -->|עולא| S6
+  S6 -->|מאן חבריי| S7
+  S7 -->|פירוט| S8
+  S8 -.->|השגה| Q9
+  Q9 -->|תשובה| A10
+  A10 -.->|ועוד| Q11
+  Q11 -->|יישוב| A12
+  A12 -->|מימרא| S13
+  S13 -.->|מיתיבי| Q14
+  Q14 -->|תירוץ| C15
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ג ב — Chullin 33b:14</span></div>
+      <div class="orig">אָמַר רַבִּי אֶלְעָזָר אָמַר רַבִּי הוֹשַׁעְיָא: הָכָא בְּחוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת הַקֹּדֶשׁ עָסְקִינַן, וּדְלָא כְּרַבִּי יְהוֹשֻׁעַ, דְּתַנְיָא: רַבִּי אֱלִיעֶזֶר אוֹמֵר: הָאוֹכֵל אוֹכֶל רִאשׁוֹן – רִאשׁוֹן, שֵׁנִי – שֵׁנִי, שְׁלִישִׁי – שְׁלִישִׁי.</div>
+      <div class="trans" data-when="he">אמר רבי אלעזר אמר רבי הושעיא (פירוש שלישי): כאן מדובר בחולין שנעשו על טהרת הקודש, והמשנה שלא כרבי יהושע, כמו ששנינו: רבי אליעזר אומר — האוכל אוכל ראשון, נעשה ראשון; שני — שני; שלישי — שלישי.</div>
+      <div class="trans" data-when="en">Rabbi Elazar said that Rabbi Hoshaya said a third explanation of the mishna: Here we are dealing with a case of non-sacred food items that were prepared on the level of purity of sacrificial food. And the mishna is not in accordance with the opinion of Rabbi Yehoshua, as it is taught in a mishna (Teharot 2:2): Rabbi Eliezer says: One who eats food with first-degree ritual impurity assumes first-degree impurity. One who eats food with second-degree ritual impurity assumes second-degree impurity. One who eats food with third-degree impurity assumes third-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ג ב — Chullin 33b:15</span></div>
+      <div class="orig">רַבִּי יְהוֹשֻׁעַ אוֹמֵר: הָאוֹכֵל אוֹכֶל רִאשׁוֹן וְשֵׁנִי – שֵׁנִי, שְׁלִישִׁי – שֵׁנִי לַקֹּדֶשׁ, וְאֵין שֵׁנִי לַתְּרוּמָה.</div>
+      <div class="trans" data-when="he">רבי יהושע אומר: האוכל אוכל ראשון ושני — נעשה שני; השלישי (האוכל אוכל שלישי) — נעשה שני לקודש (מטמא קודש), ואינו שני לתרומה (אינו פוסל תרומה).</div>
+      <div class="trans" data-when="en">The mishna continues: Rabbi Yehoshua says: One who eats food with first-degree or second-degree impurity assumes second-degree impurity. One with second-degree impurity who comes into contact with teruma disqualifies it, but does not render it impure. One who eats food with third-degree impurity assumes second-degree impurity vis-à-vis sacrificial food, i.e., his contact with sacrificial food renders it impure with the capacity to transmit impurity to other sacrificial food, but does not assume second-degree impurity vis-à-vis teruma, and his contact with teruma does not disqualify it.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ג ב — Chullin 33b:16</span></div>
+      <div class="orig">בְּחוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת תְּרוּמָה.</div>
+      <div class="trans" data-when="he">מבארים: ׳האוכל אוכל שלישי׳ אפשרי רק בחולין (שהרי תרומה וקדשים טמאים אסור לאכול, וחולין סתם אינם מקבלים שלישי) — לפיכך מדובר בחולין שנעשו על טהרת תרומה.</div>
+      <div class="trans" data-when="en">Eating an item that has third-degree impurity is feasible only in the case of non-sacred food, as partaking of impure teruma or sacrificial food is prohibited. Generic non-sacred food cannot contract third-degree impurity at all. Therefore, the case of one who eats food that has third-degree impurity is referring specifically to non-sacred food items that were prepared on the level of purity of teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ג ב — Chullin 33b:17</span></div>
+      <div class="orig">עַל טׇהֳרַת תְּרוּמָה – אִין, עַל טׇהֳרַת הַקֹּדֶשׁ – לָא, קָסָבַר: חוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת הַקֹּדֶשׁ לֵית בְּהוּ שְׁלִישִׁי.</div>
+      <div class="trans" data-when="he">ומדייקים: על טהרת תרומה — אין (יש בהם שלישי), על טהרת הקודש — לא; קסבר רבי יהושע: חולין שנעשו על טהרת הקודש אין בהם שלישי.</div>
+      <div class="trans" data-when="en">The Gemara infers from Rabbi Yehoshua’s statement that if one prepares items as if their level of purity were on the level of purity of teruma, then yes, they have the status like teruma, but if one prepares items as if their level of purity were on the level of purity of sacrificial food, they do not have the status like sacrificial food, and such items would not contract third-degree impurity. This indicates that Rabbi Yehoshua holds that non-sacred food items that were prepared on the level of purity of sacrificial food do not assume third-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ג ב — Chullin 33b:18</span></div>
+      <div class="orig">וְלוֹקְמַהּ</div>
+      <div class="trans" data-when="he">ומקשים: ולוקמה (יעמיד את המשנה)…</div>
+      <div class="trans" data-when="en">The Gemara objects: Let us interpret the mishna</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ד א — Chullin 34a:1</span></div>
+      <div class="orig">בְּחוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת תְּרוּמָה, וְרַבִּי יְהוֹשֻׁעַ? לָא סָלְקָא דַּעְתָּךְ, דְּקָתָנֵי ״בָּשָׂר״, דְּאִי בִּתְרוּמָה – בָּשָׂר מִי אִיכָּא?</div>
+      <div class="trans" data-when="he">…בחולין שנעשו על טהרת תרומה וכרבי יהושע! ודוחים: לא תעלה על דעתך, שהרי קתני ׳בשר׳ — ואם בתרומה, וכי יש בשר? (טהרת תרומה נוהגת רק בגידולי קרקע, לא בבשר.)</div>
+      <div class="trans" data-when="en">with regard to the case of non-sacred food items that were prepared on the level of purity of teruma and in accordance with the opinion of Rabbi Yehoshua. The Gemara responds: It should not enter your mind that the mishna is referring to a case of the level of purity of teruma, as the mishna teaches a case of the slaughter of animals and birds and consumption of their meat. And if the mishna is taught with regard to non-sacred food items that were prepared on the level of purity of teruma, is there meat eaten with the level of purity of teruma? The practice of preparing non-sacred food items on the level of purity of teruma is done only so that one will not treat actual teruma in the correct manner, and teruma is separated only from produce that grows in the ground.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ד א — Chullin 34a:2</span></div>
+      <div class="orig">אֶלָּא מַאי, בְּקָדָשִׁים? חַיָּה בְּקָדָשִׁים מִי אִיכָּא? בָּשָׂר בְּבָשָׂר מִיחַלַּף, בָּשָׂר בְּפֵירֵי לָא מִיחַלַּף.</div>
+      <div class="trans" data-when="he">ומקשים: אלא מאי, בקדשים? והרי בקדשים אין חיה! ומשיבים: אף שאין מקריבים חיה, יש המקפידים לאכול בשר חיה בטהרת קודש מפני שבשר מתחלף בבשר, אך לא בטהרת תרומה — שאין בשר מתחלף בפירות.</div>
+      <div class="trans" data-when="en">The Gemara asks: Rather, what is the case in the mishna? Is it a case of non-sacred food items that were prepared on the level of purity of sacrificial food? Is there an undomesticated animal that can be sacrificed as an offering and its meat is sacrificial food? The Gemara answers: Although undomesticated animals cannot be sacrificed as an offering, there are those who would undertake to eat their meat only when prepared on the level of purity of sacrificial food because meat of an undomesticated animal is sometimes interchanged with meat of a domesticated animal. No one would undertake to eat meat only when prepared on the level of purity of teruma, because meat would not be interchanged with produce.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ד א — Chullin 34a:3</span></div>
+      <div class="orig">אָמַר עוּלָּא: חַבְרַיָּא אָמְרִין בְּחוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת הַקֹּדֶשׁ, וּדְלָא כְּרַבִּי יְהוֹשֻׁעַ.</div>
+      <div class="trans" data-when="he">אמר עולא: חבריי אומרים שהמשנה בחולין שנעשו על טהרת הקודש, ושלא כרבי יהושע (הסובר שאין בהם שלישי).</div>
+      <div class="trans" data-when="en">Ulla said: My colleagues say that the mishna is referring to the case of non-sacred food items that were prepared on the level of purity of sacrificial food, and the mishna is not in accordance with the opinion of Rabbi Yehoshua, who says: Non-sacred food items that were prepared on the level of purity of teruma assume third-degree impurity, but non-sacred food items that were prepared on the level of purity of sacrificial food do not assume third-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ד א — Chullin 34a:4</span></div>
+      <div class="orig">וַאֲנָא אָמֵינָא רַבִּי יְהוֹשֻׁעַ הִיא, וְלָא מִיבַּעְיָא קָאָמַר: לָא מִיבַּעְיָא חוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת קֹדֶשׁ דַּחֲמִירִי דְּאִית בְּהוּ שְׁלִישִׁי, אֶלָּא אֲפִילּוּ חוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת תְּרוּמָה נָמֵי אִית בְּהוּ שְׁלִישִׁי.</div>
+      <div class="trans" data-when="he">ואני אומר: רבי יהושע היא, ובלשון ׳לא מיבעיא׳ אמר — לא מיבעיא חולין שנעשו על טהרת קודש החמורים שיש בהם שלישי, אלא אפילו חולין שנעשו על טהרת תרומה אף הם יש בהם שלישי.</div>
+      <div class="trans" data-when="en">Ulla continues: And I say that the mishna is in accordance with the opinion of Rabbi Yehoshua, and when he said that non-sacred food items that were prepared on the level of purity of teruma assume third-degree impurity, he is speaking utilizing the style of: It is not necessary. It is not necessary to say that in the case of non-sacred food items that were prepared on the level of purity of sacrificial food, which is stringent, that they have the capacity of assuming third-degree impurity. Rather, even non-sacred food items that were prepared on the level of purity of teruma also have the capacity of assuming third-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ד א — Chullin 34a:5</span></div>
+      <div class="orig">מַאן חַבְרַיָּא? רַבָּה בַּר בַּר חָנָה הִיא, דְּאָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: מַאי אַהְדַּרוּ רַבִּי אֱלִיעֶזֶר וְרַבִּי יְהוֹשֻׁעַ לַהֲדָדֵי?</div>
+      <div class="trans" data-when="he">מאן חבריי? רבה בר בר חנה, שאמר משום רבי יוחנן: מה השיבו רבי אליעזר ורבי יהושע זה לזה (בעניין דרגת האוכל אוכל טמא)?</div>
+      <div class="trans" data-when="en">The Gemara asks: Who are the colleagues to whom Ulla referred? It is Rabba bar bar Ḥana, as Rabba bar bar Ḥana says that Rabbi Yoḥanan says: What did Rabbi Eliezer and Rabbi Yehoshua reply to each other? The differences between their opinions are twofold. First, Rabbi Eliezer holds that one who eats food with first-degree impurity assumes first-degree impurity, while according to Rabbi Yehoshua he assumes second-degree impurity. Second, Rabbi Eliezer holds that one who eats food with third-degree impurity assumes third-degree impurity, while according to Rabbi Yehoshua he assumes second-degree impurity vis-à-vis sacrificial food but not vis-à-vis teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ד א — Chullin 34a:6</span></div>
+      <div class="orig">אָמַר לוֹ רַבִּי אֱלִיעֶזֶר לְרַבִּי יְהוֹשֻׁעַ: מָצִינוּ אוֹכֵל חָמוּר מִן הָאוֹכֶל, דְּאִילּוּ נִבְלַת עוֹף טָהוֹר בַּחוּץ – לֹא מְטַמֵּא, וְאִילּוּ אוֹכְלָהּ מְטַמֵּא בְּגָדִים אַבֵּית הַבְּלִיעָה, וְאָנוּ הֵיאַךְ לֹא נַעֲשֶׂה אוֹכֵל כַּמַּאֲכָל?</div>
+      <div class="trans" data-when="he">אמר רבי אליעזר לרבי יהושע: מצינו שהאוכל חמור מן המאכל — נבלת עוף טהור מבחוץ (במגע) אינה מטמאה, ואילו האוכלהּ מטמא בגדים בבית הבליעה; ואם כן כיצד לא נעשה את האוכל (אדם) כמאכל (בדרגת הטומאה)?</div>
+      <div class="trans" data-when="en">Rabbi Eliezer said to Rabbi Yehoshua: The basis for my opinion that one assumes the level of impurity of that which he ate is that we found a case where the halakha of the one who eats a food item is more stringent than the halakha of the food itself. As, the carcass of a kosher bird on the outside, i.e., when one comes into contact with it, does not impart ritual impurity, while one who eats the carcass of the kosher bird renders his garments impure when the food is in his throat. And we, in light of that, how will we not deem one who eats the impure item to be on a level of impurity at least like that of the food that he ate?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ד א — Chullin 34a:7</span></div>
+      <div class="orig">וְרַבִּי יְהוֹשֻׁעַ: מִנִּבְלַת עוֹף טָהוֹר לָא גָּמְרִינַן, דְּחִידּוּשׁ הוּא. אֶלָּא מָצִינוּ שֶׁהַמַּאֲכָל חָמוּר מִן הָאוֹכֵל, דְּאִילּוּ מַאֲכָל בִּכְבֵיצָה, וְאוֹכֵל עַד דְּאָכֵיל כַּחֲצִי פְרָס, וְאָנוּ הֵיאַךְ נַעֲשֶׂה אוֹכֵל כַּמַּאֲכָל?</div>
+      <div class="trans" data-when="he">ורבי יהושע השיב: מנבלת עוף טהור אין ללמוד, שחידוש הוא; אדרבה — מצינו שהמאכל חמור מן האוכל: מאכל מטמא בכביצה, ואדם אינו נטמא עד שיאכל כחצי פרס; ואם כן כיצד נעשה את האוכל כמאכל?</div>
+      <div class="trans" data-when="en">And Rabbi Yehoshua responded that we do not derive other cases from the case of the carcass of a kosher bird, because it is a novel ruling that cannot serve as a paradigm. Rather, we found that the halakha of food is more stringent than the halakha of the one who eats it, as food becomes impure if its measure is that of an egg-bulk, and one who eats impure food does not become impure until he eats half of a half-loaf. And we, in light of that, how will we deem one who eats the impure item to be on a level of impurity like that of the food that he ate?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ד א — Chullin 34a:8</span></div>
+      <div class="orig">וְרַבִּי אֱלִיעֶזֶר: טוּמְאָה מִשִּׁיעוּרִין לָא גָּמְרִינַן, וְעוֹד – לִדְבָרֶיךָ שֶׁאַתָּה אוֹמֵר עַל רִאשׁוֹן שֵׁנִי – יָפֶה אַתָּה אוֹמֵר, שֵׁנִי שֵׁנִי לְמָה?</div>
+      <div class="trans" data-when="he">ורבי אליעזר השיב: אין למדים חומרת טומאה משיעורים. ועוד: לדבריך — האומר על אדם שאכל ׳ראשון׳ שנעשה ׳שני׳ — יפה אתה אומר; אבל שאכל ׳שני׳ ונעשה ׳שני׳ — למה? (הרי לפי שיטתך ראוי שיֵרד דרגה.)</div>
+      <div class="trans" data-when="en">And Rabbi Eliezer responded: We do not derive the relative stringency of ritual impurity from the relative size of halakhic measures, as measures are not indicative of stringency or leniency. And furthermore, according to your statement, that which you say with regard to one who eats food with first-degree ritual impurity, that he assumes second-degree impurity, what you say is well. But that which you say with regard to one who eats food with second-degree impurity, that he assumes second-degree impurity, why is that the case? It contradicts your reasoning.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ד א — Chullin 34a:9</span></div>
+      <div class="orig">אָמַר לוֹ: מָצִינוּ שֶׁהַשֵּׁנִי עוֹשֶׂה שֵׁנִי עַל יְדֵי מַשְׁקִין.</div>
+      <div class="trans" data-when="he">אמר לו רבי יהושע: מצינו שהשני עושה שני על ידי משקין — משקים הנוגעים באוכל שני, מטמאים אוכל אחר ועושים אותו שני.</div>
+      <div class="trans" data-when="en">Rabbi Yehoshua said to Rabbi Eliezer: We found that food with second-degree impurity renders other food impure with second-degree impurity by means of liquids. Liquids that come into contact with food with second-degree impurity render other food with which they come into contact impure with second-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ד א — Chullin 34a:10</span></div>
+      <div class="orig">אָמַר לוֹ: וְהָא מַשְׁקִין נָמֵי תְּחִלָּה הָווּ, דִּתְנַן: כׇּל הַפּוֹסֵל בִּתְרוּמָה מְטַמֵּא מַשְׁקִין לִהְיוֹת תְּחִלָּה, חוּץ מִטְּבוּל יוֹם.</div>
+      <div class="trans" data-when="he">אמר לו רבי אליעזר: והרי המשקים עצמם נעשים ׳תחילה׳ (ראשונים) ממגע השני, כמו ששנינו: כל הפוסל בתרומה מטמא משקים להיות תחילה (חוץ מטבול יום)? (ואם כן אין ראיה מהמשקים.)</div>
+      <div class="trans" data-when="en">Rabbi Eliezer said to him: But aren’t those liquids also impure with first-degree ritual impurity through contact with an item impure with second-degree impurity? As we learned in a mishna (Para 8:7): Any item with second-degree ritual impurity that disqualifies teruma renders liquids impure with first-degree ritual impurity. These liquids assume a degree of impurity greater than that of the item that rendered them impure. This rabbinic decree applies to all people and items with second-degree impurity except for one who was ritually impure who immersed that day and is waiting for nightfall for the purification process to be completed. Liquids with which he comes into contact follow the standard course of transmitted impurity and assume third-degree impurity, one level below his own impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ד א — Chullin 34a:11</span></div>
+      <div class="orig">וְעוֹד, שְׁלִישִׁי שֵׁנִי לָמָה?</div>
+      <div class="trans" data-when="he">ועוד שאל רבי אליעזר: ׳השלישי (האוכל אוכל שלישי) נעשה שני׳ — למה? (אף זה סותר את כללך.)</div>
+      <div class="trans" data-when="en">Rabbi Eliezer questioned the next segment in the ruling of Rabbi Yehoshua: And furthermore, that which you say with regard to one who eats food with third-degree impurity, that he assumes second-degree impurity vis-à-vis sacrificial food, why is that the halakha? It contradicts your reasoning.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ד א — Chullin 34a:12</span></div>
+      <div class="orig">אָמַר לוֹ: אַף אֲנִי לֹא אָמַרְתִּי אֶלָּא בִּתְרוּמָה, שֶׁטׇּהֳרָתָהּ</div>
+      <div class="trans" data-when="he">אמר לו רבי יהושע: אף אני לא אמרתי ׳שני׳ אלא בחולין שנעשו על טהרת תרומה, שטהרתה…</div>
+      <div class="trans" data-when="en">Rabbi Yehoshua said to Rabbi Eliezer: I too stated that one who eats food with third-degree impurity assumes second-degree impurity vis-à-vis sacrificial food only with regard to one who eats non-sacred food items that were prepared on the level of purity of teruma, as its state of purity</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ד ב — Chullin 34b:1</span></div>
+      <div class="orig">טוּמְאָה הִיא אֵצֶל הֶקְדֵּשׁ.</div>
+      <div class="trans" data-when="he">…טומאה היא אצל הקודש: גזרו חכמים שאף הנזהר בתרומתו בטהרה נחשב טמא לעניין הקודש; לפיכך האוכל אוכל (שנעשה על טהרת תרומה) שנטמא בשלישי — נעשה שני ומטמא קודש.</div>
+      <div class="trans" data-when="en">is impurity vis-à-vis sacrificial food. The Sages issued a decree that even one who is vigilant to partake of his teruma in a state of ritual purity is considered impure vis-à-vis one partaking of sacrificial food. Therefore, one who ate a food item that was prepared on the level of purity of teruma that had become impure with third-degree impurity assumes second-degree impurity, and he renders sacrificial food impure.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין ל״ד ב — Chullin 34b:2</span></div>
+      <div class="orig">אָמַר רַבִּי זֵירָא אָמַר רַבִּי אַסִּי אָמַר רַבִּי יוֹחָנָן אָמַר רַבִּי יַנַּאי: הָאוֹכֵל שְׁלִישִׁי שֶׁל חוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת הַקֹּדֶשׁ – נַעֲשָׂה גּוּפוֹ שֵׁנִי לַקֹּדֶשׁ.</div>
+      <div class="trans" data-when="he">אמר רבי זירא אמר רבי אסי אמר רבי יוחנן אמר רבי ינאי: האוכל שלישי של חולין שנעשו על טהרת הקודש — נעשה גופו שני לקודש (מטמא קודש בשלישי, וזה פוסל קודש אחר).</div>
+      <div class="trans" data-when="en">Rabbi Zeira says that Rabbi Asi says that Rabbi Yoḥanan says that Rabbi Yannai says: With regard to one who eats non-sacred food items that were prepared on the level of purity of sacrificial food, and these items had become impure with third-degree impurity, his body becomes impure with second-degree impurity vis-à-vis sacrificial food. He renders sacrificial food with which he comes into contact impure with third-degree impurity, and that food in turn disqualifies sacrificial food with which it comes into contact.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין ל״ד ב — Chullin 34b:3</span></div>
+      <div class="orig">אֵיתִיבֵיהּ רַבִּי זֵירָא לְרַבִּי אַסִּי: שְׁלִישִׁי שֵׁנִי לַקֹּדֶשׁ, וְאֵין שֵׁנִי לַתְּרוּמָה, בְּחוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת תְּרוּמָה. עַל טׇהֳרַת תְּרוּמָה – אִין, עַל טׇהֳרַת הַקֹּדֶשׁ – לָא!</div>
+      <div class="trans" data-when="he">איתיביה רבי זירא לרבי אסי מדברי רבי יהושע: ׳שלישי — שני לקודש ואין שני לתרומה׳ — בחולין שנעשו על טהרת תרומה; הא על טהרת תרומה אין, על טהרת הקודש לא (שאין בהם שלישי כלל)!</div>
+      <div class="trans" data-when="en">Rabbi Zeira raised an objection to the statement of Rabbi Asi from the statement of Rabbi Yehoshua: One who eats food with third-degree impurity assumes second-degree impurity vis-à-vis sacrificial food but does not assume second-degree impurity vis-à-vis teruma. This is stated in the case of non-sacred food items that were prepared on the level of purity of teruma. The Gemara infers: Yes, one is able to prepare items on the level of purity of teruma, but one is not able to prepare items on the level of purity of sacrificial food, as in the latter case the non-sacred food does not become impure at all.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין ל״ד ב — Chullin 34b:4</span></div>
+      <div class="orig">אֲמַר לֵיהּ: לָא מִיבַּעְיָא קָאָמַר.</div>
+      <div class="trans" data-when="he">אמר לו רבי אסי: דיוק זה אינו, שהרי רבי יהושע בלשון ׳לא מיבעיא׳ אמר — לא מיבעיא חולין שעל טהרת קודש החמורים שיש בהם שלישי, אלא אף שעל טהרת תרומה יש בהם שלישי.</div>
+      <div class="trans" data-when="en">Rabbi Asi said to Rabbi Zeira: That inference is incorrect, as Rabbi Yehoshua is speaking utilizing the style of: It is not necessary. It is not necessary to say that in the case of non-sacred food items that were prepared on the level of purity of sacrificial food, which is stringent, they have the capacity of assuming third-degree impurity. Rabbi Yehoshua teaches that non-sacred food items that were prepared on the level of purity of teruma also have the capacity of assuming third-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין ל״ד ב — Chullin 34b:5</span></div>
+      <div class="orig">וְהָא ״אַף אֲנִי לֹא אָמַרְתִּי אֶלָּא בִּתְרוּמָה״ קָאָמַר, אָמוֹרָאֵי נִינְהוּ, וְאַלִּיבָּא דְּרַבִּי יוֹחָנָן.</div>
+      <div class="trans" data-when="he">ומקשים: והרי לפי רבה בר בר חנה משום רבי יוחנן אמר רבי יהושע ׳אף אני לא אמרתי אלא בתרומה׳ (משמע שעל טהרת קודש אין בהם שלישי)! ומשיבים: אמוראים הם וחלוקים בדעת רבי יוחנן — אם דברי רבי יהושע נאמרו דווקא בחולין שעל טהרת תרומה, או אף שעל טהרת הקודש.</div>
+      <div class="trans" data-when="en">The Gemara objects: But didn’t Rabbi Yehoshua say to Rabbi Eliezer according to the explanation that Rabba bar bar Ḥana said that Rabbi Yoḥanan said: I too stated this only with regard to non-sacred food items that were prepared on the level of purity of teruma, indicating that he was not referring to non-sacred food items that were prepared on the level of purity of sacrificial food. The Gemara explains: Rabba bar bar Ḥana and Rabbi Asi are amora’im, and disagree with regard to the opinion of Rabbi Yoḥanan, and they disagree about whether the statement of Rabbi Yehoshua was stated specifically with regard to non-sacred food items that were prepared on the level of purity of teruma, or whether it includes even those prepared on the level of purity of sacrificial food.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
