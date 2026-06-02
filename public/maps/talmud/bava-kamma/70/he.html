@@ -809,5 +809,142 @@ graph TD
 
   applyPageLang();
 </script>
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries. Behavior layered on the
+     existing circled-numeral (①) <-> .num correspondence; no content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  .xref-cite-head { cursor: pointer; }
+  .xref-cite-head:hover .ref { text-decoration: underline; }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollTo(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function findNode(chart, n) {
+    var nodes = chart.querySelectorAll('.node');
+    for (var i = 0; i < nodes.length; i++) {
+      if (numFromText(nodes[i].textContent) === n) return nodes[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+
+  function wireSection(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart) return;
+
+    // Reference line (badge + ref name) -> its shape. Wired once per line.
+    var quotes = sec.querySelectorAll('.quote');
+    for (var i = 0; i < quotes.length; i++) {
+      var badge = quotes[i].querySelector('.num');
+      if (!badge) continue;
+      var head = badge.parentNode;        // the <div> holding .num + .ref
+      if (!head || head.getAttribute('data-xref') === '1') continue;
+      head.setAttribute('data-xref', '1');
+      head.classList.add('xref-cite-head');
+      (function (head, badge) {
+        head.addEventListener('click', function () {
+          if (selectionInside(head)) return;       // let the user select the ref text
+          var n = parseInt(badge.textContent, 10);
+          if (isNaN(n)) return;
+          var node = findNode(chart, n);
+          if (node) { scrollTo(node); flash(node, 'xref-flash-node'); }
+        });
+      })(head, badge);
+    }
+
+    // Shape -> its reference line. Nodes are recreated on each (re)render,
+    // so this re-runs and wires the fresh elements.
+    var nodes = chart.querySelectorAll('.node');
+    for (var j = 0; j < nodes.length; j++) {
+      var node = nodes[j];
+      if (node.getAttribute('data-xref') === '1') continue;
+      var n = numFromText(node.textContent);
+      if (n == null) continue;
+      node.setAttribute('data-xref', '1');
+      (function (node) {
+        node.addEventListener('click', function () {
+          var nn = numFromText(node.textContent);
+          if (nn == null) return;
+          var q = findQuote(sec, nn);
+          if (q) { scrollTo(q); flash(q, 'xref-flash-cite'); }
+        });
+      })(node);
+    }
+  }
+
+  function wireAll() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wireSection(secs[i]);
+  }
+
+  function start() {
+    wireAll();
+    // Re-wire whenever a chart (re)renders — initial Mermaid render and the
+    // meaning<->original toggle both replace the SVG. Self-contained: no
+    // dependency on the template's render code.
+    var charts = document.querySelectorAll('section.sugya .chart');
+    for (var i = 0; i < charts.length; i++) {
+      (function (chart) {
+        var sec = chart.closest('section.sugya');
+        var mo = new MutationObserver(function () { wireSection(sec); });
+        mo.observe(chart, { childList: true, subtree: true });
+      })(charts[i]);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
 </body>
 </html>

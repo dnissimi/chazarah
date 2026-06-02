@@ -357,3 +357,11 @@ Citation (one per segment; original full, both translations):
   `lang` + `embed=1` for chrome-free embedding), the bone palette + David Libre/Frank
   Ruhl Libre/Heebo fonts, and
   all the JS. Fill the placeholders; don't re-implement the JS.
+  - It also includes a self-contained **shape⇄citation cross-link** block
+    (`<script id="xref-crosslink">`): clicking a chart shape smooth-scrolls to its
+    citation below, and clicking a citation's head line (number badge + ref) scrolls
+    back up to its shape (each with a brief highlight). It keys off the existing
+    circled-numeral ① ↔ `.num` correspondence (scoped per `section.sugya`), re-wires on
+    every render via a MutationObserver (so it survives the toggle and `/he`↔`/en`), and
+    needs **no change to your authored content** — just keep node numerals and citation
+    `.num` badges matching, as you already do.
