@@ -909,6 +909,7 @@ graph TD
   applyPageLang();
 </script>
 
+
 <style id="xref-crosslink-style">
   /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
      Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
@@ -917,10 +918,19 @@ graph TD
   section.sugya .chart .node * { cursor: pointer; }
   section.sugya .quote > div:first-child { cursor: pointer; }
   section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
-  /* Touch devices have no :hover to reveal the faint meaning<->original toggle,
-     so show it at full strength there. */
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
   @media (hover: none) {
-    .chart .lang-toggle { opacity: 1; }
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
   }
   @keyframes xref-cite-flash {
     0%   { background: #fde68a; }
