@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל״ד</title>
+<meta name="description" content="עולא: האוכל שלישי של חולין שנעשו על טהרת תרומה — נפסל גופו מאכילת תרומה; קושיית נזיד הדמע ויישובה, ודברי רבי יונתן בשלישי של תרומה עצמה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="34">
+<meta name="gemara-map:sefaria-ref" content="Chullin 34">
+<meta name="gemara-map:topic-he" content="טומאת שלישי ואכילת תרומה">
+<meta name="gemara-map:topic-en" content="Third-degree impurity and teruma">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל״ד">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 34">
+<meta name="gemara-map:blurb-he" content="עולא: האוכל שלישי של חולין שנעשו על טהרת תרומה — נפסל גופו מאכילת תרומה; קושיית נזיד הדמע ויישובה, ודברי רבי יונתן בשלישי של תרומה עצמה.">
+<meta name="gemara-map:blurb-en" content="Ulla: one who eats third-degree non-sacred food prepared in teruma purity is disqualified from teruma; the teruma-spiced-stew objection and its resolution, and Rabbi Yonatan on third-degree of teruma itself.">
+<meta name="gemara-map:sugya-count" content="1">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל״ד</span><span data-when="en">Sugya map — Chullin 34</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל״ד ב–ל״ה א (ל״ד ב:ו–ל״ה א:ג) · סוגיה אחת · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 34b–35a (34b:6–35a:3) · one sugya · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> הסוגיה עוסקת בדינו של מי שאכל אוכל בדרגת טומאה שלישית: עולא קובע שאם אכל חולין שנעשו על טהרת תרומה — גופו נפסל מאכילת תרומה. רב המנונא מקשה מן המשנה (שהשלישי נאכל בנזיד הדמע), והגמרא מיישבת שאין באותו תבשיל שיעור תרומה הקובע. לבסוף מצטרפים דברי רבי יונתן על שלישי של תרומה עצמה (אסור לאכול, מותר ליגע) — וצריכים את שתי ההלכות.</span>
+    <span data-when="en"><b>Bottom line:</b> The sugya treats one who has eaten food with third-degree impurity: Ulla rules that if he ate non-sacred food prepared in teruma purity, his body is disqualified from teruma. Rav Hamnuna objects from the mishna (third-degree food may be eaten in a teruma-spiced stew), and the Gemara answers that the stew contains no qualifying measure of teruma. Finally Rabbi Yonatan’s ruling on third-degree of teruma itself (barred from eating, permitted to touch) is added — and both statements are necessary.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  
+
+    <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">טומאת שלישי ואכילת תרומה</span><span data-when="en">Third-degree impurity and teruma</span>
+        <span class="ref">Chullin 34b:6-35a:3</span></h2>
+    <div class="lead"><span data-when="he">עולא קובע שהאוכל אוכל שלישי (חולין שנעשו על טהרת תרומה) נפסל גופו מאכילת תרומה; רב המנונא מקשה מנזיד הדמע, והגמרא מיישבת ומצרפת את דברי רבי יונתן בתרומה עצמה — וצריכים את שניהם.</span><span data-when="en">Ulla holds that one who eats third-degree food (non-sacred prepared in teruma purity) is disqualified from teruma; Rav Hamnuna objects from the teruma-spiced stew, the Gemara resolves it, and Rabbi Yonatan's parallel ruling on teruma itself is added — both statements are needed.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עולא: אוכל שלישי של חולין (על טהרת תרומה) — גופו נפסל מתרומה"]:::statement
+  Q2{"② מאי קא משמע לן? תנינא!"}:::question
+  A3["③ צריכא: קמ״ל ששלישי הוי — ונפסל"]:::answer
+  Q4{"④ מיתיבי: השלישי נאכל בנזיד הדמע"}:::question
+  Q5{"⑤ וספינן ליה מידי דפסיל לגופו? — הנח לנזיד הדמע"}:::question
+  A6["⑥ דליכא כזית בכדי אכילת פרס"]:::answer
+  S7["⑦ ר׳ יונתן בשם רבי: שלישי של תרומה עצמה — אסור לאכול, מותר ליגע"]:::statement
+  C8(["⑧ מסקנה: צריכי — עולא (חולין) ורבי יונתן (תרומה)"]):::conclusion
+  S1 -->|קושיא| Q2
+  Q2 -->|תירוץ| A3
+  A3 -.->|מיתיבי| Q4
+  Q4 -->|המשך| Q5
+  Q5 -->|תירוץ| A6
+  A6 -->|דין נוסף| S7
+  S7 -->|צריכא| C8
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Ulla: eating third-degree non-sacred food (in teruma purity) disqualifies the body from teruma"]:::statement
+  Q2{"② What does this teach? We already learned it!"}:::question
+  A3["③ Necessary: it teaches he does assume third-degree — and is disqualified"]:::answer
+  Q4{"④ Objection: third-degree food may be eaten in a teruma-spiced stew"}:::question
+  Q5{"⑤ Would we feed him what disqualifies his body? — set the stew aside"}:::question
+  A6["⑥ There is no olive-bulk within the time to eat a half-loaf"]:::answer
+  S7["⑦ R. Yonatan in Rabbi's name: third-degree of teruma itself — barred from eating, permitted to touch"]:::statement
+  C8(["⑧ Conclusion: both needed — Ulla (non-sacred) and R. Yonatan (teruma)"]):::conclusion
+  S1 -->|objection| Q2
+  Q2 -->|answer| A3
+  A3 -.->|objection| Q4
+  Q4 -->|continues| Q5
+  Q5 -->|answer| A6
+  A6 -->|further ruling| S7
+  S7 -->|both needed| C8
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הָאוֹכֵל שְׁלִישִׁי שֶׁל חוּלִּין … נִפְסַל גּוּפוֹ מִלֶּאֱכוֹל בִּתְרוּמָה"]:::statement
+  Q2{"② מַאי קָא מַשְׁמַע לַן? תְּנֵינָא … הָא שְׁלִישִׁי הָוֵי"}:::question
+  A3["③ אִי מֵהַהִיא … אַיְּידֵי דְּאָמַר ״שֵׁנִי בַּקֹּדֶשׁ״ … קָא מַשְׁמַע לַן"]:::answer
+  Q4{"④ הָרִאשׁוֹן … וְהַשְּׁלִישִׁי נֶאֱכָל בִּנְזִיד הַדֶּמַע"}:::question
+  Q5{"⑤ סָפֵינַן לֵיהּ מִידֵּי דְּפָסֵיל לֵיהּ לְגוּפֵיהּ? … הַנַּח לִנְזִיד הַדֶּמַע"}:::question
+  A6["⑥ דְּלֵיכָּא כְּזַיִת בִּכְדֵי אֲכִילַת פְּרָס"]:::answer
+  S7["⑦ הָאוֹכֵל שְׁלִישִׁי שֶׁל תְּרוּמָה עַצְמָהּ – אָסוּר לֶאֱכוֹל, וּמוּתָּר לִיגַּע"]:::statement
+  C8(["⑧ וְאִיצְטְרִיךְ דְּעוּלָּא, וְאִיצְטְרִיךְ דְּרַבִּי יוֹנָתָן … צְרִיכִי"]):::conclusion
+  S1 -->|קושיא| Q2
+  Q2 -->|תירוץ| A3
+  A3 -.->|מיתיבי| Q4
+  Q4 -->|המשך| Q5
+  Q5 -->|תירוץ| A6
+  A6 -->|דין נוסף| S7
+  S7 -->|צריכא| C8
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ד ב — Chullin 34b:6</span></div>
+      <div class="orig">אָמַר עוּלָּא: הָאוֹכֵל שְׁלִישִׁי שֶׁל חוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת תְּרוּמָה – נִפְסַל גּוּפוֹ מִלֶּאֱכוֹל בִּתְרוּמָה.</div>
+      <div class="trans" data-when="he">אמר עולא: האוכל אוכלי חולין שדרגת טומאתם שלישית, שנעשו על טהרת תרומה — גופו נפסל מלאכול בתרומה.</div>
+      <div class="trans" data-when="en">§ Ulla says: One who eats non-sacred food items that were prepared on the level of purity of teruma and that are impure with third-degree impurity, his body is disqualified from the right to partake of teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ד ב — Chullin 34b:7</span></div>
+      <div class="orig">מַאי קָא מַשְׁמַע לַן? תְּנֵינָא: שְׁלִישִׁי שֵׁנִי לַקֹּדֶשׁ, וְאֵין שֵׁנִי לַתְּרוּמָה, בְּחוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת תְּרוּמָה. שֵׁנִי הוּא דְּלָא הָוֵי, הָא שְׁלִישִׁי הָוֵי.</div>
+      <div class="trans" data-when="he">מה משמיע לנו עולא? הרי כבר שנינו (טהרות): ׳שלישי — שני לקודש ואין שני לתרומה, בחולין שנעשו על טהרת תרומה׳. מדויק: שֵני אינו נעשה, אבל שלישי כן נעשה — ומכאן שנפסל מתרומה.</div>
+      <div class="trans" data-when="en">The Gemara asks: What is Ulla teaching us? We already learn in the mishna cited earlier (33b) from tractate Teharot: One who eats food with third-degree impurity assumes second-degree impurity vis-à-vis sacrificial food, but does not assume second-degree impurity vis-à-vis teruma. This is stated in the case of non-sacred food items that were prepared on the level of purity of teruma. The Gemara infers: It is second-degree impurity that he does not assume, but third-degree impurity he assumes, and he is therefore disqualified from partaking of teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ד ב — Chullin 34b:8</span></div>
+      <div class="orig">אִי מֵהַהִיא, הֲוָה אָמֵינָא: לָא שֵׁנִי הָוֵי וְלָא שְׁלִישִׁי הָוֵי, וְאַיְּידֵי דְּאָמַר ״שֵׁנִי בַּקֹּדֶשׁ״ – אָמַר נָמֵי ״אֵין שֵׁנִי בִּתְרוּמָה״, קָא מַשְׁמַע לַן.</div>
+      <div class="trans" data-when="he">ומשיבים: אילו רק מאותה משנה, הייתי אומר שלא נעשה לא שני ולא שלישי לתרומה (שאין הסברה שדין האוכֵל כדין מאכלו), ומה שנקט ׳שני בקודש׳ גרר גם ׳אין שני בתרומה׳ — לכן עולא משמיע לנו שכן נעשה שלישי, ונפסל.</div>
+      <div class="trans" data-when="en">The Gemara answers: It was necessary for Ulla to teach this halakha, as if it was learned from that mishna, I would say that vis-à-vis teruma he assumes neither second-degree nor third-degree impurity, as there is no reason to deem the status of one who eats like that of the food that he ate. And perhaps it was only since Rabbi Yehoshua said that he assumes second-degree impurity vis-à-vis sacrificial food that he also said that he does not assume second-degree impurity vis-à-vis teruma. Therefore, Ulla teaches us that he assumes third-degree impurity and is disqualified from partaking of teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ד ב — Chullin 34b:9</span></div>
+      <div class="orig">אֵיתִיבֵיהּ רַב הַמְנוּנָא לְעוּלָּא: הָרִאשׁוֹן שֶׁבַּחוּלִּין טָמֵא וּמְטַמֵּא, וְהַשֵּׁנִי פּוֹסֵל וְאֵינוֹ מְטַמֵּא, וְהַשְּׁלִישִׁי נֶאֱכָל בִּנְזִיד הַדֶּמַע.</div>
+      <div class="trans" data-when="he">הקשה רב המנונא לעולא ממשנה (טהרות): הראשון שבחולין — טמא ומטמא (פוסל תרומה לטמא אחרת); השני — פוסל את התרומה ואינו מטמא; והשלישי — נאכל בנזיד הדֶּמַע (תבשיל שמעורבים בו תבליני תרומה).</div>
+      <div class="trans" data-when="en">Rav Hamnuna raised an objection to the statement of Ulla from a mishna (Teharot 2:3): Non-sacred food that is impure with first-degree impurity is impure and renders teruma impure in the sense that this teruma disqualifies other teruma with which it comes into contact. Non-sacred food that is impure with second-degree impurity disqualifies teruma, but it does not render teruma impure, meaning that it renders the teruma itself impure, but not to the extent that the teruma can render other teruma impure. And food that is impure with third-degree impurity may be eaten by a priest in a stew that is a mixture containing spices of teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ד ב — Chullin 34b:10</span></div>
+      <div class="orig">וְאִי אָמְרַתְּ נִפְסַל גּוּפוֹ מִלֶּאֱכוֹל בִּתְרוּמָה, סָפֵינַן לֵיהּ מִידֵּי דְּפָסֵיל לֵיהּ לְגוּפֵיהּ? אֲמַר לֵיהּ: הַנַּח לִנְזִיד הַדֶּמַע,</div>
+      <div class="trans" data-when="he">ואם אתה אומר שהאוכל שלישי גופו נפסל מתרומה — וכי נאכיל לו דבר הפוסל את גופו (תבליני התרומה שבנזיד)? אמר לו עולא: הנח את נזיד הדמע,</div>
+      <div class="trans" data-when="en">And if you say that by partaking of food that is impure with third-degree impurity his body is disqualified from the right to partake of teruma, do we feed him a matter that invalidates his body from the right to partake of teruma? According to this, when eating the stew that contains food that is impure with third-degree impurity, he is disqualified from partaking of the spices of teruma that the mishna permits him to add to the stew. Ulla said to him: Leave the matter of stew that is a mixture containing spices of teruma,</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ה א — Chullin 35a:1</span></div>
+      <div class="orig">דְּלֵיכָּא כְּזַיִת בִּכְדֵי אֲכִילַת פְּרָס.</div>
+      <div class="trans" data-when="he">שכן אין בו כזית תרומה בכדי אכילת פרס (פחות מן השיעור שנחשב אכילת תרומה), ולכן אין צורך לנהוג בו טהרת תרומה.</div>
+      <div class="trans" data-when="en">as there is not an olive-bulk of teruma in the amount of stew that he eats in the time it takes to eat a half-loaf of bread. Therefore, one need not treat the mixture with the level of purity required of teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ה א — Chullin 35a:2</span></div>
+      <div class="orig">אָמַר רַבִּי יוֹנָתָן אָמַר רַבִּי: הָאוֹכֵל שְׁלִישִׁי שֶׁל תְּרוּמָה עַצְמָהּ – אָסוּר לֶאֱכוֹל, וּמוּתָּר לִיגַּע.</div>
+      <div class="trans" data-when="he">אמר רבי יונתן אמר רבי: האוכל שלישי של תרומה עצמה — אסור לו לאכול תרומה (אחרת), אך מותר לו לגעת בה.</div>
+      <div class="trans" data-when="en">Rabbi Yonatan says that Rabbi Yehuda HaNasi says: For one who partakes of actual teruma that is impure with third-degree impurity, it is prohibited to partake of other teruma, but it is permitted to come into contact with teruma.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ה א — Chullin 35a:3</span></div>
+      <div class="orig">וְאִיצְטְרִיךְ דְּעוּלָּא, וְאִיצְטְרִיךְ דְּרַבִּי יוֹנָתָן, דְּאִי מִדְּעוּלָּא הֲוָה אָמֵינָא: הָנֵי מִילֵּי בְּחוּלִּין שֶׁנַּעֲשׂוּ עַל טׇהֳרַת תְּרוּמָה, אֲבָל תְּרוּמָה – בִּנְגִיעָה נָמֵי אָסוּר, אִיצְטְרִיךְ דְּרַבִּי יוֹנָתָן. וְאִי מִדְּרַבִּי יוֹנָתָן הֲוָה אָמֵינָא: הָנֵי מִילֵּי תְּרוּמָה, אֲבָל חוּלִּין – בַּאֲכִילָה נָמֵי שְׁרֵי, צְרִיכִי.</div>
+      <div class="trans" data-when="he">וצריך גם את עולא וגם את רבי יונתן: אילו מעולא בלבד, הייתי אומר שדווקא בחולין שנעשו על טהרת תרומה נפסל, אבל בתרומה עצמה אף הנגיעה אסורה — לכן צריך את רבי יונתן. ואילו מרבי יונתן בלבד, הייתי אומר שדווקא בתרומה, אבל חולין אף באכילה מותר — לכן צריכים את שניהם.</div>
+      <div class="trans" data-when="en">The Gemara notes that the statement of Ulla was necessary and the statement of Rabbi Yonatan was necessary. As, if the halakha were learned exclusively from the statement of Ulla, I would say: This statement applies with regard to non-sacred food items that were prepared on the level of purity of teruma, but with regard to teruma itself perhaps contact is also prohibited. Therefore, the statement of Rabbi Yonatan was necessary. And if the halakha were learned exclusively from the statement of Rabbi Yonatan, I would say: This statement applies with regard to teruma, but with regard to non-sacred food that was prepared with purity of teruma, perhaps eating it is also permitted. Therefore, both statements are necessary.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
