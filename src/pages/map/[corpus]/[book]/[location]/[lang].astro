@@ -35,7 +35,7 @@ export async function getStaticPaths() {
       if (lang !== 'he' && lang !== 'en') continue;
       paths.push({
         params: { corpus: m.data.corpus, book: m.data.book, location: m.data.location, lang },
-        props: { title: m.data.title, blurb: m.data.blurb },
+        props: { title: m.data.title, blurb: m.data.blurb, topic: m.data.topic, ref: m.data.sefariaRef },
       });
     }
   }
@@ -49,8 +49,28 @@ const { corpus, book, location, lang } = Astro.params as Record<string, string>;
 const L: Lang = lang === 'en' ? 'en' : 'he';
 const dir = DIR[L];
 const t = resolved(L);
-const { title, blurb } = Astro.props as { title: Record<Lang, string>; blurb: Record<Lang, string> };
+const { title, blurb, topic, ref } = Astro.props as {
+  title: Record<Lang, string>; blurb: Record<Lang, string>;
+  topic: { he: string; en: string }; ref: string;
+};
 const pageTitle = `${title[L]} — ${t.brand}`;
+
+// Record this daf in the visitor's "recently viewed" store on load. Site-side,
+// so every map view counts — the site's links go straight to this map leaf and
+// bypass the info page, which used to be the only place recents were recorded.
+// Inlined (no import into the raw map string) but kept byte-compatible with
+// src/lib/visitor-recents.ts: same key 'chazarah.visitorRecents.v2', dedupe by
+// corpus/book/location, newest-first, cap 10.
+const recordScript = `<script>(function(){try{
+  var K='chazarah.visitorRecents.v2';
+  var e=${JSON.stringify({ corpus, book, location, topic, ref })};
+  e.openedAt=new Date().toISOString();
+  var cur=[]; try{cur=JSON.parse(localStorage.getItem(K)||'[]')||[];}catch(_){}
+  if(!Array.isArray(cur))cur=[];
+  cur=cur.filter(function(x){return !(x&&x.corpus===e.corpus&&x.book===e.book&&x.location===e.location);});
+  cur.unshift(e);
+  localStorage.setItem(K,JSON.stringify(cur.slice(0,10)));
+}catch(_){}})();<\/script>`;
 
 const base = `${SITE}/map/${corpus}/${book}/${location}`;
 const self = `${base}/${L}`;
@@ -155,5 +175,6 @@ html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(pageTitle)}</title>`)
 html = html.replace(/<meta\s+name="description"\s+content="[^"]*">/, `<meta name="description" content="${esc(blurb[L])}">`);
 html = html.replace('</head>', `${seoHead}\n${fontLink}\n${headerCss}\n</head>`);
 html = html.replace(/<body([^>]*)>/, `<body$1>\n${header}`);
+html = html.replace('</body>', `${recordScript}\n</body>`);
 ---
 <Fragment set:html={html} />
