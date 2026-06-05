@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל״ו</title>
+<meta name="description" content="שתי סוגיות בחולין ל״ו: השוחט והתיז דם שחיטה על דלעת — מחלוקת רבי ורבי חייא אם הדם מכשיר; וספק ריש לקיש בצריד של מנחות — האם חיבת הקודש מועילה אף למנות ראשון ושני, עד תיקו.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="36">
+<meta name="gemara-map:sefaria-ref" content="Chullin 36">
+<meta name="gemara-map:topic-he" content="הכשר דם השחיטה וחיבת הקודש">
+<meta name="gemara-map:topic-en" content="Slaughter-blood and regard for sanctity">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל״ו">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 36">
+<meta name="gemara-map:blurb-he" content="שתי סוגיות בחולין ל״ו: השוחט והתיז דם שחיטה על דלעת — מחלוקת רבי ורבי חייא אם הדם מכשיר; וספק ריש לקיש בצריד של מנחות — האם חיבת הקודש מועילה אף למנות ראשון ושני, עד תיקו.">
+<meta name="gemara-map:blurb-en" content="Two sugyot on Chullin 36: one who splashes slaughter-blood on a gourd — the dispute of Rabbi and Rabbi Ḥiyya whether the blood renders it susceptible; and Reish Lakish's dilemma about dry meal-offering flour — whether regard for sanctity also lets one count first- and second-degree impurity, ending in teiku.">
+<meta name="gemara-map:sugya-count" content="2">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל״ו</span><span data-when="en">Sugya map — Chullin 36</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל״ו א–ל״ז א (ל״ו א:ג–ל״ז א:א) · שתי סוגיות · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 36a–37a (36a:3–37a:1) · two sugyot · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המפה פותחת במחלוקת רבי ורבי חייא בשׁוחט שהתיז דם שחיטה על דלעת — האם הדם מכשיר את הדלעת לקבל טומאה; רבי אושעיא נשען על רבי שמעון ׳שחיטה מכשרת ולא דם׳, ורב פפא ורב אשי ממקדים את המחלוקת במקרה שנתקנח הדם בין סימן לסימן. הסוגיה השנייה היא ספק ריש לקיש בצריד של מנחות: כשחיבת הקודש מכשירה — האם רק לפסול את גופו או גם למנות בו ראשון ושני; אחר משא-ומתן ארוך מתברר שחיבת הקודש מכשירה מן התורה, אך הספק גופו נשאר ב׳תיקו׳.</span>
+    <span data-when="en"><b>Bottom line:</b> The map opens with the dispute of Rabbi and Rabbi Ḥiyya about one who splashes slaughter-blood on a gourd — does the blood render it susceptible to impurity? Rabbi Oshaya leans on Rabbi Shimon (slaughter, not blood, renders susceptible), and Rav Pappa and Rav Ashi pin the dispute to the case where the blood was wiped off between one siman and the other. The second sugya is Reish Lakish’s dilemma about dry meal-offering flour: when regard for sanctity renders it susceptible — only to disqualify itself, or also to count first- and second-degree impurity? After a long give-and-take it emerges that regard for sanctity renders by Torah law, but the dilemma itself is left unresolved (teiku).</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+    <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — שתי סוגיות</span><span data-when="en">Overview — two sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · התיז דם על הדלעת — שחיטה מכשרת או הדם"]:::statement
+  O2["2 · צריד של מנחות — חיבת הקודש כהכשר?"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Blood splashed on a gourd — slaughter or blood renders susceptible"]:::statement
+  O2["2 · Dry meal-offering flour — regard for sanctity as an enabler?"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+      </script>
+    </div>
+  </section>
+
+    <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">התיז דם על הדלעת — שחיטה מכשרת או הדם</span><span data-when="en">Blood splashed on a gourd</span>
+        <span class="ref">Chullin 36a:3-36a:11</span></h2>
+    <div class="lead"><span data-when="he">רבי ורבי חייא נחלקו בשׁוחט שהתיז דם שחיטה על דלעת של תרומה: רבי מכשיר, רבי חייא ׳תולין׳. רבי אושעיא מציע להישען על רבי שמעון (שחיטה מכשרת ולא דם), ורב פפא ורב אשי מבארים שהמחלוקת היא בנתקנח הדם בין סימן לסימן.</span><span data-when="en">Rabbi and Rabbi Ḥiyya disagree about one who splashes slaughter-blood on a gourd of teruma: Rabbi renders it susceptible, Rabbi Ḥiyya places it ׳in abeyance.׳ Rabbi Oshaya proposes relying on Rabbi Shimon (slaughter, not blood, renders susceptible); Rav Pappa and Rav Ashi explain that the dispute is in the case where the blood was wiped off between one siman and the other.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: התיז דם שחיטה על דלעת — רבי: הוכשר; ר׳ חייא: תולין"]:::statement
+  S2["② ר׳ אושעיא: על מי נסמוך? נסמוך על ר׳ שמעון — שחיטה מכשרת ולא דם"]:::statement
+  S3["③ רב פפא: דם מתחילה ועד סוף — מכשיר לכו״ע; פליגי בנתקנח"]:::statement
+  S4["④ רבי: ישנה לשחיטה מתחילה ועד סוף — דם שחיטה (מכשיר)"]:::statement
+  O5["⑤ ר׳ חייא: שחיטה רק בסוף — דם מכה; ׳תולין׳ עד גמר שחיטה"]:::statement
+  Q6{"⑥ ומאי ׳נסמוך על ר״ש׳? לר״ש לא מכשיר, לר׳ חייא מכשיר!"}:::question
+  A7["⑦ בנתקנח אשוו: מר ומר לא מכשיר — רבי יחיד, ואין דבריו במקום שניים"]:::answer
+  S8["⑧ רב אשי: ׳תולין׳ לעולם — ר׳ חייא מספקא ליה; ׳תולין׳: לא אוכלין ולא שורפין"]:::statement
+  Q9{"⑨ ומאי ׳נסמוך על ר״ש׳? לר״ש לא מכשיר, לר׳ חייא ספק!"}:::question
+  A10["⑩ לעניין שריפה שווים — לזה לא שורפין ולזה לא שורפין; רבי יחיד מול שניים"]:::answer
+  S1 -->|אנא על מי נסמוך| S2
+  S2 -->|הסבר א׳| S3
+  S3 --> S4
+  S3 --> O5
+  S4 -.->|קושיא| Q6
+  O5 -.->|קושיא| Q6
+  Q6 -->|תירוץ| A7
+  S2 -->|הסבר ב׳| S8
+  S8 -.->|קושיא| Q9
+  Q9 -->|תירוץ| A10
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: splashed slaughter-blood on a gourd — Rabbi: rendered susceptible; R. Ḥiyya: in abeyance"]:::statement
+  S2["② R. Oshaya: on whom rely? Rely on R. Shimon — slaughter renders susceptible, not blood"]:::statement
+  S3["③ Rav Pappa: blood present start-to-finish — all agree it renders; they dispute the wiped-off case"]:::statement
+  S4["④ Rabbi: slaughter spans start-to-finish — this is slaughter-blood (renders)"]:::statement
+  O5["⑤ R. Ḥiyya: slaughter only at the end — this is wound-blood; ׳abeyance׳ until slaughter ends"]:::statement
+  Q6{"⑥ Then what is ׳rely on R. Shimon׳? For R. Shimon it does not render, for R. Ḥiyya it does!"}:::question
+  A7["⑦ In the wiped case both agree it does not render — so Rabbi is one against two"]:::answer
+  S8["⑧ Rav Ashi: ׳abeyance׳ means forever — R. Ḥiyya is in doubt; ׳abeyance׳: neither eat nor burn"]:::statement
+  Q9{"⑨ Then what is ׳rely on R. Shimon׳? For R. Shimon no, for R. Ḥiyya a doubt!"}:::question
+  A10["⑩ For burning both agree — neither burns; so Rabbi is one against two"]:::answer
+  S1 -->|on whom rely?| S2
+  S2 -->|reading 1| S3
+  S3 --> S4
+  S3 --> O5
+  S4 -.->|objection| Q6
+  O5 -.->|objection| Q6
+  Q6 -->|answer| A7
+  S2 -->|reading 2| S8
+  S8 -.->|objection| Q9
+  Q9 -->|answer| A10
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הַשּׁוֹחֵט וְהִתִּיז דָּם עַל הַדַּלַּעַת – רַבִּי אוֹמֵר: הוּכְשַׁר, רַבִּי חִיָּיא אוֹמֵר: תּוֹלִין"]:::statement
+  S2["② אָנוּ עַל מִי נִסְמוֹךְ? … עַל דִּבְרֵי רַבִּי שִׁמְעוֹן … שְׁחִיטָה מַכְשֶׁרֶת וְלֹא דָּם"]:::statement
+  S3["③ רַב פָּפָּא: הַכֹּל מוֹדִים … דְּאִיתֵיהּ לְדָם מִתְּחִלָּה וְעַד סוֹף … כִּי פְּלִיגִי בְּנִתְקַנֵּחַ"]:::statement
+  S4["④ רַבִּי סָבַר: יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף, וְהַאי דַּם שְׁחִיטָה הוּא"]:::statement
+  O5["⑤ רַבִּי חִיָּיא … אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף … וּמַאי ׳תּוֹלִין׳? עַד גְּמַר שְׁחִיטָה"]:::statement
+  Q6{"⑥ וּמַאי ׳נִסְמוֹךְ עַל … רַבִּי שִׁמְעוֹן׳? לְרַבִּי שִׁמְעוֹן לֹא מַכְשִׁיר, לְרַבִּי חִיָּיא מַכְשִׁיר!"}:::question
+  A7["⑦ בְּנִתְקַנֵּחַ … מָר לָא מַכְשִׁיר וּמָר לָא מַכְשִׁיר … אֵין דְּבָרָיו שֶׁל אֶחָד בִּמְקוֹם שְׁנַיִם"]:::answer
+  S8["⑧ רַב אָשֵׁי: ׳תּוֹלִין׳ לְעוֹלָם מַשְׁמַע … סַפּוֹקֵי מְסַפְּקָא לֵיהּ … לֹא אוֹכְלִין וְלֹא שׂוֹרְפִין"]:::statement
+  Q9{"⑨ וּמַאי ׳נִסְמוֹךְ עַל … רַבִּי שִׁמְעוֹן׳? לְרַבִּי שִׁמְעוֹן לֹא מַכְשִׁיר, לְרַבִּי חִיָּיא סְפֵיקָא!"}:::question
+  A10["⑩ לְעִנְיַן שְׂרֵיפָה … לָא שָׂרְפִינַן … הָוֵה לֵיהּ רַבִּי חַד … בִּמְקוֹם שְׁנַיִם"]:::answer
+  S1 -->|אנא על מי נסמוך| S2
+  S2 -->|הסבר א׳| S3
+  S3 --> S4
+  S3 --> O5
+  S4 -.->|קושיא| Q6
+  O5 -.->|קושיא| Q6
+  Q6 -->|תירוץ| A7
+  S2 -->|הסבר ב׳| S8
+  S8 -.->|קושיא| Q9
+  Q9 -->|תירוץ| A10
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ו א — Chullin 36a:3</span></div>
+      <div class="orig">תָּנוּ רַבָּנַן: הַשּׁוֹחֵט וְהִתִּיז דָּם עַל הַדַּלַּעַת – רַבִּי אוֹמֵר: הוּכְשַׁר, רַבִּי חִיָּיא אוֹמֵר: תּוֹלִין.</div>
+      <div class="trans" data-when="he">תנו רבנן: השוחט בהמה והתיז (שׁפך) דם השחיטה על דלעת של תרומה — רבי אומר: הוכשרה הדלעת לקבל טומאה; רבי חייא אומר: תולין (אם נגעה בטומאה — מסופקים, כי ספק אם הדם הכשירהּ).</div>
+      <div class="trans" data-when="en">§ The Sages taught in a baraita: With regard to one who slaughters an animal and splashed blood of the slaughter on a gourd of teruma, Rabbi Yehuda HaNasi says: The gourd is rendered susceptible to ritual impurity. Rabbi Ḥiyya says: If the gourd came into contact with a source of impurity, one places the matter in abeyance, as there is uncertainty whether the blood rendered it susceptible to impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ו א — Chullin 36a:4</span></div>
+      <div class="orig">אָמַר רַבִּי אוֹשַׁעְיָא: מֵאַחַר שֶׁרַבִּי אוֹמֵר הוּכְשַׁר, וְרַבִּי חִיָּיא אוֹמֵר תּוֹלִין, אָנוּ עַל מִי נִסְמוֹךְ? בֹּאוּ וְנִסְמוֹךְ עַל דִּבְרֵי רַבִּי שִׁמְעוֹן, שֶׁהָיָה רַבִּי שִׁמְעוֹן אוֹמֵר: שְׁחִיטָה מַכְשֶׁרֶת וְלֹא דָּם.</div>
+      <div class="trans" data-when="he">אמר רבי אושעיא: מאחר שרבי אומר ׳הוכשר׳ ורבי חייא אומר ׳תולין׳, על מי נסמוך? בואו ונסמוך על דברי רבי שמעון, שהיה אומר: השחיטה מכשרת ולא הדם.</div>
+      <div class="trans" data-when="en">Rabbi Oshaya said: Since Rabbi Yehuda HaNasi says that the gourd is rendered susceptible to ritual impurity and Rabbi Ḥiyya says that one places the matter in abeyance, on whom shall we rely? Come and let us rely on the statement of Rabbi Shimon, as Rabbi Shimon would say: It is slaughter that renders the animal susceptible, and not blood.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ו א — Chullin 36a:5</span></div>
+      <div class="orig">אָמַר רַב פָּפָּא: הַכֹּל מוֹדִים הֵיכָא דְּאִיתֵיהּ לְדָם מִתְּחִלָּה וְעַד סוֹף – כּוּלֵּי עָלְמָא לָא פְּלִיגִי דְּמַכְשַׁיר. כִּי פְּלִיגִי בְּנִתְקַנֵּחַ הַדָּם בֵּין סִימָן לְסִימָן, רַבִּי סָבַר: יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף, וְהַאי דַּם שְׁחִיטָה הוּא.</div>
+      <div class="trans" data-when="he">אמר רב פפא: הכל מודים שאם היה דם על הדלעת מתחילת השחיטה ועד סופה — לכולי עלמא מכשיר. נחלקו רק כשנתקנח (נמחה) הדם בין סימן לסימן: רבי סובר שהשחיטה נמשכת מתחילה ועד סוף, וזהו דם שחיטה (ולכן מכשיר).</div>
+      <div class="trans" data-when="en">Rav Pappa said in explanation: Everyone, Rabbi Yehuda HaNasi and Rabbi Ḥiyya, agrees that where there is blood on the gourd throughout the slaughter continuously from beginning to end, everyone, both Rabbi Shimon ben Lakish, who says: Slaughter is defined only as the conclusion of its performance, and Rabbi Yoḥanan, who says: Slaughter is defined from the beginning to the end of its performance, agrees that the blood renders the gourd susceptible to impurity, in accordance with the opinion of the Rabbis, who disagree with Rabbi Shimon. When they disagree is in a case where the blood is wiped off the gourd between the cutting of one siman and the other siman. Rabbi Yehuda HaNasi holds that slaughter is defined from the beginning to the end of its performance, and this blood that splashed on the gourd is blood of slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ו א — Chullin 36a:5</span></div>
+      <div class="orig">אָמַר רַב פָּפָּא: הַכֹּל מוֹדִים הֵיכָא דְּאִיתֵיהּ לְדָם מִתְּחִלָּה וְעַד סוֹף – כּוּלֵּי עָלְמָא לָא פְּלִיגִי דְּמַכְשַׁיר. כִּי פְּלִיגִי בְּנִתְקַנֵּחַ הַדָּם בֵּין סִימָן לְסִימָן, רַבִּי סָבַר: יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף, וְהַאי דַּם שְׁחִיטָה הוּא.</div>
+      <div class="trans" data-when="he">אמר רב פפא: הכל מודים שאם היה דם על הדלעת מתחילת השחיטה ועד סופה — לכולי עלמא מכשיר. נחלקו רק כשנתקנח (נמחה) הדם בין סימן לסימן: רבי סובר שהשחיטה נמשכת מתחילה ועד סוף, וזהו דם שחיטה (ולכן מכשיר).</div>
+      <div class="trans" data-when="en">Rav Pappa said in explanation: Everyone, Rabbi Yehuda HaNasi and Rabbi Ḥiyya, agrees that where there is blood on the gourd throughout the slaughter continuously from beginning to end, everyone, both Rabbi Shimon ben Lakish, who says: Slaughter is defined only as the conclusion of its performance, and Rabbi Yoḥanan, who says: Slaughter is defined from the beginning to the end of its performance, agrees that the blood renders the gourd susceptible to impurity, in accordance with the opinion of the Rabbis, who disagree with Rabbi Shimon. When they disagree is in a case where the blood is wiped off the gourd between the cutting of one siman and the other siman. Rabbi Yehuda HaNasi holds that slaughter is defined from the beginning to the end of its performance, and this blood that splashed on the gourd is blood of slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ו א — Chullin 36a:6</span></div>
+      <div class="orig">רַבִּי חִיָּיא סָבַר: אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף, וְהַאי דַּם מַכָּה הוּא, וּמַאי ״תּוֹלִין״? תּוֹלִין הַדָּבָר עַד גְּמַר שְׁחִיטָה – אִי אִיתֵיהּ לְדָם בְּסוֹף שְׁחִיטָה מַכְשִׁיר, וְאִי לָא – לֹא מַכְשִׁיר.</div>
+      <div class="trans" data-when="he">רבי חייא סובר: שם ׳שחיטה׳ חל רק בסוף, והדם הזה (שלפני סוף השחיטה) הוא דם מכה (שאינו מכשיר). ומהו ׳תולין׳? תולין את הדבר עד גמר השחיטה: אם נשאר דם בסוף השחיטה — מכשיר; ואם לא — אינו מכשיר.</div>
+      <div class="trans" data-when="en">Rabbi Ḥiyya holds that slaughter is defined only as the conclusion of its performance, and this is blood of a wound, which does not render food items susceptible to ritual impurity. And what is the meaning of the ruling of Rabbi Ḥiyya that one places the matter in abeyance? It means that one places the matter in abeyance until the conclusion of the slaughter. If there is blood remaining on the gourd at the conclusion of the slaughter the blood renders the gourd susceptible to ritual impurity, and if not, the blood does not render the gourd susceptible to ritual impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ו א — Chullin 36a:7</span></div>
+      <div class="orig">וּמַאי ״בֹּאוּ וְנִסְמוֹךְ עַל דִּבְרֵי רַבִּי שִׁמְעוֹן״? לְרַבִּי שִׁמְעוֹן לֹא מַכְשִׁיר, לְרַבִּי חִיָּיא מַכְשִׁיר!</div>
+      <div class="trans" data-when="he">ומהו ׳בואו ונסמוך על דברי רבי שמעון׳ (לפי רב פפא)? הרי לרבי שמעון הדם אינו מכשיר כלל, ואילו לרבי חייא הוא כן מכשיר (כשנשאר עד הסוף)!</div>
+      <div class="trans" data-when="en">The Gemara asks: And what is the meaning of the statement of Rabbi Oshaya: Come and let us rely on the statement of Rabbi Shimon? According to Rabbi Shimon the blood of slaughter does not render food items susceptible to ritual impurity, while according to Rabbi Ḥiyya the blood of slaughter renders the gourd susceptible to ritual impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ו א — Chullin 36a:8</span></div>
+      <div class="orig">בְּנִתְקַנֵּחַ מִיהוּ אַשְׁווֹ לַהֲדָדֵי, מָר לָא מַכְשִׁיר, וּמָר לָא מַכְשִׁיר, הֲוָה לֵיהּ רַבִּי חַד, וְאֵין דְּבָרָיו שֶׁל אֶחָד בִּמְקוֹם שְׁנַיִם.</div>
+      <div class="trans" data-when="he">כשנתקנח הדם — לכל הפחות רבי שמעון ורבי חייא מסכימים: זה אינו מכשיר וזה אינו מכשיר. נמצא שרבי הוא יחיד מול שניים, ואין דברי האחד (רבי) במקום שניים.</div>
+      <div class="trans" data-when="en">The Gemara answers that in a case where the blood is wiped off the gourd prior to the conclusion of slaughter, in any event, the opinions of Rabbi Shimon and Rabbi Ḥiyya correspond to each other: One Sage holds that the blood of slaughter does not render the gourd susceptible to ritual impurity and the other Sage holds that the blood of slaughter does not render the gourd susceptible to ritual impurity. The result is that Rabbi Yehuda HaNasi, who holds that the blood of slaughter renders the gourd susceptible to ritual impurity, is one Sage stating an individual opinion, and the statement of one Sage has no standing in a place where it is disputed by two Sages.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ו א — Chullin 36a:9</span></div>
+      <div class="orig">רַב אָשֵׁי אָמַר: ״תּוֹלִין״ לְעוֹלָם מַשְׁמַע, וְנִתְקַנֵּחַ לְרַבִּי חִיָּיא סַפּוֹקֵי מְסַפְּקָא לֵיהּ, אִי יֶשְׁנָהּ לִשְׁחִיטָה מִתְּחִלָּה וְעַד סוֹף, אוֹ אֵינָהּ לִשְׁחִיטָה אֶלָּא בַּסּוֹף, וּמַאי ״תּוֹלִין״? לֹא אוֹכְלִין וְלֹא שׂוֹרְפִין.</div>
+      <div class="trans" data-when="he">רב אשי אמר: ׳תולין׳ משמעו לעולם (ספק שאין לו הכרעה). ובנתקנח — רבי חייא מסופק אם השחיטה מתחילה ועד סוף או רק בסוף; ומהו ׳תולין׳? לא אוכלין (שמא טמא) ולא שורפין (שמא טהור).</div>
+      <div class="trans" data-when="en">Rav Ashi said that the term: One places the matter in abeyance, indicates that it remains in abeyance forever. It is a fundamental halakhic uncertainty for which there is no resolution. And in the case where the blood is wiped off the gourd prior to the conclusion of the slaughter, the halakha is unclear. This is because Rabbi Ḥiyya is uncertain whether slaughter is defined from the beginning to the end of its performance or whether slaughter is defined only as the conclusion of its performance. And what is the meaning of his ruling that one places the matter in abeyance? It means that if a source of impurity comes into contact with the gourd after the blood was wiped off the gourd, one may neither eat the gourd, as perhaps it is impure teruma, nor may one burn it, as perhaps it is pure.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ו א — Chullin 36a:10</span></div>
+      <div class="orig">וּמַאי ״בֹּאוּ וְנִסְמוֹךְ עַל דִּבְרֵי רַבִּי שִׁמְעוֹן״? לְרַבִּי שִׁמְעוֹן לֹא מַכְשִׁיר, לְרַבִּי חִיָּיא סְפֵיקָא, לְעִנְיַן שְׂרֵיפָה מִיהוּ שָׁווּ לַהֲדָדֵי: (ומר) [וּלְמָר] לָא שָׂרְפִינַן, (ומר) [וּלְמָר] לָא שָׂרְפִינַן.</div>
+      <div class="trans" data-when="he">ומהו ׳בואו ונסמוך על דברי רבי שמעון׳ (לפי רב אשי)? הרי לרבי שמעון אינו מכשיר ולרבי חייא ספק! אלא לעניין שריפה הם שווים: לזה (רבי שמעון) לא שורפים, ולזה (רבי חייא) לא שורפים.</div>
+      <div class="trans" data-when="en">The Gemara asks: And according to this explanation, what is the meaning of the statement of Rabbi Oshaya: Come and let us rely on the statement of Rabbi Shimon? According to Rabbi Shimon the blood of slaughter does not render food items susceptible to ritual impurity, while according to Rabbi Ḥiyya, there is uncertainty with regard to the status of the gourd. The Gemara answers that with regard to the matter of burning, in any event, the opinions of Rabbi Shimon and Rabbi Ḥiyya correspond to each other: One Sage, Rabbi Shimon, does not burn the gourd, because it was not rendered susceptible to impurity, and the other Sage, Rabbi Ḥiyya, does not burn the gourd, due to the uncertainty.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ו א — Chullin 36a:11</span></div>
+      <div class="orig">הָוֵה לֵיהּ רַבִּי חַד, וְאֵין דְּבָרָיו שֶׁל אֶחָד בִּמְקוֹם שְׁנַיִם, וְהָכִי קָאָמַר: כְּגוֹן זֹאת תּוֹלִין – לֹא אוֹכְלִין וְלֹא שׂוֹרְפִין.</div>
+      <div class="trans" data-when="he">נמצא שרבי הוא יחיד מול שניים, ואין דברי האחד במקום שניים. וכך אמר רבי חייא: כגון זה — תולין; לא אוכלין ולא שורפין.</div>
+      <div class="trans" data-when="en">The result is that Rabbi Yehuda HaNasi, who holds that one burns the gourd since the blood of slaughter renders the gourd susceptible to ritual impurity and contact with a source of impurity renders it impure, is one Sage stating an individual opinion, and the statement of one Sage has no standing in a place where it is disputed by two Sages. And this is what Rabbi Ḥiyya is saying: In a case such as this, one places the matter in abeyance; one may neither eat the gourd nor burn it.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">צריד של מנחות — חיבת הקודש כהכשר?</span><span data-when="en">Regard for sanctity as an enabler</span>
+        <span class="ref">Chullin 36a:12-37a:1</span></h2>
+    <div class="lead"><span data-when="he">ריש לקיש מסתפק בצריד של מנחות (סולת קודש יבשה): האם חיבת הקודש המכשירה אותו מועילה רק לפסול את גופו, או גם למנות בו ראשון ושני כשאר אוכלין. הגמרא מנסה ראיות מן הכתובים וממשנת ׳הוכשרו בשחיטה׳ ומ׳הבוצר לגת׳, מבררת שחיבת הקודש מכשירה מן התורה (מ׳והבשר׳ — עצים ולבונה), והספק עצמו נשאר ב׳תיקו׳.</span><span data-when="en">Reish Lakish raises a dilemma about a dry portion of consecrated meal-offering flour: does the regard-for-sanctity that renders it susceptible work only to disqualify the item itself, or also to count the descending degrees of impurity like other foods? The Gemara tests proofs from Scripture, from the mishna ׳rendered susceptible by slaughter,׳ and from ׳one who harvests for the press,׳ establishes that regard-for-sanctity renders by Torah law (from ׳and the flesh׳ — wood and frankincense), and leaves the dilemma itself unresolved (teiku).</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בעי ר״ל: צריד של מנחות — מונין בו ראשון ושני, או רק פסול גופו?"}:::question
+  P2["② ר׳ אלעזר ת״ש: ׳אוכל הבא במים — הוכשר׳; צריד שלא בא במים — לא מונה"]:::proof
+  A3["③ דחייה: ר״ל יודע זאת — ספקו: חיבת הקודש כאוכל הבא במים, או לא?"]:::answer
+  P4["④ ר׳ אלעזר מייתורא: כבר ׳וכי יותן מים על זרע׳ — ׳מכל האוכל׳ ל״ל? למעט חיבת הקודש"]:::proof
+  A5["⑤ דחייה: לא — חד בטומאת מת וחד בטומאת שרץ; וצריכי (מת/שרץ)"]:::answer
+  Q6{"⑥ מתיב רב יוסף ממשנה: ׳הוכשרו בשחיטה׳ — אף למנות ראשון ושני!"}:::question
+  A7["⑦ אביי: עשאוהו כהכשר מים מדרבנן"]:::answer
+  Q8{"⑧ ר׳ זירא ת״ש: הבוצר לגת — שמאי הוכשר, שתק לו הלל. אמאי?"}:::question
+  Q9{"⑨ רב יוסף: אם כן אף ספק צריד — תאמר ׳עשאוהו כהכשר מים׳!"}:::question
+  A10["⑩ אביי: ספק ר״ל לשרוף (דאורייתא), לא לתלות (דרבנן)"]:::answer
+  S11["⑪ מכלל: חיבת הקודש דאורייתא — מנא לן? ׳והבשר אשר יגע׳ — במה הוכשר?"]:::statement
+  Q12{"⑫ בדם? והא דם קדשים אינו מכשיר (׳תשפכנו כמים׳)"}:::question
+  Q13{"⑬ במשקי בית מטבחיים? והא אינם מכשירים (ר׳ יוסי בר׳ חנינא)"}:::question
+  A14["⑭ דחייה: דלמא כדרב יהודה — פרה שהעבירה בנחל ועדיין טופח עליה"]:::answer
+  P15["⑮ אלא מסיפא: ׳והבשר׳ לרבות עצים ולבונה — לאו בני אכילה; חיבת הקודש מכשרתם"]:::proof
+  C16(["⑯ והכא נמי חיבת הקודש מכשרתו — אך למנות בו ראשון ושני? תיקו"]):::conclusion
+  Q1 -.->|ת״ש| P2
+  P2 -.->|דחייה| A3
+  A3 -->|ראיה אחרת| P4
+  P4 -.->|דחייה| A5
+  A5 -.->|מתיב| Q6
+  Q6 -->|תירוץ| A7
+  A7 -.->|ת״ש| Q8
+  Q8 -->|תירוץ| A7
+  A7 -.->|השבה| Q9
+  Q9 -->|תירוץ| A10
+  A10 -->|מכלל| S11
+  S11 -.->|קושיא| Q12
+  S11 -.->|קושיא| Q13
+  Q13 -->|דחייה| A14
+  A14 -->|אלא| P15
+  P15 -->|מסקנה| C16
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① R. Lakish asks: dry meal-offering flour — count first/second degree, or only disqualify itself?"}:::question
+  P2["② R. Elazar: ׳food that meets water is rendered susceptible׳ — dry flour, untouched by water, does not count"]:::proof
+  A3["③ Rejected: R. Lakish knows this — his doubt: is regard-for-sanctity LIKE water-contact, or not?"]:::answer
+  P4["④ R. Elazar from redundancy: ׳when water is put on seed׳ already said — why ׳of all food׳? to exclude sanctity"]:::proof
+  A5["⑤ Rejected: no — one verse for corpse-impurity, one for creeping-animal; both needed"]:::answer
+  Q6{"⑥ Rav Yosef objects from mishna: ׳rendered susceptible by slaughter׳ — even to count first/second!"}:::question
+  A7["⑦ Abaye: the Sages gave it water-susceptibility status, by rabbinic law"]:::answer
+  Q8{"⑧ R. Zeira: one who harvests for the press — Shammai ׳susceptible׳, Hillel was silent. Why?"}:::question
+  Q9{"⑨ Rav Yosef: then for R. Lakish's flour too you'd say ׳rabbinic water-status׳!"}:::question
+  A10["⑩ Abaye: R. Lakish's doubt is about burning (Torah law), not abeyance (rabbinic)"]:::answer
+  S11["⑪ Inference: sanctity renders by Torah law — whence? ׳the flesh that touches׳ — rendered by what?"]:::statement
+  Q12{"⑫ By blood? but sacrificial blood does not render (׳pour it like water׳)"}:::question
+  Q13{"⑬ By abattoir liquids? but they do not render (R. Yosei b. Ḥanina)"}:::question
+  A14["⑭ Rejected: perhaps per Rav Yehuda — a cow led through a river, still damp when slaughtered"]:::answer
+  P15["⑮ Rather from the end: ׳the flesh׳ includes wood and frankincense — not edible; sanctity renders them"]:::proof
+  C16(["⑯ So here too sanctity renders it — but counting first/second? It stands unresolved (teiku)"]):::conclusion
+  Q1 -.->|proof| P2
+  P2 -.->|rejected| A3
+  A3 -->|other proof| P4
+  P4 -.->|rejected| A5
+  A5 -.->|objection| Q6
+  Q6 -->|answer| A7
+  A7 -.->|proof| Q8
+  Q8 -->|answer| A7
+  A7 -.->|rejoinder| Q9
+  Q9 -->|answer| A10
+  A10 -->|inference| S11
+  S11 -.->|objection| Q12
+  S11 -.->|objection| Q13
+  Q13 -->|rejected| A14
+  A14 -->|rather| P15
+  P15 -->|conclusion| C16
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בָּעֵי רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: צָרִיד שֶׁל מְנָחוֹת, מוֹנִין בּוֹ רִאשׁוֹן וְשֵׁנִי, אוֹ אֵין מוֹנִין?"}:::question
+  P2["② ׳מִכׇּל הָאֹכֶל אֲשֶׁר יֵאָכֵל׳ – אוֹכֶל הַבָּא בְּמַיִם הוּכְשַׁר, שֶׁאֵינוֹ בָּא בְּמַיִם לֹא הוּכְשַׁר"]:::proof
+  A3["③ אַטּוּ … לֵית לֵיהּ אוֹכֶל הַבָּא בְּמַיִם? … חִבַּת הַקֹּדֶשׁ כְּאוֹכֶל הַבָּא בְּמַיִם דָּמֵי, אוֹ לָא?"]:::answer
+  P4["④ מִיִּתּוּרֵי קְרָאֵי … ׳וְכִי יֻתַּן מַיִם עַל זֶרַע׳, ׳מִכׇּל הָאֹכֶל אֲשֶׁר יֵאָכֵל׳ לְמָה לִּי? לְמַעוֹטֵי חִיבַּת הַקֹּדֶשׁ"]:::proof
+  A5["⑤ לָא: חַד בְּטוּמְאַת מֵת וְחַד בְּטוּמְאַת שֶׁרֶץ … וּצְרִיכִי"]:::answer
+  Q6{"⑥ מֵתִיב רַב יוֹסֵף: ׳הוּכְשְׁרוּ בִּשְׁחִיטָה׳ – וַאֲפִילּוּ לְמִימְנֵי בְּהוּ רִאשׁוֹן וְשֵׁנִי"}:::question
+  A7["⑦ אֲמַר לֵיהּ אַבָּיֵי: עֲשָׂאוּהוּ כְּהֶכְשֵׁר מַיִם מִדְּרַבָּנַן"]:::answer
+  Q8{"⑧ תָּא שְׁמַע, הַבּוֹצֵר לְגַת … שַׁמַּאי … הוּכְשַׁר … וּשְׁתֵיק לֵיהּ הִלֵּל לְשַׁמַּאי. אַמַּאי?"}:::question
+  Q9{"⑨ רַב יוֹסֵף: … לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ נָמֵי עֲשָׂאוּהוּ כְּהֶכְשֵׁר מַיִם!"}:::question
+  A10["⑩ אַטּוּ … לִתְלוֹת קָמִיבַּעְיָא לֵיהּ? כִּי קָא מִיבַּעְיָא לֵיהּ לִשְׂרוֹף"]:::answer
+  S11["⑪ דְּחִיבַּת הַקֹּדֶשׁ דְּאוֹרָיְיתָא, מְנָא לַן? ׳וְהַבָּשָׂר אֲשֶׁר יִגַּע בְּכׇל טָמֵא׳ … בְּמַאי אִתַּכְשַׁר?"]:::statement
+  Q12{"⑫ דְּאִתַּכְשַׁר בְּדָם? … מִנַּיִן לְדַם קָדָשִׁים שֶׁאֵינוֹ מַכְשִׁיר … ׳תִּשְׁפְּכֶנּוּ כַּמָּיִם׳"}:::question
+  Q13{"⑬ בְּמַשְׁקֵי בֵּית מַטְבְּחַיָּא? … לֹא דַּיָּין שֶׁהֵן דְּכַן, אֶלָּא שֶׁאֵין מַכְשִׁירִין"}:::question
+  A14["⑭ וְדִלְמָא כִּדְרַב יְהוּדָה … פָּרָה … וְהֶעֱבִירָהּ בַּנַּחַל … וַעֲדַיִין מַשְׁקֶה טוֹפֵחַ עָלֶיהָ"]:::answer
+  P15["⑮ אֶלָּא מִסֵּיפָא: ׳וְהַבָּשָׂר׳ לְרַבּוֹת עֵצִים וּלְבוֹנָה … חִבַּת הַקֹּדֶשׁ מַכְשְׁרָא לְהוּ"]:::proof
+  C16(["⑯ הָכָא נָמֵי, חִבַּת הַקֹּדֶשׁ מַכְשַׁרְתָּן … לְמִימְנֵא בֵּיהּ רִאשׁוֹן וְשֵׁנִי לָא? תֵּיקוּ"]):::conclusion
+  Q1 -.->|ת״ש| P2
+  P2 -.->|דחייה| A3
+  A3 -->|ראיה אחרת| P4
+  P4 -.->|דחייה| A5
+  A5 -.->|מתיב| Q6
+  Q6 -->|תירוץ| A7
+  A7 -.->|ת״ש| Q8
+  Q8 -->|תירוץ| A7
+  A7 -.->|השבה| Q9
+  Q9 -->|תירוץ| A10
+  A10 -->|מכלל| S11
+  S11 -.->|קושיא| Q12
+  S11 -.->|קושיא| Q13
+  Q13 -->|דחייה| A14
+  A14 -->|אלא| P15
+  P15 -->|מסקנה| C16
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ו א — Chullin 36a:12</span></div>
+      <div class="orig">בָּעֵי רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: צָרִיד שֶׁל מְנָחוֹת, מוֹנִין בּוֹ רִאשׁוֹן וְשֵׁנִי, אוֹ אֵין מוֹנִין בּוֹ רִאשׁוֹן וְשֵׁנִי? כִּי מַהְנְיָא חִבַּת הַקֹּדֶשׁ לְאִפְּסוֹלֵי גּוּפֵיהּ, לְמִימְנֵא בֵּיהּ רִאשׁוֹן וְשֵׁנִי – לָא, אוֹ דִלְמָא לָא שְׁנָא?</div>
+      <div class="trans" data-when="he">בעי ריש לקיש: צָריד של מנחות (סולת קודש יבשה שלא נילושה בשמן) — מונין בו ראשון ושני (כסדר דרגות הטומאה) או לא? כלומר: כשחיבת הקודש מכשירה — האם רק לפסול את עצמו, אבל לא למנות בו ראשון ושני; או שאין הבדל, וכמו הכשר מים?</div>
+      <div class="trans" data-when="en">Rabbi Shimon ben Lakish raises a dilemma: With regard to a dry portion of consecrated flour that was not mixed with the oil of meal offerings, does one count the descending levels of impurity characteristic of other foods that come into contact with a primary source of impurity, i.e., that food assumes first-degree impurity, and food that comes into contact with that food assumes second-degree impurity; or does one not count the descending levels of first-degree impurity and second-degree impurity? The Gemara elaborates: When regard for sanctity is effective in rendering an item susceptible to impurity, is it effective only to disqualify that item itself, but to count the descending levels of first-degree and second-degree impurity it is not effective? Or perhaps once it is rendered susceptible to impurity there is no difference whether it is rendered susceptible by means of regard for sanctity or by means of contact with liquids.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ו א — Chullin 36a:13</span></div>
+      <div class="orig">אָמַר רַבִּי אֶלְעָזָר: תָּא שְׁמַע, ״מִכׇּל הָאֹכֶל אֲשֶׁר יֵאָכֵל וְגוֹ׳״ – אוֹכֶל הַבָּא בְּמַיִם – הוּכְשַׁר, אוֹכֶל שֶׁאֵינוֹ בָּא בְּמַיִם – לֹא הוּכְשַׁר.</div>
+      <div class="trans" data-when="he">אמר רבי אלעזר: תא שמע — ׳מכל האוכל אשר יֵאכל וגו׳׳: אוכל שבא במים — הוכשר; אוכל שלא בא במים — לא הוכשר. ומכאן שצריד שלא בא במים אינו מונה ראשון ושני.</div>
+      <div class="trans" data-when="en">Rabbi Elazar said: Come and hear proof from a baraita. It is written: “Of all food that may be eaten, on which water comes, it shall be impure; and all drink that may be drunk it shall be impure” (Leviticus 11:34). From that verse it is derived: Food that comes into contact with water is rendered susceptible to ritual impurity and to count the descending levels of impurity, but food that does not come into contact with water is not rendered susceptible to ritual impurity. Apparently, for the dry portion of flour that did not come into contact with a liquid but was rendered susceptible by regard for sanctity, one does not count the descending levels of impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ו א — Chullin 36a:14</span></div>
+      <div class="orig">אַטּוּ רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ לֵית לֵיהּ אוֹכֶל הַבָּא בְּמַיִם? רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ הָכִי קָמִיבַּעְיָא לֵיהּ: חִבַּת הַקֹּדֶשׁ כְּאוֹכֶל הַבָּא בְּמַיִם דָּמֵי, אוֹ לָא?</div>
+      <div class="trans" data-when="he">וכי ריש לקיש אינו יודע את דין ׳אוכל הבא במים׳?! אלא כך הסתפק: האם חיבת הקודש דינה כאוכל הבא במים (שאז אין מונים בו), או לא (ודינה מיוחד)?</div>
+      <div class="trans" data-when="en">The Gemara asks: Is that to say that Rabbi Shimon ben Lakish does not have knowledge of the halakha that only food that comes into contact with water is susceptible to ritual impurity? The Gemara answers: This is the dilemma that Rabbi Shimon ben Lakish is raising: Is the halakhic status of consecrated food that is subject to regard for sanctity like that of food that comes into contact with water, and one does not count the descending levels of impurity for items that come into contact with it, or no, its halakhic status is unique?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ו א — Chullin 36a:15</span></div>
+      <div class="orig">רַבִּי אֶלְעָזָר נָמֵי מִיִּתּוּרֵי קְרָאֵי קָאָמַר, מִכְּדֵי כְּתִיב ״וְכִי יֻתַּן מַיִם עַל זֶרַע״, ״מִכׇּל הָאֹכֶל אֲשֶׁר יֵאָכֵל״ לְמָה לִּי?</div>
+      <div class="trans" data-when="he">וגם רבי אלעזר אינו מביא ראיה מן הדין עצמו אלא מייתור הכתובים: הרי כבר נאמר ׳וכי יֻתן מים על זרע׳ — אם כן ׳מכל האוכל אשר יֵאכל׳ למה לי?</div>
+      <div class="trans" data-when="en">The Gemara explains that Rabbi Elazar, who cited the verse to resolve the dilemma of Rabbi Shimon ben Lakish, is not merely citing a verse that Rabbi Shimon ben Lakish knows. Rather, he too is stating his proof from the extraneous formulation of the verses. Since it is written: “But when water is placed upon the seed, and any of their carcass falls upon it, it is impure for you” (Leviticus 11:38), why do I need the verse: “Of all food which may be eaten, on which water comes, shall be impure” (Leviticus 11:34)?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ו ב — Chullin 36b:1</span></div>
+      <div class="orig">לָאו לְמַעוֹטֵי חִיבַּת הַקֹּדֶשׁ? לָא: חַד בְּטוּמְאַת מֵת וְחַד בְּטוּמְאַת שֶׁרֶץ.</div>
+      <div class="trans" data-when="he">האם אין הייתור בא למעט חיבת הקודש (שאינה מונה)? ודוחים: לא — שני הכתובים נצרכים: אחד בטומאת מת ואחד בטומאת שרץ (ללמד שבשניהם צריך הכשר).</div>
+      <div class="trans" data-when="en">Is it not to exclude items rendered susceptible to impurity due to regard for sanctity? The Gemara rejects that proof: No, both verses teach that food becomes impure only after it is rendered susceptible to impurity by one of the seven liquids. One verse is referring to impurity imparted by a corpse, and one verse is referring to impurity imparted by the carcass of a creeping animal.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ו ב — Chullin 36b:2</span></div>
+      <div class="orig">וּצְרִיכִי, דְּאִי אַשְׁמְעִינַן טוּמְאַת מֵת – הָתָם הוּא דְּבָעֵי הֶכְשֵׁר, מִשּׁוּם דְּלָא מְטַמֵּא בְּכַעֲדָשָׁה, אֲבָל שֶׁרֶץ דִּמְטַמֵּא בְּכַעֲדָשָׁה – אֵימָא לָא לִיבְעֵי הֶכְשֵׁר.</div>
+      <div class="trans" data-when="he">וצריכים שניהם: אילו לימד רק בטומאת מת — היינו אומרים שדווקא שם צריך הכשר, כי מת אינו מטמא בכעדשה; אבל שרץ, שמטמא בכעדשה (חמור) — אולי לא יצטרך הכשר.</div>
+      <div class="trans" data-when="en">And both verses are necessary, as had the Torah taught us the requirement of being rendered susceptible to impurity only with regard to impurity imparted by a corpse, one would have concluded that it is there that food requires being rendered susceptible to impurity by one of the seven liquids in order to become impure, due to the fact that the impurity imparted by a corpse is less stringent, as a portion of a corpse the size of a lentil-bulk does not render people or vessels impure. But in the case of impurity imparted by the carcass of a creeping animal, which is more stringent, as the creeping animal renders people or vessels impure with a portion of it the size of a lentil-bulk, say that food does not require to be rendered susceptible by one of the seven liquids in order to become impure.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ו ב — Chullin 36b:3</span></div>
+      <div class="orig">וְאִי אַשְׁמְעִינַן שֶׁרֶץ, מִשּׁוּם דְּלָא מְטַמֵּא טוּמְאַת שִׁבְעָה, אֲבָל מֵת דִּמְטַמֵּא טוּמְאַת שִׁבְעָה – אֵימָא לָא לִיבְעֵי הֶכְשֵׁר, צְרִיכָא.</div>
+      <div class="trans" data-when="he">ואילו לימד רק בשרץ — היינו אומרים שדווקא שם, כי שרץ אינו מטמא טומאת שבעה; אבל מת, שמטמא טומאת שבעה — אולי לא יצטרך הכשר. לכן צריכא (שניהם נצרכים).</div>
+      <div class="trans" data-when="en">And had the Torah taught us the requirement of being rendered susceptible to impurity only with regard to impurity imparted by the carcass of a creeping animal, one would have concluded that it is there that food must be rendered susceptible to impurity, due to the fact that the impurity imparted by a creeping animal is less stringent, as a creeping animal does not render people or vessels impure with impurity that lasts seven days. But with regard to a corpse, which renders people or vessels impure with impurity that lasts seven days, say that food does not require to be rendered susceptible by one of the seven liquids in order to become impure from it. Therefore, it is necessary for the Torah to teach both verses.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ו ב — Chullin 36b:4</span></div>
+      <div class="orig">מֵתִיב רַב יוֹסֵף: רַבִּי שִׁמְעוֹן אוֹמֵר הוּכְשְׁרוּ בִּשְׁחִיטָה. הוּכְשְׁרוּ – וַאֲפִילּוּ לְמִימְנֵי בְּהוּ רִאשׁוֹן וְשֵׁנִי.</div>
+      <div class="trans" data-when="he">מתיב רב יוסף ממשנתנו (חולין לג): רבי שמעון אומר ׳הוכשרו בשחיטה׳ — ׳הוכשרו׳ אפילו למנות בהם ראשון ושני; ואם כן חיבת הקודש (כמו שחיטה) כן מונה!</div>
+      <div class="trans" data-when="en">Rav Yosef raises an objection from the mishna (33a) to Rabbi Elazar’s opinion that only with regard to food rendered susceptible by one of the seven liquids does one count the descending levels of impurity, i.e., first-degree impurity and second-degree impurity: Rabbi Shimon says: They were rendered susceptible to ritual impurity by means of the slaughter itself. Rabbi Shimon is saying they were rendered susceptible in every sense, and even to count the descending levels of impurity, first-degree impurity and second-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ו ב — Chullin 36b:5</span></div>
+      <div class="orig">אַמַּאי? וְהָא לָאו אוֹכֶל הַבָּא בְּמַיִם הוּא! אֲמַר לֵיהּ אַבָּיֵי: עֲשָׂאוּהוּ כְּהֶכְשֵׁר מַיִם מִדְּרַבָּנַן.</div>
+      <div class="trans" data-when="he">הקושיא: אמאי מונה? הרי בשר השחיטה אינו אוכל הבא במים! אמר לו אביי: עשאוהו חכמים כהכשר מים מדרבנן (ולכן מונה — אך לא ראיה לחיבת הקודש דאורייתא).</div>
+      <div class="trans" data-when="en">Why is the animal rendered susceptible to impurity in every sense; but the slaughtered animal is not food that comes into contact with water? Apparently, even items that did not come into contact with water are susceptible to impurity in every sense. Abaye said to Rav Yosef: Rabbi Shimon holds that it is not susceptible by Torah law. Rather, the Sages accorded susceptibility via slaughter of the animal a status like that of susceptibility rendered by means of water, by rabbinic law.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ו ב — Chullin 36b:6</span></div>
+      <div class="orig">אָמַר רַבִּי זֵירָא: תָּא שְׁמַע, הַבּוֹצֵר לְגַת – שַׁמַּאי אוֹמֵר: הוּכְשַׁר, הִלֵּל אוֹמֵר: לֹא הוּכְשַׁר, וּשְׁתֵיק לֵיהּ הִלֵּל לְשַׁמַּאי. אַמַּאי? וְהָא לָאו אוֹכֶל הַבָּא בְּמַיִם הוּא! אֲמַר לֵיהּ אַבָּיֵי: עֲשָׂאוּהוּ כְּהֶכְשֵׁר מַיִם מִדְּרַבָּנַן.</div>
+      <div class="trans" data-when="he">אמר רבי זירא: תא שמע — הבוצר ענבים לגת: שמאי אומר הוכשר, הלל אומר לא הוכשר, ושתק לו הלל לשמאי (קיבל דעתו). אמאי הוכשר? והרי אינו אוכל הבא במים! אמר לו אביי: עשאוהו כהכשר מים מדרבנן.</div>
+      <div class="trans" data-when="en">Rabbi Zeira said: Come and hear an objection to Rabbi Elazar’s opinion from a baraita: In the case of one who harvests grapes in order to take them to the winepress, Shammai says: The grapes are rendered susceptible to ritual impurity by the liquid that seeps from them, and Hillel says: They are not rendered susceptible to ritual impurity; and ultimately, Hillel was silent and did not respond to Shammai, accepting his opinion. Why does that liquid render the grapes susceptible to impurity; but the grapes are not food that comes into contact with water? Contact with liquid renders food susceptible to impurity only if the contact was with the intent of the owner, and here, the liquid did not seep out of the grapes of one’s own volition. Abaye said to Rabbi Zeira: Hillel does not hold that the grapes are susceptible by Torah law; rather, the Sages accorded susceptibility via the liquid a status like that of susceptibility rendered by means of water, by rabbinic law, to count the descending levels of impurity, i.e., first-degree impurity, second-degree impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ו ב — Chullin 36b:7</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַב יוֹסֵף: אָמֵינָא לָךְ אֲנָא הוּכְשְׁרוּ בִּשְׁחִיטָה, וְאַתְּ אָמְרַתְּ לִי עֲשָׂאוּהוּ כְּהֶכְשֵׁר מַיִם, וְאָמַר לָךְ רַבִּי זֵירָא, וַאֲמַרְתְּ לֵיהּ עֲשָׂאוּהוּ כְּהֶכְשֵׁר מַיִם, לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ נָמֵי עֲשָׂאוּהוּ כְּהֶכְשֵׁר מַיִם!</div>
+      <div class="trans" data-when="he">אמר לו רב יוסף לאביי: אני הקשיתי לך מ׳הוכשרו בשחיטה׳ ואמרת ׳עשאוהו כהכשר מים׳; ורבי זירא הקשה ואמרת לו ׳עשאוהו כהכשר מים׳ — אם כן גם לספק ריש לקיש (צריד) תאמר ׳עשאוהו כהכשר מים מדרבנן׳ (ושוב אין כאן ספק)!</div>
+      <div class="trans" data-when="en">Rav Yosef said to Abaye: I said to you an objection from the statement of Rabbi Shimon: They were rendered susceptible to ritual impurity by means of the slaughter itself, and you said to me: It was the Sages who accorded susceptibility via slaughter of the animal a status like that of susceptibility rendered by means of water. And Rabbi Zeira said to you an objection from the case of one who harvests grapes, and you said to him: It is the Sages who accorded susceptibility via the liquid from the grapes a status like that of susceptibility rendered by means of water. If so, will you also say in response to the dilemma of Rabbi Shimon ben Lakish with regard to a dry portion of consecrated flour that was not mixed with the oil of meal offerings that it is the Sages who accorded susceptibility via the regard for sanctity of the flour a status like that of susceptibility rendered by means of water, by rabbinic law, to count the descending levels of impurity, i.e., first-degree impurity, second-degree impurity?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ו ב — Chullin 36b:8</span></div>
+      <div class="orig">אֲמַר לֵיהּ: אַטּוּ רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ לִתְלוֹת קָמִיבַּעְיָא לֵיהּ? כִּי קָא מִיבַּעְיָא לֵיהּ לִשְׂרוֹף.</div>
+      <div class="trans" data-when="he">אמר לו אביי: וכי ריש לקיש הסתפק לעניין ׳לתלות׳ (איסור דרבנן)? הוא הסתפק לעניין ׳לשרוף׳ — דין דאורייתא (ולכן אין לתרץ ׳מדרבנן׳).</div>
+      <div class="trans" data-when="en">Abaye said to Rav Yosef: Is that to say that Rabbi Shimon ben Lakish was raising a dilemma with regard to placing the matter in abeyance, and one may neither eat the consecrated flour nor may one burn it, which would be the case for impurity by rabbinic law? When Rabbi Shimon ben Lakish raises the dilemma it is with regard to whether to burn the gourd, which is the case when the impurity is by Torah law.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ו ב — Chullin 36b:9</span></div>
+      <div class="orig">מִכְּלָל דְּחִיבַּת הַקֹּדֶשׁ דְּאוֹרָיְיתָא, מְנָא לַן? אִילֵּימָא מִדִּכְתִיב ״וְהַבָּשָׂר אֲשֶׁר יִגַּע בְּכׇל טָמֵא״, הַאי בָּשָׂר דְּאִתַּכְשַׁר, בְּמַאי?</div>
+      <div class="trans" data-when="he">מכלל הדברים — שריש לקיש מניח שחיבת הקודש מכשירה מן התורה; ומניין לנו זה? אם נאמר מן הכתוב ׳והבשר אשר יִגַע בכל טמא׳ — בשר זה שהוכשר, במה הוכשר?</div>
+      <div class="trans" data-when="en">The Gemara notes that it may be learned by inference that Rabbi Shimon ben Lakish holds that regard for sanctity renders sacred items subject to ritual impurity by Torah law, as his dilemma was limited to whether one counts the descending levels of impurity from those susceptible items, i.e., first-degree impurity, second-degree impurity, not the impurity of the sacred item itself. From where do we derive this halakha? If we say that it is derived from that which is written: “And the flesh that touches any impure item shall not be eaten; it shall be burned with fire” (Leviticus 7:19), then it must be ascertained: This flesh that was rendered susceptible to ritual impurity, by what means was it rendered susceptible?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ו ב — Chullin 36b:10</span></div>
+      <div class="orig">אִילֵּימָא דְּאִתַּכְשַׁר בְּדָם, וְהָאָמַר רַבִּי חִיָּיא בַּר אַבָּא אָמַר רַבִּי יוֹחָנָן: מִנַּיִן לְדַם קָדָשִׁים שֶׁאֵינוֹ מַכְשִׁיר, שֶׁנֶּאֱמַר: ״לֹא תֹּאכְלֶנּוּ עַל הָאָרֶץ תִּשְׁפְּכֶנּוּ כַּמָּיִם״ – דָּם הַנִּשְׁפָּךְ כַּמַּיִם מַכְשִׁיר, שֶׁאֵינוֹ נִשְׁפָּךְ כַּמַּיִם אֵינוֹ מַכְשִׁיר!</div>
+      <div class="trans" data-when="he">אם נאמר שהוכשר בדם — והרי אמר רבי חייא בר אבא בשם רבי יוחנן: מניין שדם קדשים אינו מכשיר? שנאמר ׳על הארץ תשפכנו כמים׳ — דם הנשפך כמים (חולין) מכשיר, ושאינו נשפך כמים (קדשים, שעל המזבח) אינו מכשיר.</div>
+      <div class="trans" data-when="en">If we say that it was rendered susceptible to impurity by means of the blood of the animal, this is difficult. But doesn’t Rabbi Ḥiyya bar Abba say that Rabbi Yoḥanan says: From where is it derived with regard to blood of sacrificial animals that it does not render food susceptible to impurity? It is derived from a verse, as it is stated: “You shall not eat it; you shall pour it upon the earth like water” (Deuteronomy 12:24). Blood of a non-sacred animal, which is poured like water when it is slaughtered, renders food susceptible to ritual impurity. By contrast, blood of a sacrificial animal, which is not poured like water but is presented on the altar, does not render food susceptible to impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין ל״ו ב — Chullin 36b:11</span></div>
+      <div class="orig">אֶלָּא דְּאִיתַּכְשַׁר בְּמַשְׁקֵי בֵּית מַטְבְּחַיָּא, וְהָא אָמַר רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: מַשְׁקֵי בֵּית מַטְבְּחַיָּא לֹא דַּיָּין שֶׁהֵן דְּכַן, אֶלָּא שֶׁאֵין מַכְשִׁירִין, וְכִי תֵּימָא תַּרְגְּמַהּ אַדָּם, וְהָא ״מַשְׁקֵי״ קָאָמַר! אֶלָּא לָאו דְּאִתַּכְשַׁר בְּחִבַּת הַקֹּדֶשׁ?</div>
+      <div class="trans" data-when="he">אלא נאמר שהוכשר במשקי בית המטבחיים (הדם והמים שבמקדש) — והרי אמר רבי יוסי בר׳ חנינא: משקי בית המטבחיים לא די שהם טהורים, אלא שאינם מכשירים. ואם תאמר שכוונתו רק לדם — והרי ׳משקין׳ (לשון רבים) אמר! אלא לאו — שהוכשר בחיבת הקודש?</div>
+      <div class="trans" data-when="en">Rather, perhaps say that the flesh was rendered susceptible to ritual impurity by means of the liquids of the Temple abattoir. But didn’t Rabbi Yosei, son of Rabbi Ḥanina, say: With regard to the liquids of the Temple abattoir, not only are they ritually pure, but they do not even render food susceptible to impurity. And if you would say that one should explain the statement of Rabbi Yosei, son of Rabbi Ḥanina, as referring exclusively to blood, and the other liquids render food susceptible, but doesn’t he say: Liquids, in the plural? Rather, is it not that the flesh was rendered susceptible to ritual impurity via regard for sanctity?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין ל״ו ב — Chullin 36b:12</span></div>
+      <div class="orig">וְדִלְמָא כִּדְרַב יְהוּדָה אָמַר שְׁמוּאֵל, דְּאָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: כְּגוֹן שֶׁהָיְתָה לוֹ פָּרָה שֶׁל זִבְחֵי שְׁלָמִים, וְהֶעֱבִירָהּ בַּנַּחַל, שְׁחָטָהּ וַעֲדַיִין מַשְׁקֶה טוֹפֵחַ עָלֶיהָ.</div>
+      <div class="trans" data-when="he">ודוחים: ושמא הכתוב כדרב יהודה אמר שמואל — כגון שהיתה לו פרה של זבחי שלמים, והעבירהּ בנחל (להרטיבהּ) ושחטהּ ועדיין משקה טופֵח עליה (ואז הוכשר במים ממש, לא בחיבת הקודש).</div>
+      <div class="trans" data-when="en">The Gemara responds: And perhaps the verse can be explained in accordance with the statement that Rav Yehuda says that Shmuel says, as Rav Yehuda says that Shmuel says: The verse is referring to a case where one had a cow that was to be sacrificed as a peace offering, and since the owner is entitled to the meat and the hide of the animal, in order to improve their quality he conveyed it through the river and slaughtered the animal while the liquid was still upon it and the animal was damp. That liquid rendered the meat susceptible to impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין ל״ו ב — Chullin 36b:13</span></div>
+      <div class="orig">אֶלָּא מִסֵּיפָא: ״וְהַבָּשָׂר״, לְרַבּוֹת עֵצִים וּלְבוֹנָה. עֵצִים וּלְבוֹנָה בְּנֵי אֲכִילָה נִינְהוּ? אֶלָּא חִבַּת הַקֹּדֶשׁ מַכְשְׁרָא לְהוּ, וּמְשַׁוְּיָא לְהוּ אוֹכֶל. הָכָא נָמֵי, חִבַּת הַקֹּדֶשׁ מַכְשַׁרְתָּן.</div>
+      <div class="trans" data-when="he">אלא הראיה מסוף הכתוב: ׳והבשר׳ (השני, מיותר) — לרבות עצים ולבונה. וכי עצים ולבונה בני אכילה הם (שייכללו ב׳אוכל׳)? אלא חיבת הקודש מכשרתם ועושה אותם כאוכל; הכא נמי (בצריד) — חיבת הקודש מכשרתו.</div>
+      <div class="trans" data-when="en">Rather the proof is from the latter portion of that verse: “And the flesh that touches any impure item shall not be eaten; it shall be burned with fire. And the flesh, every pure person may eat flesh” (Leviticus 7:19). The Gemara explains: The second mention of the term “and the flesh” in the verse is superfluous and serves to include the halakha that with regard to sacred wood and frankincense, impurity disqualifies them from being burned on the altar. Are wood and frankincense edible and therefore included in the verse: “Of all food that may be eaten, on which water comes, shall be impure” (Leviticus 11:34)? Rather, Rabbi Shimon ben Lakish derived from this that regard for sanctity renders them susceptible to ritual impurity and renders their status like that of food. Here too, in the case of a dry portion of flour that was not mixed with the oil of meal offerings, regard for sanctity renders it susceptible to ritual impurity.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">חולין ל״ז א — Chullin 37a:1</span></div>
+      <div class="orig">מַאי? כִּי מַהְנְיָא חִבַּת הַקֹּדֶשׁ לִפְסוּלָא דְּגוּפֵיהּ, אֲבָל לְמִימְנֵא בֵּיהּ רִאשׁוֹן וְשֵׁנִי לָא, אוֹ דִּלְמָא לָא שְׁנָא? תֵּיקוּ.</div>
+      <div class="trans" data-when="he">ומה בסוף עם ספיקו של ריש לקיש? כשחיבת הקודש מועילה — לפסול את גופו, אבל למנות בו ראשון ושני לא; או דילמא אין הבדל? תיקו (נשאר בלא הכרעה).</div>
+      <div class="trans" data-when="en">The Gemara asks: What is the resolution of the dilemma raised by Rabbi Shimon ben Lakish: When regard for sanctity is effective in rendering an item susceptible to impurity, is it only to disqualify that item itself, but to count the descending levels of first-degree impurity and second-degree impurity, it is not effective; or perhaps once it is rendered susceptible to impurity there is no difference whether it is rendered susceptible by means of regard for sanctity or by means of contact with liquids? The Gemara answers: The dilemma shall stand unresolved.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
