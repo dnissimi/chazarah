@@ -40,6 +40,11 @@ const ogLocale = lang === 'he' ? 'he_IL' : 'en_US';
 const ogLocaleAlt = lang === 'he' ? 'en_US' : 'he_IL';
 const jsonLdList = jsonLd == null ? [] : Array.isArray(jsonLd) ? jsonLd : [jsonLd];
 
+// Relative path to the English counterpart of this page (same rule the language
+// switcher uses): '/en' + path, with '/' collapsing to bare '/en'. Used by the
+// "available in English" suggestion banner below.
+const enPath = '/en' + (canonicalPath === '/' ? '' : canonicalPath);
+
 // `?embed=1` strips site chrome (header/footer) so the slot can fill an iframe
 // cleanly — used by the gemara-map "report a correction" modal (see
 // docs/specs/map-wiring.md refinement 2026-05-30). Detected client-side in the
@@ -110,6 +115,53 @@ const jsonLdList = jsonLd == null ? [] : Array.isArray(jsonLd) ? jsonLd : [jsonL
 
   <body>
     <div class="shell">
+      {/* Locale suggestion: on the Hebrew pages, gently offer English to
+          visitors whose browser isn't set to Hebrew. A nudge, NOT an auto
+          redirect — Hebrew stays canonical/x-default and the page stays static
+          (per the SEO plan's "switcher links only" decision). Hidden until the
+          inline script below decides to show it; dismissal/choice is remembered
+          in localStorage so it only ever appears once. English-only audience,
+          so its text + arrow read LTR even on the RTL page. */}
+      {lang === 'he' && (
+        <Fragment>
+          <div class="lang-suggest" id="lang-suggest" dir="ltr" hidden>
+            <div class="container">
+              <span class="lang-suggest-text">This site is also available in English.</span>
+              <a class="lang-suggest-cta" href={enPath} data-lang-suggest-go>View in English →</a>
+              <button
+                class="lang-suggest-close"
+                type="button"
+                aria-label="Dismiss"
+                data-lang-suggest-close
+              >×</button>
+            </div>
+          </div>
+          <script is:inline>
+            (function () {
+              try {
+                if (document.documentElement.dataset.embed === '1') return;
+                var K = 'chazarah.langSuggest.v1';
+                if (localStorage.getItem(K)) return;
+                var primary = (navigator.language || (navigator.languages || [])[0] || '').toLowerCase();
+                // Skip Hebrew browsers (modern 'he', legacy 'iw'); nudge everyone else.
+                if (/^(he|iw)\b/.test(primary)) return;
+                var el = document.getElementById('lang-suggest');
+                if (!el) return;
+                el.hidden = false;
+                var remember = function () { try { localStorage.setItem(K, '1'); } catch (_) {} };
+                el.querySelector('[data-lang-suggest-close]').addEventListener('click', function () {
+                  remember();
+                  el.hidden = true;
+                });
+                // Clicking through to English also counts as handled — don't nag again.
+                el.querySelector('[data-lang-suggest-go]').addEventListener('click', remember);
+              } catch (_) {
+                /* storage/navigator unavailable — just don't show the banner. */
+              }
+            })();
+          </script>
+        </Fragment>
+      )}
       <SiteHeader lang={lang} canonicalPath={canonicalPath} />
       <main class="site-main">
         <slot />
