@@ -1,14 +1,22 @@
 # Chazarah · חזרה
 
-A non-commercial, Hebrew-first website that hosts a growing library of
-**Chazarah Maps** — color-coded flowcharts of Talmudic sugyot (extensible to
-other Sefaria corpora) — alongside the original text and a clear Hebrew
-translation.
+A non-commercial, bilingual (Hebrew/English) website that hosts a growing
+library of **Chazarah Maps** — color-coded flowcharts of Talmudic sugyot
+(extensible to other Sefaria corpora) — alongside the original text and clear
+translations.
+
+**Live at [hazara.co.il](https://hazara.co.il).**
 
 The site is the *bookstore*; each map is a self-contained *book*.
 
 ## Repository layout
 
+- [`src/`](./src/) — the Astro application: pages/routes, components, the
+  `maps` content collection, i18n strings, and pure libs (browse/library/map
+  helpers, submission validation).
+- [`public/`](./public/) — static assets, incl. [`public/maps/`](./public/maps/)
+  (the published, verbatim map files) and `public/_redirects` / `robots.txt`.
+- [`skills/`](./skills/) — bundled Claude Code skills (see "Claude skills" below).
 - [`CONTEXT.md`](./CONTEXT.md) — domain glossary (terms used everywhere)
 - [`CLAUDE.md`](./CLAUDE.md) — entry point for agents working on this repo
 - [`docs/adr/`](./docs/adr/) — architectural decision records
@@ -17,10 +25,9 @@ The site is the *bookstore*; each map is a self-contained *book*.
 - [`docs/prds/`](./docs/prds/) — product requirements docs
 - [`docs/specs/`](./docs/specs/) — specs for the operational skills
 - [`design/`](./design/) — design mockups and the Claude Design export the
-  implementation is being built from
+  implementation was built from
 - [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json) — Claude Code
   plugin manifest (registers the skills below)
-- [`skills/`](./skills/) — bundled Claude Code skills (see "Claude skills" below)
 
 ## Claude skills
 
@@ -75,7 +82,7 @@ npx skills@latest update -g           # from a terminal
 
 Both run the same underlying command.
 
-### Local development
+### Local development (skills)
 
 `npx skills add` snapshots from GitHub into `~/.agents/skills/`; local edits to
 the working tree are NOT reflected. For tight edit-test loops on the skills
@@ -93,16 +100,39 @@ clone — edits are live in the next Claude session. Revert to the production
 install with `rm ~/.claude/skills/{gemara-map,chazarah-fulfill,chazarah-publish}`
 then `npx skills add dnissimi/chazarah -g`.
 
+## Running the site locally
+
+```bash
+npm install
+npm run dev         # local dev server
+npm run typecheck   # astro check (types + content-collection schema)
+npm run build       # full static/SSR build
+npm test            # vitest unit tests
+```
+
 ## Status
 
-Pre-implementation. The site is specified ([PRD 0001](./docs/prds/0001-chazarah-mvp.md))
-and designed; no application code exists yet.
+**Live.** The site is deployed on Cloudflare Pages at
+[hazara.co.il](https://hazara.co.il), serving a growing map library across
+Megillah, Shabbat, Chullin, and Bava Kamma (more added via the submission
+pipeline above). Shipped:
 
-## Stack (planned)
+- **Bilingual, separately-indexable URLs** — Hebrew at the root, English under
+  `/en` — rendered server-side (real translated pages, not a client-side swap),
+  with `hreflang`, canonical, Open Graph, JSON-LD, a generated `sitemap.xml`,
+  and `robots.txt`.
+- **Map pages** are the verbatim gemara-map files served *wrapped* with the
+  site header (brand / nav / language switch) and per-language SEO, without
+  altering the map file itself ([ADR 0004](./docs/adr/0004-maps-served-verbatim.md)).
+- **In-map shape⇄citation cross-linking** — tap a chart shape to jump to its
+  source, and back — working on mouse and touch.
+- The submission → fulfill → publish skill pipeline described above.
 
-Astro on Cloudflare Pages, with a Cloudflare Worker for the submission
-endpoint and Cloudflare Turnstile for anti-spam. See
-[ADR 0003](./docs/adr/0003-astro-cloudflare-stack.md).
+## Stack
+
+Astro on Cloudflare Pages (`output: 'hybrid'`), with a serverless `/api/submit`
+endpoint and Cloudflare Turnstile for anti-spam; maps are Mermaid flowcharts in
+self-contained HTML. See [ADR 0003](./docs/adr/0003-astro-cloudflare-stack.md).
 
 ## License
 
