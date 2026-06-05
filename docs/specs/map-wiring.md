@@ -9,7 +9,10 @@ emit so this becomes turnkey (or fully automatable by `/chazarah-fulfill`).
 1. **Place the HTML verbatim.** Copy the skill's output
    `sugya_<book>_<daf>.html` → `public/maps/<corpus>/<book>/<location>/<lang>.html`.
    - The site serves it at `/map/<corpus>/<book>/<location>/<lang>` via the
-     wildcard rewrite in `public/_redirects` (ADR 0004 — byte-for-byte).
+     prerendered Astro page `map/[corpus]/[book]/[location]/[lang].astro`, which
+     reads this verbatim file and wraps it with the site header + per-language
+     SEO (ADR 0004, revised 2026-06-05 — the file itself stays verbatim and is
+     also reachable directly at `/maps/.../<lang>.html`).
    - Requires injecting two facts the filename doesn't carry: `corpus`
      (`talmud`) and `lang` (`he`).
 

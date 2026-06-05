@@ -1,6 +1,6 @@
 # ADR 0004 — Chazarah Maps are served verbatim; the skill output is the source of truth
 
-- Status: Accepted
+- Status: Accepted — revised 2026-06-05 (see "Revision: site-header wrap")
 - Date: 2026-05-26
 
 ## Context
@@ -57,3 +57,34 @@ The skill output is the source of truth for what a map looks like.
 - **Bake site chrome into the generated HTML.** Couples the skill to a
   specific site. Bad for a future where Chazarah hosts other products and
   the skill might (in principle) be used elsewhere.
+
+## Revision: site-header wrap (2026-06-05)
+
+The "site chrome doesn't persist inside a map" trade-off above proved too
+costly: a visitor landing on `/map/.../<lang>` (from search, a shared link, or
+"recently viewed") had no way back into the site but the browser back button.
+We resolved it with a **fourth option the original alternatives missed** —
+neither iframe, nor decompose, nor baking chrome into the skill output:
+
+> The canonical `/map/:corpus/:book/:location/:lang` URL is now a **prerendered
+> Astro page** (`src/pages/map/[corpus]/[book]/[location]/[lang].astro`) that
+> **reads the verbatim map file at build and serves it with a slim Chazarah
+> header spliced in** (brand → home, Home/Library/Request, he⇄en), plus
+> per-language `<title>`/description/canonical/hreflang/OG. The map's own body,
+> styles, scripts, deep-link anchors, and content are untouched.
+
+This keeps the ADR's spirit intact:
+- **The skill output is still the source of truth and still verbatim** — the
+  file on disk is unchanged, the skill is untouched (no site URLs baked in), and
+  the raw file remains directly available at `/maps/.../<lang>.html` for
+  offline/email/embed use. The wrap is applied by the *site* at build, not by
+  the skill, and lives in exactly one place (the Astro page).
+- A header change touches that one page, **not** the skill template (this
+  reverses the old "unified header bar requires touching the skill" trade-off).
+- Deep links (`#sugya-3`) and the in-map cross-link/toggle/feedback still work,
+  since the document is the same plus a sticky header above it.
+
+Mechanics: the old `_redirects` 200-rewrite for this URL is removed (the Astro
+page owns it now); the file is emitted as `<lang>.html` (`build.format:'file'`)
+so Cloudflare serves the right content-type. The embedded footer/feedback link
+the skill adds is unaffected.

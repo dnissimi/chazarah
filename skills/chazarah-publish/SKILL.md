@@ -98,10 +98,14 @@ or fill the `<head>` block by hand).
 
 A bilingual map is **one authored file** that serves both `/he` and `/en` (the
 file's JS defaults the language from the URL's trailing segment). We materialize
-it as one file **per language** so the existing `_redirects` rule
-(`/map/:corpus/:book/:location/:lang → /maps/:corpus/:book/:location/:lang.html`)
-keeps working unchanged and uniformly with the legacy he-only maps. So for each
-language in `languages`, copy the artifact **unmodified**:
+it as one file **per language** under `public/maps/`. The canonical
+`/map/:corpus/:book/:location/:lang` URL is served by the prerendered Astro page
+`src/pages/map/[corpus]/[book]/[location]/[lang].astro`, which reads this
+verbatim file at build and wraps it with the site header + per-language SEO
+(ADR 0004, revised 2026-06-05) — so you still just drop the file here, untouched,
+and the route picks it up automatically (the raw file also stays directly
+available at `/maps/.../<lang>.html`). So for each language in `languages`, copy
+the artifact **unmodified**:
 
 ```bash
 mkdir -p public/maps/<corpus>/<book>/<location>

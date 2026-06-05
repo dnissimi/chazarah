@@ -1,7 +1,6 @@
-# Serve the standalone Chazarah Map HTML files at the canonical singular
-# `/map/<corpus>/<book>/<location>/<lang>` URL (ADR 0002). The files live at
-# `public/maps/<corpus>/<book>/<location>/<lang>.html` (plural "maps", with
-# extension) so Cloudflare's static asset handler can serve them directly;
-# a 200-status rewrite aliases the canonical URL to that file path
-# byte-for-byte, with no Astro wrapping (ADR 0004).
-/map/:corpus/:book/:location/:lang  /maps/:corpus/:book/:location/:lang.html  200
+# The canonical map URL `/map/<corpus>/<book>/<location>/<lang>` is now served by
+# the prerendered Astro page `src/pages/map/[corpus]/[book]/[location]/[lang].astro`,
+# which reads the verbatim standalone file from `public/maps/.../<lang>.html` and
+# wraps it with the site header + per-language SEO (ADR 0004, revised 2026-06-05).
+# The raw files remain directly available under `/maps/...` for embedding/portability.
+# No redirect rule is needed here anymore.

@@ -1,0 +1,124 @@
+---
+/**
+ * Canonical map page: /map/:corpus/:book/:location/:lang
+ *
+ * The map is a standalone, site-agnostic file authored by gemara-map and shipped
+ * verbatim under public/maps/.../{lang}.html. This page does NOT alter that file —
+ * it reads it at build and serves it WRAPPED with a slim Chazarah header (brand →
+ * home, Home/Library/Request, he⇄en) plus per-language SEO (title / description /
+ * canonical / hreflang / OG). Site chrome lives in one place here; the map stays
+ * portable; changing the header never touches a map file. Emitted as `<lang>.html`
+ * (build.format:'file') so Cloudflare serves it with the right content-type.
+ * Supersedes the old `_redirects` raw passthrough for this URL (see ADR 0004).
+ */
+import { getCollection } from 'astro:content';
+import { resolved, DIR, type Lang } from '../../../../../i18n/strings';
+import { SITE } from '../../../../../i18n/urls';
+
+export const prerender = true;
+
+// Read the verbatim standalone map files at build (bundler-friendly — no node:fs,
+// which the Cloudflare adapter can't bundle). Keys are '/public/maps/.../<lang>.html'.
+const MAP_FILES = import.meta.glob('/public/maps/**/*.html', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+export async function getStaticPaths() {
+  const maps = await getCollection('maps');
+  const paths = [];
+  for (const m of maps) {
+    for (const lang of m.data.languages) {
+      if (lang !== 'he' && lang !== 'en') continue; // map files exist only for he/en
+      paths.push({
+        params: { corpus: m.data.corpus, book: m.data.book, location: m.data.location, lang },
+        props: { title: m.data.title, blurb: m.data.blurb },
+      });
+    }
+  }
+  return paths;
+}
+
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const { corpus, book, location, lang } = Astro.params as Record<string, string>;
+const L: Lang = lang === 'en' ? 'en' : 'he';
+const dir = DIR[L];
+const t = resolved(L);
+const { title, blurb } = Astro.props as { title: Record<Lang, string>; blurb: Record<Lang, string> };
+const fullTitle = `${title[L]} — ${t.brand}`;
+
+const base = `${SITE}/map/${corpus}/${book}/${location}`;
+const self = `${base}/${L}`;
+const p = (path: string) => (L === 'en' ? (path === '/' ? '/en' : `/en${path}`) : path);
+const mapUrl = (l: string) => `/map/${corpus}/${book}/${location}/${l}`;
+const cur = (l: string) => (l === L ? ' aria-current="true"' : '');
+
+const navCss = `<style id="cz-nav-style">
+  .cz-nav{position:sticky;top:0;z-index:1000;display:flex;align-items:center;gap:16px;
+    flex-wrap:wrap;padding:8px 16px;background:#f1ece2;border-bottom:1px solid #cabfb0;
+    font-family:'Assistant','Noto Sans Hebrew',system-ui,sans-serif;font-size:14px;
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .cz-nav a{color:#574f48;text-decoration:none}
+  .cz-nav-brand{font-family:'David Libre','Noto Serif Hebrew',Georgia,serif;font-weight:500;
+    font-size:20px;color:#1c1815;line-height:1}
+  .cz-nav-links{display:flex;gap:18px;align-items:center}
+  .cz-nav-links a:hover{color:#1c1815}
+  .cz-nav-spacer{flex:1}
+  .cz-nav-lang{display:inline-flex;border:1px solid #cabfb0;border-radius:999px;padding:2px;
+    background:#f5efe2;font-size:12px}
+  .cz-nav-lang a{padding:3px 10px;border-radius:999px;color:#574f48}
+  .cz-nav-lang a[aria-current="true"]{background:#1c1815;color:#f8f3e8}
+  @media (max-width:560px){.cz-nav{gap:10px;padding:8px 12px}.cz-nav-brand{font-size:18px}
+    .cz-nav-links{gap:12px;font-size:13px}}
+</style>`;
+
+const nav = `<nav class="cz-nav" dir="${dir}" aria-label="${esc(t.brand)}">
+  <a class="cz-nav-brand" href="${p('/')}">${esc(t.brand)}</a>
+  <div class="cz-nav-links">
+    <a href="${p('/')}">${esc(t.navHome)}</a>
+    <a href="${p('/library')}">${esc(t.navBrowse)}</a>
+    <a href="${p('/request')}">${esc(t.navRequest)}</a>
+  </div>
+  <span class="cz-nav-spacer"></span>
+  <div class="cz-nav-lang" role="group" aria-label="${esc(t.langGroupLabel)}">
+    <a href="${mapUrl('he')}"${cur('he')} hreflang="he">עברית</a>
+    <a href="${mapUrl('en')}"${cur('en')} hreflang="en">English</a>
+  </div>
+</nav>`;
+
+const seoHead = [
+  `<link rel="canonical" href="${self}">`,
+  `<link rel="alternate" hreflang="he" href="${base}/he">`,
+  `<link rel="alternate" hreflang="en" href="${base}/en">`,
+  `<link rel="alternate" hreflang="x-default" href="${base}/he">`,
+  `<meta property="og:type" content="article">`,
+  `<meta property="og:site_name" content="${esc(t.brand)}">`,
+  `<meta property="og:title" content="${esc(fullTitle)}">`,
+  `<meta property="og:description" content="${esc(blurb[L])}">`,
+  `<meta property="og:url" content="${self}">`,
+  `<meta property="og:locale" content="${L === 'he' ? 'he_IL' : 'en_US'}">`,
+  `<meta name="twitter:card" content="summary">`,
+  `<meta name="twitter:title" content="${esc(fullTitle)}">`,
+  `<meta name="twitter:description" content="${esc(blurb[L])}">`,
+].join('\n');
+
+const mapKey = `/public/maps/${corpus}/${book}/${location}/${lang}.html`;
+let html = MAP_FILES[mapKey];
+if (!html) throw new Error(`map file not found for ${mapKey}`);
+// Set lang/dir server-side (avoids first-paint flash; the map's own JS re-confirms).
+html = html.replace(/<html[^>]*>/, `<html lang="${L}" dir="${dir}">`);
+// Per-language <title> + description. NB: the template's <head> opens with a
+// documentation comment that mentions the literal text `<title>` and
+// `<meta name="description">`; match only the REAL tags (title content has no
+// `<`; the real meta carries a content= attribute the comment's mention lacks)
+// so we don't clobber that comment.
+html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(fullTitle)}</title>`);
+html = html.replace(/<meta\s+name="description"\s+content="[^"]*">/, `<meta name="description" content="${esc(blurb[L])}">`);
+// Inject SEO + nav CSS before </head>; inject the nav bar right after <body>.
+html = html.replace('</head>', `${seoHead}\n${navCss}\n</head>`);
+html = html.replace(/<body([^>]*)>/, `<body$1>\n${nav}`);
+---
+<Fragment set:html={html} />
