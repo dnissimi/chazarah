@@ -4,12 +4,16 @@
  *
  * The map is a standalone, site-agnostic file authored by gemara-map and shipped
  * verbatim under public/maps/.../{lang}.html. This page does NOT alter that file —
- * it reads it at build and serves it WRAPPED with a slim Chazarah header (brand →
- * home, Home/Library/Request, he⇄en) plus per-language SEO (title / description /
- * canonical / hreflang / OG). Site chrome lives in one place here; the map stays
- * portable; changing the header never touches a map file. Emitted as `<lang>.html`
+ * it reads it at build and serves it WRAPPED with the site header (a 1:1 copy of
+ * the homepage SiteHeader) plus per-language SEO (title / description / canonical /
+ * hreflang / OG). Site chrome lives in one place here; the map stays portable;
+ * changing the header never touches a map file. Emitted as `<lang>.html`
  * (build.format:'file') so Cloudflare serves it with the right content-type.
  * Supersedes the old `_redirects` raw passthrough for this URL (see ADR 0004).
+ *
+ * The header markup + CSS below are kept in sync with src/components/SiteHeader.astro
+ * and the `.site-header` rules in src/styles/global.css (the vars are re-declared
+ * scoped to .site-header so they don't collide with the map's own palette).
  */
 import { getCollection } from 'astro:content';
 import { resolved, DIR, type Lang } from '../../../../../i18n/strings';
@@ -17,8 +21,6 @@ import { SITE } from '../../../../../i18n/urls';
 
 export const prerender = true;
 
-// Read the verbatim standalone map files at build (bundler-friendly — no node:fs,
-// which the Cloudflare adapter can't bundle). Keys are '/public/maps/.../<lang>.html'.
 const MAP_FILES = import.meta.glob('/public/maps/**/*.html', {
   query: '?raw',
   import: 'default',
@@ -30,7 +32,7 @@ export async function getStaticPaths() {
   const paths = [];
   for (const m of maps) {
     for (const lang of m.data.languages) {
-      if (lang !== 'he' && lang !== 'en') continue; // map files exist only for he/en
+      if (lang !== 'he' && lang !== 'en') continue;
       paths.push({
         params: { corpus: m.data.corpus, book: m.data.book, location: m.data.location, lang },
         props: { title: m.data.title, blurb: m.data.blurb },
@@ -48,46 +50,83 @@ const L: Lang = lang === 'en' ? 'en' : 'he';
 const dir = DIR[L];
 const t = resolved(L);
 const { title, blurb } = Astro.props as { title: Record<Lang, string>; blurb: Record<Lang, string> };
-const fullTitle = `${title[L]} — ${t.brand}`;
+const pageTitle = `${title[L]} — ${t.brand}`;
 
 const base = `${SITE}/map/${corpus}/${book}/${location}`;
 const self = `${base}/${L}`;
-const p = (path: string) => (L === 'en' ? (path === '/' ? '/en' : `/en${path}`) : path);
-const mapUrl = (l: string) => `/map/${corpus}/${book}/${location}/${l}`;
-const cur = (l: string) => (l === L ? ' aria-current="true"' : '');
+const homeHref = L === 'en' ? '/en' : '/';
+const libraryHref = L === 'en' ? '/en/library' : '/library';
+const heMap = `/map/${corpus}/${book}/${location}/he`;
+const enMap = `/map/${corpus}/${book}/${location}/en`;
 
-const navCss = `<style id="cz-nav-style">
-  .cz-nav{position:sticky;top:0;z-index:1000;display:flex;align-items:center;gap:16px;
-    flex-wrap:wrap;padding:8px 16px;background:#f1ece2;border-bottom:1px solid #cabfb0;
-    font-family:'Assistant','Noto Sans Hebrew',system-ui,sans-serif;font-size:14px;
-    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-  .cz-nav a{color:#574f48;text-decoration:none}
-  .cz-nav-brand{font-family:'David Libre','Noto Serif Hebrew',Georgia,serif;font-weight:500;
-    font-size:20px;color:#1c1815;line-height:1}
-  .cz-nav-links{display:flex;gap:18px;align-items:center}
-  .cz-nav-links a:hover{color:#1c1815}
-  .cz-nav-spacer{flex:1}
-  .cz-nav-lang{display:inline-flex;border:1px solid #cabfb0;border-radius:999px;padding:2px;
-    background:#f5efe2;font-size:12px}
-  .cz-nav-lang a{padding:3px 10px;border-radius:999px;color:#574f48}
-  .cz-nav-lang a[aria-current="true"]{background:#1c1815;color:#f8f3e8}
-  @media (max-width:560px){.cz-nav{gap:10px;padding:8px 12px}.cz-nav-brand{font-size:18px}
-    .cz-nav-links{gap:12px;font-size:13px}}
+// 1:1 copy of SiteHeader.astro markup (incl. BrandMark SVG + full/short lang labels).
+const brandMark = `<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><g stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="square"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="9" y1="18" x2="15" y2="18"/></g></svg>`;
+const header = `<header class="site-header">
+  <div class="container">
+    <div class="row">
+      <a class="brand" href="${homeHref}">
+        <span class="brand-icon">${brandMark}</span>
+        <span class="brand-mark">${esc(t.brand)}</span>
+        <span class="brand-sub">${esc(t.brandSub)}</span>
+      </a>
+      <nav class="site-nav" aria-label="Site">
+        <a href="${homeHref}">${esc(t.navHome)}</a>
+        <a href="${libraryHref}">${esc(t.navBrowse)}</a>
+      </nav>
+      <div class="lang-switcher" role="group" aria-label="${esc(t.langGroupLabel)}">
+        <a href="${heMap}" hreflang="he"${L === 'he' ? ' class="active" aria-current="true"' : ''}>
+          <span class="lang-toggle-full">עברית</span>
+          <span class="lang-toggle-short" aria-hidden="true">ע</span>
+        </a>
+        <a href="${enMap}" hreflang="en"${L === 'en' ? ' class="active" aria-current="true"' : ''}>
+          <span class="lang-toggle-full">English</span>
+          <span class="lang-toggle-short" aria-hidden="true">EN</span>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="editorial-rule"></div>
+</header>`;
+
+// Exact `.site-header` CSS from global.css, scoped (vars re-declared on .site-header
+// so the map's own --ink/--accent/etc. are not affected; the header subtree resolves
+// them to the site palette).
+const headerCss = `<style id="cz-site-header">
+  .site-header{--paper:#f1ece2;--paper-card:#f8f3e8;--paper-warm:#f5efe2;--ink:#1c1815;--ink-2:#574f48;--ink-3:#8a8278;--rule:#cabfb0;--rule-strong:#a99c8b;--accent:#2a3a6b;--font-display:'David Libre','Noto Serif Hebrew',Georgia,serif;--font-body:'Assistant','Noto Sans Hebrew',system-ui,sans-serif;--display-tight:-0.005em;--display-weight:500;
+    border-bottom:1px solid var(--rule);background:var(--paper);position:sticky;top:0;z-index:50;text-align:start;margin:0;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .site-header .container{max-width:1180px;margin:0 auto;padding:0 56px;width:100%}
+  .site-header .row{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px 0}
+  .site-header .brand{display:flex;align-items:baseline;gap:12px;cursor:pointer;color:inherit;text-decoration:none}
+  .site-header .brand-icon{color:var(--ink);display:inline-flex;align-items:center;align-self:center}
+  .site-header .brand-mark{font-family:var(--font-display);font-weight:var(--display-weight);font-size:26px;letter-spacing:var(--display-tight);color:var(--ink);line-height:1}
+  .site-header .brand-sub{font-family:var(--font-body);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+  [dir="ltr"] .site-header .brand-sub{letter-spacing:.12em}
+  .site-header .site-nav{display:flex;align-items:center;gap:28px;font-family:var(--font-body);font-size:14px;color:var(--ink-2)}
+  .site-header .site-nav a{padding:4px 0;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;white-space:nowrap;color:inherit;text-decoration:none}
+  .site-header .site-nav a:hover{color:var(--ink);border-bottom-color:var(--rule-strong)}
+  .site-header .lang-switcher{display:inline-flex;border:1px solid var(--rule);border-radius:999px;padding:3px;background:var(--paper-warm);font-family:var(--font-body);font-size:12px;letter-spacing:.04em}
+  .site-header .lang-switcher a{appearance:none;background:transparent;border:0;padding:4px 12px;border-radius:999px;color:var(--ink-2);cursor:pointer;font:inherit;text-decoration:none}
+  .site-header .lang-switcher a.active{background:var(--ink);color:var(--paper-card)}
+  .site-header .lang-toggle-short{display:none}
+  .site-header .editorial-rule{height:1px;background:linear-gradient(to right,var(--rule-strong),transparent 80%)}
+  [dir="rtl"] .site-header .editorial-rule{background:linear-gradient(to left,var(--rule-strong),transparent 80%)}
+  @media (max-width:640px){
+    .site-header .lang-toggle-full{display:none}
+    .site-header .lang-toggle-short{display:inline}
+    .site-header .lang-switcher a{padding:4px 8px;min-width:22px}
+    .site-header .container{padding:0 16px}
+    .site-header .row{gap:10px;padding:14px 0}
+    .site-header .brand{gap:6px}
+    .site-header .brand-mark{font-size:22px}
+    .site-header .brand-sub{font-size:10px;letter-spacing:.06em}
+    .site-header .site-nav{gap:14px}
+    .site-header .site-nav a{font-size:13px}
+  }
 </style>`;
 
-const nav = `<nav class="cz-nav" dir="${dir}" aria-label="${esc(t.brand)}">
-  <a class="cz-nav-brand" href="${p('/')}">${esc(t.brand)}</a>
-  <div class="cz-nav-links">
-    <a href="${p('/')}">${esc(t.navHome)}</a>
-    <a href="${p('/library')}">${esc(t.navBrowse)}</a>
-    <a href="${p('/request')}">${esc(t.navRequest)}</a>
-  </div>
-  <span class="cz-nav-spacer"></span>
-  <div class="cz-nav-lang" role="group" aria-label="${esc(t.langGroupLabel)}">
-    <a href="${mapUrl('he')}"${cur('he')} hreflang="he">עברית</a>
-    <a href="${mapUrl('en')}"${cur('en')} hreflang="en">English</a>
-  </div>
-</nav>`;
+// The homepage header text is Assistant; the map only loads David Libre / Frank
+// Ruhl Libre / Heebo, so pull Assistant in for a true 1:1 match.
+const fontLink = `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&display=swap">`;
 
 const seoHead = [
   `<link rel="canonical" href="${self}">`,
@@ -96,29 +135,25 @@ const seoHead = [
   `<link rel="alternate" hreflang="x-default" href="${base}/he">`,
   `<meta property="og:type" content="article">`,
   `<meta property="og:site_name" content="${esc(t.brand)}">`,
-  `<meta property="og:title" content="${esc(fullTitle)}">`,
+  `<meta property="og:title" content="${esc(pageTitle)}">`,
   `<meta property="og:description" content="${esc(blurb[L])}">`,
   `<meta property="og:url" content="${self}">`,
   `<meta property="og:locale" content="${L === 'he' ? 'he_IL' : 'en_US'}">`,
   `<meta name="twitter:card" content="summary">`,
-  `<meta name="twitter:title" content="${esc(fullTitle)}">`,
+  `<meta name="twitter:title" content="${esc(pageTitle)}">`,
   `<meta name="twitter:description" content="${esc(blurb[L])}">`,
 ].join('\n');
 
-const mapKey = `/public/maps/${corpus}/${book}/${location}/${lang}.html`;
-let html = MAP_FILES[mapKey];
-if (!html) throw new Error(`map file not found for ${mapKey}`);
-// Set lang/dir server-side (avoids first-paint flash; the map's own JS re-confirms).
+let html = MAP_FILES[`/public/maps/${corpus}/${book}/${location}/${lang}.html`];
+if (!html) throw new Error(`map file not found for /public/maps/${corpus}/${book}/${location}/${lang}.html`);
+// Set lang/dir server-side (the map's JS also sets it from the URL leaf).
 html = html.replace(/<html[^>]*>/, `<html lang="${L}" dir="${dir}">`);
-// Per-language <title> + description. NB: the template's <head> opens with a
-// documentation comment that mentions the literal text `<title>` and
-// `<meta name="description">`; match only the REAL tags (title content has no
-// `<`; the real meta carries a content= attribute the comment's mention lacks)
-// so we don't clobber that comment.
-html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(fullTitle)}</title>`);
+// Per-language <title> + description. NB: the template's <head> opens with a doc
+// comment mentioning the literal text `<title>`/`<meta name="description">`; match
+// only the REAL tags (title content has no `<`; the real meta has a content= attr).
+html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(pageTitle)}</title>`);
 html = html.replace(/<meta\s+name="description"\s+content="[^"]*">/, `<meta name="description" content="${esc(blurb[L])}">`);
-// Inject SEO + nav CSS before </head>; inject the nav bar right after <body>.
-html = html.replace('</head>', `${seoHead}\n${navCss}\n</head>`);
-html = html.replace(/<body([^>]*)>/, `<body$1>\n${nav}`);
+html = html.replace('</head>', `${seoHead}\n${fontLink}\n${headerCss}\n</head>`);
+html = html.replace(/<body([^>]*)>/, `<body$1>\n${header}`);
 ---
 <Fragment set:html={html} />
