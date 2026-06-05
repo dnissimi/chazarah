@@ -450,7 +450,21 @@ button { font-family: inherit; }
     grid-template-columns: 1fr;
     padding: 20px 22px;
   }
-  .popular-table { min-width: 560px; }
+  /* "Recently added": on mobile the 3-column table rolled off the side. Stack
+     each row instead — title on its own line, with the reference + date right
+     beneath it (same small fonts) — so nothing requires horizontal scrolling. */
+  .popular-scroll { overflow-x: visible; }
+  .popular-table { min-width: 0; }
+  .popular-table thead { display: none; }
+  .popular-table tbody tr {
+    display: block;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .popular-table tbody tr:last-child { border-bottom: none; }
+  .popular-table tbody td { display: inline; padding: 0; border: none; }
+  .popular-table td.popular-topic { display: block; margin-bottom: 4px; }
+  .popular-ref::after { content: " · "; color: var(--ink-3); }
 }
 
 /* 404 */
