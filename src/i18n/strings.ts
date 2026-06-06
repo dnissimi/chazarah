@@ -47,7 +47,7 @@ const he = {
   requestTitle: 'בקשת מפה',
   requestIntro:
     'הציעו סוגיא, פרק, או פרשה למפה חדשה. נבדוק את הבקשה ידנית — לא כל בקשה תיענה, ואין מועד יעד.',
-  requestRefLabel: 'מקור בספריא',
+  requestRefLabel: 'מסכת / דף',
   requestRefHint: 'אפשר בעברית (״מגילה כו״) או באנגלית (״Megillah 26״).',
   requestRefPlaceholder: 'למשל: מגילה כו',
   requestTargetLangLabel: 'שפת היעד',
@@ -187,7 +187,7 @@ const en: Partial<Record<StringKey, string>> = {
   requestTitle: 'Request a map',
   requestIntro:
     "Propose a sugya, perek, or parsha for a new map. We review every request manually — not all requests get fulfilled, and there's no SLA.",
-  requestRefLabel: 'Sefaria reference',
+  requestRefLabel: 'Masechet / Daf',
   requestRefHint: 'Hebrew ("מגילה כו") or Latin ("Megillah 26") both work.',
   requestRefPlaceholder: 'e.g. Megillah 26',
   requestTargetLangLabel: 'Target language',

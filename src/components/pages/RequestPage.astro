@@ -1,7 +1,6 @@
 ---
 import SiteLayout from '../../layouts/SiteLayout.astro';
 import { resolved, type Lang } from '../../i18n/strings';
-import { BAVLI_TRACTATES } from '../../lib/library';
 
 interface Props {
   lang: Lang;
@@ -38,22 +37,9 @@ const TURNSTILE_SITEKEY =
             required
             autocomplete="off"
             spellcheck="false"
-            list="masechet-suggestions"
             data-request-ref
             placeholder={t.requestRefPlaceholder}
           />
-          {/* Bavli tractate names (both Hebrew and English) feed native
-              browser substring matching as the visitor types into a blank
-              form. No JS — the browser handles the dropdown. When the form
-              is opened with ?ref= prefilled this is invisible noise. */}
-          <datalist id="masechet-suggestions">
-            {BAVLI_TRACTATES.map((tr) => (
-              <>
-                <option value={tr.he}></option>
-                <option value={tr.en}></option>
-              </>
-            ))}
-          </datalist>
           <p class="hint">{t.requestRefHint}</p>
           <p class="error" data-request-ref-error hidden>{t.requestRefRequired}</p>
         </div>
