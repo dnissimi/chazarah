@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל״ז</title>
+<meta name="description" content="שלוש סוגיות בחולין ל״ז על המסוכנת — בהמה הנוטה למות: משנת סימני הפירכוס המכשירים את שחיטתהּ; דרשה ארוכה המוכיחה שבשרהּ מותר באכילה לאחר שחיטה, שאינה כנבלה ולא כטרפה; והגדרת המסוכנת ומחלוקת רב ושמואל מהו הפירכוס המתיר.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="37">
+<meta name="gemara-map:sefaria-ref" content="Chullin 37">
+<meta name="gemara-map:topic-he" content="שחיטת המסוכנת וסימני הפירכוס">
+<meta name="gemara-map:topic-en" content="Slaughtering a dying animal; signs of life">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל״ז">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 37">
+<meta name="gemara-map:blurb-he" content="שלוש סוגיות בחולין ל״ז על המסוכנת — בהמה הנוטה למות: משנת סימני הפירכוס המכשירים את שחיטתהּ; דרשה ארוכה המוכיחה שבשרהּ מותר באכילה לאחר שחיטה, שאינה כנבלה ולא כטרפה; והגדרת המסוכנת ומחלוקת רב ושמואל מהו הפירכוס המתיר.">
+<meta name="gemara-map:blurb-en" content="Three sugyot on Chullin 37 about the mesukkenet — an animal in danger of imminent death: the Mishnah's convulsion-signs that validate its slaughter; a long derivation that its meat is permitted once slaughtered, being neither a carcass nor a tereifa; and the definition of a mesukkenet with the Rav–Shmuel dispute over which convulsion validates the slaughter.">
+<meta name="gemara-map:sugya-count" content="3">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל״ז</span><span data-when="en">Sugya map — Chullin 37</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל״ז א–ל״ח א (ל״ז א:ב–ל״ח א:ו) · שלוש סוגיות · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 37a–38a (37a:2–38a:6) · three sugyot · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> כדי שתהא שחיטת בהמה מסוכנת (נוטה למות) כשרה, צריך שתראה סימן חיים — ׳פירכוס׳ — והמשנה מביאה כמה דעות מהו. הגמרא מבססת בדרשה ארוכה שבשר המסוכנת מותר באכילה לאחר שחיטה — אינה כנבלה ולא כטרפה — ומסיימת בהגדרת המסוכנת ובמחלוקת אילו תנועות נחשבות פירכוס המתיר ואילו רק ׳הוצאת נפש׳.</span>
+    <span data-when="en"><b>Bottom line:</b> For the slaughter of an animal in danger of imminent death (mesukkenet) to be valid, it must show a sign of life — a convulsion (pirkus) — and the Mishnah records several views on what counts. Through a long derivation the Gemara establishes that a mesukkenet's meat is permitted once slaughtered — it is neither a carcass nor a tereifa — and closes by defining a mesukkenet and disputing which movements count as a validating convulsion versus mere death-throes.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+    <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — שלוש סוגיות</span><span data-when="en">Overview — three sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · משנה: סימני פירכוס במסוכנת"]):::mishnah
+  O2["2 · מניין שהמסוכנת מותרת באכילה? דרשה ארוכה"]:::statement
+  O3["3 · מהי מסוכנת, ומהו פירכוס המתיר?"]:::statement
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · Mishnah: convulsion-signs in a mesukkenet"]):::mishnah
+  O2["2 · Whence is a mesukkenet permitted to eat? a long derivation"]:::statement
+  O3["3 · What is a mesukkenet, and which convulsion validates?"]:::statement
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+      </script>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">סימני הפירכוס במסוכנת — המשנה</span><span data-when="en">The Mishnah: signs of life in a mesukkenet</span>
+        <span class="ref">Chullin 37a:2-37a:3</span></h2>
+    <div class="lead"><span data-when="he">המשנה דנה בשוחט בהמה מסוכנת (נוטה למות): איזה סימן חיים — ׳פירכוס׳ — נדרש כדי שתהא שחיטתהּ כשרה. רשב״ג, רבי אליעזר וחכמים נחלקו בדבר, ורבי שמעון מביא מעשה כראיה לרבי אליעזר; ולבסוף סייג: כל זה במוחזקת מסוכנת, אך בריאה כשרה אף בלא סימן.</span><span data-when="en">The Mishnah discusses one who slaughters a dying animal (mesukkenet): which sign of life — a convulsion (pirkus) — is required for the slaughter to be valid. Rabban Shimon ben Gamliel, Rabbi Eliezer, and the Sages dispute it, and Rabbi Shimon brings a case supporting Rabbi Eliezer; it closes with a qualification: all this is for one presumed dying, but a healthy animal is valid even without a sign.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: השוחט את המסוכנת — נחלקו בסימן הפירכוס המכשיר; רשב״ג ביד וברגל, ר׳ אליעזר בזינוק דם, חכמים יד או רגל או כשכוש זנב"]):::mishnah
+  S2["② ר׳ שמעון: שחט בלילה ומצא כתלים מלאי דם — כשרה, שזינקה, כר׳ אליעזר"]:::statement
+  S3["③ אחד דקה ואחד גסה — דקה שפשטה ידה ולא החזירה פסולה, שאינה אלא הוצאת נפש"]:::statement
+  C4(["④ במה דברים אמורים — במוחזקת מסוכנת; בחזקת בריאה כשרה אף בלא אחד מן הסימנים"]):::conclusion
+  M1 -->|דעת ר׳ שמעון| S2
+  M1 -->|המשך המשנה| S3
+  S3 -->|סייג| C4
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishnah: one who slaughters a mesukkenet — they dispute the validating sign; RaShBaG foreleg and hind leg, R. Eliezer blood spurting, Sages foreleg or hind leg or wagging the tail"]):::mishnah
+  S2["② R. Shimon: slaughtered at night and found walls full of blood — valid, for it spurted, like R. Eliezer"]:::statement
+  S3["③ Both small and large — a small one that extended its bent foreleg and did not draw it back is invalid, mere death-throes"]:::statement
+  C4(["④ When is this said — of one presumed dying; if presumed healthy, valid even without any of these signs"]):::conclusion
+  M1 -->|R. Shimon| S2
+  M1 -->|Mishnah cont.| S3
+  S3 -->|qualification| C4
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① הַשּׁוֹחֵט אֶת הַמְסוּכֶּנֶת … רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל … עַד שֶׁתְּפַרְכֵּס בַּיָּד וּבָרֶגֶל … רַבִּי אֱלִיעֶזֶר … דַּיָּהּ אִם זִינְּקָה … וַחֲכָמִים … אוֹ עַד שֶׁתְּכַשְׁכֵּשׁ בִּזְנָבָהּ"]):::mishnah
+  S2["② אָמַר רַבִּי שִׁמְעוֹן: הַשּׁוֹחֵט בַּלַּיְלָה … וּמָצָא כְּתָלִים מְלֵאִים דָּם – כְּשֵׁרָה, שֶׁזִּינְּקָה, וּכְמִדַּת רַבִּי אֱלִיעֶזֶר"]:::statement
+  S3["③ בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה – פְּסוּלָה, שֶׁאֵינָהּ אֶלָּא הוֹצָאַת נֶפֶשׁ בִּלְבָד"]:::statement
+  C4(["④ בַּמֶּה דְּבָרִים אֲמוּרִים? שֶׁהָיְתָה בְּחֶזְקַת מְסוּכֶּנֶת, אֲבָל … בְּחֶזְקַת בְּרִיאָה … אֲפִילּוּ אֵין בָּהּ … הַסִּימָנִים הַלָּלוּ – כְּשֵׁרָה"]):::conclusion
+  M1 -->|דעת ר׳ שמעון| S2
+  M1 -->|המשך המשנה| S3
+  S3 -->|סייג| C4
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ז א — Chullin 37a:2</span></div>
+      <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט אֶת הַמְסוּכֶּנֶת, רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל אוֹמֵר: עַד שֶׁתְּפַרְכֵּס בַּיָּד וּבָרֶגֶל. רַבִּי אֱלִיעֶזֶר אוֹמֵר: דַּיָּהּ אִם זִינְּקָה. אָמַר רַבִּי שִׁמְעוֹן: הַשּׁוֹחֵט בַּלַּיְלָה, וּלְמָחָר הִשְׁכִּים וּמָצָא כְּתָלִים מְלֵאִים דָּם – כְּשֵׁרָה, שֶׁזִּינְּקָה, וּכְמִדַּת רַבִּי אֱלִיעֶזֶר. וַחֲכָמִים אוֹמְרִים: עַד שֶׁתְּפַרְכֵּס אוֹ בַיָּד אוֹ בָרֶגֶל, אוֹ עַד שֶׁתְּכַשְׁכֵּשׁ בִּזְנָבָהּ.</div>
+      <div class="trans" data-when="he">משנה. השוחט בהמה מסוכנת — הנוטה למות — שחיטתהּ כשרה רק אם הראתה סימן חיים בשעת השחיטה. רבן שמעון בן גמליאל: עד שתפרכס ביד וברגל; רבי אליעזר: די אם קילח הדם בכוח; וחכמים: עד שתפרכס ביד או ברגל, או שתכשכש בזנבהּ.</div>
+      <div class="trans" data-when="en">MISHNA: In the case of one who slaughters an animal that is in danger of imminent death, Rabban Shimon ben Gamliel says: The slaughter is valid only in a case where after the slaughter it convulses with its foreleg and with its hind leg. Rabbi Eliezer says: It is sufficient if blood spurted from the neck. Rabbi Shimon says: In the case of one who slaughters at night and the next day he awoke and found walls full of blood, the slaughter is valid, as it is clear that the blood spurted, and this is in accordance with the rule of Rabbi Eliezer. And the Rabbis say: It is valid only in a case where it convulses with its foreleg or with its hind leg, or in a case where it wags its tail.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ז א — Chullin 37a:2</span></div>
+      <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט אֶת הַמְסוּכֶּנֶת, רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל אוֹמֵר: עַד שֶׁתְּפַרְכֵּס בַּיָּד וּבָרֶגֶל. רַבִּי אֱלִיעֶזֶר אוֹמֵר: דַּיָּהּ אִם זִינְּקָה. אָמַר רַבִּי שִׁמְעוֹן: הַשּׁוֹחֵט בַּלַּיְלָה, וּלְמָחָר הִשְׁכִּים וּמָצָא כְּתָלִים מְלֵאִים דָּם – כְּשֵׁרָה, שֶׁזִּינְּקָה, וּכְמִדַּת רַבִּי אֱלִיעֶזֶר. וַחֲכָמִים אוֹמְרִים: עַד שֶׁתְּפַרְכֵּס אוֹ בַיָּד אוֹ בָרֶגֶל, אוֹ עַד שֶׁתְּכַשְׁכֵּשׁ בִּזְנָבָהּ.</div>
+      <div class="trans" data-when="he">רבי שמעון מביא ראיה לדברי רבי אליעזר: השוחט בלילה, והשכים בבוקר ומצא את הכתלים מלאים דם — כשרה, שהרי קילח הדם בכוח (זינקה), כשיטת רבי אליעזר.</div>
+      <div class="trans" data-when="en">MISHNA: In the case of one who slaughters an animal that is in danger of imminent death, Rabban Shimon ben Gamliel says: The slaughter is valid only in a case where after the slaughter it convulses with its foreleg and with its hind leg. Rabbi Eliezer says: It is sufficient if blood spurted from the neck. Rabbi Shimon says: In the case of one who slaughters at night and the next day he awoke and found walls full of blood, the slaughter is valid, as it is clear that the blood spurted, and this is in accordance with the rule of Rabbi Eliezer. And the Rabbis say: It is valid only in a case where it convulses with its foreleg or with its hind leg, or in a case where it wags its tail.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ז א — Chullin 37a:3</span></div>
+      <div class="orig">אֶחָד בְּהֵמָה דַּקָּה וְאֶחָד בְּהֵמָה גַּסָּה, בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה – פְּסוּלָה, שֶׁאֵינָהּ אֶלָּא הוֹצָאַת נֶפֶשׁ בִּלְבָד. בַּמֶּה דְּבָרִים אֲמוּרִים? שֶׁהָיְתָה בְּחֶזְקַת מְסוּכֶּנֶת, אֲבָל אִם הָיְתָה בְּחֶזְקַת בְּרִיאָה, אֲפִילּוּ אֵין בָּהּ אֶחָד מִכׇּל הַסִּימָנִים הַלָּלוּ – כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">דין זה שווה בבהמה דקה ובגסה. בהמה דקה שבשעת שחיטה פשטה את רגלהּ הכפופה ולא החזירה — פסולה, שאין פשיטה זו אלא חלק מיציאת הנשמה ולא סימן חיים.</div>
+      <div class="trans" data-when="en">This is the halakha with regard to both a small animal, e.g., a sheep, and a large animal, e.g., a cow, that is in danger of imminent death. The slaughter of a small animal that when being slaughtered extended its foreleg that was bent and did not restore it to the bent position is not valid, as extending the foreleg is only part of the natural course of removal of the animal’s soul from its body and not a convulsion indicating life. In what case is this statement said? It is in a case where the presumptive status of the animal was that it was in danger of imminent death. But if its presumptive status was that it was healthy, then even if there were none of these indicators, the slaughter is valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ז א — Chullin 37a:3</span></div>
+      <div class="orig">אֶחָד בְּהֵמָה דַּקָּה וְאֶחָד בְּהֵמָה גַּסָּה, בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה – פְּסוּלָה, שֶׁאֵינָהּ אֶלָּא הוֹצָאַת נֶפֶשׁ בִּלְבָד. בַּמֶּה דְּבָרִים אֲמוּרִים? שֶׁהָיְתָה בְּחֶזְקַת מְסוּכֶּנֶת, אֲבָל אִם הָיְתָה בְּחֶזְקַת בְּרִיאָה, אֲפִילּוּ אֵין בָּהּ אֶחָד מִכׇּל הַסִּימָנִים הַלָּלוּ – כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">במה דברים אמורים? בבהמה שהוחזקה מסוכנת. אבל אם הוחזקה בריאה — כשרה אף אם לא נראה בה אף אחד מן הסימנים הללו.</div>
+      <div class="trans" data-when="en">This is the halakha with regard to both a small animal, e.g., a sheep, and a large animal, e.g., a cow, that is in danger of imminent death. The slaughter of a small animal that when being slaughtered extended its foreleg that was bent and did not restore it to the bent position is not valid, as extending the foreleg is only part of the natural course of removal of the animal’s soul from its body and not a convulsion indicating life. In what case is this statement said? It is in a case where the presumptive status of the animal was that it was in danger of imminent death. But if its presumptive status was that it was healthy, then even if there were none of these indicators, the slaughter is valid.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">מניין שהמסוכנת מותרת באכילה</span><span data-when="en">Whence a mesukkenet is permitted to eat</span>
+        <span class="ref">Chullin 37a:4-37b:7</span></h2>
+    <div class="lead"><span data-when="he">דרשה ארוכה המבררת את מקור ההיתר לאכול מסוכנת לאחר שחיטה. הגמרא מנסה ללמוד זאת מנבלה ומטרפה — ושתי הראיות נדחות — ולבסוף מן הכתוב ׳חֵלב נבלה וחֵלב טרפה׳: מדכתבה התורה ׳נבלה׳ בנפרד, מכלל שטרפה אינה כמסוכנת. עוד מובאות שתי ראיות (׳ואיבעית אימא׳), והאחרונה מדברי יחזקאל — שגדולתו היתה שנמנע מן המסוכנת המותרת.</span><span data-when="en">A long derivation establishing the source for permitting a mesukkenet's meat after slaughter. The Gemara tries to learn it from a carcass and from a tereifa — both proofs are rejected — and finally from the verse ׳the fat of a carcass and the fat of a tereifa׳: since the Torah writes ׳carcass׳ separately, a tereifa is not the same as a mesukkenet. Two further proofs follow (׳alternatively׳), the last from Ezekiel — whose greatness lay in refraining from the permitted mesukkenet.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① קושיא: מנין שהמסוכנת מותרת? וממאי דתיסק אדעתין לאסור — מ׳זֹאת הַחַיָּה אֲשֶׁר תֹּאכְלוּ׳, חיה אֱכוֹל"}:::question
+  P2["② ראיה א׳ — מ׳נבלה לא תאכל׳; אם אסורה מחיים, ל״ל לאחר מיתה? מכלל דמסוכנת שריא"]:::proof
+  A3["③ ודלמא היינו נבלה היינו מסוכנת? לא ס״ד — ׳הנוגע בנבלתה׳; לאחר מיתה קרי נבלה, לא מחיים"]:::answer
+  Q4{"④ ודחי: ודלמא מחיים בעשה, לאחר מיתה בלאו — ונפלה ראיה א׳"}:::question
+  P5["⑤ ראיה ב׳ — מ׳טרפה לא תאכל׳; ק״ו ממסוכנת שאינה מחוסרת אבר; מכלל דמסוכנת שריא"]:::proof
+  Q6{"⑥ ודלמא היינו טרפה היינו מסוכנת בעשה ולאו? אם כן ׳נבלה׳ דכתב רחמנא ל״ל?"}:::question
+  Q7{"⑦ ודלמא היינו נבלה היינו טרפה היינו מסוכנת — בשני לאוין ועשה; ונפלה ראיה ב׳"}:::question
+  P8["⑧ ראיה ג׳ — ׳חֵלֶב נְבֵלָה וְחֵלֶב טְרֵפָה … לֹא תֹאכְלֻהוּ׳; יבא איסור נבלה וטרפה ויחול על איסור חלב"]:::proof
+  S9["⑨ ואי טרפה היינו מסוכנת — לכתוב רק ׳חלב טרפה לא תאכלוהו׳, ונבלה בק״ו!"]:::statement
+  C10(["⑩ אלא מדכתב ׳נבלה׳ — מכלל דטרפה לאו היינו מסוכנת; מסוכנת מותרת"]):::conclusion
+  Q11{"⑪ מתקיף מר בר רב אשי: ׳נבלה׳ לגיסטרא שעשאהּ לשניים — ונדחה: אף גיסטרא היתה מסוכנת פורתא תחילה"}:::question
+  P12["⑫ ואיבעית אימא — כפל ׳חלב׳ ׳חלב׳; יש שחלבהּ חלוק מבשרהּ — מסוכנת, ומותרת"]:::proof
+  P13["⑬ ואיבעית אימא מיחזקאל — ׳וּנְבֵלָה וּטְרֵפָה לֹא אָכַלְתִּי מִנְּעוּרַי׳"]:::proof
+  S14["⑭ ביאור הכתוב: ׳כוס כוס׳ — מסוכנת; ׳בשר פיגול׳ — שהורה בה חכם; משום ר׳ נתן — שלא הורמו מתנותיה"]:::statement
+  C15(["⑮ אי שריא — היינו רבותיה דיחזקאל; אי אסירא — מאי רבותיה? מסוכנת מותרת"]):::conclusion
+  Q1 -->|ראיה א׳ — נבלה| P2
+  P2 -.->|ודלמא| A3
+  A3 -.->|ודלמא| Q4
+  Q4 -->|אלא, ראיה ב׳ — טרפה| P5
+  P5 -.->|ודלמא| Q6
+  Q6 -.->|ודלמא| Q7
+  Q7 -->|אלא, ראיה ג׳ — חלב| P8
+  P8 --> S9
+  S9 -->|מכלל| C10
+  C10 -.->|מתקיף ונדחה| Q11
+  C10 -->|ואיבעית אימא| P12
+  C10 -->|ואיבעית אימא — יחזקאל| P13
+  P13 --> S14
+  S14 -->|הראיה| C15
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Question: whence is a mesukkenet permitted? and why would we forbid it — from ׳These are the living things you may eat׳, eat what lives"}:::question
+  P2["② Proof 1 — from ׳you shall not eat a carcass׳; if forbidden alive, why state it after death? hence permitted"]:::proof
+  A3["③ Perhaps carcass = mesukkenet? No — ׳touches its carcass׳; only after death is it called a carcass, not while alive"]:::answer
+  Q4{"④ Rejected: perhaps alive by a positive command, after death by a prohibition — so Proof 1 collapses"}:::question
+  P5["⑤ Proof 2 — from ׳you shall not eat a tereifa׳; a fortiori from a mesukkenet that lacks no limb; hence permitted"]:::proof
+  Q6{"⑥ Perhaps tereifa = mesukkenet, by command and prohibition? then why does the Torah write ׳carcass׳?"}:::question
+  Q7{"⑦ Perhaps carcass = tereifa = mesukkenet — two prohibitions and a command; so Proof 2 collapses"}:::question
+  P8["⑧ Proof 3 — ׳the fat of a carcass and the fat of a tereifa … you shall not eat׳; the carcass and tereifa prohibitions take effect upon the fat prohibition"]:::proof
+  S9["⑨ Were tereifa = mesukkenet, let it write only ׳fat of a tereifa you shall not eat׳, inferring the carcass a fortiori!"]:::statement
+  C10(["⑩ Rather, since it writes ׳carcass׳ — a tereifa is not a mesukkenet; a mesukkenet is permitted"]):::conclusion
+  Q11{"⑪ Mar bar Rav Ashi objects: ׳carcass׳ is for one cut in two — rejected: even that was somewhat dying first"}:::question
+  P12["⑫ Alternatively — the doubled ׳fat׳ ׳fat׳; there is one whose fat is distinct from its meat — the mesukkenet, and it is permitted"]:::proof
+  P13["⑬ Alternatively, from Ezekiel — ׳I have not eaten a carcass or a tereifa from my youth׳"]:::proof
+  S14["⑭ Reading the verse: ׳slaughter it, slaughter it׳ — a mesukkenet; ׳piggul flesh׳ — one a Sage permitted; per R. Natan — whose priestly gifts were unseparated"]:::statement
+  C15(["⑮ If permitted — that is Ezekiel's greatness; if forbidden — what greatness? a mesukkenet is permitted"]):::conclusion
+  Q1 -->|Proof 1 — carcass| P2
+  P2 -.->|perhaps| A3
+  A3 -.->|perhaps| Q4
+  Q4 -->|rather, Proof 2 — tereifa| P5
+  P5 -.->|perhaps| Q6
+  Q6 -.->|perhaps| Q7
+  Q7 -->|rather, Proof 3 — fat| P8
+  P8 --> S9
+  S9 -->|inference| C10
+  C10 -.->|objection, rejected| Q11
+  C10 -->|alternatively| P12
+  C10 -->|alternatively — Ezekiel| P13
+  P13 --> S14
+  S14 -->|the proof| C15
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① מְסוּכֶּנֶת מִמַּאי דְּשַׁרְיָא? וּמִמַּאי תִּיסַּק אַדַּעְתִּין דַּאֲסִירָא? … ׳זֹאת הַחַיָּה אֲשֶׁר תֹּאכְלוּ׳, חַיָּה אֱכוֹל … וְהָא מְסוּכֶּנֶת אֵינָהּ חַיָּה?"}:::question
+  P2["② מִדְּאָמַר רַחֲמָנָא נְבֵלָה לֹא תֹּאכֵל, מִכְּלָל דִּמְסוּכֶּנֶת שַׁרְיָא … מֵחַיִּים אֲסִירָא, לְאַחַר מִיתָה מִיבְּעֵי?"]:::proof
+  A3["③ וְדִלְמָא הַיְינוּ נְבֵלָה הַיְינוּ מְסוּכֶּנֶת? לָא סָלְקָא דַעְתָּךְ … ׳הַנֹּגֵעַ בְּנִבְלָתָהּ׳ … לְאַחַר מִיתָה … מֵחַיִּים לָא אִקְּרַי נְבֵלָה"]:::answer
+  Q4{"④ וְדִלְמָא … מֵחַיִּים בַּעֲשֵׂה, לְאַחַר מִיתָה בְּלָאו"}:::question
+  P5["⑤ אֶלָּא, מִדְּאָמַר רַחֲמָנָא טְרֵפָה לֹא תֹּאכַל – מִכְּלָל דִּמְסוּכֶּנֶת שַׁרְיָא … טְרֵפָה מִיבַּעְיָא?"]:::proof
+  Q6{"⑥ וְדִלְמָא הַיְינוּ טְרֵפָה הַיְינוּ מְסוּכֶּנֶת … אִם כֵּן, נְבֵלָה דִּכְתַב רַחֲמָנָא לְמָה לִי?"}:::question
+  Q7{"⑦ וְדִלְמָא הַיְינוּ נְבֵלָה, הַיְינוּ טְרֵפָה, הַיְינוּ מְסוּכֶּנֶת, וְלַעֲבוֹר עָלָיו בִּשְׁנֵי לָאוִין וַעֲשֵׂה"}:::question
+  P8["⑧ אֶלָּא מֵהָכָא, ׳וְחֵלֶב נְבֵלָה וְחֵלֶב טְרֵפָה … וְאָכֹל לֹא תֹאכְלֻהוּ׳ … יָבֹא אִיסּוּר נְבֵלָה וְיָחוּל עַל אִיסּוּר חֵלֶב"]:::proof
+  S9["⑨ וְאִי סָלְקָא דַעְתָּךְ טְרֵפָה הַיְינוּ מְסוּכֶּנֶת, לִכְתּוֹב רַחֲמָנָא … ׳וְחֵלֶב טְרֵפָה לֹא תֹאכְלוּהוּ׳ … לְאַחַר מִיתָה מִיבַּעְיָא?!"]:::statement
+  C10(["⑩ אֶלָּא, מִדִּכְתַב רַחֲמָנָא ׳נְבֵלָה׳, מִכְּלָל דִּטְרֵפָה לָאו הַיְינוּ מְסוּכֶּנֶת"]):::conclusion
+  Q11{"⑪ מַתְקֵיף לַהּ מָר בַּר רַב אָשֵׁי … ׳נְבֵלָה׳ … דְּלָא אָתְיָא מִכֹּחַ מְסוּכֶּנֶת … שֶׁעֲשָׂאָהּ גִּיסְטְרָא … אִי אֶפְשָׁר דְּלָא הֲוַי מְסוּכֶּנֶת פּוּרְתָּא"}:::question
+  P12["⑫ וְאִיבָּעֵית אֵימָא … ׳חֵלֶב׳ ׳חֵלֶב׳ לְמָה לִי? … יֵשׁ לְךָ אַחֶרֶת שֶׁחֶלְבָּהּ חָלוּק מִבְּשָׂרָהּ … מְסוּכֶּנֶת"]:::proof
+  P13["⑬ וְאִיבָּעֵית אֵימָא מֵהָכָא, ׳וּנְבֵלָה וּטְרֵפָה לֹא אָכַלְתִּי מִנְּעוּרַי וְעַד עַתָּה׳"]:::proof
+  S14["⑭ ׳וּנְבֵלָה וּטְרֵפָה לֹא אָכַלְתִּי מִנְּעוּרַי׳ – שֶׁלֹּא אָכַלְתִּי בְּשַׂר כּוֹס כּוֹס … ׳בְּשַׂר פִּגּוּל׳ – שֶׁהוֹרָה בָּהּ חָכָם … מִשּׁוּם רַבִּי נָתָן … שֶׁלֹּא הוּרְמוּ מַתְּנוֹתֶיהָ"]:::statement
+  C15(["⑮ אִי אָמְרַתְּ בִּשְׁלָמָא שַׁרְיָא – הַיְינוּ רְבוּתֵיהּ דִּיחֶזְקֵאל, אֶלָּא אִי אָמְרַתְּ אֲסִירָא – מַאי רְבוּתֵיהּ דִּיחֶזְקֵאל?"]):::conclusion
+  Q1 -->|ראיה א׳ — נבלה| P2
+  P2 -.->|ודלמא| A3
+  A3 -.->|ודלמא| Q4
+  Q4 -->|אלא, ראיה ב׳ — טרפה| P5
+  P5 -.->|ודלמא| Q6
+  Q6 -.->|ודלמא| Q7
+  Q7 -->|אלא, ראיה ג׳ — חלב| P8
+  P8 --> S9
+  S9 -->|מכלל| C10
+  C10 -.->|מתקיף ונדחה| Q11
+  C10 -->|ואיבעית אימא| P12
+  C10 -->|ואיבעית אימא — יחזקאל| P13
+  P13 --> S14
+  S14 -->|הראיה| C15
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ז א — Chullin 37a:4</span></div>
+      <div class="orig">גְּמָ׳ מְסוּכֶּנֶת מִמַּאי דְּשַׁרְיָא? וּמִמַּאי תִּיסַּק אַדַּעְתִּין דַּאֲסִירָא? דִּכְתִיב: ״זֹאת הַחַיָּה אֲשֶׁר תֹּאכְלוּ״, חַיָּה אֱכוֹל, וְשֶׁאֵינָהּ חַיָּה לֹא תֹּאכַל. וְהָא מְסוּכֶּנֶת אֵינָהּ חַיָּה?</div>
+      <div class="trans" data-when="he">גמרא. מניין שבשר המסוכנת מותר באכילה לאחר שחיטה? וממה היה עולה בדעתנו לאוסרהּ? מן הכתוב ׳זאת החיה אשר תאכלו׳ — ׳חיה אֱכוֹל׳, ושאינה חיה (כמסוכנת) אל תאכל; והרי מסוכנת אינה ׳חיה׳.</div>
+      <div class="trans" data-when="en">GEMARA: The Gemara asks: From where is it known that the flesh of an animal in danger of imminent death is permitted by means of slaughter? The Gemara responds with a question: And from where would it enter your mind that it is prohibited? The Gemara explains that one may have thought it is prohibited, as it is written: “These are the living beings [haḥayya] that you may eat among all the animals that are on the earth” (Leviticus 11:2). One might have thought that the verse is saying: Eat an animal that is fit to live [ḥayya], but do not eat an animal that is not fit to live. And this animal in danger of imminent death is not fit to live.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ז א — Chullin 37a:5</span></div>
+      <div class="orig">מִדְּאָמַר רַחֲמָנָא נְבֵלָה לֹא תֹּאכֵל, מִכְּלָל דִּמְסוּכֶּנֶת שַׁרְיָא, דְּאִי סָלְקָא דַעְתָּךְ מְסוּכֶּנֶת אֲסִירָא – הַשְׁתָּא מֵחַיִּים אֲסִירָא, לְאַחַר מִיתָה מִיבְּעֵי?</div>
+      <div class="trans" data-when="he">ראיה ראשונה: מדאמרה התורה ׳נבלה לא תאכל׳ — מכלל שהמסוכנת מותרת; שאם תאמר שהמסוכנת אסורה כבר מחיים, מה צורך לאוסרהּ במפורש לאחר מיתה?</div>
+      <div class="trans" data-when="en">The fact that its meat is permitted is derived from the fact that the Merciful One states that you shall not eat an unslaughtered animal carcass, as it is written: “You shall not eat any unslaughtered carcass” (Deuteronomy 14:21); one learns by inference that eating the meat of an animal in danger of imminent death is permitted. As, if it enters your mind that eating the meat of an animal in danger of imminent death is prohibited, now if an animal is prohibited while alive, is it necessary to state that it is prohibited after death?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ז א — Chullin 37a:6</span></div>
+      <div class="orig">וְדִלְמָא הַיְינוּ נְבֵלָה הַיְינוּ מְסוּכֶּנֶת? לָא סָלְקָא דַּעְתָּךְ, דִּכְתִיב: ״וְכִי יָמוּת מִן הַבְּהֵמָה אֲשֶׁר הִיא לָכֶם לְאׇכְלָה הַנֹּגֵעַ בְּנִבְלָתָהּ״, לְאַחַר מִיתָה הוּא דְּקַרְיַיהּ רַחֲמָנָא נְבֵלָה, מֵחַיִּים לָא אִקְּרַי נְבֵלָה.</div>
+      <div class="trans" data-when="he">ושמא דין נבלה ודין מסוכנת אחד הם? אין לומר כן, שנאמר ׳וכי ימות... הנוגע בנבלתה׳ — רק לאחר מיתה קראתהּ התורה ׳נבלה׳, ומחיים אינה קרויה נבלה.</div>
+      <div class="trans" data-when="en">The Gemara rejects that proof. And that is not a legitimate inference, as perhaps the halakhic status of an unslaughtered carcass is the same as that of an animal in danger of imminent death, and the prohibition: “You shall not eat any unslaughtered carcass,” includes both. The Gemara answers: It would not enter your mind to say so, as it is written: “And if any animal of which you may eat dies, one who touches its carcass shall be impure until the evening” (Leviticus 11:39). This indicates that it is after death that the Merciful One calls the animal a carcass; while alive, the animal is not called a carcass.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ז א — Chullin 37a:7</span></div>
+      <div class="orig">וְדִלְמָא לְעוֹלָם אֵימָא לָךְ: הַיְינוּ נְבֵלָה הַיְינוּ מְסוּכֶּנֶת, מֵחַיִּים – בַּעֲשֵׂה, לְאַחַר מִיתָה – בְּלָאו.</div>
+      <div class="trans" data-when="he">ודוחים את הראיה: ושמא לעולם דין נבלה ומסוכנת אחד — אלא שמחיים האיסור בעשה ולאחר מיתה בלאו; ונמצא שאין ראיה מנבלה.</div>
+      <div class="trans" data-when="en">The Gemara questions that understanding. And perhaps, actually I will say to you: The halakhic status of an unslaughtered carcass is the same as that of an animal in danger of imminent death, but if one slaughters the animal in danger of imminent death while alive, he would be in violation of a positive mitzva: “These are the living beings that you may eat” (Leviticus 11:2), whereas after its death, he would be in violation of a prohibition: “You shall not eat any unslaughtered carcass” (Deuteronomy 14:21).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ז א — Chullin 37a:8</span></div>
+      <div class="orig">אֶלָּא, מִדְּאָמַר רַחֲמָנָא טְרֵפָה לֹא תֹּאכַל – מִכְּלָל דִּמְסוּכֶּנֶת שַׁרְיָא, דְּאִי סָלְקָא דַעְתָּךְ מְסוּכֶּנֶת אֲסִירָא, הַשְׁתָּא מְסוּכֶּנֶת דְּלָא מְחַסְּרָא אֲסִירָא, טְרֵפָה מִיבַּעְיָא?</div>
+      <div class="trans" data-when="he">ראיה שנייה: מדאמרה התורה ׳טרפה לא תאכל׳ — מכלל שהמסוכנת מותרת; שאם המסוכנת, שאינה חסרה אבר, אסורה — קל וחומר לטרפה החסרה, ולמה לי לאוסרהּ?</div>
+      <div class="trans" data-when="en">Rather, the fact that its meat is permitted is derived from the fact that the Merciful One states you shall not eat an animal with a wound that will cause it to die within twelve months [tereifa], as it is written: “And you shall not eat any animal that was mauled in the field [tereifa]” (Exodus 22:30). From here, one learns by inference that eating the meat of an animal in danger of imminent death is permitted. As, if it enters your mind that eating the meat of an animal in danger of imminent death is prohibited, now that an animal in danger of imminent death that is not lacking any limb is prohibited, is it necessary to state that a tereifa, an animal that was mauled and lacking body parts, is prohibited?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ז א — Chullin 37a:9</span></div>
+      <div class="orig">וְדִלְמָא הַיְינוּ טְרֵפָה הַיְינוּ מְסוּכֶּנֶת, וְלַעֲבוֹר עָלָיו בַּעֲשֵׂה וְלֹא תַעֲשֶׂה! אִם כֵּן, נְבֵלָה דִּכְתַב רַחֲמָנָא לְמָה לִי? וּמָה מֵחַיִּים קָאֵי עֲלַהּ בְּלָאו וַעֲשֵׂה, לְאַחַר מִיתָה מִיבַּעְיָא?</div>
+      <div class="trans" data-when="he">ושמא דין טרפה ומסוכנת אחד, ובא ללמד שעובר עליו בעשה ובלאו? אם כן, ׳נבלה׳ שכתבה התורה למה לי — והרי תילמד בקל וחומר ממסוכנת?</div>
+      <div class="trans" data-when="en">The Gemara rejects that proof. And that is not a legitimate inference, as perhaps the halakhic status of a tereifa that is lacking body parts is the same as that of an animal in danger of imminent death that is not lacking body parts, and both are included in the category of tereifa. This would render one who slaughters either to be in violation of both a positive mitzva: “These are the living beings that you may eat,” and a prohibition: “And you shall not eat any animal that was mauled in the field [tereifa].” The Gemara questions that understanding: If so, why do I need the prohibition that the Merciful One writes with regard to an unslaughtered carcass? If while an animal is alive one stands in violation of a prohibition and a positive mitzva, is it necessary to state that it is prohibited after death?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ז א — Chullin 37a:10</span></div>
+      <div class="orig">וְדִלְמָא הַיְינוּ נְבֵלָה, הַיְינוּ טְרֵפָה, הַיְינוּ מְסוּכֶּנֶת, וְלַעֲבוֹר עָלָיו בִּשְׁנֵי לָאוִין וַעֲשֵׂה!</div>
+      <div class="trans" data-when="he">ושמא דין נבלה, טרפה ומסוכנת אחד הוא, והכל לעבור עליו בשני לאוין ועשה; ונמצא שגם ראיה זו נדחתה.</div>
+      <div class="trans" data-when="en">The Gemara objects: And that is not a legitimate question, as perhaps the halakhic status of an unslaughtered carcass is the same as a tereifa that is lacking body parts, and is the same as that of an animal in danger of imminent death that is not lacking body parts. Therefore, when the Torah writes the word “carcass,” it is the same as though it had written tereifa and the same as though it had written an animal in danger of imminent death. The Torah prohibits each, and the result will be that he will violate two prohibitions and a positive mitzva.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ז א — Chullin 37a:11</span></div>
+      <div class="orig">אֶלָּא מֵהָכָא, ״וְחֵלֶב נְבֵלָה וְחֵלֶב טְרֵפָה יֵעָשֶׂה לְכׇל מְלָאכָה וְאָכֹל לֹא תֹאכְלֻהוּ״, וְאָמַר מָר: לְמַאי הִלְכְתָא אָמְרָה הַתּוֹרָה? יָבֹא אִיסּוּר נְבֵלָה וְיָחוּל עַל אִיסּוּר חֵלֶב, יָבֹא אִיסּוּר טְרֵפָה וְיָחוּל עַל אִיסּוּר חֵלֶב.</div>
+      <div class="trans" data-when="he">ראיה שלישית: ׳וחֵלב נבלה וחֵלב טרפה יֵעשה לכל מלאכה ואָכֹל לא תאכלֻהו׳ — ואמר מר: בא איסור נבלה לחול על איסור החֵלב (שכבר אסור), וכן בא איסור טרפה לחול על איסור החֵלב.</div>
+      <div class="trans" data-when="en">Rather, the fact that the meat of an animal in danger of imminent death is permitted is derived from here: “And the fat of a carcass and the fat of a tereifa may be used for any purpose; but you shall not eat it” (Leviticus 7:24). And the Master says: In order to derive what halakha is this verse written? Would one imagine that because it is an unslaughtered carcass or a tereifa its fat would be permitted for consumption? The Torah states: Let the prohibition against eating an unslaughtered carcass come and take effect upon the prohibition against eating forbidden fat, which already exists. One who eats the forbidden fat of an unslaughtered carcass is liable for violation of both prohibitions. Likewise, the word “tereifa” in the verse teaches: Let the prohibition against eating a tereifa come and take effect upon the prohibition against eating forbidden fat, which already exists, so that one who eats the forbidden fat of a tereifa is liable for transgressing both prohibitions.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ז ב — Chullin 37b:1</span></div>
+      <div class="orig">וְאִי סָלְקָא דַעְתָּךְ טְרֵפָה הַיְינוּ מְסוּכֶּנֶת, לִכְתּוֹב רַחֲמָנָא ״חֵלֶב נְבֵלָה יֵעָשֶׂה לְכׇל מְלָאכָה וְחֵלֶב טְרֵפָה לֹא תֹאכְלוּהוּ״, וַאֲנָא אָמֵינָא: וּמָה מֵחַיִּים אָתֵי אִיסּוּר טְרֵפָה חָיֵיל אַאִיסּוּר חֵלֶב, לְאַחַר מִיתָה מִיבַּעְיָא?!</div>
+      <div class="trans" data-when="he">ואם תאמר שדין טרפה ומסוכנת אחד — היה לתורה לכתוב רק ׳וחֵלב טרפה לא תאכלוהו׳, ונלמד נבלה בקל וחומר: ומה מחיים חל איסור טרפה על החֵלב, לאחר מיתה לא כל שכן?</div>
+      <div class="trans" data-when="en">And if it enters your mind to say that the halakhic status of a tereifa lacking body parts is the same as that of an animal in danger of imminent death, let the Merciful One write: And the fat of a carcass may be used for any purpose, and the fat of a tereifa you shall not eat. The prohibition against eating the forbidden fat should have been written exclusively with regard to a tereifa, and I would say: If while an animal is alive and in danger of imminent death the prohibition against eating a tereifa takes effect upon the prohibition against eating forbidden fat, is it necessary to state that after its death the prohibition against eating an unslaughtered carcass takes effect upon the prohibition against eating forbidden fat?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ז ב — Chullin 37b:2</span></div>
+      <div class="orig">אֶלָּא, מִדִּכְתַב רַחֲמָנָא ״נְבֵלָה״, מִכְּלָל דִּטְרֵפָה לָאו הַיְינוּ מְסוּכֶּנֶת.</div>
+      <div class="trans" data-when="he">אלא, מדכתבה התורה ׳נבלה׳ במפורש — מכלל שטרפה אינה כמסוכנת; נמצא שהמסוכנת מותרת באכילה לאחר שחיטה.</div>
+      <div class="trans" data-when="en">The Gemara concludes: Rather, from the fact that the Merciful One writes that the prohibition against eating an unslaughtered carcass takes effect upon the prohibition against eating forbidden fat, one learns by inference that the tereifa in the verse is not the same as an animal in danger of imminent death. Rather, the tereifa in the verse is an animal that was mauled and is lacking body parts, and it is only that animal that is prohibited after slaughter. Eating an animal in danger of imminent death after slaughter is permitted.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ז ב — Chullin 37b:3</span></div>
+      <div class="orig">מַתְקֵיף לַהּ מָר בַּר רַב אָשֵׁי: וְדִלְמָא לְעוֹלָם אֵימָא לָךְ הַיְינוּ טְרֵפָה הַיְינוּ מְסוּכֶּנֶת, וּדְקָאָמְרַתְּ: ״נְבֵלָה״ דִּכְתַב רַחֲמָנָא לְמָה לִי? לְהָךְ נְבֵלָה דְּלָא אָתְיָא מִכֹּחַ מְסוּכֶּנֶת. וְהֵיכִי דָּמֵי? שֶׁעֲשָׂאָהּ גִּיסְטְרָא. הָתָם נָמֵי, אִי אֶפְשָׁר דְּלָא הֲוַי מְסוּכֶּנֶת פּוּרְתָּא מִקַּמֵּי דְּלִיפְסֹק לְרוּבָּא.</div>
+      <div class="trans" data-when="he">מתקיף מר בר רב אשי: שמא לעולם טרפה כמסוכנת, ו׳נבלה׳ נכתבה לנבלה שאינה באה מחמת סכנה — כגון שחתכהּ לשניים (גיסטרא). ודוחים: אף שם אי אפשר שלא היתה מסוכנת מעט קודם שנחתך רובהּ.</div>
+      <div class="trans" data-when="en">Mar bar Rav Ashi objects to this: And perhaps, actually I will say to you that the halakhic status of a tereifa is the same as that of an animal in danger of imminent death, and with regard to that which you said: Why do I need the prohibition with regard to an unslaughtered carcass that the Merciful One writes, one can explain that it is necessary for that unslaughtered carcass that does not come as a result of danger of imminent death. And what are the circumstances of that unslaughtered carcass? It is in a case where one rendered the animal like a shard, by cutting it into two widthwise. The Gemara rejects that distinction: There too, in the case where one rendered the animal like a shard, it is impossible that the animal was not at least somewhat in danger of imminent death before he cut the majority of the animal.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ז ב — Chullin 37b:4</span></div>
+      <div class="orig">וְאִיבָּעֵית אֵימָא, אִם כֵּן לֵימָא ״חֵלֶב נְבֵלָה וּטְרֵפָה״, ״חֵלֶב״ ״חֵלֶב״ לְמָה לִי? זוֹ הִיא שֶׁאֵין חֶלְבָּהּ חָלוּק מִבְּשָׂרָהּ, וְיֵשׁ לְךָ אַחֶרֶת שֶׁחֶלְבָּהּ חָלוּק מִבְּשָׂרָהּ, וְאֵיזוֹ זוֹ? מְסוּכֶּנֶת.</div>
+      <div class="trans" data-when="he">ואם תרצה אמור: מכפל הלשון ׳חֵלב׳ ׳חֵלב׳ — ללמד שיש בהמה שחֶלבהּ אינו חלוק מבשרהּ (טרפה), ויש שחֶלבהּ (האסור) חלוק מבשרהּ (המותר) — וזו המסוכנת; הרי שהמסוכנת מותרת.</div>
+      <div class="trans" data-when="en">And if you wish, say instead that there is a different source for the fact that the meat of an animal in danger of imminent death is permitted. If it is so that an animal in danger of imminent death is included in the category of tereifa, let the verse say: The fat of an unslaughtered carcass and a tereifa. Why do I need it to be written: “Fat of a carcass and the fat of a tereifa”? The term “fat” is repeated to teach that it is this case where the status of its fat is not distinct from the status of its meat, and both are prohibited; but you have another case where the status of its fat, which is forbidden, is distinct from the status of its meat, which is permitted. And which case is that? That is the case of an animal in danger of imminent death.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין ל״ז ב — Chullin 37b:5</span></div>
+      <div class="orig">וְאִיבָּעֵית אֵימָא מֵהָכָא, ״וָאֹמַר אֲהָהּ ה׳ אֱלֹהִים הִנֵּה נַפְשִׁי לֹא מְטֻמָּאָה וּנְבֵלָה וּטְרֵפָה לֹא אָכַלְתִּי מִנְּעוּרַי וְעַד עַתָּה וְלֹא בָא בְּפִי בְּשַׂר פִּגּוּל״.</div>
+      <div class="trans" data-when="he">ואם תרצה אמור ראיה מיחזקאל: ׳ונבלה וטרפה לא אכלתי מנעורי ועד עתה, ולא בא בפי בשר פיגול׳.</div>
+      <div class="trans" data-when="en">And if you wish, say instead that it is derived from here: “Then I said: Ah, Lord God, my soul has not become impure; and from my youth until now I have not eaten an unslaughtered carcass or a tereifa, and no piggul flesh came into my mouth” (Ezekiel 4:14).</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין ל״ז ב — Chullin 37b:6</span></div>
+      <div class="orig">״הִנֵּה נַפְשִׁי לֹא מְטֻמָּאָה״ – שֶׁלֹּא הִרְהַרְתִּי בַּיּוֹם לָבֹא לִידֵי טוּמְאָה בַּלַּיְלָה, ״וּנְבֵלָה וּטְרֵפָה לֹא אָכַלְתִּי מִנְּעוּרַי״ – שֶׁלֹּא אָכַלְתִּי בְּשַׂר כּוֹס כּוֹס מֵעוֹלָם, ״וְלֹא בָא בְּפִי בְּשַׂר פִּגּוּל״ – שֶׁלֹּא אָכַלְתִּי מִבְּהֵמָה שֶׁהוֹרָה בָּהּ חָכָם. מִשּׁוּם רַבִּי נָתָן אָמְרוּ: שֶׁלֹּא אָכַלְתִּי מִבְּהֵמָה שֶׁלֹּא הוּרְמוּ מַתְּנוֹתֶיהָ.</div>
+      <div class="trans" data-when="he">ביאור הכתוב: ׳ונבלה וטרפה לא אכלתי׳ — שלא אכלתי בשר בהמה שמיהרו לשוחטהּ באומרם ׳כּוֹס כּוֹס׳ (שחֹט מהר) מפני שהיא מסוכנת; ׳בשר פיגול׳ — מבהמה שהורה בה חכם להתיר מספק; ומשום רבי נתן: שלא הורמו ממנה מתנות כהונה.</div>
+      <div class="trans" data-when="en">The Gemara explains: “My soul has not become impure” means that I did not consider any sinful thoughts during the day that would cause me to come to impurity due to a seminal emission at night. “And from my youth until now I have not eaten an unslaughtered carcass or a tereifa” means that I never ate the flesh of an animal that was in danger of imminent death, leading one to say: Slaughter it, slaughter it quickly, before it dies. “And no piggul flesh came into my mouth” means that I never ate from an animal with regard to which there was uncertainty whether it is forbidden and a Sage issued a ruling to permit it. They said in the name of Rabbi Natan that the last portion of the verse means: That I never ate from an animal whose gifts to which members of the priesthood are entitled, i.e., the foreleg, the jaw, and the maw, were not already separated.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין ל״ז ב — Chullin 37b:7</span></div>
+      <div class="orig">אִי אָמְרַתְּ בִּשְׁלָמָא שַׁרְיָא – הַיְינוּ רְבוּתֵיהּ דִּיחֶזְקֵאל, אֶלָּא אִי אָמְרַתְּ אֲסִירָא – מַאי רְבוּתֵיהּ דִּיחֶזְקֵאל?</div>
+      <div class="trans" data-when="he">וזו הראיה: אם בשר מסוכנת מותר — מובנת גדולתו של יחזקאל שנמנע מן המותר; אבל אם אסור, מה גדולה יש בכך שנמנע? אלא ודאי מותר.</div>
+      <div class="trans" data-when="en">The proof is: Granted, if you say that it is permitted to slaughter and eat an animal in imminent danger of death, then that is the greatness of Ezekiel, as, although eating it is permitted, he refrained from doing so. But if you say that it is forbidden to slaughter and eat that animal, what in that action attests to the greatness of Ezekiel? Apparently, it is permitted to slaughter and eat an animal in danger of imminent death.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+        <span data-when="he">מהי מסוכנת ומהו פירכוס המתיר</span><span data-when="en">Defining a mesukkenet and the validating convulsion</span>
+        <span class="ref">Chullin 37b:8-38a:6</span></h2>
+    <div class="lead"><span data-when="he">הגמרא מגדירה מהי מסוכנת (רב: כל שמעמידים אותה ואינה עומדת), ומבררת מהו ׳פירכוס׳ המתיר את שחיטתהּ. רב מונה סימנים, ושמואל מכלילם בכלל אחד: כל תנועה שאין המתה עושה כמותהּ. נדונים החידוש שבדבר מול המשנה, וברייתא הסותרת את רב — המיושבת בחילוק בין קול עבה לדק וברעי שבכוח לעומת שותֵת.</span><span data-when="en">The Gemara defines a mesukkenet (Rav: any animal you stand up that cannot stand), and clarifies which convulsion (pirkus) validates its slaughter. Rav lists signs; Shmuel subsumes them under one rule: any movement a dead animal would not make. It weighs the novelty against the Mishnah, and a baraita that contradicts Rav — resolved by distinguishing a rich voice from a faint one, and forceful excretion from a trickle.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① היכי דמי מסוכנת? רב יהודה אמר רב: כל שמעמידין אותה ואינה עומדת; ר׳ חנינא בר שלמיה: אף אוכלת בקעיות; רמי בר יחזקאל: אף אוכלת קורות"]:::statement
+  S2["② בסורא ובפומבדיתא שנו בחילוף — למי מיוחס ׳אף אוכלת בקעיות׳ ולמי ׳אף אוכלת קורות׳"]:::statement
+  Q3{"③ אשכחינהו שמואל לתלמידי דרב: מאי אמר רב במסוכנת? אמרו לו: כך אמר רב—"}:::question
+  S4["④ רב: גָּעֲתָה, הטילה רעי, כשכשה באוזנה — הרי זה פירכוס. שמואל: כל שאינה עושה דברים שהמתה עושה"]:::statement
+  S5["⑤ מאי דברים שהמתה עושה? רב ענן משמואל: ידה כפופה ופשטתהּ — שהמתה עושה; פשוטה וכפפתהּ — אין המתה עושה, פירכוס"]:::statement
+  Q6{"⑥ מאי קא משמע לן? תנינא: דקה שפשטה ולא החזירה — פסולה; הא החזירה — כשרה!"}:::question
+  A7["⑦ אי ממתניתין: דווקא כפופה שפשטהּ וחזר וכפפהּ; אבל פשוטה שכפפהּ לא — קא משמע לן ששמואל מחדש"]:::answer
+  Q8{"⑧ מיתיבי: ר׳ מאיר — גועה בשעת שחיטה אין זה פירכוס; ר׳ אלעזר בר׳ יוסי — אף רעי וכשכוש זנב לא. קשיא גועה אגועה, רעי ארעי!"}:::question
+  C9(["⑨ תירוץ: גועה — עָבֵי קלה פירכוס, עָמֵי קלה לא; רעי — מתרזת בכוח פירכוס, שותתת לא"]):::conclusion
+  S1 -->|חילופי גרסאות| S2
+  S2 -->|שמואל מצא תלמידי רב| Q3
+  Q3 -->|דברי רב וחידוש שמואל| S4
+  S4 -->|מהם דברים שהמתה עושה| S5
+  S5 -.->|מאי קמ״ל| Q6
+  Q6 -->|תירוץ| A7
+  A7 -.->|מיתיבי| Q8
+  Q8 -->|לא קשיא| C9
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① What defines a mesukkenet? Rav Yehuda said Rav: any that you stand up and it cannot stand; R. Ḥanina bar Shelamya: even if it eats wood-chips; Rami bar Yeḥezkel: even if it eats beams"]:::statement
+  S2["② Sura and Pumbedita taught the versions in reverse — to whom ׳even eats wood-chips׳ is attributed, and to whom ׳even beams׳"]:::statement
+  Q3{"③ Shmuel found Rav's students: what did Rav say about a mesukkenet? They said: thus said Rav—"}:::question
+  S4["④ Rav: if it lowed, excreted, or wiggled its ear — that is a convulsion. Shmuel: anything that is not what a dead animal does"]:::statement
+  S5["⑤ What does a dead animal do? Rav Anan from Shmuel: a bent foreleg it straightens — what a dead animal does; a straight one it bends — not, a valid convulsion"]:::statement
+  Q6{"⑥ What does this teach? we already learned: a small animal that extended and did not draw back is invalid — hence drawing back is valid!"}:::question
+  A7["⑦ From the mishna alone I would limit it to bent-then-straightened-then-bent; that a straight foreleg bent also counts — this Shmuel teaches"]:::answer
+  Q8{"⑧ An objection: R. Meir — lowing during slaughter is no convulsion; R. Elazar b. R. Yosei — even excreting or tail-wagging is not. This contradicts Rav twice!"}:::question
+  C9(["⑨ Resolved: lowing — a rich voice is a convulsion, a faint one is not; excreting — with force is a convulsion, in a trickle is not"]):::conclusion
+  S1 -->|versions| S2
+  S2 -->|Shmuel met Rav's students| Q3
+  Q3 -->|Rav's words and Shmuel's novelty| S4
+  S4 -->|what a dead animal does| S5
+  S5 -.->|what does this teach| Q6
+  Q6 -->|answer| A7
+  A7 -.->|objection| Q8
+  Q8 -->|not difficult| C9
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הֵיכִי דָּמֵי מְסוּכֶּנֶת? אָמַר רַב יְהוּדָה אָמַר רַב: כֹּל שֶׁמַּעֲמִידִין אוֹתָהּ וְאֵינָהּ עוֹמֶדֶת … אֲפִילּוּ אוֹכֶלֶת בְּקָעִיּוֹת … אֲפִילּוּ אוֹכֶלֶת קוֹרוֹת"]:::statement
+  S2["② בְּסוּרָא מַתְנֵי הָכִי, בְּפוּמְבְּדִיתָא מַתְנֵי הָכִי … רָמֵי בַּר יְחֶזְקֵאל אָמַר: אֲפִילּוּ אוֹכֶלֶת קוֹרוֹת"]:::statement
+  Q3{"③ אַשְׁכְּחִינְהוּ שְׁמוּאֵל לְתַלְמִידֵי דְּרַב, אֲמַר לְהוּ: מַאי אָמַר רַב בִּמְסוּכֶּנֶת? אֲמַרוּ לֵיהּ: הָכִי אָמַר רַב"}:::question
+  S4["④ גּוֹעָה וְהֵטִילָה רֶיעִי וְכִשְׁכְּשָׁה בְּאׇזְנָהּ – הֲרֵי זֶה פִּירְכּוּס … שֶׁאֲנִי אוֹמֵר כֹּל שֶׁאֵינָהּ … דְּבָרִים שֶׁהַמֵּתָה עוֹשָׂה"]:::statement
+  S5["⑤ הָיְתָה יָדָהּ כְּפוּפָה וּפְשָׁטַתָּה – דָּבָר שֶׁהַמֵּתָה עוֹשֶׂה, פְּשׁוּטָה וּכְפָפַתָּה – דְּבָרִים שֶׁאֵין הַמֵּתָה עוֹשָׂה"]:::statement
+  Q6{"⑥ מַאי קָא מַשְׁמַע לַן? תְּנֵינָא: בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה – פְּסוּלָה … הָא הֶחְזִירָה – כְּשֵׁרָה"}:::question
+  A7["⑦ אִי מִמַּתְנִיתִין, הֲוָה אָמֵינָא: דַּוְקָא דְּכַיְיפָה וּפָשְׁטָה וַהֲדַר כָּיְיפָה … אֲבָל פְּשׁוּטָה וּכְפָפַתָּה – לָא, קָא מַשְׁמַע לַן"]:::answer
+  Q8{"⑧ מֵיתִיבִי … גּוֹעָה בִּשְׁעַת שְׁחִיטָה – אֵין זֶה פִּירְכּוּס … אֲפִילּוּ הֵטִילָה רֶיעִי וְכִשְׁכְּשָׁה בִּזְנָבָהּ – אֵין זֶה פִּירְכּוּס. קַשְׁיָא גּוֹעָה אַגּוֹעָה, קַשְׁיָא רֶיעִי אַרֶיעִי!"}:::question
+  C9(["⑨ גּוֹעָה אַגּוֹעָה לָא קַשְׁיָא: הָא דְּעָבֵי קָלַהּ, הָא דְּעָמֵי קָלַהּ. רֶיעִי אַרֶיעִי … כָּאן בְּשׁוֹתֶתֶת, כָּאן בְּמַתְרֶזֶת"]):::conclusion
+  S1 -->|חילופי גרסאות| S2
+  S2 -->|שמואל מצא תלמידי רב| Q3
+  Q3 -->|דברי רב וחידוש שמואל| S4
+  S4 -->|מהם דברים שהמתה עושה| S5
+  S5 -.->|מאי קמ״ל| Q6
+  Q6 -->|תירוץ| A7
+  A7 -.->|מיתיבי| Q8
+  Q8 -->|לא קשיא| C9
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ז ב — Chullin 37b:8</span></div>
+      <div class="orig">הֵיכִי דָּמֵי מְסוּכֶּנֶת? אָמַר רַב יְהוּדָה אָמַר רַב: כֹּל שֶׁמַּעֲמִידִין אוֹתָהּ וְאֵינָהּ עוֹמֶדֶת. רַב חֲנִינָא בַּר שֶׁלֶמְיָא מִשְּׁמֵיהּ דְּרַב אָמַר: אֲפִילּוּ אוֹכֶלֶת בְּקָעִיּוֹת. רָמֵי בַּר יְחֶזְקֵאל אָמַר: אֲפִילּוּ אוֹכֶלֶת קוֹרוֹת.</div>
+      <div class="trans" data-when="he">מהי מסוכנת? רב יהודה אמר רב: כל שמעמידים אותה על רגליה ואינה עומדת מעצמהּ. רב חנינא בר שלמיה משום רב: אפילו אוכלת בקעיות (פיסות עץ) — אם אינה עומדת, מסוכנת. רמי בר יחזקאל: אפילו אוכלת קורות.</div>
+      <div class="trans" data-when="en">§ The Gemara asks: What are the circumstances of an animal in danger of imminent death? Rav Yehuda said that Rav said: It is any animal with regard to which one stands it on its feet but it does not stand unaided. Rav Ḥanina bar Shelamya in the name of Rav said: That indicator is so clear that even if that animal maintains sufficient strength in its jaw and eats pieces of wood, if it is unable to stand, its status is that of an animal in danger of imminent death. Rami bar Yeḥezkel said: That is the case even if that animal eats beams.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ז ב — Chullin 37b:9</span></div>
+      <div class="orig">בְּסוּרָא מַתְנֵי הָכִי. בְּפוּמְבְּדִיתָא מַתְנֵי הָכִי: הֵיכִי דָּמְיָא מְסוּכֶּנֶת? אָמַר רַב יְהוּדָה אָמַר רַב: כׇּל שֶׁמַּעֲמִידִין אוֹתָהּ וְאֵינָהּ עוֹמֶדֶת, וַאֲפִילּוּ אוֹכֶלֶת בְּקָעִיּוֹת. רָמֵי בַּר יְחֶזְקֵאל אָמַר: אֲפִילּוּ אוֹכֶלֶת קוֹרוֹת.</div>
+      <div class="trans" data-when="he">בסורא שנו את הדברים בנוסח אחד, ובפומבדיתא בנוסח הפוך — למי מיוחס ׳אפילו אוכלת בקעיות׳ ולמי ׳אפילו אוכלת קורות׳.</div>
+      <div class="trans" data-when="en">In Sura, they would teach the exchange in that manner. In Pumbedita, they would teach the exchange in this manner: What are the circumstances of an animal in danger of imminent death? Rav Yehuda said that Rav said: It is any animal with regard to which one stands it on its feet but it does not stand unaided, even if that animal maintains sufficient strength in its jaw and eats pieces of wood. Rami bar Yeḥezkel said: That indicator is so clear that even if that animal maintains sufficient strength in its jaw and eats beams, if it is unable to stand its status is that of an animal in danger of imminent death.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ז ב — Chullin 37b:10</span></div>
+      <div class="orig">אַשְׁכְּחִינְהוּ שְׁמוּאֵל לְתַלְמִידֵי דְּרַב, אֲמַר לְהוּ: מַאי אָמַר רַב בִּמְסוּכֶּנֶת? אֲמַרוּ לֵיהּ: הָכִי אָמַר רַב:</div>
+      <div class="trans" data-when="he">שמואל מצא את תלמידי רב (לאחר פטירתו) ושאלם: מה אמר רב בעניין מסוכנת? אמרו לו: כך אמר רב—</div>
+      <div class="trans" data-when="en">Shmuel found students of Rav after Rav’s death. He said to them: What did Rav say with regard to an animal in danger of imminent death? They said to him: This is what Rav said:</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ח א — Chullin 38a:1</span></div>
+      <div class="orig">גּוֹעָה וְהֵטִילָה רֶיעִי וְכִשְׁכְּשָׁה בְּאׇזְנָהּ – הֲרֵי זֶה פִּירְכּוּס. אֲמַר לְהוּ: אִצְטְרִיכָא לֵיהּ לְאַבָּא לְאֹזוֹזֵי אוּנֵּי, שֶׁאֲנִי אוֹמֵר כֹּל שֶׁאֵינָהּ [עוֹשָׂה] דְּבָרִים שֶׁהַמֵּתָה עוֹשָׂה.</div>
+      <div class="trans" data-when="he">אם גָּעֲתָה (השמיעה קול), או הטילה רעי, או כשכשה באוזנהּ — הרי זה פירכוס המתיר. אמר להם שמואל: וכי הוצרך רב (אבא) לסימן של תנועת אוזן? אני אומר: כל תנועה שאין המתה עושה כמותהּ — הרי זו פירכוס.</div>
+      <div class="trans" data-when="en">If the animal lows, or excreted excrement, or wiggled its ear during the slaughter, that is a convulsion, and the slaughter renders eating the flesh of the animal permitted. Shmuel said to them: Is it necessary according to Abba, i.e., Rav, for the animal to move its ears during the slaughter, which requires a considerable life force? As I say: Any movements of the animal that are not matters that the death of the animal engenders are convulsions sufficient to render the slaughter valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ח א — Chullin 38a:2</span></div>
+      <div class="orig">מַאי נִינְהוּ דְּבָרִים שֶׁהַמֵּתָה עוֹשָׂה? אָמַר רַב עָנָן: לְדִידִי מִפָּרְשָׁא לִי מִינֵּיהּ דְּמָר שְׁמוּאֵל – הָיְתָה יָדָהּ כְּפוּפָה וּפְשָׁטַתָּה – דָּבָר שֶׁהַמֵּתָה עוֹשֶׂה, פְּשׁוּטָה וּכְפָפַתָּה – דְּבָרִים שֶׁאֵין הַמֵּתָה עוֹשָׂה.</div>
+      <div class="trans" data-when="he">ומהם ׳דברים שהמתה עושה׳? אמר רב ענן, כך נתפרש לי משמואל: היתה ידהּ כפופה ופשטתהּ — דבר שהמתה עושה (אינו פירכוס); היתה פשוטה וכפפתהּ — דבר שאין המתה עושה, והרי זה פירכוס.</div>
+      <div class="trans" data-when="en">The Gemara asks: What are matters that the death of the animal engenders? Rav Anan said: This was explained to me from Master Shmuel himself: If the animal’s foreleg was bent, and the animal straightened it, that is a matter that the death of the animal engenders. But if its foreleg was straight and the animal bent it, that is among the matters that the death of the animal does not engender and is a convulsion sufficient to render the slaughter valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ח א — Chullin 38a:3</span></div>
+      <div class="orig">מַאי קָא מַשְׁמַע לַן? תְּנֵינָא: בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה – פְּסוּלָה, שֶׁאֵינָהּ אֶלָּא הוֹצָאַת נֶפֶשׁ; הָא הֶחְזִירָה – כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">מה חידש שמואל? הרי כבר שנינו במשנה: דקה שפשטה ידהּ ולא החזירה — פסולה, שאינה אלא הוצאת נפש; מכלל שאם החזירה — כשרה!</div>
+      <div class="trans" data-when="en">The Gemara asks: What is Shmuel teaching us with that statement? We already learn in the mishna: The slaughter of a small animal that during its slaughter extended its foreleg that was bent and did not restore it to the bent position is not valid, as extending the foreleg is nothing other than part of the natural course of removal of the animal’s soul from its body and not a convulsion indicating life. But one may infer that if the animal does restore its foreleg to the bent position, that indicates life and the slaughter is valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ח א — Chullin 38a:4</span></div>
+      <div class="orig">אִי מִמַּתְנִיתִין, הֲוָה אָמֵינָא: דַּוְקָא דְּכַיְיפָה וּפָשְׁטָה וַהֲדַר כָּיְיפָה לַהּ, אֲבָל פְּשׁוּטָה וּכְפָפַתָּה – לָא, קָא מַשְׁמַע לַן.</div>
+      <div class="trans" data-when="he">אילו מן המשנה בלבד, הייתי אומר: דווקא כשהיתה כפופה, פשטתהּ וחזרה וכפפתהּ — כשרה; אבל פשוטה שכפפתהּ — לא. לכן השמיענו שמואל שאף פשוטה שכפפתהּ — פירכוס.</div>
+      <div class="trans" data-when="en">The Gemara answers: If the halakha is learned from the mishna alone, I would say that it is specifically in a case where the animal’s foreleg had been bent, and the animal now straightens it and then bends it, that the slaughter is valid. But if the foreleg had been straight and the animal bent it, the slaughter is not valid. Therefore, Shmuel teaches us that if its foreleg was straight and the animal bent it; that is a convulsion sufficient to render the slaughter valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ח א — Chullin 38a:5</span></div>
+      <div class="orig">מֵיתִיבִי: רַבִּי יוֹסֵי אוֹמֵר, הָיָה רַבִּי מֵאִיר אוֹמֵר: גּוֹעָה בִּשְׁעַת שְׁחִיטָה – אֵין זֶה פִּירְכּוּס. רַבִּי אֶלְעָזָר בְּרַבִּי יוֹסֵי אוֹמֵר מִשְּׁמוֹ: אֲפִילּוּ הֵטִילָה רֶיעִי וְכִשְׁכְּשָׁה בִּזְנָבָהּ – אֵין זֶה פִּירְכּוּס. קַשְׁיָא גּוֹעָה אַגּוֹעָה, קַשְׁיָא רֶיעִי אַרֶיעִי!</div>
+      <div class="trans" data-when="he">מיתיבי מברייתא: רבי יוסי אמר שרבי מאיר היה אומר — געייה בשעת שחיטה אינה פירכוס; ורבי אלעזר ברבי יוסי אמר משמו — אף הטלת רעי וכשכוש זנב אינם פירכוס. וקשה: געייה על געייה (כנגד רב), ורעי על רעי!</div>
+      <div class="trans" data-when="en">The Gemara raises an objection from a baraita to Rav’s statement cited earlier. Rabbi Yosei says that Rabbi Meir would say: If an animal lows during its slaughter, that is not a convulsion sufficient to render the slaughter valid. Rabbi Elazar, son of Rabbi Yosei, says in the name of Rabbi Yosei: Even if the animal excreted excrement or wagged its tail, that is not a convulsion sufficient to render the slaughter valid. The Gemara now clarifies: Rabbi Yosei’s statement in the baraita that if an animal lows it is not a convulsion sufficient to render the slaughter valid is difficult, as it contradicts the statement of Rav that if an animal lows it is a convulsion. And Rabbi Elazar’s statement in the baraita that if an animal excreted excrement it is not a convulsion sufficient to render the slaughter valid is difficult, as it contradicts the statement of Rav that if an animal excreted excrement it is a convulsion.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ח א — Chullin 38a:6</span></div>
+      <div class="orig">גּוֹעָה אַגּוֹעָה לָא קַשְׁיָא: הָא דְּעָבֵי קָלַהּ, הָא דְּעָמֵי קָלַהּ. רֶיעִי אַרֶיעִי נָמֵי לָא קַשְׁיָא: כָּאן בְּשׁוֹתֶתֶת, כָּאן בְּמַתְרֶזֶת.</div>
+      <div class="trans" data-when="he">תירוץ: געייה על געייה אינה קשה — כאן בקול עָבֶה וחזק (פירכוס), כאן בקול דק וחלוש (אינו פירכוס). ורעי על רעי אינו קשה — כאן כשמטילה בכוח (פירכוס), כאן כשהרעי שותֵת מאליו (אינו פירכוס).</div>
+      <div class="trans" data-when="en">The Gemara answers: The apparent contradiction between the opinion that when an animal lows it is a convulsion and the opinion that when an animal lows it is not a convulsion is not difficult. This opinion, that it is a convulsion, is referring to a case where the animal’s voice is rich and powerful, a clear indication of life; that opinion, that it is not a convulsion, is referring to a case where the animal’s voice is muted, which is not an indication of life. The apparent contradiction between the opinion that when an animal excreted excrement it is a convulsion and the opinion that when an animal excreted excrement it is not a convulsion is also not difficult. Here, the opinion that it is not a convulsion is referring to a case where the animal expels the excrement in a trickle. That is not an indication of life. There, the opinion that it is a convulsion is referring to a case where the animal expels the excrement with force. That is an indication of life.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
