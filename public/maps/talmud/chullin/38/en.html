@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל״ח</title>
+<meta name="description" content="ארבע סוגיות בחולין ל״ח. שלוש מימרות נחלקו מתי הפירכוס מכשיר את שחיטת המסוכנת — בסוף השחיטה, אף בתחילתה, או בסופה — וכל אחת מביאה ראיה; רבא פוסק הלכה כברייתא בענייני יד רגל דקה גסה ועוף; משנת השוחט לנכרי ומחלוקת אם סתם מחשבת נכרי לעבודה זרה; והגמרא מבארת את שורש המחלוקת בשני לשונות.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="38">
+<meta name="gemara-map:sefaria-ref" content="Chullin 38">
+<meta name="gemara-map:topic-he" content="פירכוס המכשיר ושחיטה לנכרי">
+<meta name="gemara-map:topic-en" content="Validating convulsion; slaughter for a gentile">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל״ח">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 38">
+<meta name="gemara-map:blurb-he" content="ארבע סוגיות בחולין ל״ח. שלוש מימרות נחלקו מתי הפירכוס מכשיר את שחיטת המסוכנת — בסוף השחיטה, אף בתחילתה, או בסופה — וכל אחת מביאה ראיה; רבא פוסק הלכה כברייתא בענייני יד רגל דקה גסה ועוף; משנת השוחט לנכרי ומחלוקת אם סתם מחשבת נכרי לעבודה זרה; והגמרא מבארת את שורש המחלוקת בשני לשונות.">
+<meta name="gemara-map:blurb-en" content="Four sugyot on Chullin 38. Three statements dispute when a convulsion validates the slaughter of a dying animal — at the end, even at the start, or only at the end — each with a proof; Rava rules the halakha follows a baraita on foreleg, hind leg, small, large and bird; the Mishnah of one who slaughters for a gentile and the dispute whether a gentile's unspecified intent is for idol worship; and the Gemara explains the root of the dispute in two versions.">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל״ח</span><span data-when="en">Sugya map — Chullin 38</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל״ח א–ל״ט א (ל״ח א:ז–ל״ט א:א) · ארבע סוגיות · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 38a–39a (38a:7–39a:1) · four sugyot · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> דף זה ממשיך בשני נושאים. ראשית, מהי שעת הפירכוס המכשירה את שחיטת המסוכנת — רב חסדא ורבא מצריכים סימן בסוף השחיטה, ורב נחמן בר יצחק מכשיר אף בתחילתה; כל אחד מביא ראיה, ורבא חותם בדרשת ׳יתום׳ שצריך חיוּת בסוף התהליך. אחר כך פוסק רבא הלכה כברייתא (יד, רגל, דקה, גסה ועוף). הנושא השני: השוחט בהמת נכרי לנכרי — שחיטתו כשרה, ורבי אליעזר פוסל שסתם מחשבת נכרי לעבודה זרה; הגמרא מבארת את המחלוקת ואת דרשת רבי אליעזר ברבי יוסי על פיגול הבעלים, בשני לשונות.</span>
+    <span data-when="en"><b>Bottom line:</b> This daf continues two topics. First, which moment of convulsion validates a dying animal's slaughter — Rav Ḥisda and Rava require a sign at the conclusion of the slaughter, while Rav Naḥman bar Yitzḥak validates even one at the start; each brings a proof, and Rava closes with the ׳orphan׳ derivation that life is needed at the end of the process. Rava then rules the halakha follows a baraita (foreleg, hind leg, small, large, bird). The second topic: a Jew who slaughters a gentile's animal for a gentile — the slaughter is valid, and Rabbi Eliezer invalidates it since a gentile's unspecified intent is for idol worship; the Gemara traces the dispute to Rabbi Eliezer ben Rabbi Yosei on owners causing piggul, in two versions.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview" id="overview">
+    <h2><span data-when="he">מבט-על — ארבע סוגיות</span><span data-when="en">Overview — four sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · מתי הפירכוס מכשיר? שלוש מימרות וראיותיהן"]:::statement
+  O2["2 · רבא — הלכה כברייתא; מה חידשה? העוף"]:::statement
+  O3(["3 · משנה: השוחט לנכרי, וסתם מחשבת נכרי"]):::mishnah
+  O4["4 · שורש המחלוקת — פיגול הבעלים, בשני לשונות"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · When does a convulsion validate? three statements and their proofs"]:::statement
+  O2["2 · Rava — halakha like the baraita; what did it add? the bird"]:::statement
+  O3(["3 · Mishnah: slaughtering for a gentile, and his unspecified intent"]):::mishnah
+  O4["4 · Root of the dispute — owners' piggul, in two versions"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+      </script>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">מתי הפירכוס מכשיר את המסוכנת</span><span data-when="en">When does a convulsion validate a mesukkenet</span>
+        <span class="ref">Chullin 38a:7-38b:3</span></h2>
+    <div class="lead"><span data-when="he">שלוש מימרות נחלקו באיזו שעה הפירכוס מכשיר את שחיטת המסוכנת. רב חסדא: בסוף השחיטה (ואף באמצעיתה), עם ראיה מן המשנה שרבא דוחה. רב נחמן בר יצחק: אף בתחילת השחיטה, עם ראיה מזינוק הדם שעמדה במשא ומתן ארוך. ורבא: דווקא בסוף, מדרשת ׳יתום׳ — שצריך חיוּת בסוף התהליך.</span><span data-when="en">Three statements dispute at which moment a convulsion validates a dying animal's slaughter. Rav Ḥisda: at the conclusion (even in the midst), with a proof from the Mishnah that Rava rejects. Rav Naḥman bar Yitzḥak: even at the start, with a proof from blood-spurting that survives a long give-and-take. And Rava: only at the end, from the ׳orphan׳ derivation — life is required at the end of the process.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב חסדא — הפירכוס בסוף השחיטה, ואף באמצעיתה, לאפוקי תחילת שחיטה"]:::statement
+  P2["② ראייתו מן המשנה — דקה שפשטה ולא החזירה פסולה; אימת? באמצע שחיטה"]:::proof
+  A3["③ רבא דוחה — לעולם בסוף שחיטה; שאינה עושה כן בסוף, נשמתהּ נטולה קודם"]:::answer
+  S4["④ רב נחמן בר יצחק — הפירכוס אף בתחילת השחיטה"]:::statement
+  P5["⑤ ראייתו — ר׳ שמעון, כתלי בית השחיטה מלאי דם; אם בתחילה שפיר"]:::proof
+  Q6{"⑥ ודחי — שאני זינוק דעדיף"}:::question
+  Q7{"⑦ ומי עדיף? והא ר׳ אליעזר ׳דיה אם זינקה׳ — קל מרבן גמליאל"}:::question
+  Q8{"⑧ רבינא — ומדרבנן מי עדיף? והא חכמים ׳עד שתפרכס ביד או ברגל׳"}:::question
+  Q9{"⑨ רבנן אהי קיימי? אי אדרבן גמליאל — ׳כיון שפירכסה׳ מיבעי ליה"}:::question
+  A10(["⑩ אלא אדר׳ אליעזר; ואי עדיף מאי ׳עד׳? אלמא זינוק קל, וראיית רנב״י קיימת"]):::answer
+  S11["⑪ רבא — הפירכוס בסוף שחיטה; ראיה מברייתא ׳שור או כשב או עז כי יולד׳"]:::statement
+  S12["⑫ דרשת המיעוטים — כלאים, נדמה, יוצא דופן, מחוסר זמן, ויתום"]:::statement
+  Q13{"⑬ האי יתום היכי דמי? ילדתו ומתה? אלא מתה וילדתו — מ׳כי יולד׳ נפקא"}:::question
+  C14(["⑭ אלא זה פירש למיתה וזה לחיים — בעינן חיוּת בסוף לידה; וכן בסוף שחיטה"]):::conclusion
+  S1 -->|מנא אמינא לה| P2
+  P2 -.->|רבא דוחה| A3
+  A3 -->|דעה שנייה| S4
+  S4 -->|מנא אמינא לה| P5
+  P5 -.->|ודלמא| Q6
+  Q6 -.->|ומי עדיף| Q7
+  Q7 -.->|רבינא מקשה| Q8
+  Q8 --> Q9
+  Q9 -->|אלא| A10
+  A10 -->|דעה שלישית| S11
+  S11 --> S12
+  S12 -->|ביאור היתום| Q13
+  Q13 -->|אלא| C14
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Ḥisda — the convulsion is at the end of slaughter, even mid-slaughter, excluding the start"]:::statement
+  P2["② His proof from the Mishnah — a small animal that extended and did not draw back is invalid; when? mid-slaughter"]:::proof
+  A3["③ Rava rejects — actually at the end; one not doing so at the end was already dead"]:::answer
+  S4["④ Rav Naḥman bar Yitzḥak — the convulsion even at the start of slaughter"]:::statement
+  P5["⑤ His proof — R. Shimon, walls of the neck full of blood; if at the start, it works"]:::proof
+  Q6{"⑥ Rejected — spurting is different, it is superior"}:::question
+  Q7{"⑦ Is it superior? but R. Eliezer ׳enough if it spurted׳ — less than Rabban Gamliel"}:::question
+  Q8{"⑧ Ravina — is it superior to the Rabbis? but the Sages say ׳foreleg or hind leg׳"}:::question
+  Q9{"⑨ To whom do the Rabbis respond? if to Rabban Gamliel — they should say ׳once it convulsed׳"}:::question
+  A10(["⑩ Rather, to R. Eliezer; and if superior, what is ׳only׳? so spurting is weaker — RNbY's proof stands"]):::answer
+  S11["⑪ Rava — the convulsion at the end; proof from a baraita ׳a bull, sheep or goat when born׳"]:::statement
+  S12["⑫ The verse's exclusions — diverse-kinds, look-alike, caesarean, premature, and orphan"]:::statement
+  Q13{"⑬ What is this orphan? born then mother died? rather died then born — derived from ׳when born׳"}:::question
+  C14(["⑭ Rather, mother withdrew for death and newborn for life — life needed at the end of birth; so too at the end of slaughter"]):::conclusion
+  S1 -->|whence| P2
+  P2 -.->|Rava rejects| A3
+  A3 -->|second view| S4
+  S4 -->|whence| P5
+  P5 -.->|perhaps| Q6
+  Q6 -.->|is it superior| Q7
+  Q7 -.->|Ravina objects| Q8
+  Q8 --> Q9
+  Q9 -->|rather| A10
+  A10 -->|third view| S11
+  S11 --> S12
+  S12 -->|the orphan| Q13
+  Q13 -->|rather| C14
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב חִסְדָּא — פִּירְכּוּס שֶׁאָמְרוּ בְּסוֹף שְׁחִיטָה … בְּאֶמְצַע שְׁחִיטָה, לְאַפּוֹקֵי תְּחִלַּת שְׁחִיטָה דְּלָא"]:::statement
+  P2["② מְנָא אָמֵינָא לַהּ? דִּתְנַן בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה – פְּסוּלָה … אֶלָּא לָאו בְּאֶמְצַע שְׁחִיטָה"]:::proof
+  A3["③ אֲמַר לֵיהּ רָבָא — לְעוֹלָם בְּסוֹף שְׁחִיטָה … בְּיָדוּעַ שֶׁנִּשְׁמָתָהּ נְטוּלָה הֵימֶנָּה קוֹדֶם לָכֵן"]:::answer
+  S4["④ רַב נַחְמָן בַּר יִצְחָק אָמַר — פִּירְכּוּס שֶׁאָמְרוּ בִּתְחִלַּת שְׁחִיטָה"]:::statement
+  P5["⑤ מְנָא אָמֵינָא לַהּ? … אָמַר רַבִּי שִׁמְעוֹן … כּוֹתְלֵי בֵּית שְׁחִיטָה … אִי … בִּתְחִלַּת שְׁחִיטָה שַׁפִּיר"]:::proof
+  Q6{"⑥ וְדִלְמָא שָׁאנֵי זִינּוּק, דַּעֲדִיף"}:::question
+  Q7{"⑦ וּמִי עֲדִיף? וְהָתְנַן רַבִּי אֱלִיעֶזֶר אוֹמֵר דַּיָּיהּ אִם זִינְּקָה, קַל מִדְּרַבָּן גַּמְלִיאֵל"}:::question
+  Q8{"⑧ אָמַר רָבִינָא … וּמִדְּרַבָּנַן מִי עֲדִיף? וְהָא תְּנַן וַחֲכָמִים אוֹמְרִים עַד שֶׁתְּפַרְכֵּס אוֹ בַיָּד אוֹ בָרֶגֶל"}:::question
+  Q9{"⑨ רַבָּנַן אַהֵי קָיְימִי? אִילֵּימָא אַדְּרַבָּן גַּמְלִיאֵל – ׳כֵּיוָן שֶׁפִּירְכְּסָה׳ מִיבְּעֵי לֵיהּ"}:::question
+  A10(["⑩ אֶלָּא פְּשִׁיטָא אַדְּרַבִּי אֱלִיעֶזֶר, וְאִי עֲדִיף מַאי ׳עַד׳"]):::answer
+  S11["⑪ רָבָא אָמַר — פִּירְכּוּס שֶׁאָמְרוּ בְּסוֹף שְׁחִיטָה … דְּתַנְיָא ׳שׁוֹר אוֹ כֶשֶׂב … כִּי יִוָּלֵד׳"]:::statement
+  S12["⑫ ׳אוֹ כֶשֶׂב׳ פְּרָט לְכִלְאַיִם … ׳אוֹ עֵז׳ לְנִדְמֶה … ׳כִּי יִוָּלֵד׳ לְיוֹצֵא דּוֹפֶן … ׳תַּחַת אִמּוֹ׳ לַיָּתוֹם"]:::statement
+  Q13{"⑬ הַאי יָתוֹם הֵיכִי דָמֵי? אִילֵּימָא דִּילִידְתֵּיהּ אִמֵּיהּ וַהֲדַר מִתָה … אֶלָּא דְּמִתָה וַהֲדַר יְלִידְתֵּיהּ מִ׳כִּי יִוָּלֵד׳ נָפְקָא"}:::question
+  C14(["⑭ אֶלָּא פְּשִׁיטָא, זֶה פֵּירַשׁ לְמִיתָה וְזֶה פֵּירַשׁ לְחַיִּים … בָּעֵינַן חִיּוּתָא בְּסוֹף לֵידָה"]):::conclusion
+  S1 -->|מנא אמינא לה| P2
+  P2 -.->|רבא דוחה| A3
+  A3 -->|דעה שנייה| S4
+  S4 -->|מנא אמינא לה| P5
+  P5 -.->|ודלמא| Q6
+  Q6 -.->|ומי עדיף| Q7
+  Q7 -.->|רבינא מקשה| Q8
+  Q8 --> Q9
+  Q9 -->|אלא| A10
+  A10 -->|דעה שלישית| S11
+  S11 --> S12
+  S12 -->|ביאור היתום| Q13
+  Q13 -->|אלא| C14
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ח א — Chullin 38a:7</span></div>
+      <div class="orig">אָמַר רַב חִסְדָּא: פִּירְכּוּס שֶׁאָמְרוּ – בְּסוֹף שְׁחִיטָה. מַאי בְּסוֹף שְׁחִיטָה? בְּאֶמְצַע שְׁחִיטָה, לְאַפּוֹקֵי תְּחִלַּת שְׁחִיטָה דְּלָא.</div>
+      <div class="trans" data-when="he">אמר רב חסדא: הפירכוס שאמרו חכמים שהוא סימן חיים — צריך שיהיה בסוף השחיטה. ומהו ׳סוף שחיטה׳? אף באמצע השחיטה כשר; ולא אמרו ׳בסוף׳ אלא להוציא פירכוס שבתחילת השחיטה, שאינו סימן.</div>
+      <div class="trans" data-when="en">§ The Gemara continues its definition of convulsion that indicates life. Rav Ḥisda said: I was taught that the convulsion that the Sages said is an indication of life is a convulsion at the conclusion of the act of slaughter. Rav Ḥisda elaborates: What is the meaning of: At the conclusion of the act of slaughter? It means even in the midst of the slaughter. The Sages said that it must be at the conclusion of the slaughter only to exclude convulsions at the beginning of the act of slaughter, which are not an indication of life.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ח א — Chullin 38a:8</span></div>
+      <div class="orig">אָמַר רַב חִסְדָּא: מְנָא אָמֵינָא לַהּ? דִּתְנַן: בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה – פְּסוּלָה. אֵימַת? אִילֵּימָא בְּסוֹף שְׁחִיטָה, כֹּל הָכִי תֵּיחֵי וְתֵיזִיל? אֶלָּא לָאו בְּאֶמְצַע שְׁחִיטָה?</div>
+      <div class="trans" data-when="he">מניין לו לרב חסדא שפירכוס באמצע השחיטה מכשיר? מן המשנה: בהמה דקה שפשטה את ידהּ ולא החזירה — פסולה. מתי? אם בסוף השחיטה — וכי תמשיך לחיות כל כך הרבה שתחזיר? אלא ודאי באמצע השחיטה; ומכאן שאם החזירה — פירכוס המכשיר.</div>
+      <div class="trans" data-when="en">Rav Ḥisda said: From where do I say that a convulsion in the midst of the act of slaughter is an indication of life? It is from the mishna, as we learned: The slaughter of a small animal that when being slaughtered extended its foreleg that was bent and did not restore it to the bent position is not valid, as extending the foreleg is only part of the natural course of removal of the animal’s soul from its body and not a convulsion indicating life. Rav Ḥisda elaborates: When did the animal extend its foreleg but not restore it? If we say that it occurred at the conclusion of the slaughter, must the animal continue living for so extended a period that it restores its leg to its bent position after the slaughter is complete? Is the slaughter truly not valid otherwise? Rather, is it not that the mishna is referring to a case where the animal extends its foreleg in the middle of the slaughter? If so, then when it restores its leg as well, it is considered a convulsion that indicates life.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ח א — Chullin 38a:9</span></div>
+      <div class="orig">אֲמַר לֵיהּ רָבָא: לְעוֹלָם בְּסוֹף שְׁחִיטָה, שֶׁאֲנִי אוֹמֵר: כֹּל שֶׁאֵינָהּ עוֹשֶׂה כֵּן בְּסוֹף שְׁחִיטָה – בְּיָדוּעַ שֶׁנִּשְׁמָתָהּ נְטוּלָה הֵימֶנָּה קוֹדֶם לָכֵן.</div>
+      <div class="trans" data-when="he">דחה רבא: אין מכאן ראיה. אפשר לפרש שהמשנה עוסקת בסוף השחיטה — שכל בהמה שאינה מחזירה את רגלהּ בסוף השחיטה, בידוע שנשמתהּ ניטלה ממנה עוד קודם לכן, ולכן פסולה.</div>
+      <div class="trans" data-when="en">Rava said to Rav Ḥisda: That is no proof. Actually, one could explain that the mishna is referring to a case where the animal extends its foreleg but did not restore it to the bent position at the conclusion of the slaughter, as I say with regard to any animal that does not do so at the conclusion of the slaughter, it is known that its soul was taken from it before that moment, and it was not alive.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ח א — Chullin 38a:10</span></div>
+      <div class="orig">רַב נַחְמָן בַּר יִצְחָק אָמַר: פִּירְכּוּס שֶׁאָמְרוּ – בִּתְחִלַּת שְׁחִיטָה.</div>
+      <div class="trans" data-when="he">רב נחמן בר יצחק חולק ואומר: הפירכוס שאמרו חכמים שהוא סימן חיים — מכשיר אף אם היה בתחילת השחיטה.</div>
+      <div class="trans" data-when="en">Rav Naḥman bar Yitzḥak said: The convulsion that the Sages said is an indication of life is a convulsion even at the beginning of the act of slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ח א — Chullin 38a:11</span></div>
+      <div class="orig">אָמַר רַב נַחְמָן בַּר יִצְחָק: מְנָא אָמֵינָא לַהּ? דִּתְנַן, אָמַר רַבִּי שִׁמְעוֹן: הַשּׁוֹחֵט בַּלַּיְלָה, וּלְמָחָר מָצָא כְּתָלִים מְלֵאִים דָּם – כְּשֵׁרָה, שֶׁזִּינְּקָה, וּכְמִדַּת רַבִּי אֱלִיעֶזֶר. וְאָמַר שְׁמוּאֵל: כּוֹתְלֵי בֵּית שְׁחִיטָה שָׁנִינוּ. אִי אָמְרַתְּ בִּשְׁלָמָא בִּתְחִלַּת שְׁחִיטָה – שַׁפִּיר, אֶלָּא אִי אָמְרַתְּ בְּסוֹף שְׁחִיטָה, לֵיחוּשׁ דִּלְמָא בִּתְחִלַּת שְׁחִיטָה זִינְּקָה.</div>
+      <div class="trans" data-when="he">מניין לרב נחמן בר יצחק? מן המשנה: ר׳ שמעון אמר ששוחט בלילה ולמחר מצא כתלים מלאי דם — כשרה, שזינקה, כר׳ אליעזר; ואמר שמואל שמדובר בכותלי בית השחיטה (הצוואר). אם הפירכוס מכשיר אף בתחילת השחיטה — מובן; אך אם רק בסופה, יש לחשוש שמא קילח הדם דווקא בתחילת השחיטה.</div>
+      <div class="trans" data-when="en">Rav Naḥman bar Yitzḥak explained further and said: From where do I say that this is so? It is from the mishna, as we learned that Rabbi Shimon says: In the case of one who slaughters at night and the next day he awoke and found walls full of blood, the slaughter is valid, as it is clear that the blood spurted, and this is in accordance with the rule of Rabbi Eliezer. And Shmuel said with regard to the walls mentioned in the statement of Rabbi Shimon: It is the walls of the place of the slaughter, i.e., the walls of the neck, not the walls of the house, that we learned. Granted, if you say that a convulsion even at the beginning of the act of slaughter is an indication of life, this works out well. But if you say that a convulsion is an indication of life only at the conclusion of the act of slaughter, let us be concerned that perhaps the blood spurted onto the walls of the neck at the beginning of the act of slaughter, and there was no indication of life.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ח א — Chullin 38a:12</span></div>
+      <div class="orig">וְדִלְמָא שָׁאנֵי זִינּוּק, דַּעֲדִיף.</div>
+      <div class="trans" data-when="he">דוחים את הראיה: ושמא זינוק הדם שונה, שהוא סימן חיים עדיף — ולכן אף שפשיטת רגל מכשירה רק בסוף השחיטה, זינוק מכשיר אף בתחילתה.</div>
+      <div class="trans" data-when="en">The Gemara rejects that proof. But perhaps spurting is different, as it is superior as an indication of life to extending or bending a foreleg, and therefore, although extending or bending a foreleg is a sufficient indicator of life only at the conclusion of the act of slaughter, spurting is a sufficient indicator even at the beginning of the act of slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ח א — Chullin 38a:13</span></div>
+      <div class="orig">וּמִי עֲדִיף? וְהָתְנַן, רַבִּי אֱלִיעֶזֶר אוֹמֵר: דַּיָּיהּ אִם זִינְּקָה, קַל מִדְּרַבָּן גַּמְלִיאֵל, וַעֲדִיף מִדְּרַבָּנַן.</div>
+      <div class="trans" data-when="he">וכי זינוק עדיף? והרי שנינו במשנה שר׳ אליעזר אומר ׳דיה אם זינקה׳ — משמע שזינוק סימן קל יותר מדרישת רבן גמליאל (יד ורגל). ומתרצים: קל מרבן גמליאל, אך עדיף מדרישת חכמים (יד או רגל).</div>
+      <div class="trans" data-when="en">The Gemara asks: And is spurting superior? But didn’t we learn in the mishna: Rabbi Eliezer says it is sufficient if blood spurted from the neck, indicating that spurting of blood is a less substantive indication of life than those indications mentioned in the statement of Rabban Gamliel, who requires that the animal convulse with its foreleg and with its hind leg? The Gemara answers: Rabbi Eliezer’s requirement of spurting is less substantive than the requirements of Rabban Gamliel as an indication of life, but superior to the requirement of the Rabbis as an indication of life, where the Rabbis require that the animal convulse either with its foreleg or with its hind leg.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ח א — Chullin 38a:14</span></div>
+      <div class="orig">אָמַר רָבִינָא: אָמַר לִי סַמָּא בַּר חִילְקַאי, אַקְשִׁי בַּהּ אֲבוּהּ דְּבַר אַבּוּבְרָם, וְאָמְרִי לַהּ אֲחוּהּ דְּבַר אַבּוּבְרָם: וּמִדְּרַבָּנַן מִי עֲדִיף? וְהָא תְּנַן: וַחֲכָמִים אוֹמְרִים: עַד שֶׁתְּפַרְכֵּס אוֹ בַיָּד אוֹ בָרֶגֶל.</div>
+      <div class="trans" data-when="he">אמר רבינא בשם אחרים שהקשו: וכי זינוק עדיף אפילו מדרישת חכמים? והרי שנינו ׳וחכמים אומרים עד שתפרכס או ביד או ברגל׳ — לשון ׳עד׳ מורה על דרישה מחמירה יותר מזינוק.</div>
+      <div class="trans" data-when="en">Ravina said: Samma bar Ḥilkai said to me that the father of bar Abuveram, and some say that it was the brother of bar Abuveram, raises a difficulty: And is blood spurting superior to the requirement of the Rabbis as an indication of life? But didn’t we learn in the mishna: And the Rabbis say: It is permitted only in a case where it convulses with its foreleg or with its hind leg, or in a case where it wags its tail?</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ח א — Chullin 38a:15</span></div>
+      <div class="orig">רַבָּנַן אַהֵי קָיְימִי? אִילֵּימָא אַדְּרַבָּן גַּמְלִיאֵל – ״כֵּיוָן שֶׁפִּירְכְּסָה״ מִיבְּעֵי לֵיהּ!</div>
+      <div class="trans" data-when="he">על דברי מי חולקים חכמים? אם על רבן גמליאל (הדורש יד ורגל) — היה להם לומר ׳כיון שפירכסה (ביד או ברגל)׳, להקל; ולא ׳עד שתפרכס׳ בלשון מחמירה.</div>
+      <div class="trans" data-when="en">Ravina elaborates: To which statement of the tanna’im in the mishna do the Rabbis stand and respond? If we say that they are responding to the statement of Rabban Gamliel, who requires that the animal convulse with its foreleg and with its hind leg, the Rabbis should have said: Once the animal convulsed with its foreleg or with its hind leg or it wagged its tail, indicating that this is sufficient.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ח א — Chullin 38a:16</span></div>
+      <div class="orig">אֶלָּא פְּשִׁיטָא אַדְּרַבִּי אֱלִיעֶזֶר, וְאִי עֲדִיף, מַאי ״עַד״?</div>
+      <div class="trans" data-when="he">אלא ודאי חולקים חכמים על ר׳ אליעזר; ואם זינוק עדיף משלהם, מהו לשון ׳עד שתפרכס׳ המחמיר? אלא מוכח שזינוק קל יותר — וממילא ראיית רב נחמן בר יצחק קיימת: אם זינוק מכשיר בתחילה, כל שכן פשיטת אבר.</div>
+      <div class="trans" data-when="en">Rather, it is obvious that the Rabbis are responding to the statement of Rabbi Eliezer. And if Rabbi Eliezer’s opinion is superior to that of the Rabbis as an indication of life, what is the meaning of: It is permitted only in a case where it convulses with its foreleg or with its hind leg or it wags its tail? In that case too, the Rabbis should have said: Once the animal convulses with its foreleg or with its hind leg or it wags its tail. Apparently, blood spurting is a less substantive indication of life, and the proof of Rav Naḥman bar Yitzḥak remains valid: If spurting at the beginning of the act of slaughter is a sufficient indication of life to render the slaughter valid, then all the more so, extending and bending a limb are also sufficient indications of life.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ח א — Chullin 38a:17</span></div>
+      <div class="orig">רָבָא אָמַר: פִּירְכּוּס שֶׁאָמְרוּ – בְּסוֹף שְׁחִיטָה. אָמַר רָבָא: מְנָא אָמֵינָא לַהּ? דְּתַנְיָא: ״שׁוֹר</div>
+      <div class="trans" data-when="he">רבא אומר: הפירכוס שאמרו — בסוף השחיטה. מניין לו? מברייתא הדורשת את הכתוב ׳שור או כשב או עז כי יִוָּלֵד … תחת אמו׳ (ויקרא כב), הפותחת ב׳שור׳.</div>
+      <div class="trans" data-when="en">Rava said: The convulsion that the Rabbis said is an indication of life is a convulsion at the conclusion of the act of slaughter. Rava said: From where do I say that this is the case? It is as it is taught in a baraita with regard to the verse: “When a bull or a sheep or a goat is born, it shall be seven days under its mother; and from the eighth day and onward it may be accepted for an offering to the Lord” (Leviticus 22:27). The phrase “a bull</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ח ב — Chullin 38b:1</span></div>
+      <div class="orig">אוֹ כֶשֶׂב״ – פְּרָט לְכִלְאַיִם, ״אוֹ עֵז״ – פְּרָט לְנִדְמֶה, ״כִּי יִוָּלֵד״ – פְּרָט לְיוֹצֵא דּוֹפֶן, ״שִׁבְעַת יָמִים״ – פְּרָט לִמְחוּסַּר זְמַן, ״תַּחַת אִמּוֹ״ – פְּרָט לַיָּתוֹם.</div>
+      <div class="trans" data-when="he">המשך הברייתא: ׳או כשב׳ — למעט כלאים; ׳או עז׳ — למעט נדמה (הדומה למין אחר); ׳כי יִוָּלֵד׳ — למעט יוצא דופן; ׳שבעת ימים׳ — למעט מחוסר זמן; ׳תחת אמו׳ — למעט יתום.</div>
+      <div class="trans" data-when="en">or a sheep” is to the exclusion of an animal born to parents of diverse kinds, which may not be brought as an offering. The phrase “or a goat” is to the exclusion of an animal that resembles another species of animal. “When it is born”; this is to the exclusion of an animal born by caesarean section. “It shall be seven days”; this is to the exclusion of an animal whose time has not yet arrived. “Under its mother”; this is to the exclusion of an animal that is an orphan.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין ל״ח ב — Chullin 38b:2</span></div>
+      <div class="orig">הַאי יָתוֹם הֵיכִי דָמֵי? אִילֵּימָא דִּילִידְתֵּיהּ אִמֵּיהּ וַהֲדַר מִתָה, לְעוֹלָם תֵּיחֵי וְתֵיזִיל? אֶלָּא דְּמִתָה וַהֲדַר יְלִידְתֵּיהּ, מִ״כִּי יִוָּלֵד״ נָפְקָא.</div>
+      <div class="trans" data-when="he">רבא מבאר: מהו ׳יתום׳ זה? אם שילדתו אמו ואחר כך מתה — וכי תחיה לעולם? אלא שמתה ואחר כך ילדתו; ולזה אין צורך בכתוב, שכבר נתמעט מ׳כי יִוָּלֵד׳ (כיוצא דופן). אם כן למה צריך מיעוט נוסף?</div>
+      <div class="trans" data-when="en">Rava elaborates: What are the circumstances of this orphan? If we say that its mother gave birth to it and then died, this is unreasonable. Will the mother continue living forever? Rather, perhaps the reference is to a case where the mother died and then gave birth to it. The Gemara rejects that possibility, as the fact that this animal is disqualified from sacrifice is derived from the phrase: “When it is born,” since after the mother’s death the newborn animal can emerge from the womb only by means of caesarean section.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין ל״ח ב — Chullin 38b:3</span></div>
+      <div class="orig">אֶלָּא פְּשִׁיטָא, זֶה פֵּירַשׁ לְמִיתָה וְזֶה פֵּירַשׁ לְחַיִּים. אִי אָמְרַתְּ בִּשְׁלָמָא בָּעֵינַן חִיּוּתָא בְּסוֹף לֵידָה – הַיְינוּ דְּאִיצְטְרִיךְ קְרָא לְמַעוֹטֵי, אֶלָּא אִי אָמְרַתְּ לָא בָּעֵינַן חִיּוּתָא בְּסוֹף לֵידָה, לְמָה לֵיהּ? מִ״כִּי יִוָּלֵד״ נָפְקָא!</div>
+      <div class="trans" data-when="he">אלא ודאי מדובר שמתה האם בסוף הלידה — זו פירשה למיתה וזה הוולד פירש לחיים. אם צריך חיוּת בסוף הלידה, מובן שצריך כתוב למעט; אך אם אין צריך חיוּת בסוף, למה לי המיעוט? אלא מכאן שצריך חיוּת בסוף התהליך — וכן בשחיטת המסוכנת, צריך סימן חיים בסוף השחיטה.</div>
+      <div class="trans" data-when="en">Rather, it is obvious that the reference is to a case where the mother died at the conclusion of the birth, at which point this mother withdrew for death and that newborn withdrew for life. Granted, if you say that we require life at the conclusion of the birth, that is why a verse was necessary to exclude the orphan. But if you say that we do not require life at the conclusion of the birth, and the verse is excluding only an animal that was born after its mother’s death, why is this verse necessary to exclude it? It can be derived from the phrase: “When it is born.” It may be derived from here that in any situation where the animal must be alive, it must remain alive until the end of the process. That is the case with regard to the slaughter of an animal in danger of imminent death as well. The slaughter is valid only if there is an indication of life at the end of the act of slaughter.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">רבא פוסק הלכה כברייתא</span><span data-when="en">Rava rules the halakha like the baraita</span>
+        <span class="ref">Chullin 38b:4-38b:6</span></h2>
+    <div class="lead"><span data-when="he">רבא פוסק הלכה כברייתא: דקה שפשטה ידהּ ולא החזירה — פסולה, אך ברגל, בגסה ובעוף כשרה. הגמרא שואלת מה חידש רבא — והרי הכל כבר במשנה; ומשיבה שהעוף הוא החידוש, שלא נשנה במשנה.</span><span data-when="en">Rava rules the halakha follows a baraita: a small animal that extended its foreleg and did not draw it back is invalid, but with a hind leg, a large animal, or a bird it is valid. The Gemara asks what Rava added — all this is already in the Mishnah; it answers that the bird is the novelty, not taught in the Mishnah.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רבא — הלכה כברייתא: דקה שפשטה ידהּ ולא החזירה, פסולה"]:::statement
+  S2["② הברייתא — ברגל כשרה; בגסה כשרה; ובעוף די בריפרוף גף או כשכוש זנב"]:::statement
+  C3(["③ מאי קא משמע לן? כולהו תנינהו! עוף איצטריכא ליה, דלא תנן — הוא חידוש הברייתא"]):::conclusion
+  S1 --> S2
+  S2 -->|מה חידש| C3
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rava — halakha like the baraita: a small animal extending and not drawing back its foreleg is invalid"]:::statement
+  S2["② The baraita — a hind leg is valid; a large animal is valid; a bird, even fluttering a wing or wagging its tail"]:::statement
+  C3(["③ What does Rava teach? all of it is taught! the bird was needed, as it is not taught — the baraita's novelty"]):::conclusion
+  S1 --> S2
+  S2 -->|what added| C3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רָבָא — הִלְכְתָא כִּי הָא מַתְנִיתָא: בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה, פְּסוּלָה"]:::statement
+  S2["② בַּמֶּה דְּבָרִים אֲמוּרִים? בַּיָּד; אֲבָל בָּרֶגֶל … כְּשֵׁרָה … אֲבָל בְּגַסָּה … כְּשֵׁרָה; וְעוֹף, אֲפִילּוּ לֹא רִפְרֵף אֶלָּא גַּפּוֹ … הֲרֵי זֶה פִּירְכּוּס"]:::statement
+  C3(["③ מַאי קָא מַשְׁמַע לַן? כּוּלְּהוּ תְּנַנְהִי! … עוֹף אִיצְטְרִיכָא לֵיהּ, דְּלָא תְּנַן"]):::conclusion
+  S1 --> S2
+  S2 -->|מה חידש| C3
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ח ב — Chullin 38b:4</span></div>
+      <div class="orig">אָמַר רָבָא: הִלְכְתָא כִּי הָא מַתְנִיתָא – בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה, פְּסוּלָה.</div>
+      <div class="trans" data-when="he">אמר רבא: ההלכה כברייתא זו — בהמה דקה שבשעת השחיטה פשטה את ידהּ הכפופה ולא החזירהּ, שחיטתהּ פסולה, שאין זו אלא הוצאת נפש ולא סימן חיים.</div>
+      <div class="trans" data-when="en">§ The mishna teaches: The slaughter of a small animal in danger of imminent death that during the slaughter extended its foreleg that was bent and did not restore it to the bent position is not valid, as extending the foreleg is only part of the natural course of removal of the animal’s soul from its body and not a convulsion indicating life. Rava says that the halakha is in accordance with the opinion expressed in this baraita: The slaughter of a small animal that extended its foreleg that was bent and did not restore it to the bent position is not valid.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ח ב — Chullin 38b:5</span></div>
+      <div class="orig">בַּמֶּה דְּבָרִים אֲמוּרִים? בַּיָּד, אֲבָל בָּרֶגֶל, בֵּין פָּשְׁטָה וְלֹא כָּפְפָה, בֵּין כָּפְפָה וְלֹא פָּשְׁטָה – כְּשֵׁרָה. בַּמֶּה דְּבָרִים אֲמוּרִים? בְּדַקָּה, אֲבָל בְּגַסָּה, בֵּין בַּיָּד בֵּין בָּרֶגֶל, בֵּין פָּשְׁטָה וְלֹא כָּפְפָה, בֵּין כָּפְפָה וְלֹא פָּשְׁטָה – כְּשֵׁרָה. וְעוֹף, אֲפִילּוּ לֹא רִפְרֵף אֶלָּא גַּפּוֹ, וְלֹא כִּשְׁכֵּשׁ אֶלָּא זְנָבוֹ – הֲרֵי זֶה פִּירְכּוּס.</div>
+      <div class="trans" data-when="he">המשך הברייתא: במה דברים אמורים? ביד; אבל ברגל — בין שפשטה ולא כפפה ובין שכפפה ולא פשטה — כשרה. במה דברים אמורים? בבהמה דקה; אבל בגסה — בין ביד בין ברגל, בכל אופן — כשרה. ובעוף, אפילו ריפרף רק בכנפו או כשכש רק בזנבו — הרי זה פירכוס.</div>
+      <div class="trans" data-when="en">The baraita continues: In what case is this statement said? It is with regard to the foreleg. But with regard to the hind leg, whether the animal extended it and did not restore it to the bent position or the animal bent it but did not extend it, the slaughter is valid. In what case is this statement, about extending the foreleg, said? It is with regard to a small animal. But with regard to a large animal, whether the convulsion involves its foreleg or its hind leg, and whether the animal extended it and did not restore it to the bent position or the animal bent it but did not extend it, the slaughter is valid. And with regard to a bird, even if it fluttered [rifref] only its wing or wagged only its tail, that is a convulsion and an indication of life.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ח ב — Chullin 38b:6</span></div>
+      <div class="orig">מַאי קָא מַשְׁמַע לַן? כּוּלְּהוּ תְּנַנְהִי! בְּהֵמָה דַּקָּה שֶׁפָּשְׁטָה יָדָהּ וְלֹא הֶחְזִירָה – פְּסוּלָה, שֶׁאֵינָהּ אֶלָּא הוֹצָאַת נֶפֶשׁ. יָד – אִין, רֶגֶל – לָא; דַּקָּה – אִין, גַּסָּה – לָא. עוֹף אִיצְטְרִיכָא לֵיהּ, דְּלָא תְּנַן.</div>
+      <div class="trans" data-when="he">מה חידש רבא בפסיקתו? והרי כל פרטי הברייתא כבר שנינו במשנה: דקה שפשטה ידהּ ולא החזירה פסולה; מכלל שיד — לא סימן, רגל — כן; דקה — לא, גסה — כן. ומשיבים: העוף הוצרך, שלא נשנה במשנה — וזה חידושו.</div>
+      <div class="trans" data-when="en">The Gemara asks: What is Rava teaching us in ruling in accordance with the baraita? He is teaching us all of those halakhot we learned in the mishna: The slaughter of a small animal that when being slaughtered extended its foreleg that was bent and did not restore it to the bent position is not valid, as extending the foreleg is only part of the natural course of removal of the animal’s soul from its body and not a convulsion indicating life. It may be inferred from the mishna that with regard to movement of a foreleg alone, yes, it is not an indication of life, but movement of a hind leg, no, it is an indication of life. With regard to a small animal, yes, this is the halakha; with regard to a large animal, no, this is not the halakha, and extending a hind leg does indicate life. The Gemara answers: It was necessary for Rava to teach the halakha in the baraita with regard to a bird, as we did not learn it in the mishna.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+        <span data-when="he">משנה — השוחט לנכרי</span><span data-when="en">Mishnah — slaughtering for a gentile</span>
+        <span class="ref">Chullin 38b:7-38b:8</span></h2>
+    <div class="lead"><span data-when="he">משנה חדשה: ישראל השוחט בהמת נכרי לצורך נכרי — שחיטתו כשרה, ורבי אליעזר פוסל, שסתם מחשבת נכרי לעבודה זרה. רבי יוסי דוחה בקל וחומר: אם בקודשים — שבהם המחשבה פוסלת — הולכים אחר העובד, בחולין — שאין מחשבה פוסלת — כל שכן שהולכים אחר השוחט.</span><span data-when="en">A new Mishnah: a Jew who slaughters a gentile's animal for a gentile — the slaughter is valid, and Rabbi Eliezer invalidates it, since a gentile's unspecified intent is for idol worship. Rabbi Yosei counters with an a fortiori argument: if for sacrifices — where intent does invalidate — everything follows the one who performs the service, then for non-sacred meat — where intent does not invalidate — surely everything follows the slaughterer.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: השוחט לנכרי — שחיטתו כשרה; ורבי אליעזר פוסל"]):::mishnah
+  S2["② רבי אליעזר — אפילו שחטה להאכיל לנכרי מחצר כבד, פסולה; סתם מחשבת נכרי לעבודה זרה"]:::statement
+  S3["③ רבי יוסי — קל וחומר: בקודשים שמחשבה פוסלת, הכל אחר העובד; בחולין כל שכן אחר השוחט"]:::statement
+  M1 -->|דברי ר׳ אליעזר| S2
+  M1 -->|דברי ר׳ יוסי| S3
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishnah: one who slaughters for a gentile — valid; and Rabbi Eliezer invalidates"]):::mishnah
+  S2["② R. Eliezer — even to feed a gentile from the diaphragm, invalid; a gentile's unspecified intent is for idol worship"]:::statement
+  S3["③ R. Yosei — a fortiori: in sacrifices, where intent invalidates, all follows the performer; in non-sacred, all the more, the slaughterer"]:::statement
+  M1 -->|R. Eliezer| S2
+  M1 -->|R. Yosei| S3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① מַתְנִי׳ הַשּׁוֹחֵט לְנׇכְרִי – שְׁחִיטָתוֹ כְּשֵׁרָה, וְרַבִּי אֱלִיעֶזֶר פּוֹסֵל"]):::mishnah
+  S2["② אָמַר רַבִּי אֱלִיעֶזֶר — אֲפִילּוּ שְׁחָטָהּ לֶאֱכוֹל לְנׇכְרִי מֵחֲצַר כָּבֵד שֶׁלָּהּ – פְּסוּלָה, שֶׁסְּתָם מַחְשֶׁבֶת נׇכְרִי לַעֲבוֹדָה זָרָה"]:::statement
+  S3["③ אָמַר רַבִּי יוֹסֵי — קַל וָחוֹמֶר … מְקוֹם שֶׁהַמַּחְשָׁבָה פּוֹסֶלֶת בְּמוּקְדָּשִׁין הַכֹּל אַחַר הָעוֹבֵד … בְּחוּלִּין … אַחַר הַשּׁוֹחֵט"]:::statement
+  M1 -->|דברי ר׳ אליעזר| S2
+  M1 -->|דברי ר׳ יוסי| S3
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ח ב — Chullin 38b:7</span></div>
+      <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט לְנׇכְרִי – שְׁחִיטָתוֹ כְּשֵׁרָה, וְרַבִּי אֱלִיעֶזֶר פּוֹסֵל. אָמַר רַבִּי אֱלִיעֶזֶר: אֲפִילּוּ שְׁחָטָהּ לֶאֱכוֹל לְנׇכְרִי מֵחֲצַר כָּבֵד שֶׁלָּהּ – פְּסוּלָה, שֶׁסְּתָם מַחְשֶׁבֶת נׇכְרִי לַעֲבוֹדָה זָרָה.</div>
+      <div class="trans" data-when="he">משנה. ישראל השוחט בהמת נכרי לצורך נכרי — שחיטתו כשרה, ורבי אליעזר פוסל.</div>
+      <div class="trans" data-when="en">MISHNA: In the case of a Jew who slaughters the animal of a gentile for a gentile, his slaughter is valid, and Rabbi Eliezer deems it not valid. Rabbi Eliezer says: Even if the Jew slaughtered the animal with the intent to feed the gentile from its diaphragm [meḥatzar kaved], its slaughter is not valid, as the unspecified intent of a gentile is to slaughter the animal for idol worship, and it is prohibited to derive benefit from it.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ח ב — Chullin 38b:7</span></div>
+      <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט לְנׇכְרִי – שְׁחִיטָתוֹ כְּשֵׁרָה, וְרַבִּי אֱלִיעֶזֶר פּוֹסֵל. אָמַר רַבִּי אֱלִיעֶזֶר: אֲפִילּוּ שְׁחָטָהּ לֶאֱכוֹל לְנׇכְרִי מֵחֲצַר כָּבֵד שֶׁלָּהּ – פְּסוּלָה, שֶׁסְּתָם מַחְשֶׁבֶת נׇכְרִי לַעֲבוֹדָה זָרָה.</div>
+      <div class="trans" data-when="he">אמר רבי אליעזר: אפילו שחטהּ ישראל כדי להאכיל לנכרי מחצר הכבד שלהּ (בשר רגיל לאכילה) — פסולה, שסתם מחשבת נכרי היא לעבודה זרה, ואסור ליהנות ממנה.</div>
+      <div class="trans" data-when="en">MISHNA: In the case of a Jew who slaughters the animal of a gentile for a gentile, his slaughter is valid, and Rabbi Eliezer deems it not valid. Rabbi Eliezer says: Even if the Jew slaughtered the animal with the intent to feed the gentile from its diaphragm [meḥatzar kaved], its slaughter is not valid, as the unspecified intent of a gentile is to slaughter the animal for idol worship, and it is prohibited to derive benefit from it.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ח ב — Chullin 38b:8</span></div>
+      <div class="orig">אָמַר רַבִּי יוֹסֵי: קַל וָחוֹמֶר הַדְּבָרִים, וּמָה בִּמְקוֹם שֶׁהַמַּחְשָׁבָה פּוֹסֶלֶת בְּמוּקְדָּשִׁין – אֵין הַכֹּל הוֹלֵךְ אֶלָּא אַחַר הָעוֹבֵד, מְקוֹם שֶׁאֵין מַחְשָׁבָה פּוֹסֶלֶת בְּחוּלִּין – אֵינוֹ דִּין שֶׁלֹּא יְהֵא הַכֹּל הוֹלֵךְ אֶלָּא אַחַר הַשּׁוֹחֵט?</div>
+      <div class="trans" data-when="he">אמר רבי יוסי: קל וחומר הוא. אם בקודשים — שבהם מחשבה פסולה (כגון מחשבת חוץ לזמנו) פוסלת — בכל זאת הכל הולך רק אחר מחשבת הכהן העובד, ולא אחר הבעלים; בחולין, שאין מחשבה פוסלת כלל, אינו דין שילך הכל רק אחר השוחט ולא אחר מחשבת הבעלים הנכרי?</div>
+      <div class="trans" data-when="en">Rabbi Yosei says: The matter of the intent of the gentile is irrelevant in this case, as can be derived by means of an a fortiori inference. If in a place where intent while slaughtering the animal invalidates the slaughter, i.e., in sacrificial animals, such as when slaughtering an offering with the intent to sacrifice it beyond its designated time, everything follows only the intent of the priest performing the service and not the intent of the owner, then in a place where intent does not invalidate the slaughter, i.e., in non-sacred animals, is it not right that everything should follow only the intent of the one who slaughters the animal?</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+    <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+        <span data-when="he">שורש מחלוקת התנאים — בשני לשונות</span><span data-when="en">The root of the dispute — in two versions</span>
+        <span class="ref">Chullin 38b:9-39a:1</span></h2>
+    <div class="lead"><span data-when="he">הגמרא מבארת את שורש מחלוקת תנאי המשנה. כולם אוחזים בדעת רבי אליעזר ברבי יוסי שהבעלים מפגלין במחשבתם. בלשון הראשון נחלקו אם סתם מחשבת נכרי לעבודה זרה: תנא קמא מצריך ששמעוהו מחשב, רבי אליעזר אף בלא ששמעוהו, ורבי יוסי פוטר אף כששמעוהו. בלשון השני (איכא דאמרי) נחלקו בלמדים חוץ מפנים — אם דין חולין נלמד מקודשים.</span><span data-when="en">The Gemara explains the root of the tannaitic dispute in the Mishnah. All hold like Rabbi Eliezer ben Rabbi Yosei that owners render an offering piggul by intent. In the first version they dispute whether a gentile's unspecified intent is for idol worship: the first tanna requires that we heard him express it, Rabbi Eliezer holds so even unheard, and Rabbi Yosei exempts even when heard. In the second version (ikka de'amri) they dispute whether non-sacred law is derived from sacrificial law.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① גמרא — הני תנאי אית להו דר׳ אליעזר בר׳ יוסי, ששמע שהבעלים מפגלין"]:::statement
+  S2["② לשון א׳ — נחלקו בסתם מחשבה: ת״ק רק כששמעוהו; ר׳ אליעזר אף בלא ששמעוהו; ר׳ יוסי פוטר אף ששמעוהו ׳זה מחשב וזה עובד׳"]:::statement
+  S3["③ איכא דאמרי — בדשמעוהו דחשיב פליגי; ת״ק ׳זה מחשב וזה עובד׳ דווקא בפנים, אבל בחוץ לא, חוץ מפנים"]:::statement
+  C4(["④ לא ילפינן; ר׳ אליעזר — ילפינן חוץ מפנים; ר׳ יוסי — אף בפנים ׳זה מחשב וזה עובד׳ לא אמרינן"]):::conclusion
+  S1 -->|לשון ראשון| S2
+  S2 -->|לשון שני| S3
+  S3 --> C4
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Gemara — these tannaim hold like R. Eliezer b. R. Yosei, who heard that owners render piggul"]:::statement
+  S2["② Version 1 — they dispute unspecified intent: first tanna only if heard; R. Eliezer even unheard; R. Yosei exempts even if heard — ׳this intends, that performs׳"]:::statement
+  S3["③ Ikka de'amri — they dispute where it was heard; first tanna ׳this intends, that performs׳ only inside the Temple, but not outside — outside from inside"]:::statement
+  C4(["④ we do not derive; R. Eliezer — we derive outside from inside; R. Yosei — even inside, ׳this intends, that performs׳ we do not say"]):::conclusion
+  S1 -->|version one| S2
+  S2 -->|version two| S3
+  S3 --> C4
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① גְּמָ׳ הָנֵי תַּנָּאֵי אִית לְהוּ דְּרַבִּי אֱלִיעֶזֶר בְּרַבִּי יוֹסֵי … שָׁמַעְתִּי שֶׁהַבְּעָלִים מְפַגְּלִין"]:::statement
+  S2["② תַּנָּא קַמָּא … אִי שַׁמְעִינֵיהּ דְּחַשֵּׁיב אִין … רַבִּי אֱלִיעֶזֶר … אַף עַל גַּב דְּלָא שַׁמְעִינֵיהּ … רַבִּי יוֹסֵי … זֶה מְחַשֵּׁב וְזֶה עוֹבֵד לָא אָמְרִינַן"]:::statement
+  S3["③ אִיכָּא דְּאָמְרִי: בִּדְשַׁמְעִינֵיהּ דְּחַשֵּׁיב פְּלִיגִי … תַּנָּא קַמָּא … הָנֵי מִילֵּי בִּפְנִים, אֲבָל בְּחוּץ לֹא, חוּץ מִפְּנִים"]:::statement
+  C4(["④ לָא יָלְפִינַן; רַבִּי אֱלִיעֶזֶר — יָלְפִינַן חוּץ מִפְּנִים; רַבִּי יוֹסֵי — אֲפִילּוּ בִּפְנִים ׳זֶה מְחַשֵּׁב וְזֶה עוֹבֵד׳ לָא אָמְרִינַן"]):::conclusion
+  S1 -->|לשון ראשון| S2
+  S2 -->|לשון שני| S3
+  S3 --> C4
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ח ב — Chullin 38b:9</span></div>
+      <div class="orig">גְּמָ׳ הָנֵי תַּנָּאֵי אִית לְהוּ דְּרַבִּי אֱלִיעֶזֶר בְּרַבִּי יוֹסֵי, דְּתַנְיָא: אָמַר רַבִּי אֱלִיעֶזֶר בְּרַבִּי יוֹסֵי: שָׁמַעְתִּי שֶׁהַבְּעָלִים מְפַגְּלִין.</div>
+      <div class="trans" data-when="he">גמרא. תנאי המשנה (השוללים את מחשבת הבעלים בחולין) אוחזים בדעת רבי אליעזר ברבי יוסי, ששנינו עליה בברייתא: אמר רבי אליעזר ברבי יוסי — שמעתי שאף הבעלים, ולא רק הכהן, מפגלין את הקרבן במחשבתם הפסולה.</div>
+      <div class="trans" data-when="en">GEMARA: In explanation of the dispute between the first tanna and Rabbi Eliezer, the Gemara explains: These tanna’im hold in accordance with the opinion of Rabbi Eliezer, son of Rabbi Yosei, as it is taught in a baraita that Rabbi Eliezer, son of Rabbi Yosei, says: I heard that the owners, and not only the priest, render an offering piggul by means of improper intent. The same is true with regard to non-sacred slaughter, where the owners’ intent for idol worship invalidates the slaughter, even if the slaughterer has no intent for idol worship.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ח ב — Chullin 38b:10</span></div>
+      <div class="orig">מִיהוּ תַּנָּא קַמָּא סָבַר: אִי שַׁמְעִינֵיהּ דְּחַשֵּׁיב – אִין, אִי לָא – לָא, סְתָם מַחְשֶׁבֶת נׇכְרִי לַעֲבוֹדָה זָרָה לָא אָמְרִינַן. רַבִּי אֱלִיעֶזֶר סָבַר: אַף עַל גַּב דְּלָא שַׁמְעִינֵיהּ דְּחַשֵּׁיב, סְתָם מַחְשֶׁבֶת נׇכְרִי לַעֲבוֹדָה זָרָה אָמְרִינַן. וַאֲתָא רַבִּי יוֹסֵי לְמֵימַר: אַף עַל גַּב דְּשַׁמְעִינֵיהּ דְּחַשֵּׁיב, זֶה מְחַשֵּׁב וְזֶה עוֹבֵד לָא אָמְרִינַן.</div>
+      <div class="trans" data-when="he">לשון ראשון: תנא קמא סובר — אם שמענו את הנכרי מחשב לעבודה זרה, פסולה; ואם לא — כשרה, שאין אומרים סתם מחשבת נכרי לעבודה זרה. רבי אליעזר סובר — אף בלא ששמענוהו, אומרים סתם מחשבת נכרי לעבודה זרה. ורבי יוסי בא לומר — אף ששמענוהו מחשב, כיוון שהבעלים מחשב והשוחט (הישראל) עובד — ׳זה מחשב וזה עובד׳, ואין מחשבתו פוסלת.</div>
+      <div class="trans" data-when="en">But the first tanna holds that if we heard the gentile say that he intends the animal for idol worship, yes, his intent invalidates the slaughter, and if the gentile did not voice his intent before us, his intent does not invalidate the slaughter, as we do not say that the unspecified intent of a gentile is for idol worship. Rabbi Eliezer holds: Although we did not hear the gentile say that he intends the animal for idol worship, the slaughter is not valid, as we say the unspecified intent of a gentile is for idol worship. And Rabbi Yosei comes to say that even though we heard the gentile say that he intends the animal for idol worship, in a case where this owner has intent for idol worship and that other person is performing the slaughter, we do not say that the intent of the owner invalidates the slaughter.</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ח ב — Chullin 38b:11</span></div>
+      <div class="orig">אִיכָּא דְּאָמְרִי: בִּדְשַׁמְעִינֵיהּ דְּחַשֵּׁיב פְּלִיגִי, תַּנָּא קַמָּא סָבַר: כִּי אָמְרִינַן ״זֶה מְחַשֵּׁב וְזֶה עוֹבֵד״ – הָנֵי מִילֵּי בִּפְנִים, אֲבָל בְּחוּץ לֹא, חוּץ מִפְּנִים</div>
+      <div class="trans" data-when="he">לשון שני (איכא דאמרי): דווקא במקרה ששמענו את הנכרי מחשב נחלקו. תנא קמא סובר — כשאומרים ׳זה מחשב וזה עובד׳ שהמחשבה פוסלת, זה דווקא בפנים (בקודשים שבמקדש); אבל בחוץ (בחולין) לא, שאין למדים דין חוץ מדין פנים…</div>
+      <div class="trans" data-when="en">There are those who say an alternative explanation of the mishna. It is with regard to a case where we heard the gentile say that he intends the animal for idol worship that the tanna’im disagree. The first tanna holds that when we say in a case where this owner has improper intent and that other person is performing the slaughter that the intent of the owner invalidates the slaughter, this statement applies only inside the Temple, in the slaughter of offerings. But with regard to non-sacred slaughter outside the Temple, the intent of the owner does not invalidate the slaughter, as with regard to deriving the halakhot of non-sacred slaughter outside the Temple from the halakhot of slaughter of sacrificial animals inside the Temple,</div>
+    </div>
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ט א — Chullin 39a:1</span></div>
+      <div class="orig">לָא יָלְפִינַן. וַאֲתָא רַבִּי אֱלִיעֶזֶר לְמֵימַר: יָלְפִינַן חוּץ מִפְּנִים, וַאֲתָא רַבִּי יוֹסֵי לְמֵימַר: אֲפִילּוּ בִּפְנִים נָמֵי ״זֶה מְחַשֵּׁב וְזֶה עוֹבֵד״ לָא אָמְרִינַן.</div>
+      <div class="trans" data-when="he">…אין למדים. ורבי אליעזר בא לומר — כן למדים דין חוץ מדין פנים, ולכן מחשבת הנכרי פוסלת אף בחולין. ורבי יוסי בא לומר — אף בפנים (בקודשים) אין אומרים ׳זה מחשב וזה עובד׳ שתפסול מחשבת הבעלים.</div>
+      <div class="trans" data-when="en">we do not derive in this manner. And Rabbi Eliezer comes to say that we derive the halakhot of non-sacred slaughter outside the Temple from the halakhot of slaughter of sacrificial animals inside the Temple, and therefore the intent of the gentile invalidates non-sacred slaughter. And Rabbi Yosei comes to say that even inside the Temple, in a case where this owner has improper intent and that other person is performing the slaughter, we do not say that the intent of the owner invalidates the slaughter.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
