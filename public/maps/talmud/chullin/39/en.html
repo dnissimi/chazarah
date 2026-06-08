@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ל״ט</title>
+<meta name="description" content="שלוש סוגיות בחולין ל״ט — מחלוקת רבי יוחנן וריש לקיש בשוחט לעבודה זרה, ׳הוכיח סופו על תחילתו׳, והלכה כרבי יוסי.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="39">
+<meta name="gemara-map:sefaria-ref" content="Chullin 39">
+<meta name="gemara-map:topic-he" content="שוחט לעבודה זרה — דעת השוחט">
+<meta name="gemara-map:topic-en" content="Slaughter for idolatry — whose intent">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ל״ט">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 39">
+<meta name="gemara-map:blurb-he" content="מחלוקת רבי יוחנן וריש לקיש בשוחט בכוונת עבודה זרה, קושיית רב ששת מקל וחומר של רבי יוסי וישובה, ולבסוף נפסקה הלכה כרבי יוסי שהכל הולך אחר השוחט.">
+<meta name="gemara-map:blurb-en" content="The dispute of Rabbi Yohanan and Reish Lakish on slaughtering with idolatrous intent, Rav Sheshet׳s objection from Rabbi Yosei׳s a-fortiori and its resolution, and the ruling that everything follows the slaughterer׳s intent.">
+<meta name="gemara-map:sugya-count" content="3">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ל״ט</span><span data-when="en">Sugya map — Chullin 39</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ל״ט א–מ׳ א · 39a:2–40a:1 · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 39a:2–40a:1 · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> רבי יוחנן וריש לקיש נחלקו האם השוחט בכוונת עבודה זרה אוסר את הבהמה. רב ששת הקשה מקל וחומר של רבי יוסי וישבו, ומובאת ברייתא כרבי יוחנן ובה מעשה קיסרי שבו ׳הוכיח סופו על תחילתו׳. לבסוף נפסקה הלכה כרבי יוסי — הכל הולך אחר דעת השוחט, לא אחר בעל הבהמה.</span>
+    <span data-when="en"><b>Bottom line:</b> Rabbi Yohanan and Reish Lakish dispute whether slaughtering with idolatrous intent forbids the animal. Rav Sheshet objects from Rabbi Yosei׳s a-fortiori and resolves it; a baraita supporting Rabbi Yohanan brings the Caesarea case, where ׳his end proves his beginning׳. Ultimately the halakha follows Rabbi Yosei — everything follows the slaughterer׳s intent, not the owner׳s.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+    <h2><span data-when="he">מבט-על — שלוש סוגיות</span><span data-when="en">Overview — three sugyot</span></h2>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · שוחט לעבודה זרה — מחלוקת ויישוב"]:::statement
+  O2["2 · הלכה כרבי יוסי — הכל אחר השוחט"]:::statement
+  O3(["3 · משנה — שוחט לשם הרים וגבעות"]):::mishnah
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · Slaughter for idolatry — dispute and resolution"]:::statement
+  O2["2 · Halakha follows Rabbi Yosei — all follows slaughterer"]:::statement
+  O3(["3 · Mishnah — slaughter for the sake of mountains, hills"]):::mishnah
+  O1 --> O2
+  O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+      </script>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+        <span data-when="he">שוחט לעבודה זרה — מחלוקת, קושיא ויישוב</span><span data-when="en">Slaughter for idolatry — dispute, objection, resolution</span>
+        <span class="ref">Chullin 39a:2–39b:16</span></h2>
+    <div class="lead"><span data-when="he">האם השוחט בכוונה לעבוד עבודה זרה אוסר את הבהמה? מחלוקת רבי יוחנן וריש לקיש, קושיית רב ששת מרבי יוסי, וברייתא כרבי יוחנן עם דיון ב׳הוכיח סופו על תחילתו׳.</span><span data-when="en">Does slaughtering with intent to serve idolatry forbid the animal? The dispute of Rabbi Yohanan and Reish Lakish, Rav Sheshet׳s objection from Rabbi Yosei, and a baraita like Rabbi Yohanan with a discussion of ׳his end proves his beginning׳.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שוחט לעבודה זרה — יוחנן פוסל, ר״ל מתיר"]:::statement
+  S2["② טעם יוחנן — מחשבין מעבודה לעבודה, חוץ מפנים"]:::statement
+  S3["③ דעה — שחט לשמה לזרוק שלא לשמה, ומפיגול"]:::statement
+  S4["④ צריכא — שתי המחלוקות נצרכות"]:::statement
+  Q5{"⑤ מיתיב רב ששת — ק״ו דרבי יוסי"}:::question
+  Q6{"⑥ מאי אין מחשבה פוסלת בחולין?"}:::question
+  C7{"⑦ פנים קשיא לר״ל, חוץ קשיא ליוחנן"}:::question
+  A8["⑧ פנים מיושב לר״ל, חוץ עדיין קשה"]:::answer
+  A9["⑨ הוא מותיב והוא מפרק — ד׳ עבודות מול ב׳"]:::answer
+  P10["⑩ תניא כיוחנן — ומעשה קיסרי, לא אסור ולא היתר"]:::proof
+  S11["⑪ רב חסדא — כבוד רבנן וכבוד ר׳ אליעזר"]:::statement
+  Q12{"⑫ דחייה — ממאי? אולי יש לחלק"}:::question
+  S13["⑬ רב שיזבי — משום כבוד רשב״ג; הי רשב״ג?"]:::statement
+  S14["⑭ רשב״ג דגיטין — עלה לגג ונפל"]:::statement
+  Q15{"⑮ קושיא — מעשה לסתור?"}:::question
+  A16["⑯ חסורי מיחסרא — אם הוכיח סופו"]:::answer
+  Q17{"⑰ דחייה — שאני התם דקאמר כתבו"}:::question
+  P18["⑱ רבינא — רשב״ג דהכא, ברייתא דעבדים ותרומה"]:::proof
+  A19["⑲ במה נחלקו — שתק ולבסוף צווח"]:::answer
+  S1 -->|טעם| S2
+  S2 -->|ואזדו לטעמייהו| S3
+  S3 -->|צריכא| S4
+  S4 -.->|מיתיבי| Q5
+  Q5 -->|ביאור| Q6
+  Q6 --> C7
+  C7 -->|בשלמא פנים| A8
+  A8 -->|חוץ| A9
+  A9 -->|תניא כוותיה| P10
+  P10 -->|טעם השתיקה| S11
+  S11 -.->|ממאי| Q12
+  Q12 --> S13
+  S13 --> S14
+  S14 -.->|מעשה לסתור| Q15
+  Q15 -->|חסורי| A16
+  A16 -.->|דחייה| Q17
+  Q17 -->|אלא| P18
+  P18 -->|הוינן בה| A19
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Slaughter for idolatry — Yohanan invalid, R.Lakish valid"]:::statement
+  S2["② Yohanan reasons — transfer intent rite-to-rite, derive outside from inside"]:::statement
+  S3["③ Statement — slaughter for-sake, sprinkle not-for-sake, from piggul"]:::statement
+  S4["④ Both disputes are necessary"]:::statement
+  Q5{"⑤ Rav Sheshet objects — Rabbi Yosei׳s a-fortiori"}:::question
+  Q6{"⑥ What is intent not invalidating in non-sacred?"}:::question
+  C7{"⑦ Inside hard for R.Lakish, outside hard for Yohanan"}:::question
+  A8["⑧ Inside resolved for R.Lakish, outside still hard"]:::answer
+  A9["⑨ He objects and answers — four rites vs two"]:::answer
+  P10["⑩ Baraita like Yohanan — Caesarea case, neither forbidden nor permitted"]:::proof
+  S11["⑪ Rav Hisda — honor of Rabbis and of R.Eliezer"]:::statement
+  Q12{"⑫ Rejection — from where? perhaps distinguish"}:::question
+  S13["⑬ Rav Sheizevi — honor of R.Sh.b.Gamliel; which one?"]:::statement
+  S14["⑭ R.Sh.b.Gamliel of divorce — fell from roof"]:::statement
+  Q15{"⑮ Objection — incident contradicts?"}:::question
+  A16["⑯ Mishnah is incomplete — if his end proves"]:::answer
+  Q17{"⑰ Rejection — there is different, he said write"}:::question
+  P18["⑱ Ravina — R.Sh.b.Gamliel here, slaves and teruma baraita"]:::proof
+  A19["⑲ What they dispute — silent then shouted"]:::answer
+  S1 -->|reason| S2
+  S2 -->|follow their line| S3
+  S3 -->|necessary| S4
+  S4 -.->|objection| Q5
+  Q5 -->|elaborate| Q6
+  Q6 --> C7
+  C7 -->|granted inside| A8
+  A8 -->|outside| A9
+  A9 -->|baraita supports| P10
+  P10 -->|why silent| S11
+  S11 -.->|from where| Q12
+  Q12 --> S13
+  S13 --> S14
+  S14 -.->|contradiction| Q15
+  Q15 -->|incomplete| A16
+  A16 -.->|rejection| Q17
+  Q17 -->|rather| P18
+  P18 -->|we discussed| A19
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הַשּׁוֹחֵט … לַעֲבוֹדָה זָרָה — רַבִּי יוֹחָנָן … פְּסוּלָה, רֵישׁ לָקִישׁ … מוּתֶּרֶת"]:::statement
+  S2["② מְחַשְּׁבִין מֵעֲבוֹדָה לַעֲבוֹדָה, וְיָלְפִינַן חוּץ מִפְּנִים"]:::statement
+  S3["③ שְׁחָטָהּ לִשְׁמָהּ לִזְרוֹק דָּמָהּ שֶׁלֹּא לִשְׁמָהּ … מִמַּחְשֶׁבֶת פִּיגּוּל"]:::statement
+  S4["④ וּצְרִיכָא, דְּאִי אִיתְּמַר בְּהָא … אֵימָא מוֹדֵי לֵיהּ"]:::statement
+  Q5{"⑤ מֵתִיב רַב שֵׁשֶׁת … קַל וָחוֹמֶר הַדְּבָרִים"}:::question
+  Q6{"⑥ מַאי אֵין מַחְשָׁבָה פּוֹסֶלֶת בְּחוּלִּין … הֵיכִי מַשְׁכַּחַתְּ לַהּ?"}:::question
+  C7{"⑦ פְּנִים קַשְׁיָא לְרֵישׁ לָקִישׁ, חוּץ קַשְׁיָא לְרַבִּי יוֹחָנָן"}:::question
+  A8["⑧ בִּשְׁלָמָא פְּנִים … לָא קַשְׁיָא … אֶלָּא חוּץ, קַשְׁיָא לְרַבִּי יוֹחָנָן"]:::answer
+  A9["⑨ הוּא מוֹתֵיב לַהּ וְהוּא מְפָרֵק לַהּ, בְּאַרְבַּע עֲבוֹדוֹת … בִּשְׁתֵּי עֲבוֹדוֹת"]:::answer
+  P10["⑩ תַּנְיָא כְּוָותֵיהּ דְּרַבִּי יוֹחָנָן … מַעֲשֶׂה בְּקֵיסָרִי, וְלֹא אָמְרוּ … לֹא אִיסּוּר וְלֹא הֶיתֵּר"]:::proof
+  S11["⑪ לֹא אָמְרוּ בָּהּ אִיסּוּר מִשּׁוּם כְּבוֹדָן דְּרַבָּנַן, לֹא הֶיתֵּר מִשּׁוּם כְּבוֹדוֹ דְרַבִּי אֱלִיעֶזֶר"]:::statement
+  Q12{"⑫ מִמַּאי? דִּלְמָא … הוֹכִיחַ סוֹפוֹ עַל תְּחִלָּתוֹ"}:::question
+  S13["⑬ אֶלָּא אָמַר רַב שֵׁיזְבִי … מִשּׁוּם כְּבוֹדוֹ דְּרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל, הֵי רשב״ג?"]:::statement
+  S14["⑭ הַבָּרִיא שֶׁאָמַר כִּתְבוּ גֵּט … וְעָלָה לַגָּג וְנָפַל וָמֵת"]:::statement
+  Q15{"⑮ וְהָוֵינַן בַּהּ — מַעֲשֶׂה לִסְתּוֹר?"}:::question
+  A16["⑯ חַסּוֹרֵי מִיחַסְּרָא … אִם הוֹכִיחַ סוֹפוֹ עַל תְּחִלָּתוֹ הֲרֵי זֶה גֵּט"]:::answer
+  Q17{"⑰ וְדִלְמָא שָׁאנֵי הָתָם, דְּקָאָמַר כִּתְבוּ"}:::question
+  P18["⑱ אֶלָּא אָמַר רָבִינָא … הַכּוֹתֵב נְכָסָיו … אוֹכְלִין בִּתְרוּמָה … כְּבָר זָכוּ בָּהֶן יוֹרְשִׁין"]:::proof
+  A19["⑲ בְּשׁוֹתֵק וּבַסּוֹף צָוַוח … תַּנָּא קַמָּא … מִדִּשְׁתֵיק קְנָנְהוּ … רשב״ג … הוֹכִיחַ סוֹפוֹ"]:::answer
+  S1 -->|טעם| S2
+  S2 -->|ואזדו לטעמייהו| S3
+  S3 -->|צריכא| S4
+  S4 -.->|מיתיבי| Q5
+  Q5 -->|ביאור| Q6
+  Q6 --> C7
+  C7 -->|בשלמא פנים| A8
+  A8 -->|חוץ| A9
+  A9 -->|תניא כוותיה| P10
+  P10 -->|טעם השתיקה| S11
+  S11 -.->|ממאי| Q12
+  Q12 --> S13
+  S13 --> S14
+  S14 -.->|מעשה לסתור| Q15
+  Q15 -->|חסורי| A16
+  A16 -.->|דחייה| Q17
+  Q17 -->|אלא| P18
+  P18 -->|הוינן בה| A19
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ט א — Chullin 39a:2</span></div>
+      <div class="orig">אִתְּמַר: הַשּׁוֹחֵט אֶת הַבְּהֵמָה לִזְרוֹק דָּמָהּ לַעֲבוֹדָה זָרָה, וּלְהַקְטִיר חֶלְבָּהּ לַעֲבוֹדָה זָרָה – רַבִּי יוֹחָנָן אָמַר: פְּסוּלָה, רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אָמַר: מוּתֶּרֶת.</div>
+      <div class="trans" data-when="he">נאמר: השוחט בהמה כדי לזרוק את דמה לעבודה זרה או להקטיר את חלבה לעבודה זרה — רבי יוחנן אומר שחיטתה פסולה (ואסורה בהנאה), וריש לקיש אומר מותרת.</div>
+      <div class="trans" data-when="en">§ It was stated that there is an amoraic dispute with regard to one who slaughtered an animal in order to sprinkle its blood for idol worship, or to burn its fat for idol worship. Rabbi Yoḥanan says: The slaughter is not valid, and benefit from the animal is forbidden. Rabbi Shimon ben Lakish says: The slaughter is valid and deriving benefit from the animal is permitted.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ט א — Chullin 39a:3</span></div>
+      <div class="orig">רַבִּי יוֹחָנָן אָמַר פְּסוּלָה: מְחַשְּׁבִין מֵעֲבוֹדָה לַעֲבוֹדָה, וְיָלְפִינַן חוּץ מִפְּנִים.</div>
+      <div class="trans" data-when="he">רבי יוחנן הפוסל סובר: מחשבים (מעבירים מחשבת פסול) מעבודה אחת לעבודה אחרת, ולומדים דין שחיטת חולין שבחוץ מדין הקודשים שבפנים.</div>
+      <div class="trans" data-when="en">The Gemara elaborates. Rabbi Yoḥanan says: The slaughter is not valid and benefit from the animal is forbidden. He holds that one transfers intent from one sacrificial rite to another sacrificial rite. If, while slaughtering a sacrificial animal, one intends to perform one of the other sacrificial rites in an improper manner the offering is invalidated. And Rabbi Yoḥanan holds that we derive the halakhot of non-sacred slaughter outside the Temple from the halakhot of slaughter of sacrificial animals inside the Temple. Since that intent invalidates the slaughter of sacrificial animals inside the Temple, it invalidates the slaughter of non-sacred animals outside the Temple as well.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ט א — Chullin 39a:4</span></div>
+      <div class="orig">רֵישׁ לָקִישׁ אָמַר מוּתֶּרֶת: אֵין מְחַשְּׁבִין מֵעֲבוֹדָה לַעֲבוֹדָה, וְלָא גָּמְרִינַן חוּץ מִפְּנִים.</div>
+      <div class="trans" data-when="he">ריש לקיש המתיר סובר: אין מחשבים מעבודה לעבודה (מחשבה בעבודה אחת אינה פוסלת עבודה אחרת), ואין לומדים דין החוץ מדין הפנים.</div>
+      <div class="trans" data-when="en">Reish Lakish says: The slaughter is valid, and deriving benefit from the animal is permitted. He holds that one does not transfer intent from one sacrificial rite to another sacrificial rite. Therefore, while slaughtering the animal, only intent to perform the slaughter improperly invalidates the offering, but intent to perform another sacrificial rite improperly does not invalidate the offering. And Reish Lakish holds that we do not derive the halakhot of non-sacred slaughter outside the Temple from the halakhot of slaughter of sacrificial animals inside the Temple.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ט א — Chullin 39a:5</span></div>
+      <div class="orig">וְאָזְדוּ לְטַעְמַיְיהוּ, דְּאִתְּמַר: שְׁחָטָהּ לִשְׁמָהּ לִזְרוֹק דָּמָהּ שֶׁלֹּא לִשְׁמָהּ – רַבִּי יוֹחָנָן אָמַר: פְּסוּלָה, רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אָמַר: כְּשֵׁרָה.</div>
+      <div class="trans" data-when="he">והם הולכים לשיטתם, שכן נאמר: שחט חטאת לשמה אך בכוונה לזרוק את דמה שלא לשמה — רבי יוחנן אומר פסולה, וריש לקיש אומר כשרה.</div>
+      <div class="trans" data-when="en">And Rabbi Yoḥanan and Reish Lakish follow their standard line of reasoning, as it was stated: If one slaughtered a sin offering for its own sake, but with intent to sprinkle its blood not for its own sake but for the sake of another type of offering, Rabbi Yoḥanan says that the offering is unfit, and Rabbi Shimon ben Lakish says that the offering is fit.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ט א — Chullin 39a:6</span></div>
+      <div class="orig">רַבִּי יוֹחָנָן אָמַר פְּסוּלָה: מְחַשְּׁבִין מֵעֲבוֹדָה לַעֲבוֹדָה, וְגָמְרִינַן מִמַּחְשֶׁבֶת פִּיגּוּל. רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אָמַר כְּשֵׁרָה: אֵין מְחַשְּׁבִין מֵעֲבוֹדָה לַעֲבוֹדָה, וְלָא גָּמְרִינַן מִמַּחְשֶׁבֶת פִּיגּוּל.</div>
+      <div class="trans" data-when="he">רבי יוחנן פוסל כי מחשבים מעבודה לעבודה, ולומדים זאת ממחשבת פיגול. ריש לקיש מכשיר כי אין מחשבים מעבודה לעבודה, ואין לומדים ממחשבת פיגול.</div>
+      <div class="trans" data-when="en">The Gemara elaborates: Rabbi Yoḥanan says that the offering is unfit. He holds that one transfers intent from one sacrificial rite to another sacrificial rite, and the reason is that we derive the halakha of slaughter of a sin offering not for its sake from the halakha of intent for piggul, i.e., performance of one of the sacrificial rites with the intent to sprinkle the blood of the offering beyond its appointed time. And Rabbi Shimon ben Lakish says that the offering is fit because he holds that one does not transfer intent from one sacrificial rite to another sacrificial rite, and the reason is that we do not derive the halakha of any other improper intent from the halakha of intent for piggul.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ט א — Chullin 39a:7</span></div>
+      <div class="orig">וּצְרִיכָא, דְּאִי אִיתְּמַר בְּהָא, בְּהָא קָאָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, מִשּׁוּם דְּחוּץ מִפְּנִים לָא יָלְפִינַן, אֲבָל פְּנִים מִפְּנִים – אֵימָא מוֹדֵי לֵיהּ לְרַבִּי יוֹחָנָן.</div>
+      <div class="trans" data-when="he">וצריך להשמיע את שתי המחלוקות: אילו נאמרה רק בעבודה זרה, היינו אומרים שדווקא שם מתיר ריש לקיש מפני שאין לומדים חוץ מפנים, אבל בפנים מפנים אולי יודה לרבי יוחנן.</div>
+      <div class="trans" data-when="en">The Gemara notes: And it is necessary to state the dispute between Rabbi Yoḥanan and Reish Lakish in both cases. As, if it were stated only with regard to that case of one who slaughters an animal in order to sprinkle its blood for idol worship, perhaps one would conclude that it is specifically in that case that Rabbi Shimon ben Lakish states his opinion that the slaughter is valid, due to the fact that we do not derive the halakhot of non-sacred slaughter outside the Temple from the halakhot of slaughter of sacrificial animals inside the Temple. But in the case of one who slaughters an offering for the sake of another offering, where we would be deriving the halakhot of slaughter of sacrificial animals inside the Temple from the halakhot of another case of slaughter of sacrificial animals inside the Temple, say that Reish Lakish concedes to Rabbi Yoḥanan that the offering is unfit.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">4</span> <span class="ref">חולין ל״ט א — Chullin 39a:8</span></div>
+      <div class="orig">וְאִי אִתְּמַר בְּהָךְ, בְּהַהִיא קָאָמַר רַבִּי יוֹחָנָן, אֲבָל בְּהָא – אֵימָא מוֹדֵי לֵיהּ לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, צְרִיכָא.</div>
+      <div class="trans" data-when="he">ואילו נאמרה רק בקודשים, היינו אומרים שדווקא שם פוסל רבי יוחנן, אבל בעבודה זרה אולי יודה לריש לקיש — לכן צריך את שתיהן.</div>
+      <div class="trans" data-when="en">And if their dispute was stated with regard to this case of one who slaughters an offering for the sake of another offering, perhaps one would conclude that it is specifically in this case that Rabbi Yoḥanan said that the offering is unfit, because he holds that one derives the halakhot of slaughter of sacrificial animals inside the Temple from the halakhot of another case of slaughter of sacrificial animals inside the Temple. But in that case of one who slaughters an animal in order to sprinkle its blood for idol worship, say that Rabbi Yoḥanan concedes to Rabbi Shimon ben Lakish that the offering is fit due to the fact that the halakhot of non-sacred slaughter outside the Temple are not derived from the halakhot of slaughter of sacrificial animals inside the Temple. Therefore, it is necessary to state the dispute between Rabbi Yoḥanan and Reish Lakish in both cases.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">5</span> <span class="ref">חולין ל״ט א — Chullin 39a:9</span></div>
+      <div class="orig">מֵתִיב רַב שֵׁשֶׁת: אָמַר רַבִּי יוֹסֵי: קַל וָחוֹמֶר הַדְּבָרִים, וּמָה בִּמְקוֹם שֶׁמַּחְשָׁבָה פּוֹסֶלֶת בְּמוּקְדָּשִׁין – אֵין הַכֹּל הוֹלֵךְ אֶלָּא אַחַר הָעוֹבֵד, מְקוֹם שֶׁאֵין מַחְשָׁבָה פּוֹסֶלֶת בְּחוּלִּין – אֵינוֹ דִּין שֶׁלֹּא יְהֵא הַכֹּל הוֹלֵךְ אֶלָּא אַחַר הַשּׁוֹחֵט?</div>
+      <div class="trans" data-when="he">רב ששת מקשה ממשנתנו: רבי יוסי אומר בקל וחומר — אם במקום שמחשבה פוסלת (בקודשים) הכל הולך רק אחר העובד (הכהן) ולא אחר הבעלים, מקום שאין מחשבה פוסלת (בחולין) — אינו דין שהכל ילך רק אחר השוחט?</div>
+      <div class="trans" data-when="en">Rav Sheshet raises an objection to both Rabbi Yoḥanan and Reish Lakish from the statement in the mishna with regard to one who slaughters for a gentile when the intent of the gentile is for idol worship. Rabbi Yosei says: The matter of the intent of the gentile is irrelevant in this case as can be derived by means of an a fortiori inference. If in a place where intent while slaughtering the animal invalidates the slaughter, i.e., in sacrificial animals, such as when slaughtering an offering with the intent to sacrifice it beyond its designated time, everything follows only the intent of the priest performing the service and not the intent of the owner, then in a place where intent does not invalidate the slaughter, i.e., in non-sacred animals, is it not right that everything should follow only the intent of the one who slaughters the animal?</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ט א — Chullin 39a:10</span></div>
+      <div class="orig">מַאי ״אֵין מַחְשָׁבָה פּוֹסֶלֶת בְּחוּלִּין״? אִילֵּימָא דְּלָא פָּסְלָה כְּלָל, אֶלָּא זְבִיחָה דַּעֲבוֹדָה זָרָה דְּמִיתַּסְרָא, הֵיכִי מַשְׁכַּחַתְּ לַהּ?</div>
+      <div class="trans" data-when="he">מה פירוש ״אין מחשבה פוסלת בחולין״? אם נאמר שאינה פוסלת כלל — אם כן שחיטה לעבודה זרה שאוסרת, כיצד תיתכן?</div>
+      <div class="trans" data-when="en">Rav Sheshet elaborates: What is the meaning of: Intent does not invalidate the slaughter in non-sacred animals? If we say that it means that intent does not invalidate the slaughter of non-sacred animals at all, but then how can you find a case of slaughter with intent for idol worship where the animal is forbidden?</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">6</span> <span class="ref">חולין ל״ט א — Chullin 39a:11</span></div>
+      <div class="orig">אֶלָּא פְּשִׁיטָא מֵעֲבוֹדָה לַעֲבוֹדָה, וְהָכִי קָאָמַר: וּמָה בִּמְקוֹם שֶׁמַּחְשָׁבָה פּוֹסֶלֶת בְּמוּקְדָּשִׁין מֵעֲבוֹדָה לַעֲבוֹדָה – אֵין הַכֹּל הוֹלֵךְ אֶלָּא אַחַר הָעוֹבֵד, מְקוֹם שֶׁאֵין מַחְשָׁבָה פּוֹסֶלֶת בְּחוּלִּין מֵעֲבוֹדָה לַעֲבוֹדָה, אֶלָּא בְּאוֹתָהּ עֲבוֹדָה – אֵינוֹ דִּין שֶׁלֹּא יְהֵא הַכֹּל הוֹלֵךְ אֶלָּא אַחַר הַשּׁוֹחֵט?</div>
+      <div class="trans" data-when="he">אלא ודאי שכוונת רבי יוסי היא ״מעבודה לעבודה״, וכך אמר: ומה בקודשים שמחשבה פוסלת מעבודה לעבודה הכל אחר העובד, בחולין שאין מחשבה פוסלת מעבודה לעבודה אלא רק באותה עבודה — אינו דין שהכל אחר השוחט?</div>
+      <div class="trans" data-when="en">Rather, it is obvious that the meaning of that phrase in the statement of Rabbi Yosei is that one does not transfer intent from one sacrificial rite to another sacrificial rite, and this is what Rabbi Yosei is saying: If in a place where intent invalidates, i.e., in sacrificial animals, from one sacrificial rite to another sacrificial rite, everything follows only the intent of the one performing the slaughter, and the intent of the owners is irrelevant, in a place where intent does not invalidate, i.e., in non-sacred animals, from one rite to another rite but it does so only within the same rite, is it not right that everything should follow only the intent of the one who slaughters the animal?</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">7</span> <span class="ref">חולין ל״ט א — Chullin 39a:12</span></div>
+      <div class="orig">פְּנִים קַשְׁיָא לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, חוּץ קַשְׁיָא לְרַבִּי יוֹחָנָן!</div>
+      <div class="trans" data-when="he">לפי הבנה זו: דין הפנים (קודשים) קשה לריש לקיש, שהרי רבי יוסי אומר שמחשבים מעבודה לעבודה; ודין החוץ (חולין) קשה לרבי יוחנן, שהרי רבי יוסי אומר שאין מחשבים שם מעבודה לעבודה.</div>
+      <div class="trans" data-when="en">According to this understanding of the contention of Rabbi Yosei in the mishna, the case of the slaughter of a sacrificial animal inside the Temple is difficult for Rabbi Shimon ben Lakish, as contrary to his opinion, Rabbi Yosei says that in that case one transfers intent from one sacrificial rite to another sacrificial rite. The case of slaughter of a non-sacred animal outside the Temple is difficult for Rabbi Yoḥanan, as contrary to his opinion, Rabbi Yosei says that in that case one does not transfer intent from one rite to another rite.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">8</span> <span class="ref">חולין ל״ט א — Chullin 39a:13</span></div>
+      <div class="orig">בִּשְׁלָמָא פְּנִים, לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ לָא קַשְׁיָא: הָא מִקַּמֵּי דְּשַׁמְעַהּ מֵרַבִּי יוֹחָנָן, הָא לְבָתַר דְּשַׁמְעַהּ מֵרַבִּי יוֹחָנָן. אֶלָּא חוּץ, קַשְׁיָא לְרַבִּי יוֹחָנָן!</div>
+      <div class="trans" data-when="he">בשלמא דין הפנים אינו קשה לריש לקיש — אפשר לומר שדבריו (שאין מחשבים) נאמרו לפני ששמע ממשנת רבי יוחנן, ואחר ששמע חזר בו. אבל דין החוץ עדיין קשה לרבי יוחנן.</div>
+      <div class="trans" data-when="en">Rav Sheshet continues: Granted, the case of inside the Temple is not difficult for Rabbi Shimon ben Lakish, because one can explain that he stated this statement that one does not transfer intent from one sacrificial rite to another sacrificial rite before he heard the mishna from Rabbi Yoḥanan, his teacher, and he stated that one transfers intent from one sacrificial rite to another sacrificial rite after he heard the mishna from Rabbi Yoḥanan. His dispute with Rabbi Yoḥanan is limited to transfer of intent for idol worship from rite to rite. But the case of slaughter of a non-sacred animal outside the Temple is difficult for Rabbi Yoḥanan.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ט א — Chullin 39a:14</span></div>
+      <div class="orig">הוּא מוֹתֵיב לַהּ וְהוּא מְפָרֵק לַהּ, בְּאַרְבַּע עֲבוֹדוֹת, וְהָכִי קָאָמַר: וּמָה בִּמְקוֹם שֶׁמַּחְשָׁבָה פּוֹסֶלֶת בְּמוּקְדָּשִׁין בְּאַרְבַּע עֲבוֹדוֹת – אֵין הַכֹּל הוֹלֵךְ אֶלָּא אַחַר הָעוֹבֵד,</div>
+      <div class="trans" data-when="he">רב ששת בעצמו מקשה ומתרץ: כוונת רבי יוסי היא לארבע עבודות (לא להעברה מעבודה לעבודה), וכך אמר — ומה בקודשים שמחשבה פוסלת בכל אחת מארבע העבודות, הכל הולך רק אחר העובד,</div>
+      <div class="trans" data-when="en">Rav Sheshet raises the objection, and he resolves it. That which Rabbi Yosei said, that intent inside the Temple disqualifies the slaughter of a sacrificial animal but intent outside the Temple does not disqualify the slaughter of a non-sacred animal, is unrelated to transfer of intent from one rite to another. Rather, Rabbi Yosei is referring to a case where one performed any of the four sacrificial rites with improper intent, e.g., to eat the offering beyond its appointed time. And this is what Rabbi Yosei is saying: If in a place where intent while slaughtering the animal invalidates the slaughter in sacrificial animals, if that intent was during performance of any of the four sacrificial rites, i.e., slaughter, receiving the blood, conveying the blood to the altar, and sprinkling the blood on the altar, everything follows only the intent of the priest performing the service and not the intent of the owner,</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">9</span> <span class="ref">חולין ל״ט ב — Chullin 39b:1</span></div>
+      <div class="orig">מְקוֹם שֶׁאֵין מַחְשָׁבָה פּוֹסֶלֶת בְּחוּלִּין אֶלָּא בִּשְׁתֵּי עֲבוֹדוֹת – אֵינוֹ דִּין שֶׁלֹּא יְהֵא הַכֹּל הוֹלֵךְ אֶלָּא אַחַר הַשּׁוֹחֵט.</div>
+      <div class="trans" data-when="he">מקום שאין מחשבה פוסלת בחולין אלא בשתי עבודות בלבד (שחיטה וזריקה) — אינו דין שהכל ילך רק אחר השוחט? כך נדחית הקושיה משתי הדעות.</div>
+      <div class="trans" data-when="en">then in a place where intent invalidates the slaughter in non-sacred animals slaughtered with intent for idol worship during performance of only two sacrificial rites, slaughter and sprinkling the blood, is it not right that everything should follow only the intent of the one who slaughters the animal?</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">10</span> <span class="ref">חולין ל״ט ב — Chullin 39b:2</span></div>
+      <div class="orig">תַּנְיָא כְּוָותֵיהּ דְּרַבִּי יוֹחָנָן: הַשּׁוֹחֵט אֶת הַבְּהֵמָה לִזְרוֹק דָּמָהּ לַעֲבוֹדָה זָרָה וּלְהַקְטִיר חֶלְבָּהּ לַעֲבוֹדָה זָרָה – הֲרֵי אֵלּוּ זִבְחֵי מֵתִים. שְׁחָטָהּ וְאַחַר כָּךְ חִישֵּׁב עָלֶיהָ – זֶה הָיָה מַעֲשֶׂה בְּקֵיסָרִי, וְלֹא אָמְרוּ בָּהּ לֹא אִיסּוּר וְלֹא הֶיתֵּר.</div>
+      <div class="trans" data-when="he">ברייתא כרבי יוחנן: השוחט לזרוק דמה או להקטיר חלבה לעבודה זרה — הרי אלו זבחי מתים (פסולה). שחט ורק אחר כך חישב עליה — זה היה מעשה בקיסרי, ולא אמרו בו לא איסור ולא היתר.</div>
+      <div class="trans" data-when="en">It is taught in a baraita in accordance with the opinion of Rabbi Yoḥanan: With regard to one who slaughters an animal in order to sprinkle its blood for idol worship or to burn its fat for idol worship, the status of these animals is that of offerings to the dead, i.e., to idols, and the slaughter is not valid. If one slaughtered the animal and thereafter intended in its regard to sprinkle its blood or burn its fats for idol worship, that was the incident in Caesarea, and the Sages did not say anything with regard to the animal, neither prohibition nor permission.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">11</span> <span class="ref">חולין ל״ט ב — Chullin 39b:3</span></div>
+      <div class="orig">אָמַר רַב חִסְדָּא: לֹא אָמְרוּ בָּהּ אִיסּוּר – מִשּׁוּם כְּבוֹדָן דְּרַבָּנַן. לֹא הֶיתֵּר – מִשּׁוּם כְּבוֹדוֹ דְרַבִּי אֱלִיעֶזֶר.</div>
+      <div class="trans" data-when="he">רב חסדא: לא אמרו איסור מפני כבוד חכמים (שסתם מחשבה אינה לעבודה זרה), ולא היתר מפני כבוד רבי אליעזר (שסתם מחשבה לעבודה זרה).</div>
+      <div class="trans" data-when="en">Rav Ḥisda says in explanation of the conduct of the Sages that they did not say prohibition, due to the honor of the Rabbis in the mishna, who hold that the unspecified intent of a gentile, and presumably likewise of a Jew who worships idols, is not presumed to be directed to idol worship, and therefore his slaughter is valid. Nor did the Sages say permission, due to the honor of Rabbi Eliezer, who holds that the unspecified intent of a gentile, and presumably likewise of a Jew who worships idols, is presumed to be directed to idol worship.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ט ב — Chullin 39b:4</span></div>
+      <div class="orig">מִמַּאי? דִּלְמָא עַד כָּאן לָא קָאָמְרִי רַבָּנַן הָתָם, אֶלָּא דְּלָא שְׁמַעְנֵאּ דְּחַשֵּׁיב, אֲבָל הָכָא דִּשְׁמַעְנֵאּ דְּחַשֵּׁיב – הוֹכִיחַ סוֹפוֹ עַל תְּחִלָּתוֹ!</div>
+      <div class="trans" data-when="he">מניין? אולי חכמים מתירים שם רק מפני שלא שמענו שחישב, אבל כאן ששמענו שחישב — הוכיח סופו על תחילתו (שכוונתו מתחילה הייתה לעבודה זרה)!</div>
+      <div class="trans" data-when="en">The Gemara asks: From where is that conclusion drawn? Perhaps the Rabbis say that the slaughter is permitted only there in the mishna, because we did not hear explicitly that the gentile intends the slaughter for idol worship. But here in the case in the baraita, where we hear thereafter that he intends to sprinkle the blood or burn the fats for idol worship, perhaps his ultimate statement proves the nature of his original intent while performing the slaughter.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">12</span> <span class="ref">חולין ל״ט ב — Chullin 39b:5</span></div>
+      <div class="orig">אִי נָמֵי, עַד כָּאן לָא קָאָמַר רַבִּי אֱלִיעֶזֶר הָתָם אֶלָּא גַּבֵּי נׇכְרִי, דִּסְתָם מַחְשֶׁבֶת נׇכְרִי לַעֲבוֹדָה זָרָה, אֲבָל יִשְׂרָאֵל – הוֹכִיחַ סוֹפוֹ עַל תְּחִלָּתוֹ לָא אָמְרִינַן.</div>
+      <div class="trans" data-when="he">או להפך: רבי אליעזר אוסר שם רק בבהמת נכרי, שסתם מחשבתו לעבודה זרה, אבל בישראל איננו אומרים ׳הוכיח סופו על תחילתו׳ — וממילא אין ראיה לדברי רב חסדא.</div>
+      <div class="trans" data-when="en">Alternatively, perhaps when Rabbi Eliezer states there in the mishna that slaughter performed on behalf of a gentile is not valid, this applies only with regard to an animal that is owned by a gentile, as the unspecified intent of a gentile is directed to idol worship. But in the case in the baraita where the animal belongs to a Jew, we do not say that his ultimate statement proves the nature of his original intent.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">13</span> <span class="ref">חולין ל״ט ב — Chullin 39b:6</span></div>
+      <div class="orig">אֶלָּא אָמַר רַב שֵׁיזְבִי: לֹא אָמְרוּ בָּהּ הֶיתֵּר מִשּׁוּם כְּבוֹדוֹ דְּרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל, הֵי רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל?</div>
+      <div class="trans" data-when="he">אלא אמר רב שיזבי: לא אמרו היתר מפני כבוד רבן שמעון בן גמליאל (הסובר ׳הוכיח סופו על תחילתו׳). שואלת הגמרא: באיזה רשב״ג מדובר?</div>
+      <div class="trans" data-when="en">Rather, Rav Sheizevi said that the Sages did not state permission with regard to the animal in the baraita due to the honor of Rabban Shimon ben Gamliel, who holds that one’s ultimate actions prove the nature of his original intent. The Gemara asks: Which statement of Rabban Shimon ben Gamliel indicates that this is his opinion?</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין ל״ט ב — Chullin 39b:7</span></div>
+      <div class="orig">אִילֵּימָא רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל דְּגִיטִּין, דִּתְנַן: הַבָּרִיא שֶׁאָמַר ״כִּתְבוּ גֵּט לְאִשְׁתִּי״ – רָצָה לְשַׂחֵק בָּהּ.</div>
+      <div class="trans" data-when="he">אם נאמר שזה רשב״ג שבגיטין — ששנינו: בריא שאמר ׳כתבו גט לאשתי׳ (ולא אמר ׳ותנו׳) — רצה רק לשחק בה ואין זה גט.</div>
+      <div class="trans" data-when="en">If we say that the reference is to the statement of Rabban Shimon ben Gamliel with regard to bills of divorce, this is difficult. As we learned in a mishna (Gittin 66a) that if a dying man said to the people present: Write a bill of divorce for my wife, those people should write and deliver the bill of divorce to his wife. Although the delivery was not included in his command, that is clearly his intent. But a healthy man who says: Write a bill of divorce for my wife, but did not say: Deliver it to her, presumably sought to mock her and not to designate his listeners as agents of delivery.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">14</span> <span class="ref">חולין ל״ט ב — Chullin 39b:8</span></div>
+      <div class="orig">וּמַעֲשֶׂה בְּבָרִיא שֶׁאָמַר ״כִּתְבוּ גֵּט לְאִשְׁתִּי״, וְעָלָה לַגָּג וְנָפַל וָמֵת. אָמַר רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל: אִם מֵעַצְמוֹ נָפַל, הֲרֵי זֶה גֵּט, וְאִם הָרוּחַ דָּחַתּוּ, אֵינוֹ גֵּט.</div>
+      <div class="trans" data-when="he">ומעשה בבריא שאמר ׳כתבו גט לאשתי׳, עלה לגג ונפל ומת. אמר רשב״ג: אם מעצמו נפל (התאבד) הרי זה גט, שהוכיח שכוונתו הייתה לגרש; ואם הרוח דחתו — אינו גט.</div>
+      <div class="trans" data-when="en">The mishna continues: And there was an incident involving a healthy man who said: Write a bill of divorce for my wife, and then ascended to the roof and fell, and died. Rabban Shimon ben Gamliel says: If he fell at his own initiative, taking his own life, it is a valid bill of divorce, as it is clear that he anticipated his death, thereby rendering his halakhic status like that of a dying man. But if the wind forced him to fall and he died, it is not a valid bill of divorce, as there was no clear intent to give her the bill of divorce.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">15</span> <span class="ref">חולין ל״ט ב — Chullin 39b:9</span></div>
+      <div class="orig">וְהָוֵינַן בַּהּ: מַעֲשֶׂה לִסְתּוֹר?</div>
+      <div class="trans" data-when="he">ודנו בכך: וכי הביא התנא מעשה לסתור את דבריו? תחילה אמר שאינו גט, ובמעשה משמע שלעיתים כן גט.</div>
+      <div class="trans" data-when="en">And we discussed the mishna: Did the tanna cite an incident to contradict that which was stated previously in the mishna? The tanna states unequivocally that when a healthy man says: Write a bill of divorce for my wife, the bill of divorce is not valid. The tanna then cites an incident indicating that under certain circumstances, when a healthy man says: Write a bill of divorce for my wife, the bill of divorce is valid.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">16</span> <span class="ref">חולין ל״ט ב — Chullin 39b:10</span></div>
+      <div class="orig">חַסּוֹרֵי מִיחַסְּרָא וְהָכִי קָתָנֵי: אִם הוֹכִיחַ סוֹפוֹ עַל תְּחִלָּתוֹ – הֲרֵי זֶה גֵּט, וּמַעֲשֶׂה נָמֵי בְּבָרִיא שֶׁאָמַר ״כִּתְבוּ גֵּט לְאִשְׁתִּי״, וְעָלָה לַגָּג וְנָפַל וָמֵת. אָמַר רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל: אִם מֵעַצְמוֹ נָפַל – הֲרֵי זֶה גֵּט, וְאִם הָרוּחַ דָּחַתּוּ – אֵינוֹ גֵּט.</div>
+      <div class="trans" data-when="he">המשנה חסרה וכך יש לשנותה: אם הוכיח סופו על תחילתו — הרי זה גט; וגם מעשה בבריא שאמר ׳כתבו גט׳ ועלה לגג ונפל ומת, ואמר רשב״ג: מעצמו נפל — גט, דחתו הרוח — אינו גט.</div>
+      <div class="trans" data-when="en">The Gemara answers: The mishna is incomplete and this is what it is teaching: The healthy man who says: Write a bill of divorce for my wife, but did not say: Deliver it to her, presumably sought to mock her. But if his ultimate actions prove the nature of his initial intent, that he seeks to give the bill of divorce because he is about to die, it is a valid bill of divorce. And there was an incident involving a healthy man who said: Write a bill of divorce for my wife, and then ascended to the roof and fell, and died. Rabban Shimon ben Gamliel said: If he fell at his own initiative, it is a valid bill of divorce, but if the wind forced him to fall, it is not a valid bill of divorce.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">17</span> <span class="ref">חולין ל״ט ב — Chullin 39b:11</span></div>
+      <div class="orig">וְדִלְמָא שָׁאנֵי הָתָם, דְּקָאָמַר ״כִּתְבוּ״.</div>
+      <div class="trans" data-when="he">ודחייה: אולי שם שונה, שהרי אמר ׳כתבו גט׳ — והדיבור עצמו מורה על כוונתו; מה שאין כן בשחיטה, שאין שום סימן לכוונתו הראשונה.</div>
+      <div class="trans" data-when="en">The Gemara explains why this is not a proof: But perhaps the case cited there is different, as the husband initially says: Write a bill of divorce for my wife, indicating that he originally intended to fall from the roof. By contrast, in the case of slaughter, there is no indication of his original intent.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">18</span> <span class="ref">חולין ל״ט ב — Chullin 39b:12</span></div>
+      <div class="orig">אֶלָּא אָמַר רָבִינָא: מִשּׁוּם כְּבוֹדוֹ דְּרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל דְּהָכָא, דְּתַנְיָא: הַכּוֹתֵב נְכָסָיו לַאֲחֵרִים, וְהָיוּ בָּהֶן עֲבָדִים, וְאָמַר הַלָּה ״אִי אֶפְשִׁי בָּהֶן״, אִם הָיָה רַבּוֹ שֵׁנִי כֹּהֵן – הֲרֵי אֵלּוּ אוֹכְלִין בִּתְרוּמָה. רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל אוֹמֵר: כֵּיוָן שֶׁאָמַר הַלָּה ״אִי אֶפְשִׁי בָּהֶן״ – כְּבָר זָכוּ בָּהֶן יוֹרְשִׁין.</div>
+      <div class="trans" data-when="he">אלא אמר רבינא: מפני כבוד רשב״ג שכאן, שכן שנינו: הכותב נכסיו לאחרים ובהם עבדים, ואמר המקבל ׳איני רוצה בהם׳ — אם רבו השני כהן, אוכלים בתרומה; רשב״ג אומר: כיוון שאמר ׳איני רוצה בהם׳ כבר זכו בהם היורשים.</div>
+      <div class="trans" data-when="en">Rather, Ravina said that the Sages did not state permission in the incident in Caesarea with regard to the animal due to the honor of Rabban Shimon ben Gamliel, to avoid contradicting the opinion that is cited here, as it is taught in a baraita: In a case of a person on his deathbed who wrote a document transferring his property to others, and there were slaves among his property, and that intended recipient says: I do not want to assume ownership of the slaves, if their second master, the intended recipient, was a priest, these slaves may partake of teruma, and his protest is ignored. Rabban Shimon ben Gamliel says: Once that intended recipient says: I do not want to assume ownership of the slaves, heirs of the original owner already acquired them.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">חולין ל״ט ב — Chullin 39b:13</span></div>
+      <div class="orig">וְהָוֵינַן בַּהּ: לְתַנָּא קַמָּא, אֲפִילּוּ עוֹמֵד וְצוֹוֵחַ?</div>
+      <div class="trans" data-when="he">ודנו בכך: לדעת תנא קמא, וכי המקבל זוכה בעבדים אפילו אם הוא עומד וצווח שאינו רוצה? אין זה מסתבר.</div>
+      <div class="trans" data-when="en">And we discussed the baraita: And according to the first tanna, does the intended recipient acquire the slaves even if he stands and shouts in protest that he does not want to assume ownership of the slaves? That is not reasonable.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">חולין ל״ט ב — Chullin 39b:14</span></div>
+      <div class="orig">אֲמַר רַבָּה, וְאִיתֵּימָא רַבִּי יוֹחָנָן: בְּצוֹוֵחַ מֵעִיקָּרָא – דְּכוּלֵּי עָלְמָא לָא פְּלִיגִי דְּלָא קָנָה, בְּשׁוֹתֵק וּבַסּוֹף צוֹוֵחַ – דְּכוּלֵּי עָלְמָא לָא פְּלִיגִי דִּקְנָה.</div>
+      <div class="trans" data-when="he">אמר רבה (ויש אומרים רבי יוחנן): אם צווח מתחילה — הכל מודים שלא קנה; אם שתק ולבסוף צווח (בזמן רחוק) — הכל מודים שקנה.</div>
+      <div class="trans" data-when="en">Rabba said, and some say it was Rabbi Yoḥanan who said: In a case where he shouts in protest at the outset, while the owner is giving him the gift, everyone agrees that he did not acquire the slaves. In a case where he was silent at that moment and ultimately shouted his protest at a later opportunity, everyone agrees that he acquired the slaves.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">חולין ל״ט ב — Chullin 39b:15</span></div>
+      <div class="orig">כִּי פְּלִיגִי – שֶׁזִּיכָּה לוֹ עַל יְדֵי אַחֵר, וְשָׁתַק וּלְבַסּוֹף צָוַוח; תַּנָּא קַמָּא סָבַר: מִדִּשְׁתֵיק – קְנָנְהוּ, וְהַאי דְּקָא צָוַוח – מִיהְדָּר קָא הָדַר בֵּיהּ.</div>
+      <div class="trans" data-when="he">במה נחלקו? כשזיכה לו על ידי אחר, ושתק ולבסוף צווח. תנא קמא סובר: כיוון ששתק קנה, וצעקתו עכשיו היא חזרה בעלמא (שאינה מועילה).</div>
+      <div class="trans" data-when="en">When they disagree it is in a case where the owner transferred ownership of the slaves to him through another person, and at that point the recipient was silent, and ultimately, when he actually received the slaves, he shouted in protest. The first tanna holds: Since he was initially silent, he acquired the slaves, and the fact that he is ultimately shouting indicates that he is retracting his initial acceptance of the gift. That retraction is ineffective, as acquisitions cannot be nullified in that manner.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">19</span> <span class="ref">חולין ל״ט ב — Chullin 39b:16</span></div>
+      <div class="orig">וְרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל סָבַר: הוֹכִיחַ סוֹפוֹ עַל תְּחִילָּתוֹ, וְהָא דְּלָא צְוַוח מֵעִיקָּרָא, סָבַר: כִּי לָא אָתֵי לִידִי אַמַּאי אֶצְוַוח.</div>
+      <div class="trans" data-when="he">ורשב״ג סובר: הוכיח סופו על תחילתו (מעולם לא רצה בהם), ומה שלא צווח מתחילה — סבר: כל עוד לא הגיעו לידי, למה אצעק? — ומכאן שרשב״ג מחזיק בעקרון ׳הוכיח סופו׳.</div>
+      <div class="trans" data-when="en">And Rabban Shimon ben Gamliel holds: His ultimate actions prove the nature of his original intent. He never wanted the slaves and always intended to avoid assuming ownership of them. And the fact that he did not shout initially is because he thought: As the situation is that they did not yet enter my possession, why would I shout?</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+        <span data-when="he">הלכה כרבי יוסי — הכל אחר השוחט</span><span data-when="en">Halakha follows Rabbi Yosei — all follows the slaughterer</span>
+        <span class="ref">Chullin 39b:17–19</span></h2>
+    <div class="lead"><span data-when="he">פסיקת ההלכה כרבי יוסי, יישומה במעשה הטייעים בציקוניא, ושאלה לשיטת רבי אליעזר.</span><span data-when="en">The ruling like Rabbi Yosei, its application in the case of the Arabs at Tzikuneya, and a question on Rabbi Eliezer׳s view.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  C1["① רב יהודה אמר שמואל — הלכה כרבי יוסי"]:::conclusion
+  S2["② מעשה הטייעים בציקוניא — דם וחלב לעבודה זרה"]:::statement
+  Q3{"③ לרבי אליעזר — נתן זוז לטבח? רב אשי — אלם אסור, ואם לאו מותר"}:::question
+  C1 -->|יישום| S2
+  S2 -->|לרבי אליעזר| Q3
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  C1["① Rav Yehuda citing Shmuel — halakha follows Rabbi Yosei"]:::conclusion
+  S2["② The Arabs at Tzikuneya — blood and fat for idolatry"]:::statement
+  Q3{"③ For R.Eliezer — gentile gave a dinar? Rav Ashi — if violent forbidden, else permitted"}:::question
+  C1 -->|applied| S2
+  S2 -->|for R.Eliezer| Q3
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  C1["① אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל — הֲלָכָה כְּרַבִּי יוֹסֵי"]:::conclusion
+  S2["② הָנְהוּ טַיָּיעֵי דַּאֲתוֹ לְצִיקוֹנְיָא … דְּמָא וְתַרְבָּא לְדִידַן, מַשְׁכָּא וּבִישְׂרָא לְדִידְכוּ"]:::statement
+  Q3{"③ לְרַבִּי אֱלִיעֶזֶר, יְהֵיב לֵיהּ זוּזָא … חָזֵינַן, אִי אַלָּמָא הוּא אָסוּר, וְאִי לָא רֵישָׁיךָ וְהַר"}:::question
+  C1 -->|יישום| S2
+  S2 -->|לרבי אליעזר| Q3
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ט ב — Chullin 39b:17</span></div>
+      <div class="orig">אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: הֲלָכָה כְּרַבִּי יוֹסֵי.</div>
+      <div class="trans" data-when="he">אמר רב יהודה בשם שמואל: הלכה כרבי יוסי — כששוחט ישראל בהמת נכרי, אף אם ידוע שכוונת הנכרי לעבודה זרה, השחיטה כשרה, שהכל הולך אחר השוחט בלבד.</div>
+      <div class="trans" data-when="en">§ The Gemara resumes discussion of the dispute in the mishna where Rabbi Yosei says that when a Jew slaughters an animal on behalf of a gentile, even if it is known that the intent of the gentile is for idol worship, the slaughter is valid, as it is only the intent of the slaughterer that is relevant. Rav Yehuda says that Shmuel says: The halakha is in accordance with the opinion of Rabbi Yosei.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין ל״ט ב — Chullin 39b:18</span></div>
+      <div class="orig">הָנְהוּ טַיָּיעֵי דַּאֲתוֹ לְצִיקוֹנְיָא, יְהוּב דִּיכְרֵי לְטַבָּחֵי יִשְׂרָאֵל, אֲמַרוּ לְהוּ: דְּמָא וְתַרְבָּא לְדִידַן, מַשְׁכָּא וּבִישְׂרָא לְדִידְכוּ. שַׁלְחַהּ רַב טוֹבִי בַּר רַב מַתְנָה לְקַמֵּיהּ דְּרַב יוֹסֵף: כִּי הַאי גַּוְונָא מַאי? שְׁלַח לֵיהּ: הָכִי אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: הֲלָכָה כְּרַבִּי יוֹסֵי.</div>
+      <div class="trans" data-when="he">טייעים (סוחרים נכרים) שבאו לציקוניא נתנו אילים לטבחים ישראלים ואמרו: הדם והחלב לנו (לעבודה זרה), והעור והבשר לכם. שלח רב טובי בר רב מתנה לרב יוסף: בכהאי גוונא מה דינו? השיב לו: כך אמר רב יהודה בשם שמואל — הלכה כרבי יוסי (וכשרה).</div>
+      <div class="trans" data-when="en">The Gemara relates: There were these Arabs who came to Tzikuneya, and they gave rams to Jewish slaughterers. The Arabs said to them: The blood and the fat are for us, for use in our idol worship, and the hide and the flesh are for you. Rav Tuvi bar Rav Mattana sent a question to be asked before Rav Yosef: In a case like this, what is the halakha? Rav Yosef sent to him: This is what Rav Yehuda said that Shmuel said: The halakha is in accordance with the opinion of Rabbi Yosei, and it is the intent of the slaughterer and not the intent of the owner that determines the validity of the slaughter.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">3</span> <span class="ref">חולין ל״ט ב — Chullin 39b:19</span></div>
+      <div class="orig">אֲמַר לֵיהּ רַב אַחָא בְּרֵיהּ דְּרַב אַוְיָא לְרַב אָשֵׁי: לְרַבִּי אֱלִיעֶזֶר, יְהֵיב לֵיהּ זוּזָא לְטַבָּח יִשְׂרָאֵל, מַאי? אֲמַר לֵיהּ: חָזֵינַן, אִי אִינִישׁ אַלָּמָא הוּא דְּלָא מָצֵי מְדַחֵי לֵיהּ – אָסוּר, וְאִי לָא – אָמַר לֵיהּ: ״רֵישָׁיךָ וְהַר״.</div>
+      <div class="trans" data-when="he">אמר רב אחא בריה דרב אויא לרב אשי: לדעת רבי אליעזר (ששוחט עבור נכרי פסול), אם נתן הנכרי זוז לטבח ישראל לקנות מעט בשר — מהו? השיב לו: בודקים — אם אדם אלם הוא שאי אפשר לדחותו, אסור; ואם לא, יכול לומר לו ׳ראשך והר׳ (לך והכה ראשך בהר) — ומותר.</div>
+      <div class="trans" data-when="en">Rav Aḥa, son of Rav Avya, said to Rav Ashi: According to the opinion of Rabbi Eliezer in the mishna, that if a Jew slaughters an animal on behalf of a gentile the slaughter is not valid, if the gentile gave a dinar to a Jewish slaughterer in order to purchase a small amount of the meat, what is the halakha? Does that small amount invalidate the entire slaughter? Rav Ashi said to him: We examine the situation. If this gentile is a violent man, and the Jew is unable to repudiate his offer and tell him to take his money, the entire animal is forbidden, because the slaughter was partially on behalf of the gentile. And if the gentile is not violent, the Jew can say to him: Go and arrange a collision between your head and a mountain, as I will not slaughter an animal on your behalf.</div>
+    </div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+        <span data-when="he">משנה — שוחט לשם הרים וגבעות</span><span data-when="en">Mishnah — slaughter for the sake of mountains, hills</span>
+        <span class="ref">Chullin 39b:20–40a:1</span></h2>
+    <div class="lead"><span data-when="he">משנה חדשה: השוחט לשם דברים שאינם עבודה זרה ממש — הרים, גבעות, ימים — שחיטתו פסולה, וכן שניים שאחד מהם מתכוון לכך.</span><span data-when="en">A new Mishnah: one who slaughters for the sake of things that are not actual idols — mountains, hills, seas — his slaughter is invalid, as is when two slaughter and one of them so intends.</span></div>
+    <div class="chart">
+      <button class="lang-toggle" type="button"></button>
+      <div class="mermaid-target"></div>
+      <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① שוחט לשם הרים, גבעות, ימים — פסולה"]):::mishnah
+  M2(["② שניים אוחזין בסכין — אחד לשם פסול — פסולה"]):::mishnah
+  M1 -->|המשך המשנה| M2
+      </script>
+      <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Slaughter for mountains, hills, seas — invalid"]):::mishnah
+  M2(["② Two grasp the knife — one for an invalid aim — invalid"]):::mishnah
+  M1 -->|Mishnah continues| M2
+      </script>
+      <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① הַשּׁוֹחֵט לְשֵׁם הָרִים … גְּבָעוֹת … יַמִּים … נְהָרוֹת … מִדְבָּרוֹת — שְׁחִיטָתוֹ פְּסוּלָה"]):::mishnah
+  M2(["② שְׁנַיִם אוֹחֲזִין בְּסַכִּין … אֶחָד לְשֵׁם … וְאֶחָד לְשֵׁם דָּבָר כָּשֵׁר — שְׁחִיטָתוֹ פְּסוּלָה"]):::mishnah
+  M1 -->|המשך המשנה| M2
+      </script>
+    </div>
+    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+
+    <div class="quote">
+      <div><span class="num">1</span> <span class="ref">חולין ל״ט ב — Chullin 39b:20</span></div>
+      <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט לְשֵׁם הָרִים, לְשֵׁם גְּבָעוֹת, לְשֵׁם יַמִּים, לְשֵׁם נְהָרוֹת, לְשֵׁם מִדְבָּרוֹת – שְׁחִיטָתוֹ פְּסוּלָה.</div>
+      <div class="trans" data-when="he">משנה: השוחט לשם (כלומר לעבוד) הרים, גבעות, ימים, נהרות או מדברות — שחיטתו פסולה.</div>
+      <div class="trans" data-when="en">MISHNA: In the case of one who slaughters an animal for the sake of, i.e., to worship, mountains, for the sake of hills, for the sake of seas, for the sake of rivers, or for the sake of wildernesses, his slaughter is not valid.</div>
+    </div>
+
+    <div class="quote">
+      <div><span class="num">2</span> <span class="ref">חולין מ׳ א — Chullin 40a:1</span></div>
+      <div class="orig">שְׁנַיִם אוֹחֲזִין בְּסַכִּין וְשׁוֹחֲטִין, אֶחָד לְשֵׁם אֶחָד מִכׇּל אֵלּוּ וְאֶחָד לְשֵׁם דָּבָר כָּשֵׁר – שְׁחִיטָתוֹ פְּסוּלָה.</div>
+      <div class="trans" data-when="he">שניים האוחזים יחד בסכין ושוחטים, אחד מתכוון לשם אחד מכל אלו (הרים וכו׳) והשני לשם דבר כשר — שחיטתם פסולה.</div>
+      <div class="trans" data-when="en">If there were two people grasping a knife together and slaughtering an animal, one slaughtering for the sake of one of all those enumerated in the first clause of the mishna and one slaughtering for the sake of a legitimate matter, their slaughter is not valid.</div>
+    </div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
