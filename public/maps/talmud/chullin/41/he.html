@@ -1,20 +1,43 @@
 <!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>מפת הסוגיא — חולין מ״א</title>
-<meta name="description" content="מהיכן ולְמה מותר לשחוט, ומדוע שחיטה לשם קרבן פסולה — חמש סוגיות בחולין מ״א.">
+<meta name="description" content="אסור לשחוט באופן הנראה כעבודה זרה — לתוך ים, כלים או גומא שבשוק; והשוחט לשם קרבן הנידר ונידב — שחיטתו פסולה, שנראה כשוחט קודשים בחוץ.">
 <meta name="gemara-map:corpus" content="talmud">
 <meta name="gemara-map:book" content="chullin">
 <meta name="gemara-map:location" content="41">
 <meta name="gemara-map:sefaria-ref" content="Chullin 41">
-<meta name="gemara-map:topic-he" content="מקום השחיטה ושחיטה לשם קרבן">
-<meta name="gemara-map:topic-en" content="Where one slaughters; slaughter for an offering">
+<meta name="gemara-map:topic-he" content="שחיטה הנראית כעבודה זרה">
+<meta name="gemara-map:topic-en" content="Slaughter that looks idolatrous">
 <meta name="gemara-map:title-he" content="מפת הסוגיא — חולין מ״א">
 <meta name="gemara-map:title-en" content="Sugya map — Chullin 41">
-<meta name="gemara-map:blurb-he" content="לא שוחטין לים ולא לגומא — מראית עין של עבודה זרה ומינות; והשוחט לשם קרבן הנידר ונידב — שחיטתו פסולה.">
-<meta name="gemara-map:blurb-en" content="One may not slaughter into the sea or a hole — it looks like idolatry or heresy; and slaughter for the sake of a vowed offering is invalid.">
+<meta name="gemara-map:blurb-he" content="אסור לשחוט באופן הנראה כעבודה זרה — לתוך ים, כלים או גומא שבשוק; והשוחט לשם קרבן הנידר ונידב — שחיטתו פסולה, שנראה כשוחט קודשים בחוץ.">
+<meta name="gemara-map:blurb-en" content="One may not slaughter in a way that looks idolatrous — into a sea, vessels, or a marketplace hole; and one who slaughters for the sake of an offering that can be vowed or donated — his slaughter is invalid, for it looks like sacrificing outside the Temple.">
 <meta name="gemara-map:sugya-count" content="5">
 <meta name="gemara-map:languages" content="he,en">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,12 +116,12 @@
 <div class="wrap">
   <header>
     <h1><span data-when="he">מפת הסוגיא — חולין מ״א</span><span data-when="en">Sugya map — Chullin 41</span></h1>
-    <div class="subtitle"><span data-when="he">חולין מ״א א–מ״ב א (41a:9–42a:1) · חמש סוגיות · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 41a:9–42a:1 · five sugyot · Source: Sefaria · William Davidson Edition</span></div>
+    <div class="subtitle"><span data-when="he">חולין מ״א א:ט׳-מ״ב א:א׳ · Chullin 41a:9–42a:1 · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 41a:9–42a:1 · חולין מ״א א:ט׳-מ״ב א:א׳ · Source: Sefaria (William Davidson)</span></div>
   </header>
 
   <div class="takeaway">
-    <span data-when="he"><b>שורה תחתונה:</b> מקום השחיטה ואופן ניקוז הדם נאסרו כשהם נראים כעבודה זרה או כחוקות המינים — לים, לגומא או בשוק; ובהמשך — השוחט לשם קרבן הנידר ונידב (עולה, פסח וכו׳) שחיטתו פסולה משום מראית של הקדשת קדשים בחוץ, ואילו לשם קרבן חובה — כשרה.</span>
-    <span data-when="en"><b>Bottom line:</b> The place of slaughter and the way blood is drained are forbidden when they look like idolatry or heretical custom — into the sea, a hole, or the marketplace; and one who slaughters for the sake of an offering that can be vowed or donated (a burnt offering, Paschal offering, etc.) renders his slaughter invalid, since it looks like consecrating offerings outside the Temple, whereas slaughter for an obligatory offering is valid.</span>
+    <span data-when="he"><b>שורה תחתונה:</b> שחיטה צריכה להיראות כשחיטת חולין רגילה: לא לתוך ים, כלים או גומא שבשוק — שלא ייראה כעובד עבודה זרה או כמחקה את המינים; והשוחט לשם קרבן שאפשר לנדור ולהתנדב — שחיטתו פסולה.</span>
+    <span data-when="en"><b>Bottom line:</b> Slaughter must look like ordinary non-sacred slaughter: not into a sea, vessels, or a marketplace hole — lest it look idolatrous or heretical; and one who slaughters for the sake of an offering that can be vowed or donated — his slaughter is invalid.</span>
   </div>
 
   <div class="legend">
@@ -111,7 +134,7 @@
   </div>
 
   <section class="overview">
-    <h2><span data-when="he">מבט-על — חמש סוגיות</span><span data-when="en">Overview — five sugyot</span></h2>
+    <h2><span data-when="he">מבט־על — חמש סוגיות</span><span data-when="en">Overview — five sugyot</span></h2>
     <div class="chart">
       <button class="lang-toggle" type="button"></button>
       <div class="mermaid-target"></div>
@@ -119,11 +142,11 @@
 graph TD
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
   classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
-  O1(["1 · משנה — היכן ולְמה מותר לשחוט"]):::mishnah
-  O2["2 · למה לא לים ולא לעוגה — מראית עין"]:::statement
-  O3["3 · סתירה בדין הגומא — אביי ורבא"]:::statement
-  O4(["4 · משנה — שוחט לשם קרבן"]):::mishnah
-  O5["5 · ביאור הרשימה — נידר ונידב"]:::statement
+  O1(["1 · משנה: אין שוחטין לים, לנהר ולכלים"]):::mishnah
+  O2["2 · ים מול עוגת מים — רבא: בעכורים שנו"]:::statement
+  O3["3 · סתירת הגומא — אביי ורבא"]:::statement
+  O4(["4 · משנה: השוחט לשם קרבן"]):::mishnah
+  O5["5 · ביאור הכלל — נידר ונידב"]:::statement
   O1 --> O2
   O2 --> O3
   O3 --> O4
@@ -138,11 +161,11 @@ graph TD
 graph TD
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
   classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
-  O1(["1 · Mishnah — where and for what one may slaughter"]):::mishnah
-  O2["2 · Why not into sea or pool — appearance"]:::statement
-  O3["3 · Contradiction about the hole — Abaye and Rava"]:::statement
-  O4(["4 · Mishnah — slaughter for an offering"]):::mishnah
-  O5["5 · Explaining the list — vowed or donated"]:::statement
+  O1(["1 · Mishnah: not into seas, rivers, or vessels"]):::mishnah
+  O2["2 · Sea vs. pool of water — Rava: murky water"]:::statement
+  O3["3 · The hole contradiction — Abaye and Rava"]:::statement
+  O4(["4 · Mishnah: slaughtering for the sake of an offering"]):::mishnah
+  O5["5 · Defining the rule — vowed and donated"]:::statement
   O1 --> O2
   O2 --> O3
   O3 --> O4
@@ -157,14 +180,14 @@ graph TD
   </section>
 
   <section class="sugya" id="sugya-1">
-    <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
-        <span data-when="he">משנה — היכן ולְמה מותר לשחוט</span><span data-when="en">Mishnah — where and into what one may slaughter</span>
-        <span class="ref">Chullin 41a:9–41b:1</span></h2>
-    <div class="lead"><span data-when="he">אין שוחטין לים, לנהר, לכלים או לגומא — שלא ייראה כעובד עבודה זרה או כמחקה את המינים; אבל מותר לעוגת מים, על כלים בספינה, ולגומא שבתוך הבית.</span><span data-when="en">One may not let blood flow into seas, rivers, vessels, or a hole — lest it look like idolatry or emulating the heretics; but a round water-pool, vessels on a ship, and a hole inside one׳s house are permitted.</span></div>
-    <div class="chart">
-      <button class="lang-toggle" type="button"></button>
-      <div class="mermaid-target"></div>
-      <script type="text/plain" class="src-he">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">משנה: לאן אסור לשחוט — ים, נהר, כלים וגומא</span><span data-when="en">Mishnah: where one may not slaughter — sea, river, vessels, hole</span>
+      <span class="ref">Chullin 41a:9–41b:1</span></h2>
+  <div class="lead"><span data-when="he">המשנה אוסרת אופני שחיטה הנראים כדרך עובדי עבודה זרה והמינים, ומתירה מקום שאין בו מראית עין.</span><span data-when="en">The Mishnah forbids ways of slaughtering that look like idolatrous or heretical practice, and permits where no such appearance arises.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -172,17 +195,17 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  M1(["① משנה — אין שוחטין לים, לנהר, לכלים"]):::mishnah
-  M2(["① אבל לעוגת מים, ועל כלים בספינה — מותר"]):::mishnah
-  M3(["① אין שוחטין לגומא כלל"]):::mishnah
-  M4(["① אבל עושה גומא בביתו שייכנס בה הדם"]):::mishnah
-  M5(["①②  ובשוק לא יעשה כן — שלא יחקה את המינים"]):::conclusion
-  M1 -->|היתר| M2
+  M1(["① משנה: אין שוחטין לתוך ימים, נהרות וכלים"]):::mishnah
+  M2(["② אבל שוחט לתוך עוגה של מים; ובספינה — על גבי כלים"]):::mishnah
+  M3(["③ אין שוחטין לגומא כלל; אבל עושה גומא בתוך ביתו לדם"]):::mishnah
+  M4(["④ ובשוק לא יעשה כן"]):::mishnah
+  M5(["⑤ הטעם: שלא יחקה את המינין"]):::conclusion
+  M1 -->|ההיתר| M2
   M2 -->|דין הגומא| M3
-  M3 -->|חריג בבית| M4
-  M4 -->|טעם הכל| M5
-      </script>
-      <script type="text/plain" class="src-en">
+  M3 -->|סייג בשוק| M4
+  M4 -->|הטעם| M5
+    </script>
+    <script type="text/plain" class="src-en">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -190,17 +213,17 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  M1(["① Mishnah — not into seas, rivers, vessels"]):::mishnah
-  M2(["① But a water-pool, and vessels on a ship — permitted"]):::mishnah
-  M3(["① Not into a hole at all"]):::mishnah
-  M4(["① But one may make a hole in his house for the blood"]):::mishnah
-  M5(["①②  And in the marketplace — not, lest he emulate heretics"]):::conclusion
-  M1 -->|permitted| M2
+  M1(["① Mishnah: one may not slaughter into seas, rivers, or vessels"]):::mishnah
+  M2(["② But one may — into a round pool of water; on a ship, onto vessels"]):::mishnah
+  M3(["③ Never into a hole; but one may make a hole in his house for the blood"]):::mishnah
+  M4(["④ In the marketplace one may not do so"]):::mishnah
+  M5(["⑤ The reason: so as not to imitate the heretics"]):::conclusion
+  M1 -->|the leniency| M2
   M2 -->|the hole| M3
-  M3 -->|exception at home| M4
+  M3 -->|in the market| M4
   M4 -->|the reason| M5
-      </script>
-      <script type="text/plain" class="src-ar">
+    </script>
+    <script type="text/plain" class="src-ar">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -208,41 +231,41 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  M1(["① אֵין שׁוֹחֲטִין לֹא לְתוֹךְ יַמִּים … וְלֹא לְתוֹךְ כֵּלִים"]):::mishnah
-  M2(["① אֲבָל שׁוֹחֵט … לְתוֹךְ עוּגָה שֶׁל מַיִם … וּבִסְפִינָה עַל גַּבֵּי כֵלִים"]):::mishnah
-  M3(["① אֵין שׁוֹחֲטִין לַגּוּמָּא כׇּל עִיקָּר"]):::mishnah
-  M4(["① אֲבָל עוֹשֶׂה גּוּמָּא בְּתוֹךְ בֵּיתוֹ … שֶׁיִּכָּנֵס הַדָּם לְתוֹכָהּ"]):::mishnah
-  M5(["①②  וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן שֶׁלֹּא יְחַקֶּה אֶת הַמִּינִין"]):::conclusion
-  M1 -->|היתר| M2
+  M1(["① אֵין שׁוֹחֲטִין לֹא לְתוֹךְ יַמִּים, וְלֹא לְתוֹךְ נְהָרוֹת, וְלֹא לְתוֹךְ כֵּלִים"]):::mishnah
+  M2(["② אֲבָל שׁוֹחֵט הוּא לְתוֹךְ עוּגָה שֶׁל מַיִם. וּבִסְפִינָה, עַל גַּבֵּי כֵלִים"]):::mishnah
+  M3(["③ אֵין שׁוֹחֲטִין לַגּוּמָּא כׇּל עִיקָּר, אֲבָל עוֹשֶׂה גּוּמָּא בְּתוֹךְ בֵּיתוֹ בִּשְׁבִיל שֶׁיִּכָּנֵס הַדָּם לְתוֹכָהּ"]):::mishnah
+  M4(["④ וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן"]):::mishnah
+  M5(["⑤ שֶׁלֹּא יְחַקֶּה אֶת הַמִּינִין"]):::conclusion
+  M1 -->|ההיתר| M2
   M2 -->|דין הגומא| M3
-  M3 -->|חריג בבית| M4
-  M4 -->|טעם הכל| M5
-      </script>
-    </div>
-    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
-    <div class="quote">
-      <div><span class="num">1</span> <span class="ref">חולין מ״א א — Chullin 41a:9</span></div>
-      <div class="orig">מַתְנִי׳ אֵין שׁוֹחֲטִין לֹא לְתוֹךְ יַמִּים, וְלֹא לְתוֹךְ נְהָרוֹת, וְלֹא לְתוֹךְ כֵּלִים, אֲבָל שׁוֹחֵט הוּא לְתוֹךְ עוּגָה שֶׁל מַיִם. וּבִסְפִינָה, עַל גַּבֵּי כֵלִים. אֵין שׁוֹחֲטִין לַגּוּמָּא כׇּל עִיקָּר, אֲבָל עוֹשֶׂה גּוּמָּא בְּתוֹךְ בֵּיתוֹ בִּשְׁבִיל שֶׁיִּכָּנֵס הַדָּם לְתוֹכָהּ. וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן, שֶׁלֹּא</div>
-      <div class="trans" data-when="he">המשנה: אין שוחטים ומקיזים את דם הבהמה לתוך ימים, נהרות או כלים — שזה נראה כשחיטה לעבודה זרה; אבל מותר לשחוט לתוך גומת מים עגולה, ובספינה מותר לשחוט על גבי כלים. אין שוחטים לתוך גומא כלל, אבל מותר לעשות גומא בתוך ביתו כדי שייכנס הדם לתוכה. ובשוק לא יעשה כן — כדי שלא…</div>
-      <div class="trans" data-when="en">MISHNA: One may not slaughter an animal and have its blood flow, neither into seas, nor into rivers, nor into vessels, as in all those cases it appears that he is slaughtering the animal in the manner of idolaters. But one may slaughter an animal and have its blood flow into a round excavation containing water. And on a ship, one may slaughter an animal onto vessels as it is clear that his objective is to avoid sullying the ship. One may not slaughter an animal and have its blood flow into a small hole in the ground at all, but one may fashion a small hole inside his house so that the blood will enter into it. And in the marketplace one may not do so, so that he will not</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">2</span> <span class="ref">חולין מ״א ב — Chullin 41b:1</span></div>
-      <div class="orig">יְחַקֶּה אֶת הַמִּינִין.</div>
-      <div class="trans" data-when="he">…יחקה (יחקֶּה) את המינים — כלומר, שלא ייראה כמי שמחקה את מנהגי הכופרים.</div>
-      <div class="trans" data-when="en">appear to emulate [yeḥakkeh] the heretics.</div>
-    </div>
-  </section>
+  M3 -->|סייג בשוק| M4
+  M4 -->|הטעם| M5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="num">2</span> <span class="num">3</span> <span class="num">4</span> <span class="ref">חולין מ״א א — Chullin 41a:9</span></div>
+    <div class="orig">מַתְנִי׳ אֵין שׁוֹחֲטִין לֹא לְתוֹךְ יַמִּים, וְלֹא לְתוֹךְ נְהָרוֹת, וְלֹא לְתוֹךְ כֵּלִים, אֲבָל שׁוֹחֵט הוּא לְתוֹךְ עוּגָה שֶׁל מַיִם. וּבִסְפִינָה, עַל גַּבֵּי כֵלִים. אֵין שׁוֹחֲטִין לַגּוּמָּא כׇּל עִיקָּר, אֲבָל עוֹשֶׂה גּוּמָּא בְּתוֹךְ בֵּיתוֹ בִּשְׁבִיל שֶׁיִּכָּנֵס הַדָּם לְתוֹכָהּ. וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן, שֶׁלֹּא</div>
+    <div class="trans" data-when="he">המשנה אוסרת לשחוט כך שהדם נשפך לתוך ים, נהר או כלים — שנראה כשוחט כדרך עובדי עבודה זרה; אבל מותר לשחוט לתוך גומה עגולה (״עוגה״) שיש בה מים, ובספינה — על גבי כלים. אסור לשחוט לתוך גומה בקרקע כלל, אבל עושה אדם גומה בתוך ביתו כדי שייכנס הדם לתוכה; ובשוק לא יעשה כן, כדי שלא…</div>
+    <div class="trans" data-when="en">MISHNA: One may not slaughter an animal and have its blood flow, neither into seas, nor into rivers, nor into vessels, as in all those cases it appears that he is slaughtering the animal in the manner of idolaters. But one may slaughter an animal and have its blood flow into a round excavation containing water. And on a ship, one may slaughter an animal onto vessels as it is clear that his objective is to avoid sullying the ship. One may not slaughter an animal and have its blood flow into a small hole in the ground at all, but one may fashion a small hole inside his house so that the blood will enter into it. And in the marketplace one may not do so, so that he will not</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין מ״א ב — Chullin 41b:1</span></div>
+    <div class="orig">יְחַקֶּה אֶת הַמִּינִין.</div>
+    <div class="trans" data-when="he">…ייראה כמחקה את המינים (הכופרים ועובדי עבודה זרה).</div>
+    <div class="trans" data-when="en">appear to emulate [yeḥakkeh] the heretics.</div>
+  </div>
+</section>
 
-  <section class="sugya" id="sugya-2">
-    <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
-        <span data-when="he">למה לא לים ולא לעוגה — ובמים עכורים</span><span data-when="en">Why not into the sea or pool — and murky water</span>
-        <span class="ref">Chullin 41b:2</span></h2>
-    <div class="lead"><span data-when="he">מדוע לא לים? אומרים ׳לשר הים הוא שוחט׳. אם כן אף לעוגה אומרים ׳לבבואה הוא שוחט׳ — ורבא מיישב שהמשנה דיברה במים עכורים שאין בהם בבואה.</span><span data-when="en">Why not into the sea? Onlookers say ׳he slaughters to the angel of the sea׳. If so, a pool too — ׳he slaughters to his reflection׳; Rava answers that the Mishnah spoke of murky water with no reflection.</span></div>
-    <div class="chart">
-      <button class="lang-toggle" type="button"></button>
-      <div class="mermaid-target"></div>
-      <script type="text/plain" class="src-he">
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">למה ים אסור ועוגת מים מותרת — רבא: בעכורים שנו</span><span data-when="en">Why a sea is forbidden but a pool permitted — Rava: murky water</span>
+      <span class="ref">Chullin 41b:2</span></h2>
+  <div class="lead"><span data-when="he">הגמרא משווה בין איסור הים להיתר עוגת המים, ורבא מעמיד את ההיתר במים עכורים שאין בהם בבואה.</span><span data-when="en">The Gemara contrasts the prohibited sea with the permitted pool, and Rava restricts the permission to murky water that shows no reflection.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -250,15 +273,15 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  Q1{"① קושיא — מה שונה שחיטה לים שאסורה?"}:::question
-  S2["② טעם — אומרים לשר הים הוא שוחט"]:::statement
-  Q3{"③ קושיא — אם כן אף לעוגה, לבבואה שוחט"}:::question
-  A4["④ רבא — בעכורים שָנוּ, שאין בבואה"]:::answer
-  Q1 -->|טעם האיסור| S2
-  S2 -.->|אם כן גם בעוגה| Q3
-  Q3 -->|יישוב רבא| A4
-      </script>
-      <script type="text/plain" class="src-en">
+  Q1{"① קושיא: מאי שנא לתוך ימים — שאסור?"}:::question
+  S2["② הטעם: שיאמרו — לשר הים הוא שוחט"]:::statement
+  Q3{"③ אם כן, גם לעוגה של מים ייאסר — שיאמרו לבבואה הוא שוחט!"}:::question
+  A4["④ רבא: במים עכורים שנו — שאין בהם בבואה"]:::answer
+  Q1 -->|הטעם| S2
+  S2 -.->|אם כן| Q3
+  Q3 -->|תירוץ רבא| A4
+    </script>
+    <script type="text/plain" class="src-en">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -266,15 +289,15 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  Q1{"① Question — why is slaughter into the sea forbidden?"}:::question
-  S2["② Reason — they say he slaughters to the sea-angel"]:::statement
-  Q3{"③ Question — then a pool too, to his reflection"}:::question
-  A4["④ Rava — taught of murky water, no reflection"]:::answer
-  Q1 -->|reason| S2
-  S2 -.->|so too a pool| Q3
+  Q1{"① Question: what is different about seas, that it is forbidden?"}:::question
+  S2["② The reason: people will say — he slaughters to the angel of the sea"]:::statement
+  Q3{"③ Then a pool of water too should be forbidden — they will say he slaughters to his reflection!"}:::question
+  A4["④ Rava: it was taught about murky water — which shows no reflection"]:::answer
+  Q1 -->|the reason| S2
+  S2 -.->|if so| Q3
   Q3 -->|Rava resolves| A4
-      </script>
-      <script type="text/plain" class="src-ar">
+    </script>
+    <script type="text/plain" class="src-ar">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -283,32 +306,32 @@ graph TD
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
   Q1{"① מַאי שְׁנָא לְתוֹךְ יַמִּים דְּלָא?"}:::question
-  S2["② דְּאָמְרִי לְשָׂרָא דְּיַמָּא קָא שָׁחֵיט"]:::statement
-  Q3{"③ לְתוֹךְ עוּגָה … אָמְרִי לְבָבוּאָה קָא שָׁחֵיט"}:::question
-  A4["④ אָמַר רָבָא בַּעֲכוּרִים שָׁנוּ"]:::answer
-  Q1 -->|טעם האיסור| S2
-  S2 -.->|אם כן גם בעוגה| Q3
-  Q3 -->|יישוב רבא| A4
-      </script>
-    </div>
-    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
-    <div class="quote">
-      <div><span class="num">1</span> <span class="num">2</span> <span class="num">3</span> <span class="num">4</span> <span class="ref">חולין מ״א ב — Chullin 41b:2</span></div>
-      <div class="orig">גְּמָ׳ אֵין שׁוֹחֲטִין לֹא לְתוֹךְ וְכוּ׳. מַאי שְׁנָא לְתוֹךְ יַמִּים דְּלָא? דְּאָמְרִי: לְשָׂרָא דְּיַמָּא קָא שָׁחֵיט. לְתוֹךְ עוּגָה שֶׁל מַיִם נָמֵי אָמְרִי: לְבָבוּאָה קָא שָׁחֵיט. אָמַר רָבָא: בַּעֲכוּרִים שָׁנוּ.</div>
-      <div class="trans" data-when="he">הגמרא: מה ההבדל שדווקא לתוך ימים אסור? משום שהרואים יאמרו: לְשַׂר הים הוא שוחט (עבודה זרה). אם כן — גם לתוך עוגת מים יש לאסור, שהרי יאמרו: לבבואה (לבואת דמותו במים) הוא שוחט. אמר רבא: שָנו דין זה דווקא במים עכורים, שאין נראית בהם בבואה — ושם מותר.</div>
-      <div class="trans" data-when="en">GEMARA: The mishna teaches: One may not slaughter an animal and have its blood flow, neither into seas, nor into rivers, nor into vessels, but one may slaughter an animal and have its blood flow into a round excavation containing water. The Gemara asks: What is different about slaughter into seas? Is it that one may not perform it, as onlookers will say: He is slaughtering to the angel of the sea? If so, slaughter into a round excavation containing water should also be prohibited, as onlookers will say: He is slaughtering to his reflection [bavua], which is also similar to idolatry. Rava said: The tanna’im taught that halakha in the case of murky water, in which no reflection can be seen.</div>
-    </div>
-  </section>
+  S2["② דְּאָמְרִי: לְשָׂרָא דְּיַמָּא קָא שָׁחֵיט"]:::statement
+  Q3{"③ לְתוֹךְ עוּגָה שֶׁל מַיִם נָמֵי אָמְרִי: לְבָבוּאָה קָא שָׁחֵיט"}:::question
+  A4["④ אָמַר רָבָא: בַּעֲכוּרִים שָׁנוּ"]:::answer
+  Q1 -->|הטעם| S2
+  S2 -.->|אם כן| Q3
+  Q3 -->|תירוץ רבא| A4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="num">2</span> <span class="num">3</span> <span class="num">4</span> <span class="ref">חולין מ״א ב — Chullin 41b:2</span></div>
+    <div class="orig">גְּמָ׳ אֵין שׁוֹחֲטִין לֹא לְתוֹךְ וְכוּ׳. מַאי שְׁנָא לְתוֹךְ יַמִּים דְּלָא? דְּאָמְרִי: לְשָׂרָא דְּיַמָּא קָא שָׁחֵיט. לְתוֹךְ עוּגָה שֶׁל מַיִם נָמֵי אָמְרִי: לְבָבוּאָה קָא שָׁחֵיט. אָמַר רָבָא: בַּעֲכוּרִים שָׁנוּ.</div>
+    <div class="trans" data-when="he">הגמרא שואלת: במה שונה שחיטה לתוך ים שאסורה — מפני שיאמרו ׳לשר של הים הוא שוחט׳? אם כך, גם לתוך עוגה של מים ייאסר, שיאמרו ׳לבבואה (להשתקפות שלו) הוא שוחט׳! אמר רבא: המשנה שנתה במים עכורים, שאין רואים בהם בבואה.</div>
+    <div class="trans" data-when="en">GEMARA: The mishna teaches: One may not slaughter an animal and have its blood flow, neither into seas, nor into rivers, nor into vessels, but one may slaughter an animal and have its blood flow into a round excavation containing water. The Gemara asks: What is different about slaughter into seas? Is it that one may not perform it, as onlookers will say: He is slaughtering to the angel of the sea? If so, slaughter into a round excavation containing water should also be prohibited, as onlookers will say: He is slaughtering to his reflection [bavua], which is also similar to idolatry. Rava said: The tanna’im taught that halakha in the case of murky water, in which no reflection can be seen.</div>
+  </div>
+</section>
 
-  <section class="sugya" id="sugya-3">
-    <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
-        <span data-when="he">הסתירה בדין הגומא — אביי ורבא</span><span data-when="en">The contradiction about the hole — Abaye and Rava</span>
-        <span class="ref">Chullin 41b:3–7</span></h2>
-    <div class="lead"><span data-when="he">המשנה אוסרת גומא כלל ובכל זאת מתירה גומא בבית — אביי מחלק בין שוק לבית, רבא דוחה ומפרש מחדש שעושה מקום חוץ לגומא, וברייתא מסייעת לרבא.</span><span data-when="en">The Mishnah bans a hole entirely yet permits a hole at home — Abaye distinguishes marketplace from home, Rava rejects this and re-reads the Mishnah, and a baraita supports Rava.</span></div>
-    <div class="chart">
-      <button class="lang-toggle" type="button"></button>
-      <div class="mermaid-target"></div>
-      <script type="text/plain" class="src-he">
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">סתירה בדין הגומא — אביי, רבא, וברייתא כרבא</span><span data-when="en">The hole contradiction — Abaye, Rava, and a baraita supporting Rava</span>
+      <span class="ref">Chullin 41b:3–7</span></h2>
+  <div class="lead"><span data-when="he">המשנה אוסרת גומא לגמרי ומתירה גומא בבית; אביי מחלק בין שוק לבית, רבא דוחה ומפרש שהשחיטה מחוץ לגומא — וברייתא מסייעת לו.</span><span data-when="en">The Mishnah both bans a hole outright and permits one at home; Abaye splits market from house, Rava rejects this and reads the slaughter as outside the hole — and a baraita supports him.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -316,19 +339,19 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  Q1{"① קושיא — איך מותר גומא בבית, והרי אסר כלל?"}:::question
-  A2["② אביי — רישא בגומא שבשוק"]:::answer
-  Q3{"③ רבא דוחה — מהסיפא ׳ובשוק׳ משמע שהרישא לא בשוק"}:::question
-  A4["④ אלא רבא — עושה מקום חוץ לגומא והדם יורד לתוכה"]:::answer
-  P5["⑤ תניא כוותיה דרבא — בספינה מוציא ידו חוץ"]:::proof
-  P6["⑥ והרוצה לנקר חצרו … ובשוק משום ׳ובחקתיהם׳"]:::proof
+  Q1{"① קושיא: גומא בבית — והא אמרת אין שוחטין לגומא כלל!"}:::question
+  A2["② אביי: הרישא — בגומא שבשוק"]:::answer
+  Q3{"③ רבא: מהסיפא ׳ובשוק לא יעשה כן׳ משמע שהרישא לאו בשוק!"}:::question
+  A4["④ אלא אמר רבא: עושה מקום חוץ לגומא ושוחט, והדם שותת ויורד לגומא"]:::answer
+  P5["⑤ תניא כוותיה דרבא: בספינה — מוציא ידו חוץ לספינה ושוחט"]:::proof
+  P6["⑥ המשך הברייתא: ובשוק לא יעשה כן — ׳ובחקתיהם לא תלכו׳; ואם עשה — צריך בדיקה אחריו"]:::proof
   Q1 -->|תירוץ אביי| A2
   A2 -.->|דחיית רבא| Q3
-  Q3 -->|פירוש רבא| A4
-  A4 -->|סיוע| P5
-  P5 -->|המשך הברייתא| P6
-      </script>
-      <script type="text/plain" class="src-en">
+  Q3 -->|אלא| A4
+  A4 -->|סיוע מברייתא| P5
+  P5 -->|המשך| P6
+    </script>
+    <script type="text/plain" class="src-en">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -336,19 +359,19 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  Q1{"① Question — how is a hole at home allowed if it was banned at all?"}:::question
-  A2["② Abaye — the first clause is a hole in the marketplace"]:::answer
-  Q3{"③ Rava rejects — ׳in the marketplace׳ implies the first clause is not"}:::question
-  A4["④ Rather Rava — make a place outside the hole, blood flows in"]:::answer
-  P5["⑤ Baraita like Rava — on a ship he extends his hand outside"]:::proof
-  P6["⑥ One cleaning his courtyard … and in the market, ׳their statutes׳"]:::proof
+  Q1{"① Question: a hole in the house — but you said never into a hole!"}:::question
+  A2["② Abaye: the first clause refers to a hole in the marketplace"]:::answer
+  Q3{"③ Rava: the last clause ‘in the marketplace’ implies the first clause is not about the market!"}:::question
+  A4["④ Rather, Rava: he makes a spot outside the hole and slaughters; the blood flows down into it"]:::answer
+  P5["⑤ A baraita supports Rava: on a ship — he extends his hand overboard and slaughters"]:::proof
+  P6["⑥ The baraita continues: in the market one may not — ‘neither shall you follow their statutes’; if he did, he is examined"]:::proof
   Q1 -->|Abaye answers| A2
   A2 -.->|Rava rejects| Q3
-  Q3 -->|Rava re-reads| A4
-  A4 -->|support| P5
-  P5 -->|baraita continues| P6
-      </script>
-      <script type="text/plain" class="src-ar">
+  Q3 -->|rather| A4
+  A4 -->|baraita support| P5
+  P5 -->|continued| P6
+    </script>
+    <script type="text/plain" class="src-ar">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -356,61 +379,61 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  Q1{"① וְהָא אָמְרַתְּ אֵין שׁוֹחֲטִין לַגּוּמָּא כְּלָל?"}:::question
-  A2["② אָמַר אַבָּיֵי רֵישָׁא בְּגוּמָּא שֶׁבַּשּׁוּק"]:::answer
-  Q3{"③ אֲמַר לֵיהּ רָבָא … מִכְּלָל דְּרֵישָׁא לָאו בְּשׁוּק עָסְקִינַן"}:::question
-  A4["④ אֶלָּא אָמַר רָבָא … עוֹשֶׂה מָקוֹם חוּץ לַגּוּמָּא וְשׁוֹחֵט"]:::answer
-  P5["⑤ תַּנְיָא כְּוָותֵיהּ דְּרָבָא … מוֹצִיא יָדוֹ חוּץ לַסְּפִינָה"]:::proof
-  P6["⑥ וְהָרוֹצֶה לְנַקֵּר חֲצֵרוֹ … מִשּׁוּם וּבְחֻקֹּתֵיהֶם לֹא תֵלֵכוּ"]:::proof
+  Q1{"① וְהָא אָמְרַתְּ: אֵין שׁוֹחֲטִין לַגּוּמָּא כְּלָל?"}:::question
+  A2["② אָמַר אַבָּיֵי: רֵישָׁא בְּגוּמָּא שֶׁבַּשּׁוּק"]:::answer
+  Q3{"③ וְהָא מִדְּקָתָנֵי סֵיפָא ״וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן״, מִכְּלָל דְּרֵישָׁא לָאו בְּשׁוּק עָסְקִינַן!"}:::question
+  A4["④ אֶלָּא אָמַר רָבָא … עוֹשֶׂה מָקוֹם חוּץ לַגּוּמָּא וְשׁוֹחֵט, וְדָם שׁוֹתֵת וְיוֹרֵד לַגּוּמָּא"]:::answer
+  P5["⑤ תַּנְיָא כְּוָותֵיהּ דְּרָבָא: הָיָה מְהַלֵּךְ בִּסְפִינָה … מוֹצִיא יָדוֹ חוּץ לַסְּפִינָה וְשׁוֹחֵט"]:::proof
+  P6["⑥ וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן, מִשּׁוּם שֶׁנֶּאֱמַר: ״וּבְחֻקֹּתֵיהֶם לֹא תֵלֵכוּ״, וְאִם עָשָׂה כֵּן – צָרִיךְ בְּדִיקָה אַחֲרָיו"]:::proof
   Q1 -->|תירוץ אביי| A2
   A2 -.->|דחיית רבא| Q3
-  Q3 -->|פירוש רבא| A4
-  A4 -->|סיוע| P5
-  P5 -->|המשך הברייתא| P6
-      </script>
-    </div>
-    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
-    <div class="quote">
-      <div><span class="num">1</span> <span class="ref">חולין מ״א ב — Chullin 41b:3</span></div>
-      <div class="orig">אֵין שׁוֹחֲטִין לַגּוּמָּא וְכוּ׳. וְהָא אָמְרַתְּ: אֵין שׁוֹחֲטִין לַגּוּמָּא כְּלָל? אָמַר אַבָּיֵי: רֵישָׁא בְּגוּמָּא שֶׁבַּשּׁוּק.</div>
-      <div class="trans" data-when="he">המשנה אמרה ׳אין שוחטין לגומא׳ ובכל זאת התירה גומא בבית — והרי אמרת שאין שוחטין לגומא כלל? אמר אביי: הרישא (האיסור הגורף) עוסקת בגומא שבשוק, ובבית מותר.</div>
-      <div class="trans" data-when="en">§ The mishna states: One may not slaughter an animal and have its blood flow into a small hole in the ground at all, but one may fashion a small hole inside his house so that the blood will enter into it. The Gemara asks: How is it permitted to slaughter and have the blood flow into a hole inside his house? But didn’t you initially say that one may not slaughter an animal and have its blood flow into a small hole in the ground at all? Abaye said: The first clause of the mishna, where there is a blanket prohibition against having the blood flow into a small hole, is referring to a small hole that is in the marketplace.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">2</span> <span class="ref">חולין מ״א ב — Chullin 41b:4</span></div>
-      <div class="orig">אֲמַר לֵיהּ רָבָא: וְהָא מִדְּקָתָנֵי סֵיפָא ״וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן״, מִכְּלָל דְּרֵישָׁא לָאו בְּשׁוּק עָסְקִינַן!</div>
-      <div class="trans" data-when="he">אמר לו רבא: והרי מכך שהסיפא שונה ׳ובשוק לא יעשה כן׳ — משמע שהרישא אינה עוסקת בשוק, ואם כן קושייתך חוזרת.</div>
-      <div class="trans" data-when="en">Rava said to him: But isn’t it so that from the fact that the latter clause teaches: And in the marketplace one may not do so, it may be inferred that in the first clause we are not dealing with the marketplace?</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">3</span> <span class="ref">חולין מ״א ב — Chullin 41b:5</span></div>
-      <div class="orig">אֶלָּא אָמַר רָבָא, הָכִי קָאָמַר: אֵין שׁוֹחֲטִין לַגּוּמָּא כׇּל עִיקָּר, וְהָרוֹצֶה לְנַקֵּר חֲצֵרוֹ, כֵּיצַד הוּא עוֹשֶׂה? עוֹשֶׂה מָקוֹם חוּץ לַגּוּמָּא וְשׁוֹחֵט, וְדָם שׁוֹתֵת וְיוֹרֵד לַגּוּמָּא, וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן, שֶׁלֹּא יְחַקֶּה אֶת הַמִּינִין.</div>
-      <div class="trans" data-when="he">אלא אמר רבא: כך כוונת המשנה — אין שוחטין לתוך הגומא כלל; והרוצה לנקות את חצרו מדם, כיצד יעשה? עושה מקום (מדרון) מחוץ לגומא ושוחט שם, והדם זב ויורד לגומא. ובשוק לא יעשה כן, שלא יחקה את המינים.</div>
-      <div class="trans" data-when="en">Rather, Rava said that this is what the mishna is saying: One may not slaughter an animal and have its blood flow into a small hole in the ground at all. And one who wishes to clean his courtyard and ensure that it will not be sullied in blood, how does he do so? He fashions a place with an incline or a furrow outside the small hole, and slaughters the animal there, and the blood flows and descends into the hole. And in the marketplace one may not do so, so that he will not appear to emulate the heretics.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">4</span> <span class="ref">חולין מ״א ב — Chullin 41b:6</span></div>
-      <div class="orig">תַּנְיָא כְּוָותֵיהּ דְּרָבָא: הָיָה מְהַלֵּךְ בִּסְפִינָה וְאֵין לוֹ מָקוֹם בַּסְּפִינָה לִשְׁחוֹט – מוֹצִיא יָדוֹ חוּץ לַסְּפִינָה וְשׁוֹחֵט, וְדָם שׁוֹתֵת וְיוֹרֵד עַל דּוֹפְנֵי הַסְּפִינָה, וְאֵין שׁוֹחֵט לַגּוּמָּא כׇּל עִיקָּר.</div>
-      <div class="trans" data-when="he">שנויה ברייתא כדברי רבא: היה מהלך בספינה ואין לו מקום בספינה לשחוט — מוציא ידו אל מחוץ לספינה ושוחט, והדם זב ויורד על דופני הספינה; ואין שוחט לתוך הגומא (כלומר אל הים) כלל.</div>
-      <div class="trans" data-when="en">It is taught in a baraita in accordance with the opinion of Rava: If one was traveling on a ship and he has no place on the ship to slaughter an animal, he extends his hand with a knife, holds the head of the animal outside the walls of the ship, and slaughters the animal there; and the blood flows and descends down the sides of the ship. He may not slaughter an animal and have its blood flow directly into the sea. And one may not slaughter an animal and have its blood flow into a small hole in the ground at all.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">5</span> <span class="num">6</span> <span class="ref">חולין מ״א ב — Chullin 41b:7</span></div>
-      <div class="orig">וְהָרוֹצֶה לְנַקֵּר חֲצֵרוֹ, כֵּיצַד הוּא עוֹשֶׂה? עוֹשֶׂה מָקוֹם חוּץ לַגּוּמָּא וְשׁוֹחֵט, וְדָם שׁוֹתֵת וְיוֹרֵד לַגּוּמָּא. וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן, מִשּׁוּם שֶׁנֶּאֱמַר: ״וּבְחֻקֹּתֵיהֶם לֹא תֵלֵכוּ״, וְאִם עָשָׂה כֵּן – צָרִיךְ בְּדִיקָה אַחֲרָיו.</div>
-      <div class="trans" data-when="he">והרוצה לנקות את חצרו, כיצד יעשה? עושה מקום מחוץ לגומא ושוחט, והדם זב ויורד לגומא. ובשוק לא יעשה כן, משום שנאמר ׳ובחקתיהם לא תלכו׳ (ויקרא יח); ואם עשה כן בשוק — צריך בדיקה אחריו, שמא הוא מין.</div>
-      <div class="trans" data-when="en">And one who wishes to clean his courtyard and ensure that it will not be sullied with blood, how does he do so? He fashions a place with an incline or a furrow outside the small hole, and slaughters the animal there, and the blood flows and descends into the hole. And in the marketplace, one may not do so, as it is stated: “Neither shall you follow their statutes” (Leviticus 18:3). And if he did so, he requires examination after his actions to ascertain whether he is a heretic.</div>
-    </div>
-  </section>
+  Q3 -->|אלא| A4
+  A4 -->|סיוע מברייתא| P5
+  P5 -->|המשך| P6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="num">2</span> <span class="ref">חולין מ״א ב — Chullin 41b:3</span></div>
+    <div class="orig">אֵין שׁוֹחֲטִין לַגּוּמָּא וְכוּ׳. וְהָא אָמְרַתְּ: אֵין שׁוֹחֲטִין לַגּוּמָּא כְּלָל? אָמַר אַבָּיֵי: רֵישָׁא בְּגוּמָּא שֶׁבַּשּׁוּק.</div>
+    <div class="trans" data-when="he">הגמרא מקשה על ההיתר לעשות גומה בבית: והרי אמרת ברישא ש׳אין שוחטין לגומא כל עיקר׳! אמר אביי: הרישא עוסקת בגומה שבשוק.</div>
+    <div class="trans" data-when="en">§ The mishna states: One may not slaughter an animal and have its blood flow into a small hole in the ground at all, but one may fashion a small hole inside his house so that the blood will enter into it. The Gemara asks: How is it permitted to slaughter and have the blood flow into a hole inside his house? But didn’t you initially say that one may not slaughter an animal and have its blood flow into a small hole in the ground at all? Abaye said: The first clause of the mishna, where there is a blanket prohibition against having the blood flow into a small hole, is referring to a small hole that is in the marketplace.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין מ״א ב — Chullin 41b:4</span></div>
+    <div class="orig">אֲמַר לֵיהּ רָבָא: וְהָא מִדְּקָתָנֵי סֵיפָא ״וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן״, מִכְּלָל דְּרֵישָׁא לָאו בְּשׁוּק עָסְקִינַן!</div>
+    <div class="trans" data-when="he">אמר לו רבא: והרי מכך שהסיפא שונה ׳ובשוק לא יעשה כן׳ — משמע שהרישא אינה עוסקת בשוק!</div>
+    <div class="trans" data-when="en">Rava said to him: But isn’t it so that from the fact that the latter clause teaches: And in the marketplace one may not do so, it may be inferred that in the first clause we are not dealing with the marketplace?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין מ״א ב — Chullin 41b:5</span></div>
+    <div class="orig">אֶלָּא אָמַר רָבָא, הָכִי קָאָמַר: אֵין שׁוֹחֲטִין לַגּוּמָּא כׇּל עִיקָּר, וְהָרוֹצֶה לְנַקֵּר חֲצֵרוֹ, כֵּיצַד הוּא עוֹשֶׂה? עוֹשֶׂה מָקוֹם חוּץ לַגּוּמָּא וְשׁוֹחֵט, וְדָם שׁוֹתֵת וְיוֹרֵד לַגּוּמָּא, וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן, שֶׁלֹּא יְחַקֶּה אֶת הַמִּינִין.</div>
+    <div class="trans" data-when="he">אלא אמר רבא, כך אומרת המשנה: אין שוחטין לתוך גומה כלל; והרוצה לנקות את חצרו (שלא תתלכלך בדם) — כיצד יעשה? עושה מקום מחוץ לגומה ושוחט שם, והדם זורם ויורד לגומה. ובשוק לא יעשה כן, שלא יחקה את המינים.</div>
+    <div class="trans" data-when="en">Rather, Rava said that this is what the mishna is saying: One may not slaughter an animal and have its blood flow into a small hole in the ground at all. And one who wishes to clean his courtyard and ensure that it will not be sullied in blood, how does he do so? He fashions a place with an incline or a furrow outside the small hole, and slaughters the animal there, and the blood flows and descends into the hole. And in the marketplace one may not do so, so that he will not appear to emulate the heretics.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין מ״א ב — Chullin 41b:6</span></div>
+    <div class="orig">תַּנְיָא כְּוָותֵיהּ דְּרָבָא: הָיָה מְהַלֵּךְ בִּסְפִינָה וְאֵין לוֹ מָקוֹם בַּסְּפִינָה לִשְׁחוֹט – מוֹצִיא יָדוֹ חוּץ לַסְּפִינָה וְשׁוֹחֵט, וְדָם שׁוֹתֵת וְיוֹרֵד עַל דּוֹפְנֵי הַסְּפִינָה, וְאֵין שׁוֹחֵט לַגּוּמָּא כׇּל עִיקָּר.</div>
+    <div class="trans" data-when="he">שנויה ברייתא כדעת רבא: היה מהלך בספינה ואין לו מקום בספינה לשחוט — מוציא את ידו אל מחוץ לספינה ושוחט, והדם זורם ויורד על דופנות הספינה; ואין שוחט לתוך גומה כלל.</div>
+    <div class="trans" data-when="en">It is taught in a baraita in accordance with the opinion of Rava: If one was traveling on a ship and he has no place on the ship to slaughter an animal, he extends his hand with a knife, holds the head of the animal outside the walls of the ship, and slaughters the animal there; and the blood flows and descends down the sides of the ship. He may not slaughter an animal and have its blood flow directly into the sea. And one may not slaughter an animal and have its blood flow into a small hole in the ground at all.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין מ״א ב — Chullin 41b:7</span></div>
+    <div class="orig">וְהָרוֹצֶה לְנַקֵּר חֲצֵרוֹ, כֵּיצַד הוּא עוֹשֶׂה? עוֹשֶׂה מָקוֹם חוּץ לַגּוּמָּא וְשׁוֹחֵט, וְדָם שׁוֹתֵת וְיוֹרֵד לַגּוּמָּא. וּבַשּׁוּק לֹא יַעֲשֶׂה כֵּן, מִשּׁוּם שֶׁנֶּאֱמַר: ״וּבְחֻקֹּתֵיהֶם לֹא תֵלֵכוּ״, וְאִם עָשָׂה כֵּן – צָרִיךְ בְּדִיקָה אַחֲרָיו.</div>
+    <div class="trans" data-when="he">והרוצה לנקות את חצרו — עושה מקום מחוץ לגומה ושוחט, והדם זורם ויורד לגומה. ובשוק לא יעשה כן, משום שנאמר ׳ובחקתיהם לא תלכו׳; ואם עשה כן — צריך לבדוק אחריו שמא מין הוא.</div>
+    <div class="trans" data-when="en">And one who wishes to clean his courtyard and ensure that it will not be sullied with blood, how does he do so? He fashions a place with an incline or a furrow outside the small hole, and slaughters the animal there, and the blood flows and descends into the hole. And in the marketplace, one may not do so, as it is stated: “Neither shall you follow their statutes” (Leviticus 18:3). And if he did so, he requires examination after his actions to ascertain whether he is a heretic.</div>
+  </div>
+</section>
 
-  <section class="sugya" id="sugya-4">
-    <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
-        <span data-when="he">משנה — שוחט לשם קרבן</span><span data-when="en">Mishnah — slaughtering for the sake of an offering</span>
-        <span class="ref">Chullin 41b:8–10</span></h2>
-    <div class="lead"><span data-when="he">השוחט לשם קרבן נידר ונידב (עולה, פסח, תודה…) — שחיטתו פסולה, ור״ש מכשיר; לשם קרבן חובה (חטאת, בכור, מעשר…) — כשרה; וזה הכלל: כל הנידר ונידב — אסור.</span><span data-when="en">One who slaughters for a vowed/donated offering (burnt, Paschal, thanks…) — invalid, but R. Shimon validates; for an obligatory offering (sin, firstborn, tithe…) — valid; the principle: whatever can be vowed or donated is forbidden.</span></div>
-    <div class="chart">
-      <button class="lang-toggle" type="button"></button>
-      <div class="mermaid-target"></div>
-      <script type="text/plain" class="src-he">
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">משנה: השוחט לשם קרבן</span><span data-when="en">Mishnah: slaughtering for the sake of an offering</span>
+      <span class="ref">Chullin 41b:8–10</span></h2>
+  <div class="lead"><span data-when="he">השוחט חולין לשם קרבן הבא בנדר ובנדבה — שחיטתו פסולה, שנראה כשוחט קודשים בחוץ; לשם קרבן חובה — כשרה.</span><span data-when="en">Slaughtering non-sacred meat for the sake of an offering that can be vowed or donated invalidates the slaughter — it looks like sacrificing outside the Temple; for an obligatory offering it is valid.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -418,13 +441,15 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  M1(["① משנה — שוחט לשם עולה, פסח, תודה — פסולה; ר״ש מכשיר"]):::mishnah
-  M2(["② שניים אוחזין בסכין — פסולה; לשם חטאת, בכור, מעשר — כשרה"]):::mishnah
-  M3(["③ זה הכלל — נידר ונידב אסור, שאינו נידר ונידב כשר"]):::conclusion
-  M1 -->|המשך| M2
-  M2 -->|הכלל| M3
-      </script>
-      <script type="text/plain" class="src-en">
+  M1(["① משנה: השוחט לשם עולה, זבחים, אשם תלוי, פסח, תודה — פסולה; ור׳ שמעון מכשיר"]):::mishnah
+  M2(["② שנים אוחזין בסכין, אחד לשם אחד מאלו ואחד לשם דבר כשר — פסולה"]):::mishnah
+  M3(["③ השוחט לשם חטאת, אשם ודאי, בכור, מעשר, תמורה — כשרה"]):::mishnah
+  M4(["④ זה הכלל: הנידר ונידב — אסור; שאינו נידר ונידב — כשר"]):::conclusion
+  M1 -->|שותפות בסכין| M2
+  M2 -->|קרבנות חובה| M3
+  M3 -->|הכלל| M4
+    </script>
+    <script type="text/plain" class="src-en">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -432,13 +457,15 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  M1(["① Mishnah — for a burnt, Paschal, thanks offering — invalid; R. Shimon validates"]):::mishnah
-  M2(["② Two holding a knife — invalid; for sin, firstborn, tithe — valid"]):::mishnah
-  M3(["③ The principle — vowed or donated is forbidden, otherwise valid"]):::conclusion
-  M1 -->|continues| M2
-  M2 -->|the principle| M3
-      </script>
-      <script type="text/plain" class="src-ar">
+  M1(["① Mishnah: for a burnt, peace, provisional guilt, Paschal, or thanks offering — invalid; R. Shimon validates"]):::mishnah
+  M2(["② Two grasping one knife, one for any of these and one for a fit purpose — invalid"]):::mishnah
+  M3(["③ For a sin offering, definite guilt offering, firstborn, tithe, or substitute — valid"]):::mishnah
+  M4(["④ The principle: vowed or donated — forbidden; not vowed or donated — valid"]):::conclusion
+  M1 -->|two together| M2
+  M2 -->|obligatory offerings| M3
+  M3 -->|the principle| M4
+    </script>
+    <script type="text/plain" class="src-ar">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -446,43 +473,45 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  M1(["① הַשּׁוֹחֵט לְשֵׁם עוֹלָה … לְשֵׁם פֶּסַח … שְׁחִיטָתוֹ פְּסוּלָה וְרַבִּי שִׁמְעוֹן מַכְשִׁיר"]):::mishnah
-  M2(["② שְׁנַיִם אוֹחֲזִין בְּסַכִּין … לְשֵׁם חַטָּאת … לְשֵׁם מַעֲשֵׂר … שְׁחִיטָתוֹ כְּשֵׁרָה"]):::mishnah
-  M3(["③ זֶה הַכְּלָל כׇּל דָּבָר שֶׁנִּידָּר וְנִידָּב … אָסוּר … וְשֶׁאֵינוֹ … כָּשֵׁר"]):::conclusion
-  M1 -->|המשך| M2
-  M2 -->|הכלל| M3
-      </script>
-    </div>
-    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
-    <div class="quote">
-      <div><span class="num">1</span> <span class="ref">חולין מ״א ב — Chullin 41b:8</span></div>
-      <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט לְשֵׁם עוֹלָה, לְשֵׁם זְבָחִים, לְשֵׁם אָשָׁם תָּלוּי, לְשֵׁם פֶּסַח, לְשֵׁם תּוֹדָה – שְׁחִיטָתוֹ פְּסוּלָה, וְרַבִּי שִׁמְעוֹן מַכְשִׁיר.</div>
-      <div class="trans" data-when="he">המשנה: השוחט בהמת חולין ואומר שהוא שוחט לשם עולה, לשם זבחי שלמים, לשם אשם תלוי, לשם פסח או לשם תודה — שחיטתו פסולה, מפני שנראה כמקדיש קדשים ושוחט בחוץ; ורבי שמעון מכשיר.</div>
-      <div class="trans" data-when="en">MISHNA: In the case of one who slaughters an animal and asserts that he is slaughtering it for the sake of a burnt offering, for the sake of a peace offering, for the sake of a provisional guilt offering, for the sake of a Paschal offering, or for the sake of a thanks offering, his slaughter is not valid, as it appears that he is consecrating animals and slaughtering sacrificial animals outside the Temple. And Rabbi Shimon deems his slaughter valid.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">2</span> <span class="ref">חולין מ״א ב — Chullin 41b:9</span></div>
-      <div class="orig">שְׁנַיִם אוֹחֲזִין בְּסַכִּין וְשׁוֹחֲטִין, אֶחָד לְשׁוּם אֶחָד מִכׇּל אֵלּוּ, וְאֶחָד לְשׁוּם דָּבָר כָּשֵׁר – שְׁחִיטָתוֹ פְּסוּלָה. הַשּׁוֹחֵט לְשֵׁם חַטָּאת, לְשֵׁם אָשָׁם וַדַּאי, לְשֵׁם בְּכוֹר, לְשֵׁם מַעֲשֵׂר, לְשֵׁם תְּמוּרָה – שְׁחִיטָתוֹ כְּשֵׁרָה.</div>
-      <div class="trans" data-when="he">שניים אוחזין יחד בסכין ושוחטים, האחד מתכוון לשם אחד מהקרבנות שנמנו והשני לשם דבר כשר — שחיטתם פסולה. השוחט לשם חטאת, לשם אשם ודאי, לשם בכור, לשם מעשר או לשם תמורה — שחיטתו כשרה, שכל אלו קרבנות חובה ואין חשש שהקדישם.</div>
-      <div class="trans" data-when="en">If there were two people grasping a knife together and slaughtering an animal, one slaughtering for the sake of one of all those enumerated in the first clause of the mishna and one slaughtering for the sake of a legitimate matter, their slaughter is not valid. With regard to one who slaughters an animal for the sake of a sin offering, for the sake of a guilt offering for a definite transgression, for the sake of the offering of a firstborn, for the sake of the offering of animal tithe, or for the sake of a substitute for a sacrificial animal, his slaughter is valid. All of these offerings may be brought only as obligations and not as gifts. Therefore, there is no concern that he consecrated the animals.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">3</span> <span class="ref">חולין מ״א ב — Chullin 41b:10</span></div>
-      <div class="orig">זֶה הַכְּלָל: כׇּל דָּבָר שֶׁנִּידָּר וְנִידָּב – הַשּׁוֹחֵט לִשְׁמוֹ אָסוּר, וְשֶׁאֵינוֹ נִידָּר וְנִידָּב – הַשּׁוֹחֵט לִשְׁמוֹ כָּשֵׁר.</div>
-      <div class="trans" data-when="he">זה הכלל: כל קרבן שדרכו לבוא בנדר ובנדבה — השוחט לשמו אסור (פסול), משום שנראה כמקדיש בחוץ; וכל שאינו בא בנדר ונדבה אלא חובה — השוחט לשמו כשר.</div>
-      <div class="trans" data-when="en">This is the principle: For any item, i.e., offering, which is consecrated as a voluntary vow or gift, in the case of one who slaughters for its sake the animal is forbidden. And for any offering that is not consecrated as a voluntary vow or gift but is an obligation that is incumbent upon him, in the case of one who slaughters for its sake the animal is permitted.</div>
-    </div>
-  </section>
+  M1(["① הַשּׁוֹחֵט לְשֵׁם עוֹלָה, לְשֵׁם זְבָחִים, לְשֵׁם אָשָׁם תָּלוּי, לְשֵׁם פֶּסַח, לְשֵׁם תּוֹדָה – שְׁחִיטָתוֹ פְּסוּלָה, וְרַבִּי שִׁמְעוֹן מַכְשִׁיר"]):::mishnah
+  M2(["② שְׁנַיִם אוֹחֲזִין בְּסַכִּין וְשׁוֹחֲטִין, אֶחָד לְשׁוּם אֶחָד מִכׇּל אֵלּוּ, וְאֶחָד לְשׁוּם דָּבָר כָּשֵׁר – שְׁחִיטָתוֹ פְּסוּלָה"]):::mishnah
+  M3(["③ הַשּׁוֹחֵט לְשֵׁם חַטָּאת, לְשֵׁם אָשָׁם וַדַּאי, לְשֵׁם בְּכוֹר, לְשֵׁם מַעֲשֵׂר, לְשֵׁם תְּמוּרָה – שְׁחִיטָתוֹ כְּשֵׁרָה"]):::mishnah
+  M4(["④ זֶה הַכְּלָל: כׇּל דָּבָר שֶׁנִּידָּר וְנִידָּב – הַשּׁוֹחֵט לִשְׁמוֹ אָסוּר, וְשֶׁאֵינוֹ נִידָּר וְנִידָּב – הַשּׁוֹחֵט לִשְׁמוֹ כָּשֵׁר"]):::conclusion
+  M1 -->|שותפות בסכין| M2
+  M2 -->|קרבנות חובה| M3
+  M3 -->|הכלל| M4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין מ״א ב — Chullin 41b:8</span></div>
+    <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט לְשֵׁם עוֹלָה, לְשֵׁם זְבָחִים, לְשֵׁם אָשָׁם תָּלוּי, לְשֵׁם פֶּסַח, לְשֵׁם תּוֹדָה – שְׁחִיטָתוֹ פְּסוּלָה, וְרַבִּי שִׁמְעוֹן מַכְשִׁיר.</div>
+    <div class="trans" data-when="he">המשנה: השוחט חולין ואומר שהוא שוחט לשם עולה, לשם זבחי שלמים, לשם אשם תלוי, לשם פסח או לשם תודה — שחיטתו פסולה, שנראה כמקדיש בהמות ושוחט קודשים בחוץ; ורבי שמעון מכשיר.</div>
+    <div class="trans" data-when="en">MISHNA: In the case of one who slaughters an animal and asserts that he is slaughtering it for the sake of a burnt offering, for the sake of a peace offering, for the sake of a provisional guilt offering, for the sake of a Paschal offering, or for the sake of a thanks offering, his slaughter is not valid, as it appears that he is consecrating animals and slaughtering sacrificial animals outside the Temple. And Rabbi Shimon deems his slaughter valid.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="num">3</span> <span class="ref">חולין מ״א ב — Chullin 41b:9</span></div>
+    <div class="orig">שְׁנַיִם אוֹחֲזִין בְּסַכִּין וְשׁוֹחֲטִין, אֶחָד לְשׁוּם אֶחָד מִכׇּל אֵלּוּ, וְאֶחָד לְשׁוּם דָּבָר כָּשֵׁר – שְׁחִיטָתוֹ פְּסוּלָה. הַשּׁוֹחֵט לְשֵׁם חַטָּאת, לְשֵׁם אָשָׁם וַדַּאי, לְשֵׁם בְּכוֹר, לְשֵׁם מַעֲשֵׂר, לְשֵׁם תְּמוּרָה – שְׁחִיטָתוֹ כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">שניים שאוחזים יחד בסכין ושוחטים, אחד מתכוון לשם אחד מכל הקרבנות הללו ואחד לשם דבר כשר — שחיטתם פסולה. אבל השוחט לשם חטאת, לשם אשם ודאי, לשם בכור, לשם מעשר או לשם תמורה — שחיטתו כשרה, שקרבנות אלו באים רק בחובה, ואין חשש שהקדישם.</div>
+    <div class="trans" data-when="en">If there were two people grasping a knife together and slaughtering an animal, one slaughtering for the sake of one of all those enumerated in the first clause of the mishna and one slaughtering for the sake of a legitimate matter, their slaughter is not valid. With regard to one who slaughters an animal for the sake of a sin offering, for the sake of a guilt offering for a definite transgression, for the sake of the offering of a firstborn, for the sake of the offering of animal tithe, or for the sake of a substitute for a sacrificial animal, his slaughter is valid. All of these offerings may be brought only as obligations and not as gifts. Therefore, there is no concern that he consecrated the animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין מ״א ב — Chullin 41b:10</span></div>
+    <div class="orig">זֶה הַכְּלָל: כׇּל דָּבָר שֶׁנִּידָּר וְנִידָּב – הַשּׁוֹחֵט לִשְׁמוֹ אָסוּר, וְשֶׁאֵינוֹ נִידָּר וְנִידָּב – הַשּׁוֹחֵט לִשְׁמוֹ כָּשֵׁר.</div>
+    <div class="trans" data-when="he">זה הכלל: כל קרבן שבא בנדר ובנדבה — השוחט לשמו, הבהמה אסורה; ושאינו בא בנדר ובנדבה — השוחט לשמו, שחיטתו כשרה.</div>
+    <div class="trans" data-when="en">This is the principle: For any item, i.e., offering, which is consecrated as a voluntary vow or gift, in the case of one who slaughters for its sake the animal is forbidden. And for any offering that is not consecrated as a voluntary vow or gift but is an obligation that is incumbent upon him, in the case of one who slaughters for its sake the animal is permitted.</div>
+  </div>
+</section>
 
-  <section class="sugya" id="sugya-5">
-    <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
-        <span data-when="he">ביאור הרשימה והכלל — נידר ונידב</span><span data-when="en">Explaining the list and the principle — vowed or donated</span>
-        <span class="ref">Chullin 41b:11–42a:1</span></h2>
-    <div class="lead"><span data-when="he">הגמרא מקשה על הרשימה — אשם תלוי ופסח אינם נדבה, ומיישבת; מחלוקת ינאי ויוחנן בבעלי מומין; השוחט לשם חטאת/תמורה — דווקא באומר ׳שלי׳; וריבויי הכלל: עולת נזיר ועולת יולדת.</span><span data-when="en">The Gemara challenges the list — a provisional guilt offering and Paschal offering are not donations — and resolves it; the dispute of Yannai and Yohanan on blemished animals; sin/substitute only when he says ׳mine׳; and the principle adds the nazirite׳s and the new mother׳s burnt offering.</span></div>
-    <div class="chart">
-      <button class="lang-toggle" type="button"></button>
-      <div class="mermaid-target"></div>
-      <script type="text/plain" class="src-he">
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">ביאור המשנה — אשם תלוי, פסח, והאומר ׳לשם חובתי׳</span><span data-when="en">Clarifying the Mishnah — provisional guilt offering, Pesaḥ, and explicit declarations</span>
+      <span class="ref">Chullin 41b:11–42a:1</span></h2>
+  <div class="lead"><span data-when="he">הגמרא בודקת את רשימת המשנה פריט אחר פריט: כיצד אשם תלוי ופסח ׳נידרים ונידבים׳, ומתי גם קרבנות חובה פוסלים — כשאומר ׳לשם חטאתי׳, ׳לשם תמורת זבחי׳ או ׳לשם עולת אשתי׳.</span><span data-when="en">The Gemara tests the Mishnah item by item: how a provisional guilt offering and Pesaḥ count as vowed offerings, and when even obligatory offerings invalidate — where one says ‘for my sin offering’, ‘for the substitute of my offering’, or ‘for my wife’s burnt offering’.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -490,35 +519,39 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  Q1{"① קושיא — אשם תלוי נידר ונידב הוא?"}:::question
-  A2["② ר׳ יוחנן — כר׳ אלעזר, מתנדב אשם תלוי בכל יום"]:::answer
-  Q3{"③ קושיא — פסח, והרי זמנו קבוע?"}:::question
-  A4["④ ר׳ אושעיא — הפרשתו כל השנה"]:::answer
-  S5["⑤ מחלוקת — ינאי לא שנו אלא תמימים; יוחנן אף בעלי מומין"]:::statement
-  S6["⑥ ר׳ יוחנן — לשם חטאת, דווקא במחויב חטאת"]:::statement
-  A7["⑦ ר׳ אבהו — באומר ׳לשם חטאתי׳"]:::answer
-  S8["⑧ ר׳ אלעזר — תמורה, דווקא ביש לו זבח בבית"]:::statement
-  A9["⑨ ר׳ אבהו — באומר ׳לשם תמורת זבחי׳"]:::answer
-  Q10{"⑩ ׳זה הכלל׳ לאתויי מאי? עולת נזיר"}:::question
-  S11["⑪ ושאינו נידר — לאתויי עולת יולדת"]:::statement
-  S12["⑫ ר׳ אלעזר — דווקא ביש לו אשה"]:::statement
-  Q13{"⑬ קושיא — פשיטא?"}:::question
-  A14["⑭ מהו דתימא קלא הוה ליה — אימר אפולי אפיל"]:::answer
-  Q1 -->|תירוץ יוחנן| A2
+  Q1{"① קושיא: אשם תלוי — וכי נידר ונידב הוא?"}:::question
+  A2["② ר׳ יוחנן: משנתנו כר׳ אלעזר — מתנדב אדם אשם תלוי בכל יום"]:::answer
+  Q3{"③ קושיא: פסח — הרי זמנו קבוע!"}:::question
+  A4["④ ר׳ אושעיא: שאני פסח — הפרשתו כל השנה כולה"]:::answer
+  S5["⑤ ר׳ ינאי: לא שנו אלא תמימים; בעלי מומין — מידע ידיע"]:::statement
+  S6["⑥ ר׳ יוחנן: אף בעלי מומין — שמא המום מכוסה ולא ידוע"]:::statement
+  S7["⑦ ר׳ יוחנן: ׳לשם חטאת׳ כשרה — רק כשאינו מחויב חטאת"]:::statement
+  A8["⑧ ר׳ אבהו: מדובר באומר ׳לשם חטאתי׳"]:::answer
+  S9["⑨ ר׳ אלעזר: ׳לשם תמורה׳ כשרה — רק כשאין לו זבח בביתו"]:::statement
+  A10["⑩ ר׳ אבהו: באומר ׳לשם תמורת זבחי׳"]:::answer
+  Q11{"⑪ ׳זה הכלל׳ לאתויי מאי? — עולת נזיר: אימר נדר בצנעא"}:::question
+  S12["⑫ ׳ושאינו נידר ונידב׳ — לאתויי עולת יולדת"]:::statement
+  S13["⑬ ר׳ אלעזר: דווקא כשאין לו אישה; יש לו — אימר לשמה הוא עושה"]:::statement
+  A14["⑭ ר׳ אבהו: באומר ׳לשם עולת אשתי׳"]:::answer
+  Q15{"⑮ פשיטא?"}:::question
+  C16["⑯ מהו דתימא: אם ילדה — קלא הוה ליה; קמ״ל: אימר אפולי אפיל"]:::conclusion
+  Q1 -->|תירוץ ר׳ יוחנן| A2
   A2 -->|קושיא נוספת| Q3
-  Q3 -->|תירוץ אושעיא| A4
-  A4 -->|דין נוסף| S5
-  S5 -->|לשם חטאת| S6
-  S6 -->|והא לא קאמר שלי| A7
-  A7 -->|לשם תמורה| S8
-  S8 -->|והא לא קאמר שלי| A9
-  A9 -->|ריבוי הכלל| Q10
-  Q10 -->|הצד השני| S11
-  S11 -->|תנאי| S12
-  S12 -.->|פשיטא| Q13
-  Q13 -->|יישוב| A14
-      </script>
-      <script type="text/plain" class="src-en">
+  Q3 -->|תירוץ ר׳ אושעיא| A4
+  A4 -->|תמימים ובעלי מומין| S5
+  S5 -.->|חולק| S6
+  S6 -->|לשם חטאת| S7
+  S7 -->|והא לא קאמר ׳חטאתי׳| A8
+  A8 -->|לשם תמורה| S9
+  S9 -->|והא לא קאמר| A10
+  A10 -->|׳זה הכלל׳| Q11
+  Q11 -->|הצד השני| S12
+  S12 -->|סייג| S13
+  S13 -->|והא לא קאמר| A14
+  A14 -.->|קושיא| Q15
+  Q15 -->|יישוב| C16
+    </script>
+    <script type="text/plain" class="src-en">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -526,35 +559,39 @@ graph TD
   classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
-  Q1{"① Question — can a provisional guilt offering be vowed or donated?"}:::question
-  A2["② R. Yohanan — like R. Elazar, one donates it any day"]:::answer
-  Q3{"③ Question — a Paschal offering, but its time is fixed?"}:::question
-  A4["④ R. Oshaya — its designation spans the whole year"]:::answer
-  S5["⑤ Dispute — Yannai only unblemished; Yohanan even blemished"]:::statement
-  S6["⑥ R. Yohanan — for a sin offering, only if liable for one"]:::statement
-  A7["⑦ R. Abbahu — where he says ׳for my sin offering׳"]:::answer
-  S8["⑧ R. Elazar — substitute, only if he has an offering at home"]:::statement
-  A9["⑨ R. Abbahu — where he says ׳for the substitute of my offering׳"]:::answer
-  Q10{"⑩ ׳This is the principle׳ adds what? The nazirite׳s burnt offering"}:::question
-  S11["⑪ ׳Not vowed׳ adds the new mother׳s burnt offering"]:::statement
-  S12["⑫ R. Elazar — only if he has a wife"]:::statement
-  Q13{"⑬ Objection — this is obvious?"}:::question
-  A14["⑭ Lest you say it would be known — say she miscarried"]:::answer
-  Q1 -->|Yohanan answers| A2
+  Q1{"① Question: a provisional guilt offering — is it vowed or donated?"}:::question
+  A2["② R. Yoḥanan: our Mishnah follows R. Elazar — one may donate it any day"]:::answer
+  Q3{"③ Question: a Paschal offering — its time is fixed!"}:::question
+  A4["④ R. Oshaya: Pesaḥ differs — it may be designated all year round"]:::answer
+  S5["⑤ R. Yannai: taught only of unblemished animals; a blemish is plainly known"]:::statement
+  S6["⑥ R. Yoḥanan: even blemished — the blemish may be covered and unknown"]:::statement
+  S7["⑦ R. Yoḥanan: ‘for a sin offering’ is valid only if he owes no sin offering"]:::statement
+  A8["⑧ R. Abbahu: the case is one who says ‘for my sin offering’"]:::answer
+  S9["⑨ R. Elazar: ‘for a substitute’ is valid only if no offering is in his house"]:::statement
+  A10["⑩ R. Abbahu: one who says ‘for the substitute of my offering’"]:::answer
+  Q11{"⑪ What does ‘this is the principle’ add? — a nazirite’s burnt offering: perhaps he vowed privately"}:::question
+  S12["⑫ ‘Not vowed or donated’ adds the burnt offering of a woman after childbirth"]:::statement
+  S13["⑬ R. Elazar: only if he has no wife; if he has — say he acts for her sake"]:::statement
+  A14["⑭ R. Abbahu: one who says ‘for my wife’s burnt offering’"]:::answer
+  Q15{"⑮ Obvious?"}:::question
+  C16["⑯ Lest you say: a birth would be known — it teaches: say she miscarried"]:::conclusion
+  Q1 -->|R. Yoḥanan answers| A2
   A2 -->|further question| Q3
-  Q3 -->|Oshaya answers| A4
-  A4 -->|further ruling| S5
-  S5 -->|for a sin offering| S6
-  S6 -->|but he did not say mine| A7
-  A7 -->|for a substitute| S8
-  S8 -->|but he did not say mine| A9
-  A9 -->|the principle adds| Q10
-  Q10 -->|the other side| S11
-  S11 -->|condition| S12
-  S12 -.->|obvious| Q13
-  Q13 -->|resolution| A14
-      </script>
-      <script type="text/plain" class="src-ar">
+  Q3 -->|R. Oshaya answers| A4
+  A4 -->|blemished animals| S5
+  S5 -.->|disputes| S6
+  S6 -->|sin offering| S7
+  S7 -->|but he did not say ‘my’| A8
+  A8 -->|substitute| S9
+  S9 -->|but he did not say ‘my’| A10
+  A10 -->|the principle| Q11
+  Q11 -->|the other side| S12
+  S12 -->|qualification| S13
+  S13 -->|but he did not say ‘my’| A14
+  A14 -.->|objection| Q15
+  Q15 -->|resolution| C16
+    </script>
+    <script type="text/plain" class="src-ar">
 graph TD
   classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
   classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
@@ -563,96 +600,100 @@ graph TD
   classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
   classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
   Q1{"① אָשָׁם תָּלוּי בַּר נִידָּר וְנִידָּב הוּא?"}:::question
-  A2["② אָמַר רַבִּי יוֹחָנָן … רַבִּי אֶלְעָזָר הִיא … מִתְנַדֵּב אָדָם אָשָׁם תָּלוּי בְּכׇל יוֹם"]:::answer
-  Q3{"③ פֶּסַח בַּר נִידָּב וְנִידָּר הוּא? זִמְנָא קְבִיעָא לֵיהּ"}:::question
-  A4["④ אָמַר רַבִּי אוֹשַׁעְיָא … הוֹאִיל וְהַפְרָשָׁתוֹ כׇּל הַשָּׁנָה"]:::answer
-  S5["⑤ רַבִּי יַנַּאי לֹא שָׁנוּ אֶלָּא תְּמִימִים … וְרַבִּי יוֹחָנָן אֲפִילּוּ בַּעֲלֵי מוּמִין"]:::statement
-  S6["⑥ אָמַר רַבִּי יוֹחָנָן לֹא שָׁנוּ אֶלָּא שֶׁאֵינוֹ מְחוּיָּיב חַטָּאת"]:::statement
-  A7["⑦ אָמַר רַבִּי אֲבָהוּ בְּאוֹמֵר לְשֵׁם חַטָּאתִי"]:::answer
-  S8["⑧ אָמַר רַבִּי אֶלְעָזָר לֹא שָׁנוּ אֶלָּא שֶׁאֵין לוֹ זֶבַח בְּתוֹךְ בֵּיתוֹ"]:::statement
-  A9["⑨ אָמַר רַבִּי אֲבָהוּ בְּאוֹמֵר לְשֵׁם תְּמוּרַת זִבְחִי"]:::answer
-  Q10{"⑩ זֶה הַכְּלָל לְאֵתוֹיֵי מַאי? לְאֵתוֹיֵי עוֹלַת נָזִיר"}:::question
-  S11["⑪ וְשֶׁאֵינוֹ נִידָּר וְנִידָּב לְאֵתוֹיֵי עוֹלַת יוֹלֶדֶת"]:::statement
-  S12["⑫ אָמַר רַבִּי אֶלְעָזָר לֹא שָׁנוּ אֶלָּא שֶׁאֵין לוֹ אִשָּׁה"]:::statement
-  Q13{"⑬ פְּשִׁיטָא?"}:::question
-  A14["⑭ מַהוּ דְּתֵימָא … קָלָא הֲוָה לֵיהּ … אֵימַר אַפּוֹלֵי אַפִּיל"]:::answer
-  Q1 -->|תירוץ יוחנן| A2
+  A2["② אָמַר רַבִּי יוֹחָנָן: הָא מַנִּי? רַבִּי אֶלְעָזָר הִיא, דְּאָמַר: מִתְנַדֵּב אָדָם אָשָׁם תָּלוּי בְּכׇל יוֹם"]:::answer
+  Q3{"③ פֶּסַח בַּר נִידָּב וְנִידָּר הוּא? זִמְנָא קְבִיעָא לֵיהּ!"}:::question
+  A4["④ אָמַר רַבִּי אוֹשַׁעְיָא: שָׁאנֵי פֶּסַח, הוֹאִיל וְהַפְרָשָׁתוֹ כׇּל הַשָּׁנָה כּוּלָּהּ"]:::answer
+  S5["⑤ אָמַר רַבִּי יַנַּאי: לֹא שָׁנוּ אֶלָּא תְּמִימִים, אֲבָל בַּעֲלֵי מוּמִין – מִידָּע יְדִיעַ"]:::statement
+  S6["⑥ וְרַבִּי יוֹחָנָן אָמַר: אֲפִילּוּ בַּעֲלֵי מוּמִין נָמֵי, זִימְנִין דִּרְמֵי לֵיהּ מִידֵּי אַמּוּמָא וְלָא יְדִיעַ"]:::statement
+  S7["⑦ הַשּׁוֹחֵט לְשֵׁם חַטָּאת … לֹא שָׁנוּ אֶלָּא שֶׁאֵינוֹ מְחוּיָּיב חַטָּאת, אֲבָל מְחוּיָּיב חַטָּאת – אֵימָא לְשׁוּם חַטָּאתוֹ הוּא עוֹשֶׂה"]:::statement
+  A8["⑧ אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם חַטָּאתִי״"]:::answer
+  S9["⑨ לֹא שָׁנוּ אֶלָּא שֶׁאֵין לוֹ זֶבַח בְּתוֹךְ בֵּיתוֹ … אֵימָא אֲמוֹרֵי אֲמַיר בֵּיהּ"]:::statement
+  A10["⑩ אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם תְּמוּרַת זִבְחִי״"]:::answer
+  Q11{"⑪ ״זֶה הַכְּלָל״ לְאֵתוֹיֵי מַאי? לְאֵתוֹיֵי עוֹלַת נָזִיר … אֵימַר נֶדֶר בְּצִינְעָא"}:::question
+  S12["⑫ וְשֶׁאֵינוֹ נִידָּר וְנִידָּב, לְאֵתוֹיֵי עוֹלַת יוֹלֶדֶת"]:::statement
+  S13["⑬ לֹא שָׁנוּ אֶלָּא שֶׁאֵין לוֹ אִשָּׁה, אֲבָל יֵשׁ לוֹ אִשָּׁה – אֵימַר לִשְׁמָהּ הוּא עוֹשֶׂה"]:::statement
+  A14["⑭ אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם עוֹלַת אִשְׁתִּי״"]:::answer
+  Q15{"⑮ פְּשִׁיטָא?"}:::question
+  C16["⑯ מַהוּ דְּתֵימָא: אִם אִיתָא דְּיָלְדָה – קָלָא הֲוָה לֵיהּ, קָא מַשְׁמַע לַן: אֵימַר אַפּוֹלֵי אַפִּיל"]:::conclusion
+  Q1 -->|תירוץ ר׳ יוחנן| A2
   A2 -->|קושיא נוספת| Q3
-  Q3 -->|תירוץ אושעיא| A4
-  A4 -->|דין נוסף| S5
-  S5 -->|לשם חטאת| S6
-  S6 -->|והא לא קאמר שלי| A7
-  A7 -->|לשם תמורה| S8
-  S8 -->|והא לא קאמר שלי| A9
-  A9 -->|ריבוי הכלל| Q10
-  Q10 -->|הצד השני| S11
-  S11 -->|תנאי| S12
-  S12 -.->|פשיטא| Q13
-  Q13 -->|יישוב| A14
-      </script>
-    </div>
-    <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
-    <div class="quote">
-      <div><span class="num">1</span> <span class="num">2</span> <span class="ref">חולין מ״א ב — Chullin 41b:11</span></div>
-      <div class="orig">גְּמָ׳ הַשּׁוֹחֵט לְשֵׁם עוֹלָה. אָשָׁם תָּלוּי בַּר נִידָּר וְנִידָּב הוּא? אָמַר רַבִּי יוֹחָנָן: הָא מַנִּי? רַבִּי אֶלְעָזָר הִיא, דְּאָמַר: מִתְנַדֵּב אָדָם אָשָׁם תָּלוּי בְּכׇל יוֹם.</div>
-      <div class="trans" data-when="he">הגמרא: על מה ששנינו ׳השוחט לשם עולה׳ ומנו אשם תלוי — וכי אשם תלוי בא בנדר ובנדבה? הרי בא רק מספק! אמר ר׳ יוחנן: משנתנו כר׳ אלעזר, שאמר שאדם מתנדב אשם תלוי בכל יום (מחשש שמא חטא).</div>
-      <div class="trans" data-when="en">GEMARA: The mishna teaches: In the case of one who slaughters an animal and asserts that he is slaughtering it for the sake of a burnt offering, for the sake of a peace offering, for the sake of a provisional guilt offering, for the sake of a Paschal offering, or for the sake of a thanks offering, the slaughter is not valid. This is because one who slaughters for the sake of any type of offering that is consecrated as a vow or as a gift renders the animal forbidden. The Gemara asks: Is a provisional guilt offering fit to be consecrated as a vow or as a gift? A provisional guilt offering is brought only when one is obligated to do so due to uncertainty whether or not he is liable to bring a sin offering. Rabbi Yoḥanan said: In accordance with whose opinion is this halakha in the mishna? It is in accordance with the opinion of Rabbi Elazar, who says in a mishna (Karetot 25a): A person donates a provisional guilt offering every day if he chooses, due to concern that perhaps he violated a prohibition.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">3</span> <span class="num">4</span> <span class="ref">חולין מ״א ב — Chullin 41b:12</span></div>
-      <div class="orig">פֶּסַח בַּר נִידָּב וְנִידָּר הוּא? זִמְנָא קְבִיעָא לֵיהּ! אָמַר רַבִּי אוֹשַׁעְיָא: שָׁאנֵי פֶּסַח, הוֹאִיל וְהַפְרָשָׁתוֹ כׇּל הַשָּׁנָה כּוּלָּהּ.</div>
-      <div class="trans" data-when="he">וכי הפסח בא בנדר ובנדבה? הרי זמנו קבוע (ערב פסח) ואינו קרב ביום אחר! אמר ר׳ אושעיא: שונה הפסח, הואיל וניתן להפרישו (להקדישו) במשך כל השנה כולה, אף שזמן הקרבתו קבוע.</div>
-      <div class="trans" data-when="en">The Gemara asks: Is a Paschal offering fit to be consecrated as a vow or as a gift? The time is fixed for its offering on Passover eve, when bringing it is an obligation, and it may not be brought on any other day. Rabbi Oshaya said: The Paschal offering is different, since although the date for bringing and slaughtering it is the fourteenth of Nisan, its designation can be performed throughout the entire year.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">5</span> <span class="ref">חולין מ״א ב — Chullin 41b:13</span></div>
-      <div class="orig">אָמַר רַבִּי יַנַּאי: לֹא שָׁנוּ אֶלָּא תְּמִימִים, אֲבָל בַּעֲלֵי מוּמִין – מִידָּע יְדִיעַ. וְרַבִּי יוֹחָנָן אָמַר: אֲפִילּוּ בַּעֲלֵי מוּמִין נָמֵי, זִימְנִין דִּרְמֵי לֵיהּ מִידֵּי אַמּוּמָא וְלָא יְדִיעַ.</div>
-      <div class="trans" data-when="he">אמר ר׳ ינאי: לא נאמר שהשחיטה פסולה אלא בבהמות תמימות, אבל בבעלי מומין הדבר ידוע שהן פסולות לקרבן ואין חשש. ור׳ יוחנן אמר: אף בבעלי מומין פסולה, שכן לפעמים מניחים דבר על המום ומכסים אותו, והשוחט אינו יודע שהיא בעלת מום.</div>
-      <div class="trans" data-when="en">Rabbi Yannai says: The Sages taught that slaughter of an animal for the sake of an offering is not valid only if the animals were unblemished. But with regard to animals with blemishes, the slaughterer knows that they are blemished and disqualified from sacrifice. Therefore, despite his declaration, there is no concern that his actual intent was to slaughter the animal for that purpose. And Rabbi Yoḥanan says: Slaughter of an animal for the sake of an offering is not valid even if the animals were blemished as well, as there are times that an item is cast over the blemish and covers it, and he does not know that the animal is blemished.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">6</span> <span class="num">7</span> <span class="ref">חולין מ״א ב — Chullin 41b:14</span></div>
-      <div class="orig">הַשּׁוֹחֵט לְשֵׁם חַטָּאת, אָמַר רַבִּי יוֹחָנָן: לֹא שָׁנוּ אֶלָּא שֶׁאֵינוֹ מְחוּיָּיב חַטָּאת, אֲבָל מְחוּיָּיב חַטָּאת – אֵימָא לְשׁוּם חַטָּאתוֹ הוּא עוֹשֶׂה. וְהָא לָא קָאָמַר ״לְשֵׁם חַטָּאתִי״? אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם חַטָּאתִי״.</div>
-      <div class="trans" data-when="he">על ׳השוחט לשם חטאת׳ שהיא כשרה — אמר ר׳ יוחנן: לא נאמר שכשרה אלא במי שאינו מחויב חטאת, אבל המחויב חטאת — שמא לשם חטאתו ממש הוא עושה, ופסולה. ומקשים: והרי לא אמר ׳לשם חטאתי׳ אלא סתם ׳לשם חטאת׳? אמר ר׳ אבהו: מדובר באומר במפורש ׳לשם חטאתי׳.</div>
-      <div class="trans" data-when="en">The mishna teaches: With regard to one who slaughters an animal for the sake of a sin offering, his slaughter is valid, as, since one cannot voluntarily contribute a sin offering, there is no concern that the onlookers will draw the wrong conclusion. Rabbi Yoḥanan says: The Sages taught that slaughter of an animal for the sake of a sin offering is valid only with regard to a slaughterer who is not liable to bring a sin offering. But a slaughterer who knows that he is liable to bring a sin offering, his slaughter is not valid. Say that he is performing consecration and slaughter for the sake of his sin offering. The Gemara asks: But didn’t he say before the slaughter: For the sake of a sin offering, and he did not say: For the sake of my sin offering? Why, then, is that a concern? Rabbi Abbahu said: Indeed, the reference is to a case where he says: I am slaughtering this animal for the sake of my sin offering.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">8</span> <span class="num">9</span> <span class="ref">חולין מ״א ב — Chullin 41b:15</span></div>
-      <div class="orig">לְשֵׁם תְּמוּרָה, אָמַר רַבִּי אֶלְעָזָר: לֹא שָׁנוּ אֶלָּא שֶׁאֵין לוֹ זֶבַח בְּתוֹךְ בֵּיתוֹ, אֲבָל יֵשׁ לוֹ זֶבַח בְּתוֹךְ בֵּיתוֹ – אֵימָא אֲמוֹרֵי אֲמַיר בֵּיהּ. וְהָא לָא קָאָמַר ״לְשֵׁם תְּמוּרַת זִבְחִי״? אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם תְּמוּרַת זִבְחִי״.</div>
-      <div class="trans" data-when="he">על ׳לשם תמורה׳ שהיא כשרה — אמר ר׳ אלעזר: לא נאמר אלא במי שאין לו זבח (קרבן) בביתו שאפשר להמירו, אבל יש לו זבח בביתו — שמא ממיר בו ממש, ופסולה. ומקשים: והרי לא אמר ׳לשם תמורת זבחי׳? אמר ר׳ אבהו: מדובר באומר ׳לשם תמורת זבחי׳.</div>
-      <div class="trans" data-when="en">The mishna teaches: With regard to one who slaughters for the sake of a substitute for a sacrificial animal, his slaughter is valid. Rabbi Elazar says: The Sages taught that the slaughter is valid only in a case where he does not have an animal consecrated as an offering inside his house for which it can be the substitute, but if he has an animal consecrated as an offering in his house, say that he is substituting this animal for it, and the slaughter is not valid. The Gemara asks: But didn’t he say before the slaughter: For the sake of a substitute for a sacrificial animal, and he did not say: For the sake of a substitute for my animal consecrated as an offering? Why, then, is that a concern? Rabbi Abbahu said: Indeed, the reference is to a case where he says: I am slaughtering this animal for the sake of a substitute for my animal consecrated as an offering.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">10</span> <span class="ref">חולין מ״א ב — Chullin 41b:16</span></div>
-      <div class="orig">״זֶה הַכְּלָל״ לְאֵתוֹיֵי מַאי? לְאֵתוֹיֵי עוֹלַת נָזִיר, דְּמַהוּ דְּתֵימָא: הָא לָא נְדַר, אֵימַר נֶדֶר בְּצִינְעָא.</div>
-      <div class="trans" data-when="he">׳זה הכלל׳ — מה בא לרבות? לרבות עולת נזיר. שאם תאמר אין בה חשש שהרי לא נדר נזירות בפנינו — קמ״ל, שמא נדר נזירות בצנעה, ולכן השוחט לשמה פסול.</div>
-      <div class="trans" data-when="en">The mishna states that this is the principle: For any offering that is consecrated as a voluntary vow or gift, in the case of one who slaughters for its sake, the animal is forbidden. The Gemara asks: What case does this clause add? The list in the mishna appears to be comprehensive. The Gemara answers: The clause serves to add the burnt offering of a nazirite. As, lest you say there is no concern in that case, as that person did not vow to become a nazirite and could not possibly be obligated to bring that offering, therefore, the tanna teaches that there is a concern if he said he was slaughtering for the sake of the burnt offering of a nazirite. Say that perhaps he vowed to become a nazirite in private, and no one else was aware of it.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">11</span> <span class="ref">חולין מ״א ב — Chullin 41b:17</span></div>
-      <div class="orig">וְשֶׁאֵינוֹ נִידָּר וְנִידָּב, לְאֵתוֹיֵי עוֹלַת יוֹלֶדֶת.</div>
-      <div class="trans" data-when="he">והצד השני של הכלל — ׳ושאינו נידר ונידב׳ (שכשר) — בא לרבות עולת יולדת, שהיא חובה, והשוחט לשמה כשר.</div>
-      <div class="trans" data-when="en">The Gemara asks: What is added by the second half of the principle: And for any offering that is not consecrated as a voluntary vow or as a gift, in the case of one who slaughters for its sake the animal is permitted? The Gemara answers: It serves to add the burnt offering of a woman after childbirth. If one slaughters an animal for the sake of a burnt offering of a woman after childbirth, the slaughter is valid, as it is an obligation.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">12</span> <span class="ref">חולין מ״א ב — Chullin 41b:18</span></div>
-      <div class="orig">אָמַר רַבִּי אֶלְעָזָר: לֹא שָׁנוּ אֶלָּא שֶׁאֵין לוֹ אִשָּׁה, אֲבָל יֵשׁ לוֹ אִשָּׁה – אֵימַר לִשְׁמָהּ הוּא עוֹשֶׂה. וְהָא לָא קָאָמַר ״לְשֵׁם עוֹלַת אִשְׁתִּי״? אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם עוֹלַת אִשְׁתִּי״.</div>
-      <div class="trans" data-when="he">אמר ר׳ אלעזר: לא נאמר שעולת יולדת כשרה אלא במי שאין לו אשה, אבל יש לו אשה — שמא לשם עולת אשתו (שילדה) הוא עושה, ופסולה. ומקשים: והרי לא אמר ׳לשם עולת אשתי׳? אמר ר׳ אבהו: מדובר באומר ׳לשם עולת אשתי׳.</div>
-      <div class="trans" data-when="en">Rabbi Elazar says: The Sages taught that the slaughter is valid only in a case where he does not have a wife. But if he has a wife, say that he performs consecration and slaughter of the animal for her sake and therefore the slaughter is not valid. The Gemara asks: But didn’t he say before the slaughter: For the sake of the burnt offering of a woman after childbirth, and he did not say: For the sake of the burnt offering of my wife after childbirth? Why, then, is that a concern? Rabbi Abbahu said: Indeed, the reference is to a case where he says: I am slaughtering this animal for the sake of the burnt offering of my wife after childbirth.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">13</span> <span class="ref">חולין מ״א ב — Chullin 41b:19</span></div>
-      <div class="orig">פְּשִׁיטָא?</div>
-      <div class="trans" data-when="he">פשיטא! — וכי לא ברור שאם אמר במפורש ׳לשם עולת אשתי׳ שחיטתו פסולה? מה התחדש כאן?</div>
-      <div class="trans" data-when="en">The Gemara objects: This is obvious. Clearly, if he explicitly declared that the slaughter is for the sake of the burnt offering of his wife after childbirth the slaughter is not valid.</div>
-    </div>
-    <div class="quote">
-      <div><span class="num">14</span> <span class="ref">חולין מ״ב א — Chullin 42a:1</span></div>
-      <div class="orig">מַהוּ דְּתֵימָא: אִם אִיתָא דְּיָלְדָה – קָלָא הֲוָה לֵיהּ, קָא מַשְׁמַע לַן: אֵימַר אַפּוֹלֵי אַפִּיל.</div>
-      <div class="trans" data-when="he">החידוש: שמא תאמר — אם באמת ילדה אשתו, הדבר היה מתפרסם, ואם לא שמענו על לידה נניח שאין כאן עולת יולדת ושחיטתו כשרה; קמ״ל — שמא הפילה (אפולי אפיל), ועל הפלה אין קול, ולכן פסולה.</div>
-      <div class="trans" data-when="en">The Gemara answers: Lest you say: If it is so that his wife gave birth, it would have generated publicity and been common knowledge; therefore, one might conclude that the slaughter is valid even if he declared that the slaughter is for the sake of the burnt offering of his wife after childbirth, as in fact she did not give birth. To counter this, Rabbi Elazar teaches us that the slaughter is not valid. Say that his wife miscarried and is liable to bring an offering, but it is not common knowledge, because the baby was not born alive.</div>
-    </div>
-  </section>
+  Q3 -->|תירוץ ר׳ אושעיא| A4
+  A4 -->|תמימים ובעלי מומין| S5
+  S5 -.->|חולק| S6
+  S6 -->|לשם חטאת| S7
+  S7 -->|והא לא קאמר ׳חטאתי׳| A8
+  A8 -->|לשם תמורה| S9
+  S9 -->|והא לא קאמר| A10
+  A10 -->|׳זה הכלל׳| Q11
+  Q11 -->|הצד השני| S12
+  S12 -->|סייג| S13
+  S13 -->|והא לא קאמר| A14
+  A14 -.->|קושיא| Q15
+  Q15 -->|יישוב| C16
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="num">2</span> <span class="ref">חולין מ״א ב — Chullin 41b:11</span></div>
+    <div class="orig">גְּמָ׳ הַשּׁוֹחֵט לְשֵׁם עוֹלָה. אָשָׁם תָּלוּי בַּר נִידָּר וְנִידָּב הוּא? אָמַר רַבִּי יוֹחָנָן: הָא מַנִּי? רַבִּי אֶלְעָזָר הִיא, דְּאָמַר: מִתְנַדֵּב אָדָם אָשָׁם תָּלוּי בְּכׇל יוֹם.</div>
+    <div class="trans" data-when="he">הגמרא שואלת על רשימת המשנה: אשם תלוי — וכי בא בנדר ובנדבה? הרי הוא בא רק על חיוב מספק! אמר רבי יוחנן: משנה זו כדעת מי היא? כרבי אלעזר, שאמר: מתנדב אדם אשם תלוי בכל יום.</div>
+    <div class="trans" data-when="en">GEMARA: The mishna teaches: In the case of one who slaughters an animal and asserts that he is slaughtering it for the sake of a burnt offering, for the sake of a peace offering, for the sake of a provisional guilt offering, for the sake of a Paschal offering, or for the sake of a thanks offering, the slaughter is not valid. This is because one who slaughters for the sake of any type of offering that is consecrated as a vow or as a gift renders the animal forbidden. The Gemara asks: Is a provisional guilt offering fit to be consecrated as a vow or as a gift? A provisional guilt offering is brought only when one is obligated to do so due to uncertainty whether or not he is liable to bring a sin offering. Rabbi Yoḥanan said: In accordance with whose opinion is this halakha in the mishna? It is in accordance with the opinion of Rabbi Elazar, who says in a mishna (Karetot 25a): A person donates a provisional guilt offering every day if he chooses, due to concern that perhaps he violated a prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="num">4</span> <span class="ref">חולין מ״א ב — Chullin 41b:12</span></div>
+    <div class="orig">פֶּסַח בַּר נִידָּב וְנִידָּר הוּא? זִמְנָא קְבִיעָא לֵיהּ! אָמַר רַבִּי אוֹשַׁעְיָא: שָׁאנֵי פֶּסַח, הוֹאִיל וְהַפְרָשָׁתוֹ כׇּל הַשָּׁנָה כּוּלָּהּ.</div>
+    <div class="trans" data-when="he">ועוד: פסח — וכי בא בנדב ובנדר? הרי זמנו קבוע (ערב פסח)! אמר רבי אושעיא: שונה פסח, הואיל והפרשתו (ייחוד הבהמה לקרבן) נעשית בכל ימות השנה.</div>
+    <div class="trans" data-when="en">The Gemara asks: Is a Paschal offering fit to be consecrated as a vow or as a gift? The time is fixed for its offering on Passover eve, when bringing it is an obligation, and it may not be brought on any other day. Rabbi Oshaya said: The Paschal offering is different, since although the date for bringing and slaughtering it is the fourteenth of Nisan, its designation can be performed throughout the entire year.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="num">6</span> <span class="ref">חולין מ״א ב — Chullin 41b:13</span></div>
+    <div class="orig">אָמַר רַבִּי יַנַּאי: לֹא שָׁנוּ אֶלָּא תְּמִימִים, אֲבָל בַּעֲלֵי מוּמִין – מִידָּע יְדִיעַ. וְרַבִּי יוֹחָנָן אָמַר: אֲפִילּוּ בַּעֲלֵי מוּמִין נָמֵי, זִימְנִין דִּרְמֵי לֵיהּ מִידֵּי אַמּוּמָא וְלָא יְדִיעַ.</div>
+    <div class="trans" data-when="he">אמר רבי ינאי: לא שנו שהשחיטה פסולה אלא בבהמות תמימות, אבל בבעלות מום — ידוע לכל שאינן ראויות לקרבן, ואין חשש. ורבי יוחנן אמר: אפילו בבעלות מום, שלפעמים מוטל דבר־מה על המום ומכסה אותו, ואין הדבר ידוע.</div>
+    <div class="trans" data-when="en">Rabbi Yannai says: The Sages taught that slaughter of an animal for the sake of an offering is not valid only if the animals were unblemished. But with regard to animals with blemishes, the slaughterer knows that they are blemished and disqualified from sacrifice. Therefore, despite his declaration, there is no concern that his actual intent was to slaughter the animal for that purpose. And Rabbi Yoḥanan says: Slaughter of an animal for the sake of an offering is not valid even if the animals were blemished as well, as there are times that an item is cast over the blemish and covers it, and he does not know that the animal is blemished.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="num">8</span> <span class="ref">חולין מ״א ב — Chullin 41b:14</span></div>
+    <div class="orig">הַשּׁוֹחֵט לְשֵׁם חַטָּאת, אָמַר רַבִּי יוֹחָנָן: לֹא שָׁנוּ אֶלָּא שֶׁאֵינוֹ מְחוּיָּיב חַטָּאת, אֲבָל מְחוּיָּיב חַטָּאת – אֵימָא לְשׁוּם חַטָּאתוֹ הוּא עוֹשֶׂה. וְהָא לָא קָאָמַר ״לְשֵׁם חַטָּאתִי״? אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם חַטָּאתִי״.</div>
+    <div class="trans" data-when="he">על הדין ׳השוחט לשם חטאת — כשרה׳ אמר רבי יוחנן: לא שנו אלא במי שאינו מחויב חטאת, אבל מחויב חטאת — אמור: לשם חטאתו הוא עושה. ומקשים: והרי לא אמר ׳לשם חטאתי׳! אמר רבי אבהו: מדובר באומר ׳לשם חטאתי׳.</div>
+    <div class="trans" data-when="en">The mishna teaches: With regard to one who slaughters an animal for the sake of a sin offering, his slaughter is valid, as, since one cannot voluntarily contribute a sin offering, there is no concern that the onlookers will draw the wrong conclusion. Rabbi Yoḥanan says: The Sages taught that slaughter of an animal for the sake of a sin offering is valid only with regard to a slaughterer who is not liable to bring a sin offering. But a slaughterer who knows that he is liable to bring a sin offering, his slaughter is not valid. Say that he is performing consecration and slaughter for the sake of his sin offering. The Gemara asks: But didn’t he say before the slaughter: For the sake of a sin offering, and he did not say: For the sake of my sin offering? Why, then, is that a concern? Rabbi Abbahu said: Indeed, the reference is to a case where he says: I am slaughtering this animal for the sake of my sin offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="num">10</span> <span class="ref">חולין מ״א ב — Chullin 41b:15</span></div>
+    <div class="orig">לְשֵׁם תְּמוּרָה, אָמַר רַבִּי אֶלְעָזָר: לֹא שָׁנוּ אֶלָּא שֶׁאֵין לוֹ זֶבַח בְּתוֹךְ בֵּיתוֹ, אֲבָל יֵשׁ לוֹ זֶבַח בְּתוֹךְ בֵּיתוֹ – אֵימָא אֲמוֹרֵי אֲמַיר בֵּיהּ. וְהָא לָא קָאָמַר ״לְשֵׁם תְּמוּרַת זִבְחִי״? אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם תְּמוּרַת זִבְחִי״.</div>
+    <div class="trans" data-when="he">על ׳לשם תמורה — כשרה׳ אמר רבי אלעזר: לא שנו אלא כשאין לו זבח (בהמת קרבן) בתוך ביתו, אבל יש לו זבח בתוך ביתו — אמור: ממיר הוא בו את הבהמה הזו. ומקשים: והרי לא אמר ׳לשם תמורת זבחי׳! אמר רבי אבהו: מדובר באומר ׳לשם תמורת זבחי׳.</div>
+    <div class="trans" data-when="en">The mishna teaches: With regard to one who slaughters for the sake of a substitute for a sacrificial animal, his slaughter is valid. Rabbi Elazar says: The Sages taught that the slaughter is valid only in a case where he does not have an animal consecrated as an offering inside his house for which it can be the substitute, but if he has an animal consecrated as an offering in his house, say that he is substituting this animal for it, and the slaughter is not valid. The Gemara asks: But didn’t he say before the slaughter: For the sake of a substitute for a sacrificial animal, and he did not say: For the sake of a substitute for my animal consecrated as an offering? Why, then, is that a concern? Rabbi Abbahu said: Indeed, the reference is to a case where he says: I am slaughtering this animal for the sake of a substitute for my animal consecrated as an offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין מ״א ב — Chullin 41b:16</span></div>
+    <div class="orig">״זֶה הַכְּלָל״ לְאֵתוֹיֵי מַאי? לְאֵתוֹיֵי עוֹלַת נָזִיר, דְּמַהוּ דְּתֵימָא: הָא לָא נְדַר, אֵימַר נֶדֶר בְּצִינְעָא.</div>
+    <div class="trans" data-when="he">׳זה הכלל׳ — מה בא לרבות? לרבות עולת נזיר: שלא תאמר ׳הרי הוא לא נדר בנזירות ואינו חייב בעולה זו׳ — אמור: שמא נדר בצנעה ואיש אינו יודע.</div>
+    <div class="trans" data-when="en">The mishna states that this is the principle: For any offering that is consecrated as a voluntary vow or gift, in the case of one who slaughters for its sake, the animal is forbidden. The Gemara asks: What case does this clause add? The list in the mishna appears to be comprehensive. The Gemara answers: The clause serves to add the burnt offering of a nazirite. As, lest you say there is no concern in that case, as that person did not vow to become a nazirite and could not possibly be obligated to bring that offering, therefore, the tanna teaches that there is a concern if he said he was slaughtering for the sake of the burnt offering of a nazirite. Say that perhaps he vowed to become a nazirite in private, and no one else was aware of it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין מ״א ב — Chullin 41b:17</span></div>
+    <div class="orig">וְשֶׁאֵינוֹ נִידָּר וְנִידָּב, לְאֵתוֹיֵי עוֹלַת יוֹלֶדֶת.</div>
+    <div class="trans" data-when="he">׳ושאינו נידר ונידב׳ — מה בא לרבות? לרבות עולת יולדת: השוחט לשמה — שחיטתו כשרה, שהיא קרבן חובה.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is added by the second half of the principle: And for any offering that is not consecrated as a voluntary vow or as a gift, in the case of one who slaughters for its sake the animal is permitted? The Gemara answers: It serves to add the burnt offering of a woman after childbirth. If one slaughters an animal for the sake of a burnt offering of a woman after childbirth, the slaughter is valid, as it is an obligation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="num">14</span> <span class="ref">חולין מ״א ב — Chullin 41b:18</span></div>
+    <div class="orig">אָמַר רַבִּי אֶלְעָזָר: לֹא שָׁנוּ אֶלָּא שֶׁאֵין לוֹ אִשָּׁה, אֲבָל יֵשׁ לוֹ אִשָּׁה – אֵימַר לִשְׁמָהּ הוּא עוֹשֶׂה. וְהָא לָא קָאָמַר ״לְשֵׁם עוֹלַת אִשְׁתִּי״? אָמַר רַבִּי אֲבָהוּ: בְּאוֹמֵר ״לְשֵׁם עוֹלַת אִשְׁתִּי״.</div>
+    <div class="trans" data-when="he">אמר רבי אלעזר: לא שנו אלא כשאין לו אישה, אבל יש לו אישה — אמור: לשמה (לעולת אשתו) הוא עושה. ומקשים: והרי לא אמר ׳לשם עולת אשתי׳! אמר רבי אבהו: מדובר באומר ׳לשם עולת אשתי׳.</div>
+    <div class="trans" data-when="en">Rabbi Elazar says: The Sages taught that the slaughter is valid only in a case where he does not have a wife. But if he has a wife, say that he performs consecration and slaughter of the animal for her sake and therefore the slaughter is not valid. The Gemara asks: But didn’t he say before the slaughter: For the sake of the burnt offering of a woman after childbirth, and he did not say: For the sake of the burnt offering of my wife after childbirth? Why, then, is that a concern? Rabbi Abbahu said: Indeed, the reference is to a case where he says: I am slaughtering this animal for the sake of the burnt offering of my wife after childbirth.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין מ״א ב — Chullin 41b:19</span></div>
+    <div class="orig">פְּשִׁיטָא?</div>
+    <div class="trans" data-when="he">הגמרא תמהה: פשיטא — הרי זה מובן מאליו שבאומר כך השחיטה פסולה!</div>
+    <div class="trans" data-when="en">The Gemara objects: This is obvious. Clearly, if he explicitly declared that the slaughter is for the sake of the burnt offering of his wife after childbirth the slaughter is not valid.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין מ״ב א — Chullin 42a:1</span></div>
+    <div class="orig">מַהוּ דְּתֵימָא: אִם אִיתָא דְּיָלְדָה – קָלָא הֲוָה לֵיהּ, קָא מַשְׁמַע לַן: אֵימַר אַפּוֹלֵי אַפִּיל.</div>
+    <div class="trans" data-when="he">ומשיבה: שלא תאמר — אילו באמת ילדה אשתו, היה לדבר קול, ומשלא שמענו אין חשש והשחיטה כשרה; לכן משמיע לנו: אמור שמא הפילה, ונתחייבה קרבן בלי שנודע הדבר.</div>
+    <div class="trans" data-when="en">The Gemara answers: Lest you say: If it is so that his wife gave birth, it would have generated publicity and been common knowledge; therefore, one might conclude that the slaughter is valid even if he declared that the slaughter is for the sake of the burnt offering of his wife after childbirth, as in fact she did not give birth. To counter this, Rabbi Elazar teaches us that the slaughter is not valid. Say that his wife miscarried and is liable to bring an offering, but it is not common knowledge, because the baby was not born alive.</div>
+  </div>
+</section>
 
   <footer>
     <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
