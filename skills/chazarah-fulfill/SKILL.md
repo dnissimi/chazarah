@@ -32,9 +32,12 @@ Three skills, each doing one thing:
    self-contained bilingual HTML map. Site-agnostic.
 2. **chazarah-fulfill** *(this skill)* — the queue processor. One approved issue
    → produce (delegating to gemara-map) or edit the artifact → hand off.
-3. **publication / deployment skill** *(separate, may not exist yet)* — wires the
-   artifact into the site (path, content-collection YAML, masechet registration,
-   PR, deploy). Invoked by both gemara-map (standalone) and this skill.
+3. **chazarah-publish** *(separate, exists)* — wires the artifact into the site
+   (places the file(s), writes the content-collection YAML, registers the
+   masechet if new, validates, commits + pushes to `main`; Cloudflare
+   auto-deploys). Invoked by both gemara-map (standalone) and this skill — and,
+   per the default in Step 6, **this skill runs it automatically unless the user
+   said not to.**
 
 This skill deliberately does **not**:
 
@@ -132,10 +135,23 @@ re-implement its fetch/segment/template pipeline; that logic lives in gemara-map
 and will drift if copied. In Claude Code that means running the gemara-map skill
 (e.g. `/gemara-map <ref>`) and letting it write its artifact(s) to its workspace.
 
-**Multi-daf fan-out:** gemara-map emits **one file per daf**. A range request
-("Megillah 26–29") therefore yields N artifacts from one issue. Carry all N
-forward. The publication side opens **one PR per daf**, each referencing this one
-issue (see Step 6); the issue closes only when the *last* of them merges.
+**Ranges are always per-daf.** When the ref is a range ("Chullin 40–41",
+"Megillah 26–29"), treat it as **individual dapim** — never one combined map
+(each map is keyed to a single daf location, with one content-collection entry
+per daf). gemara-map emits **one file per daf**, so a range yields N artifacts
+from one issue. Partition the sugyot by the daf each one *begins* on, keeping
+every sugya whole (see gemara-map's multi-daf rule), and check the boundary
+against any already-published adjacent daf so neighbouring maps don't overlap or
+leave an orphan.
+
+**Fan out in parallel subagents — one per daf.** For a multi-daf range, dispatch
+one subagent per daf **in a single message so they run concurrently**, each
+running the gemara-map workflow for its daf and writing its artifact to the
+workspace. Then **independently verify each** before handing off — render it
+(no Mermaid errors), confirm per-section node↔citation alignment, and audit the
+verbatim layer (`.orig` / Davidson `en`) against the fetched source. Carry all N
+artifacts forward; chazarah-publish makes **one commit per daf** and closes the
+issue once, after the last daf is pushed.
 
 ### Step 4 — Map Feedback → edit the existing map in place
 
@@ -159,7 +175,7 @@ re-committing it is exactly the intended flow.
    it) — you are applying it, not re-litigating it.
 4. **Discrepancy handling (advisory, not a veto).** If the fetched source
    *contradicts* the reporter's claim, **point it out** — surface it in your run
-   output and in the handoff notes for the PR description — rather than silently
+   output and in the handoff notes (the `--notes` passed to publish) — rather than silently
    applying it or hard-refusing. The human stays the judge; your job is to make
    the conflict visible.
 
@@ -185,13 +201,32 @@ gh issue edit <n> --repo dnissimi/chazarah-submissions \
   --remove-label ready-for-agent
 ```
 
-(Do **not** close the issue — closing happens downstream on PR merge, via the
-publication layer's merge Action. See the spec's "Cross-repo issue lifecycle".)
+(Do **not** close the issue yourself here — chazarah-publish closes it when run
+with `--issue` in Step 6, after the last daf is pushed live.)
 
-### Step 6 — Hand off to the publication skill
+### Step 6 — Run chazarah-publish (the default)
 
-Offer to run the publication skill (skill 3) rather than wiring the site
-yourself. Hand it this payload (pin this shape; it's the contract):
+**Unless the user said otherwise, fulfillment is followed immediately by
+publication** — run the **chazarah-publish** skill on the artifact(s); do not
+stop and merely offer. Only skip publishing if the user explicitly asked to
+generate without publishing, or an unresolved source/claim discrepancy is worth
+a human decision first — in that case stop, report, and ask.
+
+Invoke it with the artifact path(s) and the originating issue so it closes the
+issue on success:
+
+```
+/chazarah-publish <artifact1.html> [<artifact2.html> ...] \
+    --issue dnissimi/chazarah-submissions#<n> [--notes "<discrepancy / 'replaces existing file' notes>"]
+```
+
+chazarah-publish places each file, writes the YAML, validates
+(typecheck / build / test), commits **one per daf**, pushes to `main` (Cloudflare
+auto-deploys), and — because `--issue` was supplied — closes the issue once,
+after the last daf, with the live URL(s). Publication is **direct-to-main**:
+there is no PR and no merge Action (see chazarah-publish + ADR 0004).
+
+Hand-off payload shape (the contract — for reference, or if wiring by hand):
 
 ```
 { kind: "new" | "edit",
@@ -201,22 +236,6 @@ yourself. Hand it this payload (pin this shape; it's the contract):
   notes: "<discrepancy flags / 'replaces existing file' warnings, if any>" }
 ```
 
-Also tell skill 3 to stamp `Fulfills: dnissimi/chazarah-submissions#<n>` into
-each PR body — that trailer is what lets the merge Action close this issue later
-(cross-repo `Closes` keywords do not fire). After skill 3 opens the PR(s), make
-sure the PR URL(s) are commented back onto the submission issue:
-
-```bash
-gh issue comment <n> --repo dnissimi/chazarah-submissions \
-  --body "Fulfilled in <PR-url(s)>."
-```
-
-**If the publication skill does not exist yet:** stop here. Report the handoff
-payload, the artifact path(s), and any discrepancy notes, and point the owner at
-`docs/specs/map-wiring.md` to wire the map(s) manually for now. Do not attempt
-the wiring inside this skill — that's a deliberate boundary, and doing it here
-would duplicate logic that belongs in skill 3.
-
 ## Quick reference — end-to-end
 
 1. Load issue (`gh issue view`), confirm `ready-for-agent`, parse JSON block,
@@ -225,6 +244,8 @@ would duplicate logic that belongs in skill 3.
 3. **Request:** existing-map sub-check → invoke gemara-map → carry N artifacts.
 4. **Feedback:** locate map → fetch source for grounding → apply curated edit →
    flag any source/claim discrepancy.
-5. Drop `ready-for-agent` (mark in-flight; do not close).
-6. Hand off to skill 3 with the payload + `Fulfills:` trailer; comment PR links
-   back. If skill 3 is absent, stop and report for manual wiring.
+5. Drop `ready-for-agent` (mark in-flight; do not close — publish closes it).
+6. **Run chazarah-publish with `--issue` by default** (don't just offer): it
+   places files, validates, commits one-per-daf, pushes to `main`, and closes
+   the issue. Skip only if the user asked not to publish, or a discrepancy needs
+   a human first.

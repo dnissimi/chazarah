@@ -104,6 +104,14 @@ group `sugyot` by start daf, build one file per group from its first sugya's sta
 its last sugya's end (`--expand none --segment` per file). Name files
 `sugya_<book>_<daf>.html`. For a huge request, confirm scope with the user first.
 
+**Build the dapim in parallel subagents — one per daf.** Once the range is
+partitioned, hand each daf to its own subagent (dispatched together, in a single
+message, so they run concurrently); each one runs this whole workflow for its daf
+and writes its artifact to the workspace. Do the boundary planning (the partition
+above) *once* up front so each subagent gets a precise, non-overlapping scope, and
+verify each returned file independently (render → no Mermaid errors, node↔citation
+alignment, verbatim audit) before relying on it.
+
 ### 2. Read each sugya and identify its moves
 
 For each sugya (`segments[start_n-1 : end_n]`), read the `he` and decide what each move
