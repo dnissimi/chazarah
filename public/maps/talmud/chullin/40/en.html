@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין מ׳</title>
+<meta name="description" content="סוגיא אחת בחולין מ׳ – מ״א — האם השוחט בהמת חברו לעבודה זרה אוסרהּ. דעת רב הונא, ׳אין אדם אוסר דבר שאינו שלו׳, וחילוק בין גוי לישראל.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="40">
+<meta name="gemara-map:sefaria-ref" content="Chullin 40">
+<meta name="gemara-map:topic-he" content="אוסר דבר שאינו שלו לעבודה זרה">
+<meta name="gemara-map:topic-en" content="Forbidding another׳s animal by idolatry">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין מ׳">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 40">
+<meta name="gemara-map:blurb-he" content="הגמרא מיישבת סתירה בין משנה לברייתא בשוחט להרים, ומבררת אם השוחט בהמת חברו לעבודה זרה אוסרהּ — מחלוקת רב הונא והכלל ׳אין אדם אוסר דבר שאינו שלו׳, מקושיות וישובים עד החילוק בין גוי לישראל מומר.">
+<meta name="gemara-map:blurb-en" content="The Gemara reconciles a contradiction between the Mishnah and a baraita on slaughtering for mountains, then asks whether one who slaughters another׳s animal for idolatry renders it forbidden — Rav Huna versus the rule that a person cannot forbid what is not his — through objections and answers down to the distinction between a gentile and an apostate Jew.">
+<meta name="gemara-map:sugya-count" content="1">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין מ׳</span><span data-when="en">Sugya map — Chullin 40</span></h1>
+    <div class="subtitle"><span data-when="he">חולין מ׳ א–מ״א א (40a:2–41a:8) · סוגיא אחת רצופה · מקור: ספריא · מהדורת William Davidson</span><span data-when="en">Chullin 40a:2–41a:8 · one continuous sugya · Source: Sefaria · William Davidson Edition</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> אחרי שאביי מיישב את הסתירה בין המשנה לברייתא, הסוגיא נסבה סביב דברי רב הונא — ששחיטת בהמת חברו לעבודה זרה אוסרתהּ — מול הכלל ׳אין אדם אוסר דבר שאינו שלו׳. שתי הדעות מתמודדות עם קושיות מן הברייתא ומן המשניות, עד החילוק שגוי אוסר אבל ישראל מתכוון רק לצער — ולבסוף שמומר ומי שקיבל התראה אוסרים.</span>
+    <span data-when="en"><b>Bottom line:</b> After Abaye reconciles the Mishnah with the baraita, the sugya turns on Rav Huna׳s ruling — that slaughtering another׳s animal for idolatry forbids it — against the rule that a person cannot forbid what is not his. Both views face objections from the baraita and Mishnayot, leading to the distinction that a gentile forbids the wine but a Jew merely intends to torment — and finally that an apostate, or one who accepts forewarning, does forbid it.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">השוחט בהמת חברו לעבודה זרה — אוסרהּ?</span><span data-when="en">Does slaughtering another׳s animal for idolatry forbid it?</span>
+      <span class="ref">Chullin 40a:2-41a:8</span></h2>
+  <div class="lead"><span data-when="he">מסתירה בין משנה לברייתא, דרך דברי רב הונא והכלל ׳אין אדם אוסר דבר שאינו שלו׳, עד החילוק בין גוי לישראל מומר.</span><span data-when="en">From a Mishnah-baraita contradiction, through Rav Huna and the rule ׳one cannot forbid what is not his׳, to the distinction between a gentile and an apostate Jew.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  N1{"① סתירה: משנה — מותר בהנאה מול ברייתא — זבחי מתים"}:::question
+  N2["② תירוץ אביי: לשם ההר עצמו מול לשם המלאך"]:::answer
+  N3["③ רב הונא: שוחט בהמת חברו לע״ז — אסרהּ"]:::statement
+  N4{"④ מיתיבי רב נחמן: שוחט חטאת בחוץ — שלוש חטאות"}:::question
+  N5{"⑤ קושיא: לעולא די במעשה כלשהו — אם כן כמחתך בעפר"}:::question
+  N6["⑥ תירוץ: עובד את הע״ז רק בגמר השחיטה"]:::answer
+  N7{"⑦ קושיא: למה דווקא חטאת? שישמיענו בכל זבח"}:::question
+  N8["⑧ תירוץ מר זוטרא: חצי קנה פגום שהוסיף וגמר"]:::answer
+  N9["⑨ רב פפא: אילולא ׳סימן אחד׳ — אין קושיא, מעשה רבה"]:::statement
+  N10["⑩ רב פפא: אילולא ׳בהמת חברו׳ — אין קושיא; בשלו אוסר"]:::statement
+  N11["⑪ רב נחמן ועמרם ויצחק: אין אדם אוסר דבר שאינו שלו"]:::statement
+  N12{"⑫ מיתיבי מן הברייתא: למה דווקא חטאת העוף?"}:::question
+  N13["⑬ תא שמע: שניים אוחזים בסכין — תירוץ: שותפות"]:::proof
+  N14["⑭ תא שמע: המטמא והמדמע והמנסך — תירוץ: שותפות"]:::proof
+  N15["⑮ כתנאי: גוי שניסך יין — ת״ק אוסר, ר׳ יהודה מתיר"]:::statement
+  N16["⑯ תירוץ: אדם אוסר רק בגוי; ישראל מתכוון לצער"]:::statement
+  N17{"⑰ תא שמע: שניים אוחזים בסכין — תירוץ: ישראל מומר"}:::question
+  N18{"⑱ תא שמע: המטמא והמדמע — תירוץ: ישראל מומר"}:::question
+  N19["⑲ מסקנה: קיבל התראה — אין מומר גדול מזה"]:::conclusion
+  N2 -->|דעה| N3
+  N1 -->|תירוץ| N2
+  N3 -->|מיתיבי| N4
+  N4 -->|קושיא| N5
+  N5 -->|תירוץ| N6
+  N6 -->|קושיא| N7
+  N7 -->|תירוץ| N8
+  N8 -->|הערה| N9
+  N9 -->|הערה| N10
+  N10 -->|דעה נגדית| N11
+  N11 -->|מיתיבי| N12
+  N12 -->|תא שמע| N13
+  N13 -->|תא שמע| N14
+  N14 -->|כתנאי| N15
+  N15 -->|חילוק| N16
+  N16 -->|תא שמע| N17
+  N17 -->|תא שמע| N18
+  N18 -->|מסקנה| N19
+</script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  N1{"① Contradiction: Mishnah benefit-permitted vs baraita offerings-to-dead"}:::question
+  N2["② Abaye: the mountain itself vs the angel of the mountain"]:::answer
+  N3["③ Rav Huna: slaughtering another׳s animal for idolatry forbids it"]:::statement
+  N4{"④ Objection: slaughtering a sin-offering outside — three sin-offerings"}:::question
+  N5{"⑤ Difficulty: per Ulla a minimal act suffices — then it is chopping dirt"}:::question
+  N6["⑥ Answer: he worships only at the conclusion of the slaughter"]:::answer
+  N7{"⑦ Objection: why specifically a sin-offering? Teach it for any offering"}:::question
+  N8["⑧ Mar Zutra: deficient half-windpipe that he completed"]:::answer
+  N9["⑨ Rav Pappa: but for ׳one siman׳ no difficulty — a significant act"]:::statement
+  N10["⑩ Rav Pappa: but for ׳another׳s animal׳ no difficulty; one forbids his own"]:::statement
+  N11["⑪ Rav Nahman, Amram, Yitzhak: one cannot forbid what is not his"]:::statement
+  N12{"⑫ Objection from the baraita: why specifically a bird sin-offering?"}:::question
+  N13["⑬ Come and hear: two grasping a knife — answer: partnership share"]:::proof
+  N14["⑭ Come and hear: impurifier, mixer, libator — answer: partnership share"]:::proof
+  N15["⑮ Like tannaim: gentile׳s libation — first tanna forbids, R. Yehuda permits"]:::statement
+  N16["⑯ Answer: only a gentile forbids; a Jew merely intends to torment"]:::statement
+  N17{"⑰ Come and hear: two grasping a knife — answer: an apostate Jew"}:::question
+  N18{"⑱ Come and hear: impurifier and mixer — answer: an apostate Jew"}:::question
+  N19["⑲ Conclusion: he accepted forewarning — no greater apostate than that"]:::conclusion
+  N2 -->|statement| N3
+  N1 -->|answer| N2
+  N3 -->|objection| N4
+  N4 -->|difficulty| N5
+  N5 -->|answer| N6
+  N6 -->|objection| N7
+  N7 -->|answer| N8
+  N8 -->|note| N9
+  N9 -->|note| N10
+  N10 -->|opposing view| N11
+  N11 -->|objection| N12
+  N12 -->|come and hear| N13
+  N13 -->|come and hear| N14
+  N14 -->|parallel to tannaim| N15
+  N15 -->|distinction| N16
+  N16 -->|come and hear| N17
+  N17 -->|come and hear| N18
+  N18 -->|conclusion| N19
+</script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  N1{"① פְּסוּלָה – אִין, זִבְחֵי מֵתִים – לָא … הֲרֵי אֵלּוּ זִבְחֵי מֵתִים"}:::question
+  N2["② אָמַר אַבָּיֵי: לָא קַשְׁיָא, הָא דְּאָמַר לְהַר, הָא דְּאָמַר לְגַדָּא דְּהַר"]:::answer
+  N3["③ אָמַר רַב הוּנָא … כֵּיוָן שֶׁשָּׁחַט בָּהּ סִימָן אֶחָד – אֲסָרָהּ"]:::statement
+  N4{"④ אֵיתִיבֵיהּ רַב נַחְמָן לְרַב הוּנָא … חַיָּיב שָׁלֹשׁ חַטָּאוֹת"}:::question
+  N5{"⑤ מִכְּדֵי רַב הוּנָא כְּמַאן אַמְרַהּ … וְעוּלָּא מַעֲשֶׂה כֹּל דְּהוּ קָאָמַר"}:::question
+  N6["⑥ אֶלָּא, בְּאוֹמֵר בִּגְמַר זְבִיחָה הוּא עוֹבְדָהּ"]:::answer
+  N7{"⑦ אִי הָכִי, מַאי אִירְיָא חַטָּאת? לַישְׁמְעִינַן זֶבַח"}:::question
+  N8["⑧ אֶלָּא אָמַר מָר זוּטְרָא … חֲצִי קָנֶה פָּגוּם, וְהוֹסִיף עָלָיו כׇּל שֶׁהוּא וּגְמָרוֹ"]:::answer
+  N9["⑨ אָמַר רַב פָּפָּא: אִי לָאו דְּאָמַר רַב הוּנָא סִימָן אֶחָד … מַעֲשֶׂה רַבָּה"]:::statement
+  N10["⑩ אִי לָאו דְּאָמַר רַב הוּנָא בֶּהֱמַת חֲבֵרוֹ … דִּידֵיהּ מָצֵי אָסַר, דְּחַבְרֵיהּ לָא מָצֵי אָסַר"]:::statement
+  N11["⑪ אֵין אָדָם אוֹסֵר דָּבָר שֶׁאֵין שֶׁלּוֹ"]:::statement
+  N12{"⑫ מֵיתִיבִי … מַאי אִרְיָא חַטַּאת הָעוֹף? אֲפִילּוּ חַטַּאת בְּהֵמָה נָמֵי"}:::question
+  N13["⑬ תָּא שְׁמַע: שְׁנַיִם אוֹחֲזִין בְּסַכִּין … דְּאִית לֵיהּ שׁוּתָּפוּת בְּגַוַּהּ"]:::proof
+  N14["⑭ תָּא שְׁמַע: הַמְטַמֵּא, וְהַמְדַמֵּעַ, וְהַמְנַסֵּךְ … דְּאִית לֵיהּ שׁוּתָּפוּת בְּגַוַּהּ"]:::proof
+  N15["⑮ כְּתַנָּאֵי: גּוֹי שֶׁנִּיסֵּךְ יֵינוֹ שֶׁל יִשְׂרָאֵל … אֲסָרוֹ … מַתִּירִין אוֹתוֹ"]:::statement
+  N16["⑯ אֲפִילּוּ לְמַאן דְּאָמַר אָדָם אוֹסֵר … הָנֵי מִילֵּי גּוֹי, אֲבָל יִשְׂרָאֵל לְצַעוֹרֵיהּ קָא מִיכַּוֵּין"]:::statement
+  N17{"⑰ תָּא שְׁמַע: שְׁנַיִם אוֹחֲזִין בְּסַכִּין … בְּיִשְׂרָאֵל מְשׁוּמָּד"}:::question
+  N18{"⑱ תָּא שְׁמַע: הַמְטַמֵּא וְהַמְדַמֵּעַ וְהַמְנַסֵּךְ … בְּיִשְׂרָאֵל מְשׁוּמָּד"}:::question
+  N19["⑲ הִתְרוּ בּוֹ וְקִבֵּל עָלָיו הַתְרָאָה … אֵין לָךְ מְשׁוּמָּד גָּדוֹל מִזֶּה"]:::conclusion
+  N2 -->|דעה| N3
+  N1 -->|תירוץ| N2
+  N3 -->|מיתיבי| N4
+  N4 -->|קושיא| N5
+  N5 -->|תירוץ| N6
+  N6 -->|קושיא| N7
+  N7 -->|תירוץ| N8
+  N8 -->|הערה| N9
+  N9 -->|הערה| N10
+  N10 -->|דעה נגדית| N11
+  N11 -->|מיתיבי| N12
+  N12 -->|תא שמע| N13
+  N13 -->|תא שמע| N14
+  N14 -->|כתנאי| N15
+  N15 -->|חילוק| N16
+  N16 -->|תא שמע| N17
+  N17 -->|תא שמע| N18
+  N18 -->|מסקנה| N19
+</script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין מ׳ א:ב — Chullin 40a:2</span></div>
+    <div class="orig">גְּמָ׳ פְּסוּלָה – אִין, זִבְחֵי מֵתִים – לָא. וּרְמִינְהִי: הַשּׁוֹחֵט לְשׁוּם הָרִים, לְשׁוּם גְּבָעוֹת, לְשׁוּם נְהָרוֹת, לְשׁוּם מִדְבָּרוֹת, לְשׁוּם חַמָּה וּלְבָנָה, לְשׁוּם כּוֹכָבִים וּמַזָּלוֹת, לְשׁוּם מִיכָאֵל הַשַּׂר הַגָּדוֹל, לְשׁוּם שִׁילְשׁוּל קָטָן – הֲרֵי אֵלּוּ זִבְחֵי מֵתִים.</div>
+    <div class="trans" data-when="he">מהמשנה משמע: שחיטה להרים פסולה, אך אינה ׳זבחי מתים׳ ולכן מותר בהנאה. מכאן קושיא מברייתא: השוחט להרים, גבעות, נהרות, מדברות, חמה ולבנה, כוכבים ומזלות, או למיכאל השר הגדול — הרי אלו זבחי מתים, ואסורים בהנאה.</div>
+    <div class="trans" data-when="en">GEMARA: The mishna states that if one slaughters for the sake of mountains or other natural entities the slaughter is unfit. The Gemara infers: It is unfit, yes; with regard to offerings to the dead, i.e., to idols, it is not in that category. Apparently, the status of the animal is that of an unslaughtered carcass, from which benefit is permitted, and not that of an idolatrous offering, from which benefit is forbidden. And the Gemara raises a contradiction from a baraita: With regard to one who slaughters for the sake of mountains, for the sake of hills, for the sake of rivers, for the sake of wildernesses, for the sake of the sun and moon, for the sake of stars and constellations, for the sake of Michael the great ministering angel, or even for the sake of a small worm, these are offerings to the dead, from which benefit is forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין מ׳ א:ג — Chullin 40a:3</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: לָא קַשְׁיָא, הָא דְּאָמַר לְהַר, הָא דְּאָמַר לְגַדָּא דְּהַר. דַּיְקָא נָמֵי, דְּקָתָנֵי דּוּמְיָא דְּמִיכָאֵל שַׂר הַגָּדוֹל, שְׁמַע מִינַּהּ.</div>
+    <div class="trans" data-when="he">אביי מתרץ: אין סתירה. המשנה (מותר בהנאה) — בשוחט לשם ההר עצמו, שאינו עבודה זרה. הברייתא (אסור בהנאה) — בשוחט לשם המלאך הממונה על ההר. ומדויק כן, שההרים שנויים יחד עם ׳מיכאל השר הגדול׳ — שמע מינה שמדובר בכוח רוחני, לא בהר עצמו.</div>
+    <div class="trans" data-when="en">Abaye said: The apparent contradiction between the mishna and the baraita is not difficult. This mishna that teaches that the slaughter is not valid but benefit is permitted is referring to a case where one says that he is slaughtering the animal for the sake of the mountain itself, which is not an idol. That baraita that teaches that the animal is an offering to the dead and benefit is forbidden is referring to a case where one says that he is slaughtering the animal for the sake of the angel of the mountain. The language of the baraita is also precise, as the mountain and the other natural entities are taught together with and therefore similar to Michael, the great ministering angel. Conclude from it that the tanna is referring to slaughter for the sake of a spiritual entity, not the mountain itself.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין מ׳ א:ד — Chullin 40a:4</span></div>
+    <div class="orig">אָמַר רַב הוּנָא: הָיְתָה בֶּהֱמַת חֲבֵירוֹ רְבוּצָה לִפְנֵי עֲבוֹדָה זָרָה, כֵּיוָן שֶׁשָּׁחַט בָּהּ סִימָן אֶחָד – אֲסָרָהּ. סָבַר לַהּ כִּי הָא דְּאָמַר עוּלָּא אָמַר רַבִּי יוֹחָנָן: אַף עַל פִּי שֶׁאָמְרוּ הַמִּשְׁתַּחֲוֶה לְבֶהֱמַת חֲבֵירוֹ לֹא אֲסָרָהּ, עָשָׂה בָּהּ מַעֲשֶׂה – אֲסָרָהּ.</div>
+    <div class="trans" data-when="he">רב הונא: היתה בהמת חברו רבוצה לפני עבודה זרה, ומשחתך בה סימן אחד — אסרהּ. הוא סובר כעולא בשם רבי יוחנן: אף שהמשתחווה לבהמת חברו לא אסרהּ, אם עשה בה מעשה (כגון חיתוך סימן) — אסרהּ.</div>
+    <div class="trans" data-when="en">Rav Huna says: If the animal of another was prone before an idol, once one cut one siman, the windpipe or the gullet, he rendered the animal forbidden. He holds in accordance with that which Ulla says that Rabbi Yoḥanan says: Although the Sages said that one who bows to the animal of another does not render it forbidden, if he performed a sacrificial rite upon it he renders it forbidden. The case cited by Rav Huna involves an action of that kind, cutting one siman; therefore, the animal is forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין מ׳ א:ה — Chullin 40a:5</span></div>
+    <div class="orig">אֵיתִיבֵיהּ רַב נַחְמָן לְרַב הוּנָא: הַשּׁוֹחֵט חַטָּאת בְּשַׁבָּת בַּחוּץ לַעֲבוֹדָה זָרָה – חַיָּיב שָׁלֹשׁ חַטָּאוֹת, וְאִי אָמְרַתְּ: כֵּיוָן שֶׁשָּׁחַט בָּהּ סִימָן אֶחָד אֲסָרָהּ – אַשְּׁחוּטֵי חוּץ לָא לִיחַיַּיב,</div>
+    <div class="trans" data-when="he">רב נחמן מקשה על רב הונא מברייתא: השוחט בשבת בחוץ חטאת לעבודה זרה — חייב שלוש חטאות (שבת, שחוטי חוץ, עבודה זרה). ואם בסימן אחד כבר נאסרה הבהמה, על שחיטת חוץ לא יתחייב,</div>
+    <div class="trans" data-when="en">Rav Naḥman raised an objection to the opinion of Rav Huna from a baraita: One who unwittingly slaughters an animal that was designated as a sin offering on Shabbat outside the Temple, for idol worship, is liable to bring three sin offerings: One for performing the prohibited labor of slaughtering on Shabbat, one for slaughtering a sacrificial animal outside the Temple, and one for slaughtering an animal for idol worship. And if you say that once he cuts one siman he renders the animal forbidden as an idolatrous offering, then let him not be liable to bring a sin offering for slaughter of a sacrificial animal outside the Temple courtyard,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין מ׳ ב:א — Chullin 40b:1</span></div>
+    <div class="orig">מְחַתֵּךְ בְּעָפָר הוּא! אָמַר רַב פָּפָּא: הָכָא בְּחַטַּאת הָעוֹף עָסְקִינַן, דְּכוּלְּהוּ בַּהֲדֵי הֲדָדֵי קָאָתֵי.</div>
+    <div class="trans" data-when="he">שהרי כְּמחתך בעפר הוא (שאין חיוב שחוטי חוץ בקרבן פסול). רב פפא מתרץ: כאן בחטאת העוף, שכל חיוביה באים כאחד — שדי בחיתוך סימן אחד, ובאותו רגע באים שלושת האיסורים יחד.</div>
+    <div class="trans" data-when="en">as it is as though he is merely chopping in dirt, since one is not liable for slaughtering outside the Temple courtyard a sacrificial animal unfit for sacrifice. Rav Pappa said: Here we are dealing with a bird sin offering, for which the requirement is to cut only one siman, and when cutting that siman, all of the three prohibitions come to be violated simultaneously.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין מ׳ ב:ב — Chullin 40b:2</span></div>
+    <div class="orig">מִכְּדֵי רַב הוּנָא כְּמַאן אַמְרַהּ לִשְׁמַעְתֵּיהּ? כְּעוּלָּא, וְעוּלָּא מַעֲשֶׂה כֹּל דְּהוּ קָאָמַר.</div>
+    <div class="trans" data-when="he">ומקשים: רב הונא כמי אמר את דבריו? כעולא, ועולא אמר שדי במעשה כלשהו לאסור. אם כן, ברגע שחתך כלשהו כבר נאסרה — ושוב הוי כמחתך בעפר. מדוע יתחייב על שחוטי חוץ?</div>
+    <div class="trans" data-when="en">The Gemara asks: Now in accordance with whose opinion did Rav Huna state his halakha? It is in accordance with the opinion of Ulla, who says: If he performed a sacrificial rite upon the animal, he renders it forbidden. And Ulla says that a minimal action renders the animal forbidden, as his ruling applies even to cutting one siman. According to Ulla’s opinion, the moment that he begins the incision, the animal is forbidden and unfit to be sacrificed. Consequently, when he completes the slaughter outside the Temple, it is as though he is chopping dirt. Why then is he liable to bring a sin offering for slaughter of a sacrificial animal outside the Temple courtyard?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין מ׳ ב:ג — Chullin 40b:3</span></div>
+    <div class="orig">אֶלָּא, בְּאוֹמֵר בִּגְמַר זְבִיחָה הוּא עוֹבְדָהּ.</div>
+    <div class="trans" data-when="he">מתרצים: מדובר באומר שהוא עובד את העבודה זרה רק בגמר השחיטה; לכן הבהמה נאסרת רק בסוף, ושלושת החיובים באים כאחד.</div>
+    <div class="trans" data-when="en">The Gemara answers: Rather, the baraita is referring to a case where one says prior to the slaughter that he is worshipping the idol only at the conclusion of the slaughter; therefore, only then is the animal rendered forbidden, and one is liable for all three sin offerings simultaneously.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין מ׳ ב:ד — Chullin 40b:4</span></div>
+    <div class="orig">אִי הָכִי, מַאי אִירְיָא חַטָּאת? לַישְׁמְעִינַן זֶבַח!</div>
+    <div class="trans" data-when="he">מקשים: אם כך, למה דווקא חטאת? שישמיענו הדין בכל זבח! (לפי רב פפא, לעומת זאת, מובן למה דווקא חטאת — חטאת העוף.)</div>
+    <div class="trans" data-when="en">The Gemara asks: If so, why does the tanna teach the halakha specifically with regard to a sin offering? Let him teach us the halakha with regard to any type of offering. According to Rav Pappa, by contrast, it is clear why the tanna taught the halakha with regard to a sin offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין מ׳ ב:ה — Chullin 40b:5</span></div>
+    <div class="orig">אֶלָּא אָמַר מָר זוּטְרָא מִשְּׁמֵיהּ דְּרַב פָּפָּא: הָכָא בְּמַאי עָסְקִינַן? כְּגוֹן שֶׁהָיָה חֲצִי קָנֶה פָּגוּם, וְהוֹסִיף עָלָיו כׇּל שֶׁהוּא וּגְמָרוֹ, דְּכוּלְּהוּ בַּהֲדֵי הֲדָדֵי קָאָתְיָין.</div>
+    <div class="trans" data-when="he">אלא אמר מר זוטרא משמיה דרב פפא: כאן מדובר שהיה חצי קנה פגום כבר לפני השחיטה, והוסיף עליו כל שהוא וגמרו — שאז שלושת האיסורים באים כאחד.</div>
+    <div class="trans" data-when="en">The Gemara returns to Rav Pappa’s interpretation of the baraita as referring to the case of a bird sin offering. The previous difficulty then resurfaces, that the bird was rendered forbidden before the slaughter was completed, as according to Rav Huna and Ulla any minimal action renders the bird forbidden. Rather, Mar Zutra said in the name of Rav Pappa: What are we dealing with here in the baraita? It is a case where half of the windpipe was deficient before the slaughter, and the slaughterer added to that deficiency an incision of any size, and completed it. The minority of the windpipe had been cut before the slaughterer cut it further, completing the act of slaughter. As in that case all of the three prohibitions come to be violated simultaneously.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין מ׳ ב:ו — Chullin 40b:6</span></div>
+    <div class="orig">אָמַר רַב פָּפָּא: אִי לָאו דְּאָמַר רַב הוּנָא סִימָן אֶחָד, לָא הָוְיָא חַטָּאת תְּיוּבְתֵּיהּ. מַאי מַעֲשֶׂה? מַעֲשֶׂה רַבָּה.</div>
+    <div class="trans" data-when="he">רב פפא: אילולא אמר רב הונא ׳סימן אחד׳, לא היתה הברייתא קושיא — שהיינו אומרים שה׳מעשה׳ של עולא הוא מעשה גדול (גמר השחיטה לעבודה זרה), ולא חיתוך סימן.</div>
+    <div class="trans" data-when="en">Rav Pappa said: If not for the fact that Rav Huna said that it is sufficient to cut one siman on the animal for idol worship to render it forbidden, the fact that the baraita mentions a sin offering specifically would not raise a difficulty for his opinion. In that case, one could explain: What is the action that renders the animal forbidden according to Ulla? It is a significant action, i.e., completion of the slaughter for idol worship, that renders the animal forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין מ׳ ב:ז — Chullin 40b:7</span></div>
+    <div class="orig">וְאָמַר רַב פָּפָּא: אִי לָאו דְּאָמַר רַב הוּנָא בֶּהֱמַת חֲבֵרוֹ, לָא הָוְיָא חַטָּאת תְּיוּבְתֵּיהּ. מַאי טַעְמָא? דִּידֵיהּ מָצֵי אָסַר, דְּחַבְרֵיהּ לָא מָצֵי אָסַר.</div>
+    <div class="trans" data-when="he">ועוד אמר רב פפא: אילולא דיבר רב הונא בבהמת חברו, לא היתה הברייתא קושיא. הטעם: בשלו אדם יכול לאסור, אך בשל חברו אינו יכול לאסור (וחטאת — בשר שלה לכהנים).</div>
+    <div class="trans" data-when="en">And Rav Pappa said: If not for the fact that Rav Huna stated his halakha specifically with regard to the animal of another, the fact that the baraita mentions specifically a sin offering would not raise a difficulty for his opinion. One could then explain: What is the reason that the animal designated as a sin offering is not rendered forbidden at the beginning of the slaughter? It is due to the fact that one is able to render his animal forbidden, but one is not able to render the animal of another forbidden. It is the priests who are entitled to derive benefit from the flesh of a sin offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין מ׳ ב:ח — Chullin 40b:8</span></div>
+    <div class="orig">פְּשִׁיטָא! מַהוּ דְּתֵימָא: כֵּיוָן דְּקָנֵי לֵיהּ לְכַפָּרָה – כְּדִידֵיהּ דָּמְיָא, קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">פשיטא! ומשיבים: צריך להשמיענו, שלא תאמר כיוון שקנה את הבהמה לכפרתו הרי היא כשלו — קא משמע לן שאין זה נחשב כשלו.</div>
+    <div class="trans" data-when="en">The Gemara objects: That is obvious. The Gemara explains: Rav Pappa needs to state this, lest you say that since one who brings a sin offering acquires the animal for his atonement, its status is like that of an animal that is his. Therefore, Rav Pappa teaches us that this does not suffice that the animal be considered his.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין מ׳ ב:ט — Chullin 40b:9</span></div>
+    <div class="orig">(נָעַ״ץ – סִימָן.) רַב נַחְמָן, וְרַב עַמְרָם, וְרַב יִצְחָק אָמְרִי: אֵין אָדָם אוֹסֵר דָּבָר שֶׁאֵין שֶׁלּוֹ.</div>
+    <div class="trans" data-when="he">(נע״ץ — סימן לשמות החכמים.) רב נחמן, רב עמרם ורב יצחק אומרים: אין אדם אוסר דבר שאינו שלו.</div>
+    <div class="trans" data-when="en">The Gemara provides a mnemonic for the names of the amora’im who participate in the discussion that ensues: Nun, Rav Naḥman; ayin, Rav Amram; tzadi, Rav Yitzḥak. Rav Naḥman, and Rav Amram, and Rav Yitzḥak all say: A person does not render forbidden an item that is not his.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין מ׳ ב:י — Chullin 40b:10</span></div>
+    <div class="orig">מֵיתִיבִי: הַשּׁוֹחֵט חַטָּאת בַּשַּׁבָּת בַּחוּץ לַעֲבוֹדָה זָרָה – חַיָּיב שָׁלֹשׁ חַטָּאוֹת, וְאוֹקִימְנָא בְּחַטַּאת הָעוֹף וּבַחֲצִי קָנֶה פָּגוּם. טַעְמָא דְּחַטַּאת הָעוֹף הוּא, דְּכוּלְּהוּ בַּהֲדֵי הֲדָדֵי קָאָתְיָין,</div>
+    <div class="trans" data-when="he">מיתיבי מן הברייתא: השוחט חטאת בשבת בחוץ לעבודה זרה — חייב שלוש חטאות, והעמדנוה בחטאת העוף ובחצי קנה פגום. הטעם שדווקא חטאת העוף — שכל החיובים באים כאחד,</div>
+    <div class="trans" data-when="en">The Gemara raises an objection from a baraita: One who unwittingly slaughters an animal that was designated as a sin offering on Shabbat outside the Temple for idol worship is liable to bring three sin offerings. And we interpreted the baraita as being in the case of a bird sin offering, and in a case where half of the windpipe was deficient. The reason for the triple liability is that it is a bird sin offering, as then, all of the three prohibitions come to be violated simultaneously.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין מ״א א:א — Chullin 41a:1</span></div>
+    <div class="orig">אֲבָל זֶבַח לָא. וְאִי אֵין אָדָם אוֹסֵר דָּבָר שֶׁאֵינוֹ שֶׁלּוֹ, מַאי אִרְיָא חַטַּאת הָעוֹף? אֲפִילּוּ חַטַּאת בְּהֵמָה נָמֵי, כֵּיוָן דְּקַנְיָא לֵיהּ לְכַפָּרָה כְּדִידֵיהּ דָּמְיָא.</div>
+    <div class="trans" data-when="he">אבל בזבח (בהמה) לא. ואם אין אדם אוסר דבר שאינו שלו, למה דווקא חטאת העוף? אפילו חטאת בהמה — שהרי קנאהּ לכפרתו והיא כשלו, ולכן נאסרת בחיתוך הראשון! ומשיבים: כיוון שקנאהּ לכפרתו היא כשלו, ונאסרת מתחילת השחיטה.</div>
+    <div class="trans" data-when="en">But in the case of an animal offering there is no way in which one can violate all three prohibitions simultaneously. But if a person does not render forbidden an item that is not his, why must the tanna teach the halakha specifically with regard to a bird sin offering? The same halakha would apply even in the case of an animal sin offering. This is because cutting one siman for idolatry does not render the animal forbidden, as the priest has the exclusive right to derive benefit from it, so it does not belong to the owner anymore. Therefore, one would violate the three prohibitions simultaneously. The Gemara answers: Since one who brings a sin offering acquires the animal for his atonement, its status is like that of an animal that is his, and he renders it forbidden with the first cut at the beginning of the slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין מ״א א:ב — Chullin 41a:2</span></div>
+    <div class="orig">תָּא שְׁמַע: שְׁנַיִם אוֹחֲזִין בְּסַכִּין וְשׁוֹחֲטִין, אֶחָד לְשׁוּם אֶחָד מִכׇּל אֵלּוּ, וְאֶחָד לְשׁוּם דָּבָר כָּשֵׁר – שְׁחִיטָתוֹ פְּסוּלָה. הָכָא בְּמַאי עָסְקִינַן? דְּאִית לֵיהּ שׁוּתָּפוּת בְּגַוַּהּ.</div>
+    <div class="trans" data-when="he">תא שמע מן המשנה: שניים אוחזים בסכין ושוחטים, אחד לשם אחד מאלו ואחד לשם דבר כשר — שחיטתו פסולה. משמע שגם מי שאינו בעל הבהמה אוסרהּ! ומשיבים: כאן מדובר שיש לו שותפות בבהמה.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear another objection from the mishna: If there were two people grasping a knife together and slaughtering an animal, one slaughtering for the sake of one of all those enumerated in the first clause of the mishna and one slaughtering for the sake of a legitimate matter, their slaughter is not valid. Based on the formulation of the mishna, the one slaughtering with improper intent is not necessarily the owner of the animal. How, then, can he render the animal forbidden? Apparently, one can render forbidden an item that is not his. The Gemara answers: What are we dealing with here? We are dealing with a case where the one with improper intent has a partnership share in the animal, so he is rendering his own animal forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין מ״א א:ג — Chullin 41a:3</span></div>
+    <div class="orig">תָּא שְׁמַע: הַמְטַמֵּא, וְהַמְדַמֵּעַ, וְהַמְנַסֵּךְ – בְּשׁוֹגֵג פָּטוּר, בְּמֵזִיד חַיָּיב. הָכָא נָמֵי דְּאִית לֵיהּ שׁוּתָּפוּת בְּגַוַּהּ.</div>
+    <div class="trans" data-when="he">תא שמע ממשנה (גיטין נב ב): המטמא, המדמע והמנסך — בשוגג פטור, במזיד חייב. משמע שאדם אוסר דבר שאינו שלו! ומשיבים: גם כאן מדובר שיש לו שותפות בו.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear another objection from a mishna (Gittin 52b): With regard to one who renders another’s food impure, and one who mixes teruma with another’s non-sacred produce, and one who pours another’s wine as a libation before an idol, if he did so unwittingly, he is exempt from payment of damages, even though he caused the other monetary loss. If he did so intentionally, he is liable to pay damages. Apparently, one can render forbidden an item that is not his. The Gemara answers: Here too it is a case where the one who caused the damage has a partnership share in the produce.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין מ״א א:ד — Chullin 41a:4</span></div>
+    <div class="orig">כְּתַנָּאֵי: גּוֹי שֶׁנִּיסֵּךְ יֵינוֹ שֶׁל יִשְׂרָאֵל שֶׁלֹּא בִּפְנֵי עֲבוֹדָה זָרָה – אֲסָרוֹ, רַבִּי יְהוּדָה בֶּן בְּתֵירָא וְרַבִּי יְהוּדָה בֶּן בָּבָא מַתִּירִין אוֹתוֹ מִפְּנֵי שְׁנֵי דְבָרִים: אֶחָד – שֶׁאֵין מְנַסְּכִין יַיִן אֶלָּא בִּפְנֵי עֲבוֹדָה זָרָה, וְאֶחָד – שֶׁיָּכוֹל לוֹמַר לוֹ ״לֹא כׇּל הֵימֶנָּךְ שֶׁתֶּאֱסֹר יֵינִי לְאוֹנְסִי״.</div>
+    <div class="trans" data-when="he">המחלוקת (אם אדם אוסר דבר שאינו שלו) היא כמחלוקת תנאים: גוי שניסך יינו של ישראל שלא בפני עבודה זרה — תנא קמא אוסרו, ורבי יהודה בן בתירא ורבי יהודה בן בבא מתירים: שאין מנסכים יין אלא בפני עבודה זרה, ושיכול לומר ׳לא כל הימנך שתאסור ייני לאונסי׳.</div>
+    <div class="trans" data-when="en">The Gemara notes that the dispute whether one who slaughters another’s animal for idol worship renders the animal forbidden, in accordance with Rav Huna, or does not render it forbidden, in accordance with Rav Naḥman, Rav Amram, and Rav Yitzḥak, is parallel to a dispute between tanna’im in a baraita: In the case of a gentile who poured a Jew’s wine as an idolatrous libation, but not in the presence of an object of idol worship, he has rendered the wine forbidden. Rabbi Yehuda ben Beteira and Rabbi Yehuda ben Bava permit drinking the wine due to two factors: One is that the presumption is that idol worshippers pour wine as an idolatrous libation only in the presence of an object of idol worship. And the other one is that even if the gentile poured the wine as an idolatrous libation, the Jew can say to the gentile: It is not within your power to render my wine forbidden against my will.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין מ״א א:ה — Chullin 41a:5</span></div>
+    <div class="orig">וְרַב נַחְמָן וְרַב עַמְרָם וְרַב יִצְחָק אָמְרִי: אֲפִילּוּ לְמַאן דְּאָמַר אָדָם אוֹסֵר דָּבָר שֶׁאֵינוֹ שֶׁלּוֹ – הָנֵי מִילֵּי גּוֹי, אֲבָל יִשְׂרָאֵל לְצַעוֹרֵיהּ קָא מִיכַּוֵּין.</div>
+    <div class="trans" data-when="he">ורב נחמן, רב עמרם ורב יצחק אומרים: אפילו לדעה שאדם אוסר דבר שאינו שלו — זה דווקא בגוי, אבל ישראל מתכוון לצער את חברו (ולא לעבודה זרה), ולכן אינו אוסר.</div>
+    <div class="trans" data-when="en">And Rav Naḥman, and Rav Amram, and Rav Yitzḥak say: Although Rav Huna’s opinion is compatible only with the opinion of the first tanna in the baraita and not with the opinion of Rabbi Yehuda ben Beteira and Rabbi Yehuda ben Bava, we can state our opinion even according to the one who says that a person renders forbidden an item that is not his, e.g., by pouring his wine as a libation or slaughtering his animal for idol worship. This statement applies only in a case where a gentile pours the libation or slaughters the animal. But if a Jew pours the wine or slaughters the animal, presumably he intends to torment that other person, and not to engage in idol worship. Therefore, a Jew does not render the animal forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין מ״א א:ו — Chullin 41a:6</span></div>
+    <div class="orig">תָּא שְׁמַע: שְׁנַיִם אוֹחֲזִין בְּסַכִּין וְשׁוֹחֲטִין, אֶחָד לְשׁוּם אֶחָד מִכׇּל אֵלּוּ וְאֶחָד לְשׁוּם דָּבָר כָּשֵׁר – שְׁחִיטָתוֹ פְּסוּלָה. הָכָא בְּמַאי עָסְקִינַן? בְּיִשְׂרָאֵל מְשׁוּמָּד.</div>
+    <div class="trans" data-when="he">תא שמע מן המשנה: שניים אוחזים בסכין ושוחטים, אחד לשם אחד מאלו ואחד לשם דבר כשר — שחיטתו פסולה. ומדובר בישראל — משמע שגם ישראל אוסר! ומשיבים: כאן בישראל מומר, שכוונתו לעבודה זרה.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a contradiction to that distinction from the mishna: If there were two people grasping a knife together and slaughtering an animal, one slaughtering for the sake of one of all those enumerated in the first clause of the mishna and one slaughtering for the sake of a legitimate matter, their slaughter is not valid. As the mishna is discussing a case involving Jews, this indicates that even a Jew who slaughters an animal for idol worship renders it forbidden. The Gemara answers: What are we dealing with here? We are dealing with the case of a Jewish transgressor whose intent when declaring that his slaughter is for the sake of mountains, hills, or other natural entities is for idol worship.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין מ״א א:ז — Chullin 41a:7</span></div>
+    <div class="orig">תָּא שְׁמַע: הַמְטַמֵּא וְהַמְדַמֵּעַ וְהַמְנַסֵּךְ, בְּשׁוֹגֵג – פָּטוּר, בְּמֵזִיד – חַיָּיב. הָכָא נָמֵי בְּיִשְׂרָאֵל מְשׁוּמָּד.</div>
+    <div class="trans" data-when="he">תא שמע: המטמא, המדמע והמנסך — בשוגג פטור, במזיד חייב. משמע שישראל המנסך אוסר דבר שאינו שלו! ומשיבים: גם כאן בישראל מומר, שכוונתו לעבודה זרה.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a contradiction to the distinction between a Jew and gentile from a mishna (Gittin 52b): With regard to one who renders another’s food impure, and one who mixes teruma with another’s non-sacred produce, and one who pours another’s wine as a libation before an idol, if he did so unwittingly, he is exempt from payment of damages, even though he caused the other monetary loss. If he did so intentionally, he is liable to pay damages. Apparently, a Jew who pours wine as a libation for idolatry renders wine that is not his forbidden. The Gemara answers: Here too the reference is to an apostate Jew whose intent is for idol worship.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">19</span> <span class="ref">חולין מ״א א:ח — Chullin 41a:8</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אַחָא בְּרֵיהּ דְּרָבָא לְרַב אָשֵׁי: הִתְרוּ בּוֹ וְקִבֵּל עָלָיו הַתְרָאָה, מַאי? אֲמַר לֵיהּ: הִתִּיר עַצְמוֹ לְמִיתָה קָאָמְרַתְּ? אֵין לָךְ מְשׁוּמָּד גָּדוֹל מִזֶּה.</div>
+    <div class="trans" data-when="he">אמר רב אחא בריה דרבא לרב אשי: אם התרו בו וקיבל עליו את ההתראה, מה דינו? אמר לו: התיר עצמו למיתה קאמרת? אין לך מומר גדול מזה — ובוודאי אוסר.</div>
+    <div class="trans" data-when="en">Rav Aḥa, son of Rava, said to Rav Ashi: With regard to a Jew who is not a transgressor but declared that he is slaughtering another’s animal for idolatry, if those who heard his declaration forewarned him that doing so is prohibited by Torah law and is punishable by death, and he acknowledged the forewarning and said: It is in full knowledge of the prohibition and the punishment that I do so, what is the halakha? Does he render the animal forbidden in that case? Rav Ashi said to him: Are you saying a case where he subjected himself to death by acknowledging the forewarning? You have no transgressor greater than that, and he certainly renders the animal forbidden.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
