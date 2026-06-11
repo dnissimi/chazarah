@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין מ״ג</title>
+<meta name="description" content="עולא מונה שמונה מיני טרפות שנאמרו למשה בסיני; ר׳ יוחנן פוסק שמרה שניקבה טרפה ושדי בכזית כבד; הוושט נבדק רק מבפנים, וקוץ שישב בו — אין חוששין; ובתורבץ הוושט נחלקו רב ושמואל — ורבא, שצירף את חומרות שניהם, חויב לשלם את השור.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="43">
+<meta name="gemara-map:sefaria-ref" content="Chullin 43">
+<meta name="gemara-map:topic-he" content="שמונה מיני טרפות והוושט">
+<meta name="gemara-map:topic-en" content="Eight tereifot and the gullet">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין מ״ג">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 43">
+<meta name="gemara-map:blurb-he" content="עולא מונה שמונה מיני טרפות שנאמרו למשה בסיני; ר׳ יוחנן פוסק שמרה שניקבה טרפה ושדי בכזית כבד; הוושט נבדק רק מבפנים, וקוץ שישב בו — אין חוששין; ובתורבץ הוושט נחלקו רב ושמואל — ורבא, שצירף את חומרות שניהם, חויב לשלם את השור.">
+<meta name="gemara-map:blurb-en" content="Ulla counts eight categories of tereifot stated to Moses at Sinai; Rabbi Yochanan rules a perforated gallbladder a tereifa and an olive-bulk of liver sufficient; the gullet is inspected only from within, and a thorn lodged in it raises no concern; Rav and Shmuel dispute the entrance of the gullet — and Rava, who combined both stringencies, was made to pay for the bull.">
+<meta name="gemara-map:sugya-count" content="8">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין מ״ג</span><span data-when="en">Sugya map — Chullin 43</span></h1>
+    <div class="subtitle"><span data-when="he">חולין מ״ג א:ב׳–מ״ד א:ט׳ · Chullin 43a:2–44a:9 · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 43a:2–44a:9 · חולין מ״ג א:ב׳–מ״ד א:ט׳ · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שמונה מיני טרפות נאמרו למשה בסיני. בוושט: קרום שעלה מחמת מכה אינו קרום, בדיקתו רק מבפנים, וקוץ שישב בו — אין חוששין שמא הבריא. בתורבץ הוושט נחלקו רב (במשהו) ושמואל (ברובו) — והמצרף חומרות סותרות הוא ״הכסיל בחושך הולך״: רבא חויב לשלם את השור, אלא שרב טבות מיישב שכולה כרב עבדהּ.</span>
+    <span data-when="en"><b>Bottom line:</b> Eight categories of tereifot were stated to Moses at Sinai. As for the gullet: a membrane over a wound is no membrane, it is inspected only from within, and a thorn that sat in it raises no concern. Rav (any perforation) and Shmuel (its majority) dispute the entrance of the gullet — and one who combines contradictory stringencies is ״the fool walking in darkness״: Rava was made to pay for the bull, though Rav Tavut resolves that he acted entirely per Rav.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="sugya overview" id="overview">
+  <h2><span data-when="he">מפת־על — שמונה שלבי הסוגיה</span><span data-when="en">Overview — the eight stages of the sugya</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · שמונה מיני טרפות<br/>מ״ג א:ב׳–ג׳"]:::statement
+  O2["2 · פסקי ר׳ יוחנן: מרה וכבד<br/>מ״ג א:ד׳–ט׳"]:::statement
+  O3["3 · נקבי הקורקבן והוושט<br/>מ״ג א:י׳–י״ב"]:::question
+  O4["4 · בדיקת הוושט — רק מבפנים<br/>מ״ג א:י״ג–מ״ג ב:ב׳"]:::statement
+  O5["5 · קוץ בוושט — אין חוששין<br/>מ״ג ב:ג׳–ט׳"]:::statement
+  O6["6 · תורבץ הוושט — רב ושמואל<br/>מ״ג ב:י׳–י״א"]:::statement
+  O7["7 · אין מצרפים חומרות סותרות<br/>מ״ג ב:י״ב–מ״ד א:ו׳"]:::conclusion
+  O8["8 · גבולות השחיטה בוושט<br/>מ״ד א:ז׳–ט׳"]:::question
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  O5 --> O6
+  O6 --> O7
+  O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · Eight types of tereifot<br/>43a:2–3"]:::statement
+  O2["2 · R. Yochanan: gallbladder and liver<br/>43a:4–9"]:::statement
+  O3["3 · Gizzard and gullet linings<br/>43a:10–12"]:::question
+  O4["4 · Inspecting the gullet from within<br/>43a:13–43b:2"]:::statement
+  O5["5 · A thorn in the gullet<br/>43b:3–9"]:::statement
+  O6["6 · The gullet׳s entrance — Rav vs. Shmuel<br/>43b:10–11"]:::statement
+  O7["7 · No combining contradictory stringencies<br/>43b:12–44a:6"]:::conclusion
+  O8["8 · Boundaries of slaughter<br/>44a:7–9"]:::question
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  O5 --> O6
+  O6 --> O7
+  O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+  </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">שמונה מיני טרפות</span><span data-when="en">Eight types of tereifot</span>
+      <span class="ref">Chullin 43a:2–3</span></h2>
+  <div class="lead"><span data-when="he">עולא מונה שמונה אבות טרפות שנאמרו למשה בסיני, וחייא בר רבא מונה שמונה טרפות בנקובה — והמרה התשיעית שנויה כדעת יחיד, ר׳ יוסי בר׳ יהודה.</span><span data-when="en">Ulla counts eight categories of tereifot stated to Moses at Sinai; Chiyya bar Rava counts eight perforation tereifot — a ninth, the gallbladder, is the individual view of R. Yosei son of R. Yehuda.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עולא: שמונה מיני טרפות<br/>נאמרו למשה בסיני"]:::statement
+  S2["② למעט לקותא (איבר שלקה)<br/>של רכיש בר פפא"]:::statement
+  S3["③ חייא בר רבא: שמונה טרפות בנקובה;<br/>אם תאמר תשע — מרה דעת יחיד היא"]:::statement
+  P4["④ דתניא: ניקבה הקיבה, ניקבו הדקין — טרפה;<br/>ר׳ יוסי בר׳ יהודה: אף ניקבה המרה"]:::proof
+  S1 -->|למעט| S2
+  S1 --> S3
+  S3 -->|דתניא| P4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Ulla: eight types of tereifot<br/>were stated to Moses at Sinai"]:::statement
+  S2["② Excluding the diseased organ<br/>of Rakhish bar Pappa"]:::statement
+  S3["③ Chiyya bar Rava: eight tereifot of perforation;<br/>if nine — the gallbladder is an individual view"]:::statement
+  P4["④ Baraita: perforated abomasum or intestines — tereifa;<br/>R. Yosei b. R. Yehuda: even the gallbladder"]:::proof
+  S1 -->|To exclude| S2
+  S1 --> S3
+  S3 -->|As taught| P4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שְׁמֹנָה מִינֵי טְרֵפוֹת נֶאֶמְרוּ לוֹ<br/>לְמֹשֶׁה בְּסִינַי"]:::statement
+  S2["② לְאַפּוֹקֵי לָקוּתָא<br/>דְּרָכִישׁ בַּר פָּפָּא"]:::statement
+  S3["③ שְׁמֹנָה טְרֵפוֹת יֵשׁ בִּנְקוּבָה, אִם תֹּאמַר תֵּשַׁע –<br/>מָרָה רַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה קָתָנֵי לַהּ"]:::statement
+  P4["④ נִיקְּבָה הַקֵּיבָה, נִיקְּבוּ הַדַּקִּים – טְרֵפָה …<br/>אַף נִיקְּבָה הַמָּרָה"]:::proof
+  S1 -->|למעט| S2
+  S1 --> S3
+  S3 -->|דתניא| P4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span><span class="num">2</span> <span class="ref">חולין מ״ג א — Chullin 43a:2</span></div>
+  <div class="orig">אָמַר עוּלָּא: שְׁמֹנָה מִינֵי טְרֵפוֹת נֶאֶמְרוּ לוֹ לְמֹשֶׁה בְּסִינַי – נְקוּבָה, וּפְסוּקָה, נְטוּלָה, וַחֲסוּרָה, קְרוּעָה, וּדְרוּסָה, נְפוּלָה, וּשְׁבוּרָה. לְאַפּוֹקֵי לָקוּתָא דְּרָכִישׁ בַּר פָּפָּא.</div>
+  <div class="trans" data-when="he">אמר עולא: שמונה מיני טרפות נאמרו למשה בסיני, וכל הטרפות נכללות בהם: נקובה, פסוקה, נטולה, חסרה, קרועה, דרוסה, נפולה ושבורה. והרשימה באה למעט ״לקותא״ — איבר שלקה — שהזכיר רכיש בר פפא, שאינה טריפה לדעת עולא.</div>
+  <div class="trans" data-when="en">§ Ulla says: Eight types of tereifot were stated to Moses at Sinai, and all the cases mentioned in the Mishna and elsewhere fall into these categories: An animal whose organ was perforated or severed, removed or missing a piece, one that was torn or clawed by wild animals, or that fell or was broken. The Gemara notes: This list is compiled to the exclusion of a diseased organ, which Rakhish bar Pappa mentioned with regard to a kidney. Ulla does not deem this a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span><span class="num">4</span> <span class="ref">חולין מ״ג א — Chullin 43a:3</span></div>
+  <div class="orig">אָמַר חִיָּיא בַּר רָבָא: שְׁמֹנָה טְרֵפוֹת יֵשׁ בִּנְקוּבָה, אִם תֹּאמַר תֵּשַׁע – מָרָה רַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה קָתָנֵי לַהּ, דְּתַנְיָא: נִיקְּבָה הַקֵּיבָה, נִיקְּבוּ הַדַּקִּים – טְרֵפָה, רַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה אוֹמֵר: אַף נִיקְּבָה הַמָּרָה.</div>
+  <div class="trans" data-when="he">אמר חייא בר רבא: שמונה טרפות יש בקטגוריית ״נקובה״. ואם תאמר תשע — שהרי נשנתה גם מרה שניקבה — דין המרה שנוי רק בשיטת ר׳ יוסי בר׳ יהודה, דעת יחיד; דתניא: ניקבה הקיבה או ניקבו הדקין — טריפה; ר׳ יוסי בר׳ יהודה אומר: אף ניקבה המרה.</div>
+  <div class="trans" data-when="en">Ḥiyya bar Rava says: There are eight tereifot in the category of a perforated organ: A perforated gullet, brain membrane, heart, lung, abomasum, intestine, inner rumen, and reticulum or omasum that was perforated to the outside. If you say that there are nine, because a perforated gallbladder is also mentioned in the mishna, one can say that with regard to the gallbladder, only Rabbi Yosei, son of Rabbi Yehuda, teaches it, and it is the opinion of an individual. As it is taught in a baraita: If the abomasum was perforated, or the intestines were perforated, it is a tereifa. Rabbi Yosei, son of Rabbi Yehuda, says: Even if the gallbladder was perforated it is a tereifa.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">פסקי ר׳ יוחנן: מרה וכבד</span><span data-when="en">Rabbi Yochanan's rulings: gallbladder and liver</span>
+      <span class="ref">Chullin 43a:4–9</span></h2>
+  <div class="lead"><span data-when="he">שורת פסקים שמוסר ר׳ יצחק בר׳ יוסף בשם ר׳ יוחנן: הלכה כר׳ יוסי בר׳ יהודה במרה — וראיית החברים מאיוב נדחית, שאין מזכירין מעשה ניסים; הלכה כדברי האומר כזית בכבד; ומרה שניקבה וכבד סותמתה — כשרה.</span><span data-when="en">A series of rulings R. Yitzchak son of R. Yosef transmits in R. Yochanan's name: the halakha follows R. Yosei son of R. Yehuda on the gallbladder — the colleagues' proof from Job is deflected, since miracles are no proof; the halakha requires an olive-bulk of liver; and a perforated gallbladder sealed by the liver is kosher.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ יצחק בר׳ יוסף בשם ר׳ יוחנן: הלכה<br/>כר׳ יוסי בר׳ יהודה — מרה שניקבה טרפה"]:::statement
+  Q2{"② חבריו השיבו: ״ישפוך לארץ מררתי״ —<br/>ואיוב עדיין חי!"}:::question
+  A3["③ אין מזכירין מעשה ניסים —<br/>״רק את נפשו שמור״; נס שונה"]:::answer
+  S4["④ ועוד בשם ר׳ יוחנן: הלכה כדברי<br/>האומר כזית בכבד"]:::statement
+  Q5{"⑤ והא ר׳ יוחנן: הלכה כסתם משנה —<br/>״ולא נשתייר הימנה כלום״, הא נשתייר כשרה!"}:::question
+  A6["⑥ אמוראים הם, ונחלקו<br/>אליבא דר׳ יוחנן"]:::answer
+  S7["⑦ מרה שניקבה וכבד<br/>סותמתה — כשרה"]:::statement
+  S1 -->|אהדרו חבריו| Q2
+  Q2 -->|אמר להם| A3
+  A3 -->|ועוד אמר| S4
+  S4 -->|קושיא| Q5
+  Q5 -->|תירוץ| A6
+  A6 -->|ועוד אמר| S7
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Yitzchak b. R. Yosef citing R. Yochanan: halakha follows<br/>R. Yosei b. R. Yehuda — a perforated gallbladder is a tereifa"]:::statement
+  Q2{"② His colleagues: ״He pours out my gall<br/>upon the ground״ — and Job still lived!"}:::question
+  A3["③ Miracles are not cited as proof —<br/>״only spare his life״; a miracle is different"]:::answer
+  S4["④ Also citing R. Yochanan: halakha follows the one<br/>who says an olive-bulk of liver suffices"]:::statement
+  Q5{"⑤ But R. Yochanan said: halakha follows the unattributed<br/>mishna — ״nothing remained״ implies any remnant suffices!"}:::question
+  A6["⑥ They are amoraim, disputing<br/>R. Yochanan׳s view"]:::answer
+  S7["⑦ A perforated gallbladder sealed<br/>by the liver — kosher"]:::statement
+  S1 -->|His colleagues replied| Q2
+  Q2 -->|He answered them| A3
+  A3 -->|Further ruling| S4
+  S4 -->|Difficulty| Q5
+  Q5 -->|Answer| A6
+  A6 -->|Further ruling| S7
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הֲלָכָה כְּרַבִּי יוֹסֵי<br/>בְּרַבִּי יְהוּדָה"]:::statement
+  Q2{"② ״יִשְׁפּוֹךְ לָאָרֶץ מֵרָרָתִי״,<br/>וַעֲדַיִין אִיּוֹב קַיָּים"}:::question
+  A3["③ אֵין מַזְכִּירִין מַעֲשֵׂה נִסִּים …<br/>״רַק אֶת נַפְשׁוֹ שְׁמֹר״ … נִיסָּא שָׁאנֵי"]:::answer
+  S4["④ הֲלָכָה כְּדִבְרֵי<br/>הָאוֹמֵר כְּזַיִת"]:::statement
+  Q5{"⑤ הֲלָכָה כִּסְתַם מִשְׁנָה … הָא נִשְׁתַּיֵּיר כְּשֵׁרָה,<br/>אַף עַל גַּב דְּלָא הָוֵי כְּזַיִת!"}:::question
+  A6["⑥ אָמוֹרָאֵי נִינְהוּ וְאַלִּיבָּא<br/>דְּרַבִּי יוֹחָנָן"]:::answer
+  S7["⑦ מָרָה שֶׁנִּיקְּבָה, וְכָבֵד<br/>סוֹתַמְתָּהּ – כְּשֵׁרָה"]:::statement
+  S1 -->|אהדרו חבריו| Q2
+  Q2 -->|אמר להם| A3
+  A3 -->|ועוד אמר| S4
+  S4 -->|קושיא| Q5
+  Q5 -->|תירוץ| A6
+  A6 -->|ועוד אמר| S7
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ג א — Chullin 43a:4</span></div>
+  <div class="orig">(הִלְכוֹת חָבֵר כְּזַיִת מָרָה וְקוּרְקְבָן – סִימָן).</div>
+  <div class="trans" data-when="he">(הלכות, חבר, כזית, מרה, קורקבן — סימן לזכירת מימרותיו של ר׳ יצחק בר׳ יוסף שלהלן.)</div>
+  <div class="trans" data-when="en">§ The Gemara provides a mnemonic for the following statements of Rabbi Yitzḥak, son of Rabbi Yosef: Halakhot, friend, olive-bulk, gallbladder, and gizzard.</div>
+</div>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ג א — Chullin 43a:5</span></div>
+  <div class="orig">אָמַר רַבִּי יִצְחָק בְּרַבִּי יוֹסֵף אָמַר רַבִּי יוֹחָנָן: הֲלָכָה כְּרַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה.</div>
+  <div class="trans" data-when="he">אמר ר׳ יצחק בר׳ יוסף בשם ר׳ יוחנן: הלכה כר׳ יוסי בר׳ יהודה — שמרה שניקבה טריפה.</div>
+  <div class="trans" data-when="en">Rabbi Yitzḥak, son of Rabbi Yosef, says that Rabbi Yoḥanan disagrees with the statement of Ḥiyya bar Rava and says: The halakha is in accordance with the opinion of Rabbi Yosei, son of Rabbi Yehuda, that a perforated gallbladder renders the animal a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ג א — Chullin 43a:6</span></div>
+  <div class="orig">וְאָמַר רַבִּי יִצְחָק בְּרַבִּי יוֹסֵף אָמַר רַבִּי יוֹחָנָן: מַאי אַהְדַּרוּ לֵיהּ חַבְרֵיהּ לְרַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה? ״יִשְׁפּוֹךְ לָאָרֶץ מֵרָרָתִי״, וַעֲדַיִין אִיּוֹב קַיָּים. אָמַר לָהֶם: אֵין מַזְכִּירִין מַעֲשֵׂה נִסִּים, דְּאִי לָא תֵּימָא הָכִי ״יְפַלַּח כִּלְיוֹתַי וְלֹא יַחְמוֹל״ – מִי קָא חָיֵי? אֶלָּא נִיסָּא שָׁאנֵי, דִּכְתִיב: ״רַק אֶת נַפְשׁוֹ שְׁמֹר״. הָכָא נָמֵי נִיסָּא שָׁאנֵי.</div>
+  <div class="trans" data-when="he">ועוד אמר ר׳ יצחק בר׳ יוסף בשם ר׳ יוחנן: מה השיבו חבריו לר׳ יוסי בר׳ יהודה? מהפסוק באיוב ״ישפוך לארץ מררתי״ — ואיוב עדיין חי; משמע שאפשר לחיות במרה שניקבה! אמר להם: אין מזכירין מעשה ניסים; שאם לא תאמר כך — ״יפלח כליותי ולא יחמול״, וכי מי שנפלחו כליותיו חי? אלא הנס שונה, שנאמר לשטן ״רק את נפשו שמור״. אף כאן — נס שונה, ואין מביאים ממנו ראיה.</div>
+  <div class="trans" data-when="en">And Rabbi Yitzḥak, son of Rabbi Yosef, says that Rabbi Yoḥanan says: What did the friends of Rabbi Yosei, son of Rabbi Yehuda, respond to him? They responded that Job said: “He pours out my gall upon the ground” (Job 16:13), and yet Job was still alive. Evidently, one with a perforated gallbladder can live. Rabbi Yosei said to them: Job was kept alive by a miracle, and one does not mention miraculous acts as proof for a general ruling. As, if you do not say so, then the other phrase in the verse: “He cleaves my kidneys asunder, and does not spare,” is problematic. Does one with cleaved kidneys live? Rather, a miracle is different, as it is written that God said to Satan with regard to Job: “Only spare his life” (Job 2:6). Under natural circumstances, Job should have died from his injuries, but in this case he was kept alive by a miracle. Here too, with regard to the gallbladder, one must say that a miracle is different, and one cannot bring proof from it.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ג א — Chullin 43a:7</span></div>
+  <div class="orig">וְאָמַר רַבִּי יִצְחָק בְּרַבִּי יוֹסֵף אָמַר רַבִּי יוֹחָנָן: הֲלָכָה כְּדִבְרֵי הָאוֹמֵר כְּזַיִת.</div>
+  <div class="trans" data-when="he">ועוד אמר ר׳ יצחק בר׳ יוסף בשם ר׳ יוחנן: הלכה כדברי האומר שאם ניטל הכבד ונשתייר ממנו כזית — כשרה.</div>
+  <div class="trans" data-when="en">And Rabbi Yitzḥak, son of Rabbi Yosef, says that Rabbi Yoḥanan says: The halakha is in accordance with the statement of the one who says that if the liver of an animal was removed but one olive-bulk of it remains, it is kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span><span class="num">6</span> <span class="ref">חולין מ״ג א — Chullin 43a:8</span></div>
+  <div class="orig">וּמִי אָמַר רַבִּי יוֹחָנָן הָכִי? וְהָאָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: הֲלָכָה כִּסְתַם מִשְׁנָה, וּתְנַן: נִיטְּלָה הַכָּבֵד וְלֹא נִשְׁתַּיֵּיר הֵימֶנָּה כְּלוּם – הָא נִשְׁתַּיֵּיר כְּשֵׁרָה, אַף עַל גַּב דְּלָא הָוֵי כְּזַיִת! אָמוֹרָאֵי נִינְהוּ וְאַלִּיבָּא דְּרַבִּי יוֹחָנָן.</div>
+  <div class="trans" data-when="he">ושואלים: וכי אמר ר׳ יוחנן כך? והרי אמר רבה בר בר חנה בשם ר׳ יוחנן: הלכה כסתם משנה, ושנינו: ״ניטלה הכבד ולא נשתייר הימנה כלום״ — הא נשתייר משהו, כשרה, אף על פי שאין בו כזית! ומשיבים: אמוראים הם, ונחלקו אליבא דר׳ יוחנן — אם אמר שהלכה לעולם כסתם משנה.</div>
+  <div class="trans" data-when="en">The Gemara asks: And does Rabbi Yoḥanan really say this? But doesn’t Rabba bar bar Ḥana say that Rabbi Yoḥanan says: The halakha is always in accordance with an unattributed mishna; and we learned in the mishna: If the liver was removed and nothing remained of it, the animal is a tereifa? One can infer that if any of it remained, the animal is kosher even if what remains does not constitute an olive-bulk. The Gemara responds: They are amora’im, and they disagree with regard to the opinion of Rabbi Yoḥanan as to whether he holds that the halakha is always in accordance with an unattributed mishna.</div>
+</div>
+<div class="quote">
+  <div><span class="num">7</span> <span class="ref">חולין מ״ג א — Chullin 43a:9</span></div>
+  <div class="orig">דְּאָמַר רַבִּי יִצְחָק בְּרַבִּי יוֹסֵף אָמַר רַבִּי יוֹחָנָן: מָרָה שֶׁנִּיקְּבָה, וְכָבֵד סוֹתַמְתָּהּ – כְּשֵׁרָה.</div>
+  <div class="trans" data-when="he">שאמר ר׳ יצחק בר׳ יוסף בשם ר׳ יוחנן: מרה שניקבה במקום חיבורה לכבד, והכבד סותם את נקבה — כשרה.</div>
+  <div class="trans" data-when="en">The Gemara brings another statement that Rabbi Yitzḥak, son of Rabbi Yosef, says that Rabbi Yoḥanan says: If the gallbladder was perforated in a place where it was adjacent to the liver, and the liver seals the hole, the animal is kosher, even though a perforated gallbladder normally renders the animal a tereifa according to Rabbi Yoḥanan.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">נקבי הקורקבן והוושט</span><span data-when="en">Perforations of the gizzard and gullet linings</span>
+      <span class="ref">Chullin 43a:10–12</span></h2>
+  <div class="lead"><span data-when="he">מהקורקבן וכיסו עוברת הגמרא לשני עורות הוושט: ניקב זה בלא זה — כשר; ניקבו שניהם שלא זה כנגד זה — בוושט הנע חוששים שיזדמנו הנקבים יחד, ובקורקבן הנח — לא; וכך נמסר למסקנה משמו של רב פפא.</span><span data-when="en">From the gizzard and its lining the Gemara moves to the gullet's two linings: one perforated without the other — kosher; both perforated out of alignment — in the moving gullet the holes may align, in the resting gizzard they will not; so the final report in Rav Pappa's name concludes.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ יוחנן: ניקב הקורקבן<br/>וכיס שלו קיים — כשר"]:::statement
+  Q2{"② איבעיא: ניקב הכיס<br/>וקורקבן קיים — מהו?"}:::question
+  P3["③ תא שמע — רב נחמן:<br/>ניקב זה בלא זה — כשר"]:::proof
+  S4["④ רבא: שני עורות לוושט — חיצון אדום ופנימי לבן;<br/>ניקב זה בלא זה כשר; ואם נתחלפו — טרפה"]:::statement
+  Q5{"⑤ איבעיא: ניקבו שניהם<br/>זה שלא כנגד זה — מהו?"}:::question
+  A6["⑥ מר זוטרא משמיה דרב פפא:<br/>בוושט — כשר, בקורקבן — פסול"]:::answer
+  Q7{"⑦ רב אשי: אדרבה! הוושט נע ומתרחב — פעמים שהנקבים<br/>מזדמנים יחד; הקורקבן נח — כדקאי קאי"}:::question
+  C8["⑧ רב אחא בריה דרב יוסף: משמיה<br/>דמר זוטרא אמרו כדבריך"]:::conclusion
+  S1 -->|איבעיא| Q2
+  Q2 -->|תא שמע| P3
+  P3 -->|וכן| S4
+  S4 -->|איבעיא| Q5
+  Q5 -->|תשובה| A6
+  A6 -.->|מתקיף| Q7
+  Q7 -->|מסקנה| C8
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Yochanan: gizzard perforated but<br/>its inner lining intact — kosher"]:::statement
+  Q2{"② Dilemma: lining perforated, gizzard<br/>intact — what is the halakha?"}:::question
+  P3["③ Come and hear — Rav Nachman:<br/>one without the other — kosher"]:::proof
+  S4["④ Rava: the gullet has two linings — outer red, inner white;<br/>one without the other kosher; if switched — tereifa"]:::statement
+  Q5{"⑤ Dilemma: both perforated, not<br/>aligned — what is the halakha?"}:::question
+  A6["⑥ Mar Zutra citing Rav Pappa:<br/>gullet — kosher; gizzard — unfit"]:::answer
+  Q7{"⑦ Rav Ashi: on the contrary! The gullet moves — at times<br/>the holes align; the gizzard rests in place"}:::question
+  C8["⑧ Rav Acha b. Rav Yosef: in Mar Zutra׳s<br/>name they reported it as you say"]:::conclusion
+  S1 -->|Dilemma| Q2
+  Q2 -->|Come and hear| P3
+  P3 -->|Similarly| S4
+  S4 -->|Dilemma| Q5
+  Q5 -->|Answer| A6
+  A6 -.->|Objection| Q7
+  Q7 -->|Conclusion| C8
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① נִיקַּב הַקּוּרְקְבָן וְכִיס<br/>שֶׁלּוֹ קַיָּים – כָּשֵׁר"]:::statement
+  Q2{"② נִיקַּב הַכִּיס וְקוּרְקְבָן<br/>קַיָּים, מַאי?"}:::question
+  P3["③ תָּא שְׁמַע … נִיקַּב זֶה<br/>בְּלֹא זֶה – כָּשֵׁר"]:::proof
+  S4["④ שְׁנֵי עוֹרוֹת יֵשׁ לוֹ לַוֶּושֶׁט, חִיצוֹן אָדוֹם וּפְנִימִי לָבָן …<br/>דְּאִי חַלֵּיף – טְרֵפָה"]:::statement
+  Q5{"⑤ נִיקְּבוּ שְׁנֵיהֶם זֶה שֶׁלֹּא<br/>כְּנֶגֶד זֶה, מַהוּ?"}:::question
+  A6["⑥ בַּוֶּושֶׁט – כָּשֵׁר,<br/>בַּקּוּרְקְבָן – פָּסוּל"]:::answer
+  Q7{"⑦ אַדְּרַבָּה … זִמְנִין דְּמִיהַנְדְּזִין בַּהֲדֵי הֲדָדֵי;<br/>קוּרְקְבָן דְּמֵינָח נָיַיח, כִּדְקָאֵי קָאֵי!"}:::question
+  C8["⑧ הָכִי אָמְרִינַן מִשְּׁמֵיהּ דְּמָר זוּטְרָא …<br/>כְּוָותָיךְ"]:::conclusion
+  S1 -->|איבעיא| Q2
+  Q2 -->|תא שמע| P3
+  P3 -->|וכן| S4
+  S4 -->|איבעיא| Q5
+  Q5 -->|תשובה| A6
+  A6 -.->|מתקיף| Q7
+  Q7 -->|מסקנה| C8
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ג א — Chullin 43a:10</span></div>
+  <div class="orig">וְאָמַר רַבִּי יִצְחָק בְּרַבִּי יוֹסֵף אָמַר רַבִּי יוֹחָנָן: נִיקַּב הַקּוּרְקְבָן וְכִיס שֶׁלּוֹ קַיָּים – כָּשֵׁר.</div>
+  <div class="trans" data-when="he">ועוד אמר ר׳ יצחק בר׳ יוסף בשם ר׳ יוחנן: ניקב הקורקבן (בשרו) וכיסו — קרומו הפנימי — קיים, כשר.</div>
+  <div class="trans" data-when="en">And Rabbi Yitzḥak, son of Rabbi Yosef, says that Rabbi Yoḥanan says: Even though the mishna on 56a teaches that if a bird’s gizzard was perforated it is a tereifa, if the gizzard was perforated but its inner lining is intact, the bird is kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span><span class="num">4</span> <span class="ref">חולין מ״ג א — Chullin 43a:11</span></div>
+  <div class="orig">אִיבַּעְיָא לְהוּ: נִיקַּב הַכִּיס וְקוּרְקְבָן קַיָּים, מַאי? תָּא שְׁמַע, דְּאָמַר רַב נַחְמָן: נִיקַּב זֶה בְּלֹא זֶה – כָּשֵׁר. אָמַר רָבָא: שְׁנֵי עוֹרוֹת יֵשׁ לוֹ לַוֶּושֶׁט, חִיצוֹן אָדוֹם וּפְנִימִי לָבָן, נִיקַּב זֶה בְּלֹא זֶה – כָּשֵׁר. לְמָה לִי לְמֵימַר חִיצוֹן אָדוֹם וּפְנִימִי לָבָן? דְּאִי חַלֵּיף – טְרֵפָה.</div>
+  <div class="trans" data-when="he">נשאלה שאלה: ניקב הכיס והקורקבן קיים — מהו? בוא ושמע ממה שאמר רב נחמן: ניקב זה בלא זה — כשר. וכן אמר רבא: שני עורות יש לו לוושט — החיצון אדום והפנימי לבן; ניקב זה בלא זה — כשר. ולמה הוצרך רבא לומר ״חיצון אדום ופנימי לבן״? ללמד שאם נתחלפו הצבעים — טריפה.</div>
+  <div class="trans" data-when="en">A dilemma was raised before the Sages: If the inner lining of the gizzard was perforated, but the flesh of the gizzard is intact, what is the halakha? The Gemara suggests: Come and hear a proof from that which Rav Naḥman said with regard to a perforated gullet: If both its outer and inner lining were perforated, the animal is a tereifa, but if this lining was perforated without that lining being perforated, it is kosher. Similarly, Rava says: The gullet has two linings, the outer red, and the inner white. If this lining was perforated without that lining being perforated, the animal is kosher. The Gemara asks: Why do I need for Rava to state that the outer one is red and the inner one is white? Isn’t this self-evident? The Gemara responds: This teaches that if the two were switched, i.e., the outer lining turned white and the inner red, the animal is a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span><span class="num">6</span><span class="num">7</span><span class="num">8</span> <span class="ref">חולין מ״ג א — Chullin 43a:12</span></div>
+  <div class="orig">אִבַּעְיָא לְהוּ: נִיקְּבוּ שְׁנֵיהֶם זֶה שֶׁלֹּא כְּנֶגֶד זֶה, מַהוּ? אָמַר מָר זוּטְרָא מִשְּׁמֵיהּ דְּרַב פָּפָּא: בַּוֶּושֶׁט – כָּשֵׁר, בַּקּוּרְקְבָן – פָּסוּל. מַתְקֵיף לַהּ רַב אָשֵׁי: אַדְּרַבָּה, וֶושֶׁט דְּאָכְלָה בֵּיהּ וּפָעְיָא בֵּיהּ רָוַוח, גָּמְדָא לֵיהּ וּפָשְׁטָה לֵיהּ, זִמְנִין דְּמִיהַנְדְּזִין בַּהֲדֵי הֲדָדֵי; קוּרְקְבָן דְּמֵינָח נָיַיח, כִּדְקָאֵי קָאֵי! אֲמַר לֵיהּ רַב אַחָא בְּרֵיהּ דְּרַב יוֹסֵף לְרַב אָשֵׁי: הָכִי אָמְרִינַן מִשְּׁמֵיהּ דְּמָר זוּטְרָא, דְּאָמַר מִשְּׁמֵיהּ דְּרַב פָּפָּא כְּוָותָיךְ.</div>
+  <div class="trans" data-when="he">נשאלה שאלה: ניקבו שני העורות זה שלא כנגד זה — מהו? אמר מר זוטרא משמו של רב פפא: בוושט — כשר, בקורקבן — פסול. מתקיף רב אשי: אדרבה, להפך! הוושט, שהבהמה אוכלת בו ופועה בו, מתרחב — מתכווץ ונמתח — ופעמים שהנקבים מזדמנים זה כנגד זה; הקורקבן נח במקומו — כמות שעמד הוא עומד, והנקבים לעולם לא ייפגשו! אמר לו רב אחא בריה דרב יוסף לרב אשי: כך אומרים אנו משמו של מר זוטרא, שאמר משמו של רב פפא — כדבריך.</div>
+  <div class="trans" data-when="en">A dilemma was raised before the Sages: If both linings were perforated, but not adjacent to one another, what is the halakha? Mar Zutra says in the name of Rav Pappa: If this occurred in the gullet, the animal is kosher; but if it occurred in the gizzard, it is unfit for consumption. Rav Ashi objects to this: On the contrary, the gullet, with which the animal eats and calls, is spacious and flexible, and the animal constricts it and stretches it. Since the two linings are not connected to each other, there are times in the course of their movement that the two holes align [demihandezin] with one another, creating a fully aligned perforation. But the gizzard, which is always at rest in place, stands as it always stands. Accordingly, two such perforations will never align. Rav Aḥa, son of Rav Yosef, said to Rav Ashi: So we say in the name of Mar Zutra, that he in fact said in the name of Rav Pappa in accordance with your objection.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">בדיקת הוושט — רק מבפנים</span><span data-when="en">Inspecting the gullet — only from within</span>
+      <span class="ref">Chullin 43a:13–43b:2</span></h2>
+  <div class="lead"><span data-when="he">רבה קובע שקרום שעלה על מכה בוושט אינו קרום, ושאין לוושט בדיקה אלא מבפנים — והנפקא מינה לספק דרוסה; ובמעשה שבא לפניו בדק מבחוץ רק כדי לחדד את אביי.</span><span data-when="en">Rabba rules that a membrane over a wound in the gullet is no membrane, and that the gullet is inspected only from within — relevant to an uncertain case of clawing; in the case that came before him he checked from outside only to sharpen Abaye.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רבה: קרום שעלה מחמת מכה<br/>בוושט — אינו קרום"]:::statement
+  S2["② רבה: וושט אין לו בדיקה<br/>מבחוץ אלא בפנים"]:::statement
+  Q3{"③ למאי נפקא מינה?"}:::question
+  A4["④ לספק דרוסה"]:::answer
+  Q5{"⑤ מעשה: רבה בדק ספק דרוסה מבחוץ;<br/>אביי: והא מר אמר — רק מבפנים!"}:::question
+  C6["⑥ הפכו ובדק — נמצאו שתי טיפות דם, וטרפהּ;<br/>ורבה — לחדד את אביי נתכוון"]:::conclusion
+  S1 -->|ועוד אמר| S2
+  S2 --> Q3
+  Q3 -->|תשובה| A4
+  A4 -->|מעשה| Q5
+  Q5 -->|בדק ומצא| C6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rabba: a membrane over a wound<br/>in the gullet is no membrane"]:::statement
+  S2["② Rabba: the gullet is inspected<br/>only from within"]:::statement
+  Q3{"③ What is the practical difference?"}:::question
+  A4["④ For an uncertain case of clawing"]:::answer
+  Q5{"⑤ A case: Rabba checked from outside; Abaye:<br/>did you not say — only from within!"}:::question
+  C6["⑥ He flipped it, found two drops of blood — tereifa;<br/>Rabba only meant to sharpen Abaye"]:::conclusion
+  S1 -->|Further ruling| S2
+  S2 --> Q3
+  Q3 -->|Answer| A4
+  A4 -->|An incident| Q5
+  Q5 -->|He checked and found| C6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① קְרוּם שֶׁעָלָה מֵחֲמַת מַכָּה<br/>בַּוֶּושֶׁט, אֵינוֹ קְרוּם"]:::statement
+  S2["② וֶושֶׁט אֵין לוֹ בְּדִיקָה<br/>מִבַּחוּץ, אֶלָּא בִּפְנִים"]:::statement
+  Q3{"③ לְמַאי נָפְקָא מִינַּהּ?"}:::question
+  A4["④ לִסְפֵק דְּרוּסָה"]:::answer
+  Q5{"⑤ וְהָא מָר הוּא דְּאָמַר: וֶושֶׁט אֵין לוֹ<br/>בְּדִיקָה אֶלָּא מִבִּפְנִים!"}:::question
+  C6["⑥ אַפְכֵיהּ רַבָּה וּבַדְקֵיהּ, וְאִישְׁתְּכַח עֲלֵיהּ תְּרֵי קוּרְטֵי דְּמָא, וְטַרְפַהּ …<br/>לְחַדּוֹדֵי לְאַבָּיֵי הוּא דְּבָעֵי"]:::conclusion
+  S1 -->|ועוד אמר| S2
+  S2 --> Q3
+  Q3 -->|תשובה| A4
+  A4 -->|מעשה| Q5
+  Q5 -->|בדק ומצא| C6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ג א — Chullin 43a:13</span></div>
+  <div class="orig">וְאָמַר רַבָּה: קְרוּם שֶׁעָלָה מֵחֲמַת מַכָּה בַּוֶּושֶׁט, אֵינוֹ קְרוּם. וְאָמַר רַבָּה: וֶושֶׁט אֵין לוֹ בְּדִיקָה מִבַּחוּץ, אֶלָּא בִּפְנִים. לְמַאי נָפְקָא מִינַּהּ?</div>
+  <div class="trans" data-when="he">ואמר רבה: קרום שעלה מחמת מכה בוושט — אינו קרום, ואינו סותם את הנקב. ועוד אמר רבה: הוושט אין לו בדיקה מבחוץ אלא מבפנים, שהעור החיצון אדום ואין אודם של מכה ניכר בו. ושואלים: למאי נפקא מינה — באיזה מקרה נדרשת הבדיקה מבפנים?</div>
+  <div class="trans" data-when="en">§ And Rabba says: A membrane that appeared due to a wound in the gullet, i.e., a scab that covered a perforation, is not considered a membrane that prevents the animal from being rendered a tereifa. And Rabba says: The gullet cannot be inspected from outside to determine whether the animal is a tereifa, since the outer lining itself is red, and therefore reddening due to injury cannot be discerned in it. Rather, it must be inspected from inside, where the lining is white. The Gemara asks: What difference is there as a result of this statement, i.e., in what case must the gullet be checked from the inside?</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ג ב — Chullin 43b:1</span></div>
+  <div class="orig">לִסְפֵק דְּרוּסָה.</div>
+  <div class="trans" data-when="he">לבהמה שספק אם נדרסה בציפורני חיה טורפת: אם נדרסה — מאדים הוושט, ולכן יש לבודקו מבפנים, במקום שהוא לבן.</div>
+  <div class="trans" data-when="en">The Gemara responds: The halakha is necessary for a case in which it was uncertain whether an animal was clawed by a predator. If the animal was in fact clawed, the gullet would have become red. Since the outer lining is always red, the gullet must be checked on the inside to ascertain whether it is still white.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span><span class="num">6</span> <span class="ref">חולין מ״ג ב — Chullin 43b:2</span></div>
+  <div class="orig">הָהִיא סְפֵק דְּרוּסָה דַּאֲתַאי לְקַמֵּיהּ דְּרַבָּה, הֲוָה קָא בָּדֵיק לֵיהּ רַבָּה לְוֶושֶׁט מֵאַבָּרַאי. אֲמַר לֵיהּ אַבָּיֵי: וְהָא מָר הוּא דְּאָמַר: וֶושֶׁט אֵין לוֹ בְּדִיקָה אֶלָּא מִבִּפְנִים! אַפְכֵיהּ רַבָּה וּבַדְקֵיהּ, וְאִישְׁתְּכַח עֲלֵיהּ תְּרֵי קוּרְטֵי דְּמָא, וְטַרְפַהּ. וְרַבָּה נָמֵי לְחַדּוֹדֵי לְאַבָּיֵי הוּא דְּבָעֵי.</div>
+  <div class="trans" data-when="he">מעשה בספק דרוסה שבאה לפני רבה, והיה רבה בודק את הוושט מבחוץ. אמר לו אביי: והרי מר הוא שאמר — אין לוושט בדיקה אלא מבפנים! הפך רבה את הוושט ובדקו, ונמצאו עליו שתי טיפות דם — וטרפהּ. ומעירים: רבה לא שכח את דינו — לחדד את אביי נתכוון.</div>
+  <div class="trans" data-when="en">The Gemara recounts the case of a certain animal concerning which it was uncertain whether it was clawed by a predator, which came before Rabba. Rabba was checking its gullet from the outside. Abaye said to him: But isn’t it you, Master, who says: The gullet may be inspected only from the inside? Rabba turned over the gullet and checked it from the inside, and found on it two drops of blood, and deemed it a tereifa due to clawing. The Gemara notes: And Rabba as well desired only to sharpen Abaye by inducing him to ask. He did not forget his own statement.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">קוץ בוושט</span><span data-when="en">A thorn in the gullet</span>
+      <span class="ref">Chullin 43b:3–9</span></h2>
+  <div class="lead"><span data-when="he">עולא מכשיר קוץ שישב בוושט — אין חוששין שמא הבריא. ארבע השוואות (דרוסה, חתיכות, סכין, טומאה) נדחות אחת לאחת, ורב כהנא מעמיד: דווקא ״ישב״ נאמר — קוץ שנמצא רפוי אינו צריך פסק כלל.</span><span data-when="en">Ulla permits an animal in whose gullet a thorn sat — no concern that it perforated and healed. Four comparisons (clawing, the two pieces, the knife, impurity) are deflected one by one, and Rav Kahana establishes: precisely ״sat״ was stated — a thorn merely found loose needs no ruling at all.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עולא: ישב לו קוץ בוושט —<br/>אין חוששין שמא הבריא"]:::statement
+  Q2{"② מאי שנא מספק דרוסה?"}:::question
+  A3["③ עולא סובר: אין חוששין<br/>לספק דרוסה"]:::answer
+  Q4{"④ מאי שנא משתי חתיכות —<br/>חלב ושומן?"}:::question
+  A5["⑤ התם איתחזק איסורא"]:::answer
+  Q6{"⑥ מאי שנא מהשוחט בסכין<br/>ונמצאת פגומה?"}:::question
+  A7["⑦ התם נולדה ריעותא בסכין"]:::answer
+  Q8{"⑧ מאי שנא מספק טומאה ברשות<br/>היחיד — שספקו טמא?"}:::question
+  A9["⑨ ולטעמיך — ברשות הרבים ספקו טהור!<br/>אלא התם הלכתא גמירי לה מסוטה"]:::answer
+  C10["⑩ רב כהנא: ״ישב״ איתמר; ״נמצאת״ לא נצרכה —<br/>שכל חיות הבר אוכלות קוצים"]:::conclusion
+  S1 -->|מאי שנא| Q2
+  Q2 -->|תירוץ| A3
+  S1 -->|מאי שנא| Q4
+  Q4 -->|תירוץ| A5
+  S1 -->|מאי שנא| Q6
+  Q6 -->|תירוץ| A7
+  S1 -->|מאי שנא| Q8
+  Q8 -->|תירוץ| A9
+  S1 -->|העמדה| C10
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Ulla: a thorn sat in the gullet — no concern<br/>that it perforated and healed"]:::statement
+  Q2{"② How is this different from<br/>uncertain clawing?"}:::question
+  A3["③ Ulla holds: one is not concerned<br/>about uncertain clawing"]:::answer
+  Q4{"④ How is it different from two pieces —<br/>forbidden and permitted fat?"}:::question
+  A5["⑤ There a presumption of<br/>prohibition exists"]:::answer
+  Q6{"⑥ How is it different from a knife<br/>found notched after slaughter?"}:::question
+  A7["⑦ There a defect arose<br/>in the knife itself"]:::answer
+  Q8{"⑧ How is it different from uncertain impurity<br/>in a private domain — presumed impure?"}:::question
+  A9["⑨ By your reasoning — in a public domain it is presumed pure!<br/>Rather, that is a tradition learned from sota"]:::answer
+  C10["⑩ Rav Kahana: ״sat״ was stated; ״found loose״ needs no ruling —<br/>all animals of the field eat thorns"]:::conclusion
+  S1 -->|How differs| Q2
+  Q2 -->|Answer| A3
+  S1 -->|How differs| Q4
+  Q4 -->|Answer| A5
+  S1 -->|How differs| Q6
+  Q6 -->|Answer| A7
+  S1 -->|How differs| Q8
+  Q8 -->|Answer| A9
+  S1 -->|Qualification| C10
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① יָשַׁב לוֹ קוֹץ בַּוֶּושֶׁט,<br/>אֵין חוֹשְׁשִׁין שֶׁמָּא הִבְרִיא"]:::statement
+  Q2{"② וּלְעוּלָּא, מַאי שְׁנָא<br/>מִסְּפֵק דְּרוּסָה?"}:::question
+  A3["③ קָסָבַר עוּלָּא אֵין חוֹשְׁשִׁין<br/>לִסְפֵק דְּרוּסָה"]:::answer
+  Q4{"④ וּמַאי שְׁנָא מִשְּׁתֵּי חֲתִיכוֹת, אַחַת<br/>שֶׁל חֵלֶב וְאַחַת שֶׁל שׁוּמָּן?"}:::question
+  A5["⑤ הָתָם אִיתַּחְזַק אִיסּוּרָא"]:::answer
+  Q6{"⑥ וּמַאי שְׁנָא מֵהַשּׁוֹחֵט בְּסַכִּין,<br/>וְנִמְצֵאת פְּגוּמָה?"}:::question
+  A7["⑦ הָתָם אִיתְיְילִיד לַהּ<br/>רֵיעוּתָא בְּסַכִּין"]:::answer
+  Q8{"⑧ וּמַאי שְׁנָא מִסְּפֵק טוּמְאָה בִּרְשׁוּת<br/>הַיָּחִיד, דִּסְפֵקוֹ טָמֵא?"}:::question
+  A9["⑨ וְלִיטַעְמָיךְ, נִידַמְּיֵיהּ לִסְפֵק טוּמְאָה בִּרְשׁוּת הָרַבִּים …<br/>אֶלָּא הָתָם, הִלְכְתָא גְּמִירִי לַהּ מִסּוֹטָה"]:::answer
+  C10["⑩ ״יָשַׁב״ אִיתְּמַר, אֲבָל נִמְצֵאת – לָא אִיצְטְרִיךְ לֵיהּ לְעוּלָּא,<br/>דְּכוּלְּהוּ חֵיוֵי בָּרָיָיתָא קוֹצֵי אָכְלָן"]:::conclusion
+  S1 -->|מאי שנא| Q2
+  Q2 -->|תירוץ| A3
+  S1 -->|מאי שנא| Q4
+  Q4 -->|תירוץ| A5
+  S1 -->|מאי שנא| Q6
+  Q6 -->|תירוץ| A7
+  S1 -->|מאי שנא| Q8
+  Q8 -->|תירוץ| A9
+  S1 -->|העמדה| C10
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ג ב — Chullin 43b:3</span></div>
+  <div class="orig">אָמַר עוּלָּא: יָשַׁב לוֹ קוֹץ בַּוֶּושֶׁט, אֵין חוֹשְׁשִׁין שֶׁמָּא הִבְרִיא.</div>
+  <div class="trans" data-when="he">אמר עולא: ישב לו קוץ בוושט (ולא ניקב העור החיצון) — אין חוששין שמא ניקב קודם והבריא (העלה קרום), והבהמה כשרה.</div>
+  <div class="trans" data-when="en">Ulla says: If a thorn sat in the animal’s gullet but did not perforate the outer lining, one need not be concerned that perhaps it perforated the outer lining beforehand and the perforation healed and a scab formed over it, in which case the animal would be a tereifa, as stated above. Rather, one assumes that the thorn never perforated the outer lining and the animal is kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ג ב — Chullin 43b:4</span></div>
+  <div class="orig">(דָּרַס חֲתִיכוֹת בְּסַכִּין טְמֵאָה, סִימָן)</div>
+  <div class="trans" data-when="he">(דרס, חתיכות, בסכין, טמאה — סימן לארבע הקושיות שלהלן על דברי עולא.)</div>
+  <div class="trans" data-when="en">The Gemara provides a mnemonic for the following questions with regard to Ulla’s statement: Clawed, pieces, with a knife, ritually impure.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ג ב — Chullin 43b:5</span></div>
+  <div class="orig">וּלְעוּלָּא, מַאי שְׁנָא מִסְּפֵק דְּרוּסָה? קָסָבַר עוּלָּא אֵין חוֹשְׁשִׁין לִסְפֵק דְּרוּסָה.</div>
+  <div class="trans" data-when="he">ושואלים: ולעולא — במה שונה הדבר מספק דרוסה, שחוששים לה ובודקים? ומשיבים: עולא לשיטתו — סובר שאין חוששין לספק דרוסה.</div>
+  <div class="trans" data-when="en">The Gemara asks: But according to Ulla, given that this is a case of uncertainty, in what way is it different from a case of uncertainty as to whether an animal was clawed, where the animal must be checked and cannot be presumed kosher? The Gemara responds: Ulla holds that one need not be concerned with regard to an uncertainty as to whether the animal was clawed.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span><span class="num">5</span> <span class="ref">חולין מ״ג ב — Chullin 43b:6</span></div>
+  <div class="orig">וּמַאי שְׁנָא מִשְּׁתֵּי חֲתִיכוֹת, אַחַת שֶׁל חֵלֶב וְאַחַת שֶׁל שׁוּמָּן? הָתָם אִיתַּחְזַק אִיסּוּרָא.</div>
+  <div class="trans" data-when="he">ושואלים: ובמה שונה משתי חתיכות, אחת של חֵלב (אסור) ואחת של שומן (מותר), שאכל אחת מהן ואינו יודע איזו — שמביא אשם תלוי? ומשיבים: התם איתחזק איסורא — שם הוחזק איסור, שאחת מהן ודאי אסורה; כאן אין חזקת איסור.</div>
+  <div class="trans" data-when="en">The Gemara asks: And in what way is this case different from a case where there were two pieces of fat before a person, one of forbidden fat and one of permitted fat, and the person ate one piece but does not know which one, where the halakha is that one must bring a provisional guilt offering due to the possibility that he consumed forbidden fat? Evidently, one may not presume that an item is permitted in a case of uncertainty. The Gemara responds: There, one finds a presumption of prohibition, since one of the pieces is certainly prohibited. Here, with regard to the thorn, there is no presumption of prohibition.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span><span class="num">7</span> <span class="ref">חולין מ״ג ב — Chullin 43b:7</span></div>
+  <div class="orig">וּמַאי שְׁנָא מֵהַשּׁוֹחֵט בְּסַכִּין, וְנִמְצֵאת פְּגוּמָה? הָתָם אִיתְיְילִיד לַהּ רֵיעוּתָא בְּסַכִּין.</div>
+  <div class="trans" data-when="he">ושואלים: ובמה שונה מהשוחט בסכין בדוקה ונמצאת פגומה לאחר השחיטה — שהבהמה אסורה, אף שספק אם נפגמה קודם השחיטה? ומשיבים: התם נולדה ריעותא בסכין עצמה, וחוששים שנפגמה כבר קודם; כאן דופן הוושט שלם לפנינו.</div>
+  <div class="trans" data-when="en">The Gemara asks: And in what way is the case of the thorn different from the case of one who slaughters with a knife that was previously checked for flaws but was then found to be notched after the slaughter? In that case, it is uncertain whether the notch existed at the time of slaughter, yet the animal is prohibited. The Gemara responds: There, a deficiency was born in the knife. Accordingly, one must be concerned that it was notched beforehand as well. By contrast, the wall of the gullet is currently intact, and one may therefore presume that it was intact beforehand as well.</div>
+</div>
+<div class="quote">
+  <div><span class="num">8</span><span class="num">9</span> <span class="ref">חולין מ״ג ב — Chullin 43b:8</span></div>
+  <div class="orig">וּמַאי שְׁנָא מִסְּפֵק טוּמְאָה בִּרְשׁוּת הַיָּחִיד, דִּסְפֵקוֹ טָמֵא? וְלִיטַעְמָיךְ, נִידַמְּיֵיהּ לִסְפֵק טוּמְאָה בִּרְשׁוּת הָרַבִּים, דִּסְפֵקוֹ טָהוֹר! אֶלָּא הָתָם, הִלְכְתָא גְּמִירִי לַהּ מִסּוֹטָה.</div>
+  <div class="trans" data-when="he">ושואלים: ובמה שונה מספק טומאה ברשות היחיד, שספקו טמא? ומשיבים: ולטעמיך — נדמה אותו לספק טומאה ברשות הרבים, שספקו טהור! אלא התם הלכה למדוה מסוטה, ואין למדים ממנה למקומות אחרים.</div>
+  <div class="trans" data-when="en">The Gemara asks: And in what way is this case different from an uncertainty with regard to ritual impurity in a private domain, whose uncertainty is presumed impure? The Gemara responds: But according to your reasoning, let us compare it instead to uncertainty with regard to impurity in a public domain, whose uncertainty is presumed pure. Rather, there, with regard to the presumption of impurity in a private domain and purity in a public domain, the Sages learned this halakha through tradition from the halakha of a woman suspected by her husband of having been unfaithful [sota]. Therefore, one cannot extend it to other cases.</div>
+</div>
+<div class="quote">
+  <div><span class="num">10</span> <span class="ref">חולין מ״ג ב — Chullin 43b:9</span></div>
+  <div class="orig">יָתֵיב הָהוּא מֵרַבָּנַן קַמֵּיהּ דְּרַב כָּהֲנָא, וְיָתֵיב וְקָאָמַר: ״נִמְצֵאת״ אִתְּמַר, אֲבָל יָשַׁב – חָיְישִׁינַן. אֲמַר לְהוּ רַב כָּהֲנָא: לָא תְּצִיתוּ לֵיהּ, ״יָשַׁב״ אִיתְּמַר, אֲבָל נִמְצֵאת – לָא אִיצְטְרִיךְ לֵיהּ לְעוּלָּא, דְּכוּלְּהוּ חֵיוֵי בָּרָיָיתָא קוֹצֵי אָכְלָן.</div>
+  <div class="trans" data-when="he">ישב אחד מן החכמים לפני רב כהנא ואמר: ״נמצאת״ נאמר — קוץ שנמצא רפוי בוושט הוא שאין חוששין לו, אבל ״ישב״ — ננעץ בדופן — חוששים. אמר להם רב כהנא: אל תשמעו לו; ״ישב״ נאמר — ואף בו אין חוששין; אבל ״נמצאת״ — לא הוצרך עולא לאומרו כלל, שכל חיות הבר אוכלות קוצים ומצויים הם בוושט בלא חשש.</div>
+  <div class="trans" data-when="en">The Gemara relates that one of the Sages was sitting before Rav Kahana, and he was sitting and saying: It was stated that one need not be concerned that the thorn perforated the linings of the gullet only if it was found loose inside the gullet. But if it sat embedded in the gullet wall, we must be concerned that the outer lining was perforated and later healed, rendering the animal a tereifa. Rav Kahana said to the other Sages: Do not listen to him. Rather, it was stated that one need not be concerned about a possible perforation if the thorn sat embedded in the gullet wall. But in a case where it was simply found there loose, it was not necessary for Ulla to say that the animal is kosher, since all animals that live outside eat thorns, and it is reasonable to expect to find them in the gullet without presuming injury.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">תורבץ הוושט — רב ושמואל</span><span data-when="en">The entrance of the gullet — Rav and Shmuel</span>
+      <span class="ref">Chullin 43b:10–11</span></h2>
+  <div class="lead"><span data-when="he">תורבץ הוושט שניקב — רב: במשהו, שמקום שחיטה הוא; שמואל: ברובו, שאינו מקום שחיטה; ושלוש הגדרות נאמרו לאיתורו של התורבץ.</span><span data-when="en">A perforated entrance of the gullet — Rav: any amount, for it is a place fit for slaughter; Shmuel: only its majority, for it is not; and three definitions are offered to locate the entrance.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב: תורבץ הוושט — במשהו;<br/>מקום שחיטה הוא"]:::statement
+  S2["② שמואל: ברובו;<br/>לאו מקום שחיטה הוא"]:::statement
+  Q3{"③ הי ניהו תורבץ הוושט?"}:::question
+  A4["④ מרי בר מר עוקבא בשם שמואל: חותכו ומרחיב — תורבץ;<br/>עומד במקומו — וושט עצמו"]:::answer
+  A5["⑤ רב פפי בשם רב ביבי: עומד במקומו — תורבץ;<br/>חותכו וכווץ — וושט עצמו"]:::answer
+  A6["⑥ יונה אמר זירא: מבלעתא; וכמה? רב אויא:<br/>פחות משעורה ויותר מחיטה"]:::answer
+  S1 ---|מחלוקת| S2
+  S2 --> Q3
+  Q3 -->|שמואל| A4
+  Q3 -->|ר׳ זירא| A6
+  A4 -.->|רב פפי מתקן| A5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav: the gullet׳s entrance — any perforation;<br/>it is a place fit for slaughter"]:::statement
+  S2["② Shmuel: only its majority;<br/>it is not a place of slaughter"]:::statement
+  Q3{"③ Which area is the<br/>entrance of the gullet?"}:::question
+  A4["④ Mari b. Mar Ukva citing Shmuel: widens when cut — entrance;<br/>stays in place — the gullet itself"]:::answer
+  A5["⑤ Rav Pappi citing Rav Beivai: stays in place — entrance;<br/>constricts when cut — the gullet itself"]:::answer
+  A6["⑥ Yona citing Zeira: the swallowing area; Rav Avya:<br/>less than a barley kernel, more than a wheat kernel"]:::answer
+  S1 ---|Dispute| S2
+  S2 --> Q3
+  Q3 -->|Shmuel| A4
+  Q3 -->|R. Zeira| A6
+  A4 -.->|Rav Pappi corrects| A5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רַב אָמַר בְּמַשֶּׁהוּ:<br/>מְקוֹם שְׁחִיטָה הוּא"]:::statement
+  S2["② וּשְׁמוּאֵל אָמַר בְּרוּבּוֹ:<br/>לָאו מְקוֹם שְׁחִיטָה הוּא"]:::statement
+  Q3{"③ הֵי נִיהוּ תּוּרְבַּץ הַוֶּושֶׁט?"}:::question
+  A4["④ כֹּל שֶׁחוֹתְכוֹ וּמַרְחִיב – זֶה הוּא תּוּרְבַּץ הַוֶּושֶׁט,<br/>חוֹתְכוֹ וְעוֹמֵד בִּמְקוֹמוֹ – זֶהוּ וֶושֶׁט עַצְמוֹ"]:::answer
+  A5["⑤ כֹּל שֶׁחוֹתְכוֹ וְעוֹמֵד בִּמְקוֹמוֹ – זֶה תּוּרְבַּץ הַוֶּושֶׁט …<br/>כֹּל שֶׁחוֹתְכוֹ וְכָוֵיץ"]:::answer
+  A6["⑥ מַבְלַעְתָּא … פָּחוּת מִשְּׂעָרְתָּא<br/>וַעֲדִיף מֵחִיטְּתָא"]:::answer
+  S1 ---|מחלוקת| S2
+  S2 --> Q3
+  Q3 -->|שמואל| A4
+  Q3 -->|ר׳ זירא| A6
+  A4 -.->|רב פפי מתקן| A5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span><span class="num">2</span> <span class="ref">חולין מ״ג ב — Chullin 43b:10</span></div>
+  <div class="orig">אִיתְּמַר: תּוּרְבַּץ הַוֶּושֶׁט – רַב אָמַר: בְּמַשֶּׁהוּ, וּשְׁמוּאֵל אָמַר: בְּרוּבּוֹ. רַב אָמַר בְּמַשֶּׁהוּ: מְקוֹם שְׁחִיטָה הוּא, וּשְׁמוּאֵל אָמַר בְּרוּבּוֹ: לָאו מְקוֹם שְׁחִיטָה הוּא.</div>
+  <div class="trans" data-when="he">נאמר: תורבץ הוושט (כניסת הוושט מבית הבליעה) שניקב — רב אמר: במשהו, ושמואל אמר: ברובו. רב אמר במשהו — לפי שמקום שחיטה הוא ודינו כוושט; ושמואל אמר ברובו — לפי שאינו מקום שחיטה ואינו כוושט.</div>
+  <div class="trans" data-when="en">§ The mishna teaches that if the gullet was perforated, the animal is a tereifa. It was stated: In a case where the entrance [turbatz] of the gullet from the pharynx was perforated, Rav says: The animal is a tereifa if any part of the gullet was perforated. And Shmuel says: It is a tereifa only if its majority was perforated. Rav says: If any part was perforated, because he holds that the entrance of the gullet is a location fit for slaughter and is therefore considered part of the gullet. And Shmuel says: If its majority was perforated, because he holds that it is not a location fit for slaughter and is not considered part of the gullet.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span><span class="num">4</span><span class="num">5</span><span class="num">6</span> <span class="ref">חולין מ״ג ב — Chullin 43b:11</span></div>
+  <div class="orig">הֵי נִיהוּ תּוּרְבַּץ הַוֶּושֶׁט? אָמַר מָרִי בַּר מָר עוּקְבָא אָמַר שְׁמוּאֵל: כֹּל שֶׁחוֹתְכוֹ וּמַרְחִיב – זֶה הוּא תּוּרְבַּץ הַוֶּושֶׁט, חוֹתְכוֹ וְעוֹמֵד בִּמְקוֹמוֹ – זֶהוּ וֶושֶׁט עַצְמוֹ. אֲמַר לְהוּ רַב פַּפֵּי: מָר לָא אָמַר הָכִי, וּמַנּוּ? רַב בִּיבִי בַּר אַבָּיֵי. אֶלָּא כֹּל שֶׁחוֹתְכוֹ וְעוֹמֵד בִּמְקוֹמוֹ – זֶה תּוּרְבַּץ הַוֶּושֶׁט, אֶלָּא אֵיזֶהוּ וֶושֶׁט עַצְמוֹ? כֹּל שֶׁחוֹתְכוֹ וְכָוֵיץ. יוֹנָה אָמַר זֵירָא: מַבְלַעְתָּא, וְכַמָּה? אָמַר רַב אַוְיָא: פָּחוּת מִשְּׂעָרְתָּא וַעֲדִיף מֵחִיטְּתָא.</div>
+  <div class="trans" data-when="he">ומבררים: איזהו תורבץ הוושט? אמר מרי בר מר עוקבא בשם שמואל: כל שחותכו ומתרחב — זהו תורבץ הוושט; חותכו ועומד במקומו — זהו הוושט עצמו. אמר להם רב פפי: מר — והוא רב ביבי בר אביי — לא אמר כך, אלא: כל שחותכו ועומד במקומו — זהו תורבץ הוושט; ואיזהו הוושט עצמו? כל שחותכו ומתכווץ. יונה אמר בשם ר׳ זירא: התורבץ הוא המבלעתא (בית הבליעה הסמוך לוושט). וכמה שיעורו? אמר רב אויא: פחות מאורך שעורה ויותר מאורך חיטה.</div>
+  <div class="trans" data-when="en">The Gemara clarifies: Which area is the entrance of the gullet? Mari bar Mar Ukva said that Shmuel said: All of the area that widens outward when cut along its width, this is the entrance of the gullet; all the area that remains in place when cut, this is the gullet itself. Rav Pappi said to them: Master did not say so. And who is that Master? It is Rav Beivai bar Abaye. Rather, he said that all of the area that remains in place when cut, this is the entrance of the gullet. But which area, then, is the gullet itself? It is all of the area that constricts when cut and closes inward. The Sage Yona says in the name of Rabbi Zeira: The entrance of the gullet is only the area of the throat immediately bordering the gullet. And how much of the throat qualifies as the entrance of the gullet? Rav Avya said: Less than the length of a barley kernel and more than the length of a wheat kernel.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">שורם של בני רב עוקבא — חומרות סותרות</span><span data-when="en">The bull of Rav Ukva's sons — contradictory stringencies</span>
+      <span class="ref">Chullin 43b:12–44a:6</span></h2>
+  <div class="lead"><span data-when="he">רבא הטריף את שורם של בני רב עוקבא בצירוף חומרות רב ושמואל — ר׳ אבא חייבו לשלם, ומר בריה דרבינא מקשה מהברייתא: הנוהג מחומרי שניהם — ״הכסיל בחושך הולך״; רב טבות מיישב: כולה כרב עבדהּ.</span><span data-when="en">Rava deemed the bull of Rav Ukva's sons a tereifa by combining the stringencies of Rav and Shmuel — R. Abba made him pay, and Mar son of Ravina objects from the baraita: one who follows both stringencies is ״the fool walking in darkness״; Rav Tavut resolves: he acted entirely per Rav.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① השור: התחיל בתורבץ וגמר בוושט;<br/>רבא: מטיל אני חומרי רב ושמואל — וטרפו"]:::statement
+  Q2{"② כיצד? חומרא דרב — במשהו; והא רב: מקום שחיטה הוא!<br/>כשמואל — והא שמואל: ברובו!"}:::question
+  S3["③ הצירוף: כשמואל — לאו מקום שחיטה;<br/>כרב — במשהו"]:::answer
+  C4["④ ר׳ אבא: בין לרב בין לשמואל — שרי;<br/>ישלם רבא דמי השור לבעליו"]:::conclusion
+  Q5{"⑤ מר בריה דרבינא: תיובתא — מקולי שניהם רשע;<br/>מחומרי שניהם — ״הכסיל בחושך הולך״"}:::question
+  Q6{"⑥ גופא קשיא: לעולם הלכה כבית הלל —<br/>והרוצה כבית שמאי יעשה?!"}:::question
+  A7["⑦ כאן קודם בת קול, כאן לאחר בת קול;<br/>ואיבעית אימא: כר׳ יהושע — אין משגיחין בבת קול"]:::answer
+  C8["⑧ מכל מקום — קשיא לרבא"]:::conclusion
+  A9["⑨ רב טבות: כולה כרב עבדהּ — וושט נתנו בו חכמים שיעור;<br/>תורבץ לאו מקום שחיטה, ואף על פי כן במשהו"]:::answer
+  S1 -->|תמיהה| Q2
+  Q2 -->|הצירוף| S3
+  S3 -->|איגלגל מילתא| C4
+  C4 -->|תיובתא| Q5
+  Q5 -->|גופא קשיא| Q6
+  Q6 -->|תירוץ| A7
+  A7 -->|מכל מקום| C8
+  C8 -->|יישוב| A9
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① The bull: slaughter began at the entrance, ended in the gullet;<br/>Rava: I impose the stringencies of both Rav and Shmuel — tereifa"]:::statement
+  Q2{"② How? Rav׳s stringency — any perforation; but Rav holds it is a place<br/>of slaughter! Like Shmuel — but Shmuel requires its majority!"}:::question
+  S3["③ The combination: like Shmuel — not a place of slaughter;<br/>like Rav — any perforation"]:::answer
+  C4["④ R. Abba: permitted per both Rav and Shmuel;<br/>Rava must pay the bull׳s value to its owner"]:::conclusion
+  Q5{"⑤ Mar b. Ravina: refutation — both leniencies, wicked;<br/>both stringencies — ״the fool walks in darkness״"}:::question
+  Q6{"⑥ The baraita itself is difficult: always like Beit Hillel —<br/>yet whoever wishes may follow Beit Shammai?!"}:::question
+  A7["⑦ Before vs. after the Divine Voice; or per<br/>R. Yehoshua — one disregards a Divine Voice"]:::answer
+  C8["⑧ In any case — a difficulty<br/>for Rava"]:::conclusion
+  A9["⑨ Rav Tavut: Rava acted entirely per Rav — the Sages gave the gullet<br/>a measure; the entrance is no place of slaughter, yet any amount"]:::answer
+  S1 -->|Puzzlement| Q2
+  Q2 -->|The combination| S3
+  S3 -->|The matter circulated| C4
+  C4 -->|Refutation| Q5
+  Q5 -->|Internally difficult| Q6
+  Q6 -->|Answer| A7
+  A7 -->|In any case| C8
+  C8 -->|Resolution| A9
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① דְּאַתְחֵיל בֵּיהּ שְׁחִיטָה בְּתוּרְבַּץ הַוֶּושֶׁט, וּגְמַר בְּוֶושֶׁט …<br/>רָמֵינָא עֲלֵיהּ חוּמְרֵי דְּרַב וְחוּמְרֵי דִּשְׁמוּאֵל, וְטָרֵיפְנָא לֵיהּ"]:::statement
+  Q2{"② וְהָאָמַר רַב: מְקוֹם שְׁחִיטָה הוּא! …<br/>אִי שְׁמוּאֵל, הָאָמַר: בְּרוּבּוֹ!"}:::question
+  S3["③ כִּשְׁמוּאֵל, דְּאָמַר: לָאו מְקוֹם שְׁחִיטָה הוּא …<br/>כְּרַב, דְּאָמַר: בְּמַשֶּׁהוּ"]:::answer
+  C4["④ תּוֹרָא, בֵּין לְרַב בֵּין לִשְׁמוּאֵל שְׁרֵי …<br/>דִּלְשַׁלֵּים דְּמֵי תוֹרָא לְמָרֵיהּ"]:::conclusion
+  Q5{"⑤ מִקּוּלֵּי בֵּית שַׁמַּאי וּמִקּוּלֵּי בֵּית הִלֵּל – רָשָׁע …<br/>״הַכְּסִיל בַּחוֹשֶׁךְ הוֹלֵךְ״"}:::question
+  Q6{"⑥ אָמְרַתְּ: לְעוֹלָם הֲלָכָה כְּדִבְרֵי בֵּית הִלֵּל, וַהֲדַר תָּנֵי:<br/>וְהָרוֹצֶה לַעֲשׂוֹת כְּדִבְרֵי בֵּית שַׁמַּאי יַעֲשֶׂה!"}:::question
+  A7["⑦ כָּאן – קוֹדֶם בַּת קוֹל, כָּאן – לְאַחַר בַּת קוֹל …<br/>רַבִּי יְהוֹשֻׁעַ הִיא, דְּאָמַר: אֵין מַשְׁגִּיחִין בְּבַת קוֹל"]:::answer
+  C8["⑧ מִכׇּל מָקוֹם, קַשְׁיָא"]:::conclusion
+  A9["⑨ כּוּלַּהּ כְּרַב עַבְדַהּ … מִכְּלָל דְּתוּרְבַּץ הַוֶּושֶׁט לָאו מְקוֹם<br/>שְׁחִיטָה הוּא, וְקָאָמַר בְּמַשֶּׁהוּ"]:::answer
+  S1 -->|תמיהה| Q2
+  Q2 -->|הצירוף| S3
+  S3 -->|איגלגל מילתא| C4
+  C4 -->|תיובתא| Q5
+  Q5 -->|גופא קשיא| Q6
+  Q6 -->|תירוץ| A7
+  A7 -->|מכל מקום| C8
+  C8 -->|יישוב| A9
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ג ב — Chullin 43b:12</span></div>
+  <div class="orig">הָהוּא תּוֹרָא דַּהֲוָה לִבְנֵי רַב עוּקְבָא, דְּאַתְחֵיל בֵּיהּ שְׁחִיטָה בְּתוּרְבַּץ הַוֶּושֶׁט, וּגְמַר בְּוֶושֶׁט. אָמַר רָבָא: רָמֵינָא עֲלֵיהּ חוּמְרֵי דְּרַב וְחוּמְרֵי דִּשְׁמוּאֵל, וְטָרֵיפְנָא לֵיהּ.</div>
+  <div class="trans" data-when="he">מעשה בשור של בני רב עוקבא, שהתחילה בו השחיטה בתורבץ הוושט ונגמרה בוושט. אמר רבא: מטיל אני עליו את חומרות רב ואת חומרות שמואל — וטורפו אני.</div>
+  <div class="trans" data-when="en">The Gemara relates an incident involving a certain bull that belonged to the sons of Rav Ukva, where its slaughter began with a small incision in the entrance of the gullet and concluded in its majority in the gullet. Rava said: I impose upon it the stringencies of Rav and the stringencies of Shmuel, and deem it a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ג ב — Chullin 43b:13</span></div>
+  <div class="orig">חוּמְרֵי דְּרַב, דְּאָמַר רַב: בְּמַשֶּׁהוּ. וְהָאָמַר רַב: מְקוֹם שְׁחִיטָה הוּא! כִּשְׁמוּאֵל, דְּאָמַר: לָאו מְקוֹם שְׁחִיטָה הוּא. אִי שְׁמוּאֵל, הָאָמַר: בְּרוּבּוֹ! כְּרַב, דְּאָמַר: בְּמַשֶּׁהוּ.</div>
+  <div class="trans" data-when="he">כיצד? חומרת רב — שאמר במשהו, ותחילת החתך בתורבץ פוסלת. והרי רב אמר שמקום שחיטה הוא, ותהא זו תחילת שחיטה כשרה! — בזה כשמואל, שאמר לאו מקום שחיטה הוא. ואם כשמואל — הרי אמר ברובו! — בזה כרב, שאמר במשהו.</div>
+  <div class="trans" data-when="en">I impose the stringencies of Rav, as Rav said: The animal is a tereifa if any part of the entrance of the gullet was perforated before slaughter. Such is the case here, since the incision began in the entrance of the gullet. Perhaps one will ask: But doesn’t Rav say that the entrance of the gullet is a location fit for slaughter, in which case the initial incision should be considered the beginning of the act of slaughter? To this I will respond: I hold in accordance with the opinion of Shmuel, who says that it is not a location fit for slaughter. If one asks: If I hold in accordance with the opinion of Shmuel, doesn’t he say: It is a tereifa only if it was perforated in its majority? To this I will respond: I hold in accordance with the opinion of Rav, who says: If any part was perforated. Consequently, I deem the animal a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ג ב — Chullin 43b:14</span></div>
+  <div class="orig">אִיגַּלְגַּל מִילְּתָא, מְטַאי לְקַמֵּיהּ דְּרַבִּי אַבָּא, אֲמַר לְהוּ: תּוֹרָא, בֵּין לְרַב בֵּין לִשְׁמוּאֵל שְׁרֵי. זִילוּ אֲמַרוּ לֵיהּ לִבְרֵיהּ דְּרַב יוֹסֵף בַּר חָמָא, דִּלְשַׁלֵּים דְּמֵי תוֹרָא לְמָרֵיהּ.</div>
+  <div class="trans" data-when="he">נתגלגל הדבר והגיע לפני ר׳ אבא. אמר להם: השור — בין לרב בין לשמואל מותר; לכו אמרו לבנו של רב יוסף בר חמא (הוא רבא) שישלם את דמי השור לבעליו, שהטריפו שלא כדין.</div>
+  <div class="trans" data-when="en">The Gemara relates that the matter circulated, and it came before Rabbi Abba, who said to his students: This bull is permitted for consumption, both according to Rav, who holds that the entrance of the gullet is a location fit for slaughter, and according to Shmuel, who holds that it is not a tereifa unless it is perforated in its majority. Therefore, go tell the son of Rav Yosef bar Ḥama, i.e., Rava, that he is to pay the value of the bull to its owner, since he improperly deemed it a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ג ב — Chullin 43b:15</span></div>
+  <div class="orig">אָמַר מָר בְּרֵיהּ דְּרָבִינָא: מוֹתְבִינָא תְּיוּבְתָּא כְּלַפֵּי סָנְאֵיהּ דְּרָבָא, לְעוֹלָם הִלְכְתָא כְּדִבְרֵי בֵּית הִלֵּל, וְהָרוֹצֶה לַעֲשׂוֹת כְּדִבְרֵי בֵּית שַׁמַּאי – עוֹשֶׂה, כְּדִבְרֵי בֵּית הִלֵּל – עוֹשֶׂה. מִקּוּלֵּי בֵּית שַׁמַּאי וּמִקּוּלֵּי בֵּית הִלֵּל – רָשָׁע.</div>
+  <div class="trans" data-when="he">אמר מר בריה דרבינא: מקשה אני קושיה ניצחת כלפי ״שונאו של רבא״ (לשון נקייה — רבא עצמו) מברייתא: לעולם הלכה כדברי בית הלל; והרוצה לעשות כדברי בית שמאי — עושה, כדברי בית הלל — עושה. הנוהג מקולי בית שמאי ומקולי בית הלל — רשע;</div>
+  <div class="trans" data-when="en">Mar, son of Ravina, said: I offer a conclusive refutation to the enemies of Rava, a euphemism for Rava himself, from a baraita: The halakha is always in accordance with the statement of Beit Hillel, but one who wishes to act in accordance with the statement of Beit Shammai may do so, and one who wishes to act in accordance with the statement of Beit Hillel may do so. But if one wishes to adopt both the leniencies of Beit Shammai and also the leniencies of Beit Hillel, he is a wicked person.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ד א — Chullin 44a:1</span></div>
+  <div class="orig">מֵחוּמְרֵי בֵּית שַׁמַּאי וּמֵחוּמְרֵי בֵּית הִלֵּל – עָלָיו הַכָּתוּב אוֹמֵר: ״הַכְּסִיל בַּחוֹשֶׁךְ הוֹלֵךְ״. אֶלָּא אִי כְּבֵית שַׁמַּאי – כְּקוּלֵּיהֶן וּכְחוּמְרֵיהֶן, אִי כְּבֵית הִלֵּל – כְּקוּלֵּיהֶן וּכְחוּמְרֵיהֶן.</div>
+  <div class="trans" data-when="he">והנוהג מחומרי בית שמאי ומחומרי בית הלל — עליו הכתוב אומר ״הכסיל בחושך הולך״. אלא או כבית שמאי — כקוליהם וכחומריהם, או כבית הלל — כקוליהם וכחומריהם.</div>
+  <div class="trans" data-when="en">And one who wishes to adopt both the stringencies of Beit Shammai and the stringencies of Beit Hillel, with regard to him the verse states: “The fool walks in darkness” (Ecclesiastes 2:14). Rather, one should act either in accordance with Beit Shammai, following both their leniencies and their stringencies, or in accordance with Beit Hillel, following both their leniencies and their stringencies.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין מ״ד א — Chullin 44a:2</span></div>
+  <div class="orig">הָא גּוּפַאּ קַשְׁיָא, אָמְרַתְּ: לְעוֹלָם הֲלָכָה כְּדִבְרֵי בֵּית הִלֵּל, וַהֲדַר תָּנֵי: וְהָרוֹצֶה לַעֲשׂוֹת כְּדִבְרֵי בֵּית שַׁמַּאי יַעֲשֶׂה!</div>
+  <div class="trans" data-when="he">ומקשים על הברייתא עצמה: גופה קשיא — אמרת ״לעולם הלכה כדברי בית הלל״, וחזר ושנה ״והרוצה לעשות כדברי בית שמאי יעשה״!</div>
+  <div class="trans" data-when="en">The Gemara objects to the wording of the baraita: This baraita itself is difficult. First you say that the halakha is always in accordance with the statement of Beit Hillel, and then you teach that one who wishes to act in accordance with the statement of Beit Shammai may do so.</div>
+</div>
+<div class="quote">
+  <div><span class="num">7</span> <span class="ref">חולין מ״ד א — Chullin 44a:3</span></div>
+  <div class="orig">לָא קַשְׁיָא, כָּאן – קוֹדֶם בַּת קוֹל, כָּאן – לְאַחַר בַּת קוֹל.</div>
+  <div class="trans" data-when="he">ומתרצים: לא קשיא — כאן, שהרוצה יעשה, קודם שיצאה בת קול והכריזה שהלכה כבית הלל; כאן — לאחר בת קול.</div>
+  <div class="trans" data-when="en">The Gemara responds: This is not difficult. Here, the statement that a person may act as he wishes was made before the Divine Voice emerged and announced that the halakha is always in accordance with Beit Hillel. There, the statement that the halakha is always in accordance with Beit Hillel was made after the Divine Voice issued this ruling.</div>
+</div>
+<div class="quote">
+  <div><span class="num">7</span> <span class="ref">חולין מ״ד א — Chullin 44a:4</span></div>
+  <div class="orig">וְאִי בָּעֵית אֵימָא, אַף לְאַחַר בַּת קוֹל, וְרַבִּי יְהוֹשֻׁעַ הִיא, דְּאָמַר: אֵין מַשְׁגִּיחִין בְּבַת קוֹל.</div>
+  <div class="trans" data-when="he">ואם תרצה אמור: אף לאחר בת קול, והברייתא כר׳ יהושע, שאמר: אין משגיחין בבת קול — ולדבריו עדיין לא הוכרעה מחלוקת בית שמאי ובית הלל.</div>
+  <div class="trans" data-when="en">And if you wish, say instead that even the statement that a person may act as he wishes was made after the Divine Voice announced that the halakha is in accordance with Beit Hillel, and this statement is in accordance with the opinion of Rabbi Yehoshua, who says: One disregards a Divine Voice that attempts to intervene in matters of halakha. According to him, the dispute between Beit Shammai and Beit Hillel has not yet been decided.</div>
+</div>
+<div class="quote">
+  <div><span class="num">8</span> <span class="ref">חולין מ״ד א — Chullin 44a:5</span></div>
+  <div class="orig">מִכׇּל מָקוֹם, קַשְׁיָא.</div>
+  <div class="trans" data-when="he">ומסכמים: מכל מקום קשיא — על רבא, שצירף שתי חומרות סותרות.</div>
+  <div class="trans" data-when="en">The Gemara notes: In any case, Rava’s ruling is difficult. How could he rule in accordance with two contradictory stringencies in order to deem the animal a tereifa?</div>
+</div>
+<div class="quote">
+  <div><span class="num">9</span> <span class="ref">חולין מ״ד א — Chullin 44a:6</span></div>
+  <div class="orig">אָמַר רַב טָבוּת: כּוּלַּהּ כְּרַב עַבְדַהּ, דְּכִי אֲתָא רָמֵי בַּר יְחֶזְקֵאל אָמַר: לָא תְּצִיתוּ לְהוּ לְהָנֵי כְּלָלֵי דְּכָיֵיל יְהוּדָה אֲחִי מִשְּׁמֵיהּ דְּרַב! הָכִי אָמַר רַב: וֶושֶׁט נָתְנוּ [בּוֹ] חֲכָמִים שִׁיעוּר, מִכְּלָל דְּתוּרְבַּץ הַוֶּושֶׁט לָאו מְקוֹם שְׁחִיטָה הוּא, וְקָאָמַר בְּמַשֶּׁהוּ.</div>
+  <div class="trans" data-when="he">אמר רב טבות: רבא — כולה כרב עשאה. שכאשר בא רמי בר יחזקאל אמר: אל תשמעו לכללים הללו שכלל יהודה אחי משמו של רב! כך אמר רב: וושט — נתנו בו חכמים שיעור לשחיטה; מכלל שתורבץ הוושט לאו מקום שחיטה הוא — ואף על פי כן אמר שנטרף במשהו. נמצא שאין בדברי רבא צירוף סותר כלל.</div>
+  <div class="trans" data-when="en">Rav Tavut said: Rava acted entirely in accordance with the opinion of Rav. As when Rami bar Yeḥezkel came, he said: Do not listen to those principles that Rav Yehuda, my brother, formulated in the name of Rav. Although Rav holds that a perforation of any part of the entrance of the gullet renders an animal a tereifa, this is not because it is a location fit for slaughter. Rather, this is what Rav said: The Sages gave a measure defining the portion of the gullet that is valid for slaughter. By inference, one learns that the entrance of the gullet is not a location fit for slaughter. And nevertheless, he says that a perforation in any amount renders the animal a tereifa.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-8">
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">גבולות השחיטה בוושט</span><span data-when="en">Boundaries of slaughter in the gullet</span>
+      <span class="ref">Chullin 44a:7–9</span></h2>
+  <div class="lead"><span data-when="he">שיעור מקום השחיטה בוושט: למעלה — עד כדי תפיסת יד, למטה — עד כדי שישעיר; וקושיית ״טפח הסמוך לכרס״ מיושבת בשתי דרכים.</span><span data-when="en">The measure of valid slaughter in the gullet: above — leaving room for a hand's grip; below — until it becomes hairy; the difficulty of ״the handbreadth adjacent to the rumen״ is resolved in two ways.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① למעלה עד כמה?"}:::question
+  A2["② רב נחמן: עד כדי תפיסת יד"]:::answer
+  Q3{"③ למטה עד כמה?"}:::question
+  A4["④ רב נחמן אמר רבה בר אבוה:<br/>עד כדי שישעיר"]:::answer
+  Q5{"⑤ איני?! רב: טפח בוושט סמוך לכרס — זהו כרס<br/>הפנימי; נמצא ששוחט בכרס!"}:::question
+  A6["⑥ אימא: טפח בכרס סמוך לוושט —<br/>זהו כרס הפנימי"]:::answer
+  A7["⑦ איבעית אימא: רב — בשור,<br/>שמשעיר טפי"]:::answer
+  Q1 -->|רב נחמן| A2
+  A2 --> Q3
+  Q3 -->|רב נחמן| A4
+  A4 -.->|איני?!| Q5
+  Q5 -->|אימא| A6
+  Q5 -->|איבעית אימא| A7
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① How far up is slaughter valid?"}:::question
+  A2["② Rav Nachman: up to where<br/>a hand can grip"]:::answer
+  Q3{"③ How far down?"}:::question
+  A4["④ Rav Nachman citing Rabba bar Avuh:<br/>until it becomes hairy"]:::answer
+  Q5{"⑤ Objection — Rav: the lowest handbreadth of the gullet<br/>is the inner rumen; so he slaughters in the rumen!"}:::question
+  A6["⑥ Say: a handbreadth of rumen adjacent<br/>to the gullet is the inner rumen"]:::answer
+  A7["⑦ Or: Rav spoke of a bull,<br/>which is hairier"]:::answer
+  Q1 -->|Rav Nachman| A2
+  A2 --> Q3
+  Q3 -->|Rav Nachman| A4
+  A4 -.->|Is that so?!| Q5
+  Q5 -->|Say| A6
+  Q5 -->|Alternatively| A7
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① לְמַעְלָה עַד כַּמָּה?"}:::question
+  A2["② עַד כְּדֵי תְּפִיסַת יָד"]:::answer
+  Q3{"③ לְמַטָּה עַד כַּמָּה?"}:::question
+  A4["④ עַד כְּדֵי שֶׁיַּשְׂעִיר"]:::answer
+  Q5{"⑤ טֶפַח בַּוֶּושֶׁט סָמוּךְ לַכָּרֵס – זֶהוּ כָּרֵס הַפְּנִימִי …<br/>כִּי קָא שָׁחֵט בְּכָרֵס קָא שָׁחֵיט!"}:::question
+  A6["⑥ אֵימָא: טֶפַח בְּכָרֵס סָמוּךְ לַוֶּושֶׁט –<br/>זֶהוּ כָּרֵס הַפְּנִימִי"]:::answer
+  A7["⑦ אִיבָּעֵית אֵימָא: כִּי קָאָמַר רַב – בְּתוֹרָא,<br/>דְּמַשְׂעַר טְפֵי"]:::answer
+  Q1 -->|רב נחמן| A2
+  A2 --> Q3
+  Q3 -->|רב נחמן| A4
+  A4 -.->|איני?!| Q5
+  Q5 -->|אימא| A6
+  Q5 -->|איבעית אימא| A7
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span><span class="num">2</span><span class="num">3</span><span class="num">4</span> <span class="ref">חולין מ״ד א — Chullin 44a:7</span></div>
+  <div class="orig">לְמַעְלָה עַד כַּמָּה? אָמַר רַב נַחְמָן: עַד כְּדֵי תְּפִיסַת יָד. לְמַטָּה עַד כַּמָּה? אָמַר רַב נַחְמָן אָמַר רַבָּה בַּר אֲבוּהּ: עַד כְּדֵי שֶׁיַּשְׂעִיר.</div>
+  <div class="trans" data-when="he">אגב השיעור שנתנו חכמים שואלים: למעלה — עד היכן מקום השחיטה בוושט? אמר רב נחמן: עד כדי תפיסת יד — שיישאר מקום אחיזה ביד. למטה עד כמה? אמר רב נחמן בשם רבה בר אבוה: עד כדי שישעיר — עד המקום שבו נעשה הוושט שעיר, סמוך לכרס.</div>
+  <div class="trans" data-when="en">Since it was mentioned that the Sages gave a measure defining the portion of the gullet that is valid for slaughter, the Gemara asks: How far up the gullet is the upper boundary for valid slaughter? Rav Naḥman said: It is until the point that there remains only sufficient space for a hand to grip the gullet. The Gemara asks: How far down is the lower boundary? Rav Naḥman said that Rabba bar Avuh said: Until the gullet becomes hairy, i.e., until the opening of the rumen, whose lining is hairy.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ד א — Chullin 44a:8</span></div>
+  <div class="orig">אִינִי? וְהָאָמַר רָבִינָא אָמַר גְּנִיבָא מִשְּׁמֵיהּ דְּרַב: טֶפַח בַּוֶּושֶׁט סָמוּךְ לַכָּרֵס – זֶהוּ כָּרֵס הַפְּנִימִי. אַמַּאי? כִּי קָא שָׁחֵט בְּכָרֵס קָא שָׁחֵיט!</div>
+  <div class="trans" data-when="he">ותוהים: איני?! והרי אמר רבינא בשם גניבא משמו של רב: טפח בוושט הסמוך לכרס — זהו ״הכרס הפנימי״. ואם כן אמאי מותר לשחוט עד שישעיר? כששוחט בטפח התחתון — בכרס הוא שוחט, ושחיטתו פסולה!</div>
+  <div class="trans" data-when="en">The Gemara asks: Is that so? But doesn’t Ravina say that Geneiva says in the name of Rav: The lowermost handbreadth in the gullet, adjacent to the rumen, this is the inner rumen? If so, why does Rav Naḥman permit slaughter until the opening of the rumen? When one slaughters within the bottom handbreadth, he is slaughtering in the rumen, and his slaughter should be invalid.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span><span class="num">7</span> <span class="ref">חולין מ״ד א — Chullin 44a:9</span></div>
+  <div class="orig">אֵימָא: טֶפַח בְּכָרֵס סָמוּךְ לַוֶּושֶׁט – זֶהוּ כָּרֵס הַפְּנִימִי. אִיבָּעֵית אֵימָא: כִּי קָאָמַר רַב – בְּתוֹרָא, דְּמַשְׂעַר טְפֵי.</div>
+  <div class="trans" data-when="he">ומשיבים: אמור כך — טפח בכרס הסמוך לוושט, זהו הכרס הפנימי; אבל סוף הוושט עצמו מקום שחיטה הוא. ואם תרצה אמור: כשאמר רב — בשור אמר, שמשעיר יותר, ושערות מצויות אף בטפח התחתון של הוושט עצמו; אבל בשאר בהמות כל הוושט התחתון מקום שחיטה.</div>
+  <div class="trans" data-when="en">Rather, say that Rav’s statement should be amended, as follows: The uppermost handbreadth in the rumen, adjacent to the gullet, this is the inner rumen, which is not a valid location for slaughter. By contrast, the lowermost handbreadth of the gullet is a valid location for slaughter. And if you wish, say instead that when Rav says that the lowermost handbreadth of the gullet is considered the rumen, he is referring specifically to a bull, which is especially hairy, and hairs appear even within the lowermost handbreadth of the gullet itself. By contrast, in other animals, the entire lower gullet is a valid location for slaughter.</div>
+</div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var bs = qs[i].querySelectorAll('.num');
+      for (var j = 0; j < bs.length; j++) {
+        if (parseInt(bs[j].textContent, 10) === n) return qs[i];
+      }
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
