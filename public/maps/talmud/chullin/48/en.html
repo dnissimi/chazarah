@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין מ״ח</title>
+<meta name="description" content="טריפות הריאה והדבקויות: ריאה הסמוכה לדופן וצמחים שעלו עליה, ריאה שניקבה והדופן סותמתה, ומחט שנמצאה בריאה, בכבד ובמרה — אימתי תולים שניקבה ואימתי דרך הסימפון.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="48">
+<meta name="gemara-map:sefaria-ref" content="Chullin 48">
+<meta name="gemara-map:topic-he" content="טריפות הריאה ומחט שנמצאה">
+<meta name="gemara-map:topic-en" content="Lung tereifot and a found needle">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין מ״ח">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 48">
+<meta name="gemara-map:blurb-he" content="טריפות הריאה והדבקויות: ריאה הסמוכה לדופן וצמחים שעלו עליה, ריאה שניקבה והדופן סותמתה, ומחט שנמצאה בריאה, בכבד ובמרה — אימתי תולים שניקבה ואימתי דרך הסימפון.">
+<meta name="gemara-map:blurb-en" content="Tereifot of the lung and its adhesions: a lung attached to the chest wall and cysts that grow on it, a perforated lung sealed by the chest wall, and a needle found in the lung, liver, or gallbladder — when we presume a perforation and when the respiratory route.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין מ״ח</span><span data-when="en">Sugya map — Chullin 48</span></h1>
+    <div class="subtitle"><span data-when="he">חולין מ״ח א:ב׳–מ״ט א:ד׳ · Chullin 48a:2–49a:4 · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 48a:2–49a:4 · חולין מ״ח א:ב׳–מ״ט א:ד׳ · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> כשהריאה דבוקה לדופן תולים בדופן ומכשירים, אך צמחים שעלו עליה מעוררים חשש נקב; ריאה שניקבה והדופן סותמתה — כשרה (וזהו סתימת קבע, להבדיל מקרום זמני). על מחט שנמצאה בריאה נחלקו אם דרך הסימפון באה (כשרה) או שניקבה אליה (טריפה), והכלל המנחה: בודקים אם ניתן לתלות שהגיע הגוף הזר דרך מהלך טבעי — ובכבד ובמרה אף נוטים להקל.</span>
+    <span data-when="en"><b>Bottom line:</b> When the lung adheres to the chest wall we attribute the attachment to the wall and permit it, but cysts that grow on it raise a concern of perforation; a lung perforated yet sealed by the chest wall is kosher (a permanent seal, unlike a temporary membrane). About a needle found in the lung the Sages dispute whether it came via the bronchus (kosher) or perforated its way in (tereifa), and the governing principle is whether a foreign body's arrival can be attributed to a natural route — with the liver and gallbladder leaning toward leniency.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="sugya overview" id="overview">
+  <h2><span data-when="he">מפת־על — חמשת שלבי הסוגיה</span><span data-when="en">Overview — the five stages of the sugya</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · ריאה הסמוכה לדופן — חשש נקב<br/>מ״ח א:ב׳–ז׳"]:::statement
+  O2["2 · ריאה שניקבה והדופן סותמתה — כשרה<br/>מ״ח א:ח׳–י״ג"]:::statement
+  O3["3 · צמחים שעלו בריאה — כשרה<br/>מ״ח א:י״ד–מ״ח ב:ב׳"]:::statement
+  O4["4 · מחט שנמצאה בריאה — מחלוקת<br/>מ״ח ב:ג׳–י׳"]:::question
+  O5["5 · מחט וקשית בכבד ובמרה<br/>מ״ח ב:י״א–מ״ט א:ד׳"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · Lung attached to the chest wall — perforation concern<br/>48a:2–7"]:::statement
+  O2["2 · Perforated lung sealed by the chest wall — kosher<br/>48a:8–13"]:::statement
+  O3["3 · Cysts that grew on the lung — kosher<br/>48a:14–48b:2"]:::statement
+  O4["4 · A needle found in the lung — a dispute<br/>48b:3–10"]:::question
+  O5["5 · A needle and a pit in the liver and gallbladder<br/>48b:11–49a:4"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">ריאה הסמוכה לדופן — וכיצד בודקין</span><span data-when="en">A lung attached to the chest wall — and how we examine</span>
+      <span class="ref">Chullin 48a:2–7</span></h2>
+  <div class="lead"><span data-when="he">ריאה הדבוקה לדופן — רב נחמן אינו חושש, אלא אם עלו עליה צמחים; מר יהודה חושש תמיד. כיצד בודקין? מפרקים בסכין: ריעותא בדופן — תולים בה ומכשירים, אין ריעותא — טריפה. רב נחמיה בודק במים פושרים, ורב אשי מחלק בין דבק־דופן (תולים) לבין שתי אונות שנדבקו (טריפה). לבסוף — מתי הדופן סותמת ומתי לא: במקום רביתא, חיתוכי האונות.</span><span data-when="en">A lung adhering to the chest wall — Rav Naḥman is unconcerned unless cysts grew on it; Mar Yehuda is always concerned. How do we examine? We separate it with a knife: a defect in the wall — we attribute the attachment to it and permit; no defect — a tereifa. Rav Neḥemya inspects in tepid water, and Rav Ashi distinguishes a wall-adhesion (attributable) from two adhering lobes (a tereifa). Finally — when the wall seals and when not: in the place it grows, the sectioning of the lobes.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב נחמן: ריאה הסמוכה לדופן — אין חוששין;<br/>צמחים — חוששין. מר יהודה: בשניהם חוששין"]:::statement
+  A2["② כיצד בודקין? מפרקים בסכין: ריעותא בדופן —<br/>תולים בה וכשרה; אין — טריפה"]:::answer
+  S3["③ רב נחמיה בודק במים פושרין;<br/>מתנים זאת על שתי אונות שסרכו"]:::statement
+  Q4{"④ רב אשי: בדופן תולים — אבל שתי אונות,<br/>אי האי ניקב טריפה ואי האי ניקב טריפה!"}:::question
+  Q5{"⑤ ומי אמר רב נחמן הכי? והרי אמר:<br/>ניקבה והדופן סותמתה — כשרה!"}:::question
+  A6["⑥ לא קשיא: התם במקום רביתא,<br/>הכא שלא במקום רביתא"]:::answer
+  C7["⑦ והיכא מקום רביתא? חיתוכי דאוני"]:::conclusion
+  S1 -->|בדיקה| A2
+  A2 --> S3
+  S3 -->|מתקיף| Q4
+  S1 -->|סתירה| Q5
+  Q5 -->|תירוץ| A6
+  A6 --> C7
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Naḥman: a lung attached to the wall — no concern;<br/>cysts — concern. Mar Yehuda: in both, concern"]:::statement
+  A2["② How do we examine? Separate with a knife: a defect in the wall —<br/>attribute to it, kosher; none — a tereifa"]:::answer
+  S3["③ Rav Neḥemya inspects in tepid water;<br/>some apply this to two adhering lobes"]:::statement
+  Q4{"④ Rav Ashi: a wall-adhesion is attributable — but two lobes,<br/>if this one was perforated tereifa, and if that one tereifa!"}:::question
+  Q5{"⑤ Did Rav Naḥman really say so? But he said:<br/>perforated yet sealed by the wall — kosher!"}:::question
+  A6["⑥ Not difficult: there in the place it grows,<br/>here not in the place it grows"]:::answer
+  C7["⑦ And where is the place it grows? The sectioning of the lobes"]:::conclusion
+  S1 -->|Examination| A2
+  A2 --> S3
+  S3 -->|Objection| Q4
+  S1 -->|Contradiction| Q5
+  Q5 -->|Answer| A6
+  A6 --> C7
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רֵיאָה הַסְּמוּכָה לַדּוֹפֶן – אֵין חוֹשְׁשִׁין לָהּ,<br/>הֶעֶלְתָה צְמָחִים – חוֹשְׁשִׁין … אֶחָד זֶה וְאֶחָד זֶה – חוֹשְׁשִׁין לָהּ"]:::statement
+  A2["② מַיְיתִינַן סַכִּינָא דַּחֲלִישׁ פּוּמֵּיהּ וּמְפָרְקִינַן לַהּ; אִי אִיכָּא רֵיעוּתָא בְּדוֹפֶן –<br/>תָּלֵינַן בָּתַר דּוֹפֶן, וְאִי לָא – מֵחֲמַת רֵיאָה הִיא, וּטְרֵפָה"]:::answer
+  S3["③ רַב נְחֶמְיָה … בָּדֵיק לַהּ בְּפָשׁוֹרֵי …<br/>הָנֵי תַּרְתֵּי אוּנֵּי דְּרֵיאָה דִּסְרִיכָן לַהֲדָדֵי"]:::statement
+  Q4{"④ בִּשְׁלָמָא הָכָא תָּלֵינַן בְּדוֹפֶן … אֲבָל הָתָם –<br/>אִי הַאי נְקִיב טְרֵפָה, וְאִי הַאי נְקִיב טְרֵפָה"}:::question
+  Q5{"⑤ וּמִי אָמַר רַב נַחְמָן הָכִי? וְהָאָמַר …<br/>רֵיאָה שֶׁנִּקְּבָה וְדוֹפֶן סוֹתַמְתָּהּ – כְּשֵׁרָה"}:::question
+  A6["⑥ לָא קַשְׁיָא, הָתָם בִּמְקוֹם רְבִיתָא,<br/>הָכָא שֶׁלֹּא בִּמְקוֹם רְבִיתָא"]:::answer
+  C7["⑦ וְהֵיכָא מְקוֹם רְבִיתָא? חִיתּוּכֵי דְּאוּנֵּי"]:::conclusion
+  S1 -->|בדיקה| A2
+  A2 --> S3
+  S3 -->|מתקיף| Q4
+  S1 -->|סתירה| Q5
+  Q5 -->|תירוץ| A6
+  A6 --> C7
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ח א — Chullin 48a:2</span></div>
+  <div class="orig">אָמַר רַב יוֹסֵף בַּר מִנְיוֹמֵי אָמַר רַב נַחְמָן: רֵיאָה הַסְּמוּכָה לַדּוֹפֶן – אֵין חוֹשְׁשִׁין לָהּ, הֶעֶלְתָה צְמָחִים – חוֹשְׁשִׁין לָהּ. מָר יְהוּדָה מִשְּׁמֵיהּ דַּאֲבִימִי אָמַר: אֶחָד זֶה וְאֶחָד זֶה – חוֹשְׁשִׁין לָהּ.</div>
+  <div class="trans" data-when="he">אמר רב יוסף בר מניומי בשם רב נחמן: ריאה הדבוקה לדופן הצלעות — אין חוששין שמא נדבקה מחמת נקב בריאה (ותולים בפגיעה בדופן, וכשרה); אך אם עלו עליה צמחים (אבעבועות מוגלה) באזור הדבק — חוששין שניקבה. מר יהודה בשם אבימי אומר: בין כך ובין כך — חוששין לה תמיד.</div>
+  <div class="trans" data-when="en">§ Rav Yosef bar Minyumi says that Rav Naḥman says: With regard to a lung that is adjacent, i.e., attached, to the ribs in the chest wall, one need not be concerned about the possibility that it became attached as a result of a perforation in the lung as opposed to some injury to the chest wall. But if cysts full of pus sprouted on the lung itself in the area of its attachment to the chest wall, one must be concerned about the possibility that it was perforated, and that this gave rise to the cysts. Mar Yehuda says in the name of Avimi: In both this case and that case, whether or not there are cysts on the lung, one must be concerned about the possibility that the lung was perforated.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ח א — Chullin 48a:3</span></div>
+  <div class="orig">הֵיכִי עָבְדִינַן? אָמַר רָבָא: רָבִין בַּר שְׁבָא אַסְבְּרַהּ לִי, מַיְיתִינַן סַכִּינָא דַּחֲלִישׁ פּוּמֵּיהּ וּמְפָרְקִינַן לַהּ; אִי אִיכָּא רֵיעוּתָא בְּדוֹפֶן – תָּלֵינַן בָּתַר דּוֹפֶן, וְאִי לָא – מֵחֲמַת רֵיאָה הִיא, וּטְרֵפָה, וְאַף עַל גַּב דְּלָא קָא מַפְּקָא זִיקָא.</div>
+  <div class="trans" data-when="he">כיצד בודקין אם הפגם בדופן או בריאה? אמר רבא: רבין בר שבא הסביר לי — מביאים סכין דק־להב ומפרידים את הריאה מן הדופן; אם יש ריעותא (פצע או מחלה) בדופן — תולים את הדבק בפגיעה שבדופן (וכשרה); ואם אין — מחמת הריאה הוא, וטריפה. וכך הדין אף שהריאה אינה מוציאה אוויר בניפוח, שכן תולים שקרום כיסה את הנקב, ואין הקרום מציל מטריפות.</div>
+  <div class="trans" data-when="en">The Gemara asks: How do we perform an examination to determine whether the injury is in the chest wall or the lung? Rava said: Ravin bar Sheva explained the procedure to me: We bring a knife whose edge is sharp and thin, and we separate the lung from the chest wall. If there is a defect, a wound or disease, in the chest wall, we attribute the attachment to the defect in the chest wall. And if not, we presume that the attachment is due to a defect in the lung, and the animal is a tereifa. And this is the halakha even though the lung does not expel air when inflated, since it is assumed that a scab covered the perforation, and a scab does not prevent the animal from being rendered a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ח א — Chullin 48a:4</span></div>
+  <div class="orig">רַב נְחֶמְיָה בְּרֵיהּ דְּרַב יוֹסֵף בָּדֵיק לַהּ בְּפָשׁוֹרֵי. אֲמַר לֵיהּ מָר זוּטְרָא בְּרֵיהּ דְּרַב הוּנָא בְּרֵיהּ דְּרַב פַּפֵּי לְרָבִינָא: הָא דְּרַב נְחֶמְיָה בְּרֵיהּ דְּרַב יוֹסֵף, אַתּוּן אַהָא מַתְנִיתוּ לַהּ, אֲנַן אַדְּרָבָא מַתְנֵינַן לַהּ, דְּאָמַר רָבָא: הָנֵי תַּרְתֵּי אוּנֵּי דְּרֵיאָה דִּסְרִיכָן לַהֲדָדֵי לֵית לְהוּ בְּדִיקוּתָא לְאַכְשׁוֹרֵי. רַב נְחֶמְיָה בְּרֵיהּ דְּרַב יוֹסֵף בָּדֵיק לַהּ בְּפָשׁוֹרֵי.</div>
+  <div class="trans" data-when="he">רב נחמיה בנו של רב יוסף היה בודק ריאה כזו על ידי ניפוחה במים פושרים — אם לא עלו בועות, הכשירהּ. מר זוטרא בן רב הונא בן רב פפי אמר לרבינא: את מימרת רב נחמיה אתם שונים על הריאה הסמוכה לדופן, ואנו שונים אותה על דברי רבא — שאמר: שתי אונות הריאה שנדבקו זו לזו אין להן בדיקה להכשירן; ואף על פי כן רב נחמיה בדק ריאה כזו במים פושרין.</div>
+  <div class="trans" data-when="en">The Gemara relates that Rav Neḥemya, son of Rav Yosef, examined such a lung by inflating it in tepid water to see if bubbles would appear. Mar Zutra, son of Rav Huna, son of Rav Pappi, said to Ravina: Concerning this episode of Rav Neḥemya, son of Rav Yosef, you teach it as being about this case of a lung attached to the chest wall. But we teach it as being about the case of Rava, as Rava says: These two lobes of the lung that adhere to one another have no means of inspection to deem them kosher. Still, Rav Neḥemya, son of Rav Yosef, examined such a lung by inflating it in tepid water. If no bubbles appeared he would deem the lung kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ח א — Chullin 48a:5</span></div>
+  <div class="orig">מַתְקֵיף לַהּ רַב אָשֵׁי: הַאי מַאי? בִּשְׁלָמָא הָכָא תָּלֵינַן בְּדוֹפֶן, וּכְשֵׁרָה, אֲבָל הָתָם – אִי הַאי נְקִיב – טְרֵפָה, וְאִי הַאי נְקִיב – טְרֵפָה.</div>
+  <div class="trans" data-when="he">מקשה רב אשי: וכי בדיקה זו מועילה לשתי אונות שנדבקו? בשלמא כאן, בריאה הסמוכה לדופן, תולים את הדבק בדופן וכשרה; אבל שם, בשתי אונות שסרכו זו לזו — אם אונה זו ניקבה טריפה, ואם אונה זו ניקבה טריפה, ואין כאן מה לתלות בו.</div>
+  <div class="trans" data-when="en">Rav Ashi objects to this: What is this? How can an animal with a lung whose lobes adhered to one another be permitted by means of such an inspection? Granted, here, in the case of a lung attached to the chest wall, we attribute the attachment to an injury in the chest wall rather than the lung, and the animal is kosher. But there, in the case of an adhesion between two lobes, what can be said? If this lobe was perforated the animal is a tereifa, and if that lobe was perforated the animal is a tereifa. Even if a scab covers the perforation and prevents bubbles from appearing, the animal is still a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span><span class="num">6</span> <span class="ref">חולין מ״ח א — Chullin 48a:6</span></div>
+  <div class="orig">וּמִי אָמַר רַב נַחְמָן הָכִי? וְהָאָמַר רַב יוֹסֵף בַּר מִנְיוֹמֵי אָמַר רַב נַחְמָן: רֵיאָה שֶׁנִּקְּבָה וְדוֹפֶן סוֹתַמְתָּהּ – כְּשֵׁרָה! לָא קַשְׁיָא, הָתָם בִּמְקוֹם רְבִיתָא, הָכָא שֶׁלֹּא בִּמְקוֹם רְבִיתָא.</div>
+  <div class="trans" data-when="he">רב נחמן אמר שצמחים מעוררים חשש נקב — משמע שנקב פוסל. ומקשים: וכי רב נחמן אמר כך? והרי אמר רב יוסף בר מניומי בשמו: ריאה שניקבה והדופן סותמתה — כשרה! ומשיבים: אין סתירה — שם מדובר בדבק במקום רביתא (מקום גידולה הטבעי של הריאה), שהסתימה תתקיים והבהמה תחיה; כאן — שלא במקום רביתא.</div>
+  <div class="trans" data-when="en">Rav Naḥman stated that if there are cysts on the lung in the area of its attachment to the chest wall, one must be concerned about the possibility that the lung was perforated. Evidently, if the lung was perforated, the animal is a tereifa. The Gemara asks: And did Rav Naḥman really say this? But doesn’t Rav Yosef bar Minyumi say that Rav Naḥman says: If the lung was perforated but the chest wall seals the perforation, the animal is kosher? The Gemara responds: This is not difficult. There, Rav Naḥman is referring to a lung attached to the chest wall in the place that it grows [revita] naturally. In that case, if the chest wall seals the perforation it will remain sealed, and the animal can live. But here, Rav Naḥman is referring to a lung attached to the chest wall not in the place that it grows.</div>
+</div>
+<div class="quote">
+  <div><span class="num">7</span> <span class="ref">חולין מ״ח א — Chullin 48a:7</span></div>
+  <div class="orig">וְהֵיכָא מְקוֹם רְבִיתָא? חִיתּוּכֵי דְּאוּנֵּי.</div>
+  <div class="trans" data-when="he">והיכן הוא מקום רביתא (מקום גידולה הטבעי)? אזור חיתוכי האונות — חזית הריאה שבה האונות סמוכות לדופן מכל צדדיהן.</div>
+  <div class="trans" data-when="en">The Gemara clarifies: And where is the place that it grows? It is the area of the sectioning of the lobes, i.e., the front of the lung where the lobes are adjacent to the chest wall on all sides.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">ריאה שניקבה והדופן סותמתה</span><span data-when="en">A perforated lung sealed by the chest wall</span>
+      <span class="ref">Chullin 48a:8–13</span></h2>
+  <div class="lead"><span data-when="he">רב נחמן: ריאה שניקבה והדופן סותמתה — כשרה. רבינא מתנה: דווקא כשסבוכה בבשר; רב יוסף מקשה מברייתת ״ניקב נסתם״, ונדחה — ״וזהו״ ממעט קרום זמני, לא סתימת קבע. רב עוקבא מקשה ״ליתני נקובת הדופן״, ונדחה מן הכבד והמרה: כל שאינו מינו אינו מטריף — אין המשנה שונה אותו.</span><span data-when="en">Rav Naḥman: a perforated lung sealed by the chest wall is kosher. Ravina qualifies: only when tangled in the flesh; Rav Yosef objects from the baraita of "perforated, then sealed," and is deflected — "and this is" excludes a temporary membrane, not a permanent seal. Rav Ukva objects, "let it teach a perforated chest wall," and is deflected from the liver and gallbladder: whatever is not the rendering organ the mishna does not list.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב נחמן: ריאה שניקבה ודופן סותמתה — כשרה.<br/>רבינא: והוא דסביך בבשרא; ואי לא — טריפה"]:::statement
+  Q2{"② והרי תניא: ניקב נסתם — וזהו פסול שחוזר<br/>להכשרו; ׳וזהו׳ — למעוטי כהאי גוונא!"}:::question
+  A3["③ לא, למעוטי קרום שעלה מחמת מכה,<br/>שאינו קרום של קבע (להבדיל מבשר הדופן)"]:::answer
+  Q4{"④ רב עוקבא מתקיף: אילו אינקיב דופן לַהֲדהּ — טריפה!<br/>אם כן ליתני נקובת הדופן!"}:::question
+  A5["⑤ ולטעמיך — מרה שניקבה וכבד סותמתה כשרה;<br/>אילו אינקיב כבד טריפה — ליתני נקובת הכבד!"]:::answer
+  C6["⑥ אלא: כל שלאו מיניה מיטרפא — לא קתני;<br/>הכא נמי, הדופן אינו מינו — לא קתני"]:::conclusion
+  S1 -->|מיתיבי| Q2
+  Q2 -->|תירוץ| A3
+  S1 -->|מתקיף| Q4
+  Q4 -->|ולטעמיך| A5
+  A5 --> C6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Naḥman: a lung perforated yet sealed by the wall — kosher.<br/>Ravina: only when tangled in the flesh; if not — a tereifa"]:::statement
+  Q2{"② But a baraita teaches: perforated then sealed — one unfit<br/>who returns to fitness; ׳and this is׳ — to exclude such a case!"}:::question
+  A3["③ No, to exclude a membrane from a wound,<br/>not a permanent seal (unlike the flesh of the wall)"]:::answer
+  Q4{"④ Rav Ukva objects: if the wall were perforated against it — a tereifa!<br/>If so, let it teach: a perforated chest wall!"}:::question
+  A5["⑤ By your reasoning — a gallbladder sealed by the liver is kosher;<br/>if the liver were perforated, a tereifa — let it teach a perforated liver!"]:::answer
+  C6["⑥ Rather: what is not the rendering organ is not taught;<br/>here too, the wall is not the organ — it is not taught"]:::conclusion
+  S1 -->|Objection| Q2
+  Q2 -->|Answer| A3
+  S1 -->|Objection| Q4
+  Q4 -->|By your reasoning| A5
+  A5 --> C6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רֵיאָה שֶׁנִּקְּבָה וְדוֹפֶן סוֹתַמְתָּהּ – כְּשֵׁרָה. אָמַר רָבִינָא:<br/>וְהוּא דִּסְבִיךְ בְּבִשְׂרָא … וְאִי לָא סְבִיךְ … טְרֵפָה"]:::statement
+  Q2{"② דְּהָא תַּנְיָא: נִיקַּב פָּסוּל … נִסְתַּם כָּשֵׁר … וְזֶהוּ פְּסוּל<br/>שֶׁחוֹזֵר לְהֶכְשֵׁירוֹ … לָאו לְמַעוֹטֵי כְּהַאי גַוְונָא"}:::question
+  A3["③ לָא, לְמַעוֹטֵי קְרוּם שֶׁעָלָה מֵחֲמַת מַכָּה<br/>בָּרֵיאָה, דְּאֵינוֹ קְרוּם"]:::answer
+  Q4{"④ מַתְקֵיף … רַב עוּקְבָא: אִילּוּ אִינְּקִיב דּוֹפֶן לַהֲדַהּ –<br/>טְרֵפָה! לִיתְנֵי נְקוּבַת הַדּוֹפֶן"}:::question
+  A5["⑤ וְלִיטַעְמָיךְ … מָרָה שֶׁנִּיקְּבָה וְכָבֵד סוֹתַמְתָּהּ כְּשֵׁרָה,<br/>אִילּוּ אִינְּקִיב כָּבֵד … לִיתְנֵי נְקוּבַת הַכָּבֵד"]:::answer
+  C6["⑥ אֶלָּא, כִּי נִיקְּבָה דְּלָאו מִינֵּיהּ מִיטַּרְפָא – לָא קָתָנֵי;<br/>הָכָא נָמֵי, כֵּיוָן דְּלָאו מִינֵּיהּ מִיטַּרְפָא – לָא קָתָנֵי"]:::conclusion
+  S1 -->|מיתיבי| Q2
+  Q2 -->|תירוץ| A3
+  S1 -->|מתקיף| Q4
+  Q4 -->|ולטעמיך| A5
+  A5 --> C6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ח א — Chullin 48a:8</span></div>
+  <div class="orig">גּוּפָא, אָמַר רַב יוֹסֵף בַּר מִנְיוֹמֵי אָמַר רַב נַחְמָן: רֵיאָה שֶׁנִּקְּבָה וְדוֹפֶן סוֹתַמְתָּהּ – כְּשֵׁרָה. אָמַר רָבִינָא: וְהוּא דִּסְבִיךְ בְּבִשְׂרָא. אֲמַר לֵיהּ רַב יוֹסֵף לְרָבִינָא: וְאִי לָא סְבִיךְ מַאי? טְרֵפָה, אַלְמָא אָמְרִינַן נְקוּבָה הִיא. אִי הָכִי, כִּי סְבִיךְ נָמֵי!</div>
+  <div class="trans" data-when="he">לגוף הדבר: אמר רב יוסף בר מניומי בשם רב נחמן: ריאה שניקבה והדופן סותמתה — כשרה. אמר רבינא: ודווקא כשהריאה סבוכה (אחוזה) בבשר הדופן שבין הצלעות. אמר לו רב יוסף לרבינא: ואם אינה סבוכה — מהו? טריפה. אם כן משמע שאומרים ״נקובה היא״ — ואם כך, אף כשסבוכה תהא טריפה!</div>
+  <div class="trans" data-when="en">§ Since the Gemara cited the statement of Rav Naḥman, the Gemara turns to the matter itself: Rav Yosef bar Minyumi says that Rav Naḥman says: If the lung was perforated but the chest wall sealed the perforation, the animal is kosher. With regard to this statement, Ravina said: And this is the halakha only when the lung is tangled in the flesh of the chest wall, between the ribs. Rav Yosef said to Ravina: And if it is not tangled, what is the halakha? The animal is a tereifa. Evidently, we say that the lung is perforated. But if so, when it is tangled as well, it should be deemed a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ח א — Chullin 48a:9</span></div>
+  <div class="orig">דְּהָא תַּנְיָא: נִיקַּב – פָּסוּל, מִפְּנֵי שֶׁהוּא שׁוֹתֵת; נִסְתַּם – כָּשֵׁר, מִפְּנֵי שֶׁהוּא מוֹלִיד, וְזֶהוּ פְּסוּל שֶׁחוֹזֵר לְהֶכְשֵׁירוֹ. וְזֶהוּ לְמַעוֹטֵי מַאי? לָאו לְמַעוֹטֵי כְּהַאי גַוְונָא.</div>
+  <div class="trans" data-when="he">שהרי שנינו בברייתא (לעניין פצוע דכא): ניקב אבר ההולדה — פסול לבוא בקהל, מפני ששכבת הזרע שותתת ואינו מוליד; נסתם הנקב בבשר — כשר, מפני שחזר להוליד, ״וזהו פסול שחוזר להכשרו״. ומדייק רב יוסף: ״וזהו״ — בא למעט מה? לאו למעט מקרה כעין זה, של ריאה שניקבה ונסתמה בדופן, שאינה חוזרת להכשרה!</div>
+  <div class="trans" data-when="en">As isn’t it taught in a baraita: If a man’s penis was perforated, he is unfit to marry a Jewish woman of fit lineage, because his semen is discharged gently and he cannot procreate, in accordance with the verse: “He that is crushed or maimed in his private parts shall not enter into the assembly of the Lord” (Deuteronomy 23:2). But if the perforation was later sealed with flesh, he is fit, because now he can procreate. And this is an instance of someone who is unfit who returns to his previous state of fitness. Rav Yosef continues: When the baraita states: And this is, what does it serve to exclude? Does it not serve to exclude a case like this, where the lung was perforated and then sealed by the chest wall, in which case the animal would not become kosher again?</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ח א — Chullin 48a:10</span></div>
+  <div class="orig">לָא, לְמַעוֹטֵי קְרוּם שֶׁעָלָה מֵחֲמַת מַכָּה בָּרֵיאָה, דְּאֵינוֹ קְרוּם.</div>
+  <div class="trans" data-when="he">משיבים: לא — ״וזהו״ בא למעט קרום שעלה מחמת מכה בריאה עצמה, שאינו נחשב קרום הסותם נקב, מפני שהוא זמני. אבל בשר הדופן נחשב סתימת קבע, ומכשיר.</div>
+  <div class="trans" data-when="en">The Gemara responds: No, the phrase serves to exclude a membrane that appeared due to a wound in the lung, which is not considered a membrane that can seal a perforation, because it is temporary. By contrast, the flesh of the chest wall is considered a permanent seal on the lungs and renders the animal kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ח א — Chullin 48a:11</span></div>
+  <div class="orig">מַתְקֵיף לַהּ רַב עוּקְבָא בַּר חָמָא: אִילּוּ אִינְּקִיב דּוֹפֶן לַהֲדַהּ, מַאי? טְרֵפָה! לִיתְנֵי נְקוּבַת הַדּוֹפֶן!</div>
+  <div class="trans" data-when="he">מקשה רב עוקבא בר חמא על דין רב נחמן (ריאה שניקבה ודופן סותמתה כשרה): אילו ניקב גם בשר הדופן כנגד נקב הריאה — מהו? טריפה, שהרי האוויר יוצא. משמע שההכשר תלוי במצב הדופן — אם כן, תשנה המשנה גם ״נקובת הדופן״ ברשימת הטריפות!</div>
+  <div class="trans" data-when="en">Rav Ukva bar Ḥama objects to the ruling of Rav Naḥman that if a lung was perforated but the chest wall sealed the perforation, the animal is kosher: If flesh in the chest wall was perforated against the perforation in the lung, what would the halakha be? The animal would be a tereifa, since air can now escape from the lung. Evidently, the question of whether the animal is permitted is dependent on the state of the chest wall. If so, let the mishna teach, in addition to the given list of tereifot: An animal whose chest wall was perforated.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ח א — Chullin 48a:12</span></div>
+  <div class="orig">וְלִיטַעְמָיךְ, הָא דְּאָמַר רַב יִצְחָק בַּר יוֹסֵף אָמַר רַבִּי יוֹחָנָן: מָרָה שֶׁנִּיקְּבָה וְכָבֵד סוֹתַמְתָּהּ – כְּשֵׁרָה, אִילּוּ אִינְּקִיב כָּבֵד לַהֲדַהּ, מַאי? טְרֵפָה! לִיתְנֵי: נְקוּבַת הַכָּבֵד.</div>
+  <div class="trans" data-when="he">ומשיבים: ולטעמך גם תיקשה — הרי אמר רב יצחק בר יוסף בשם רבי יוחנן: מרה שניקבה והכבד סותמתה — כשרה; ואילו ניקב הכבד כנגד נקב המרה — מהו? טריפה! אם כן, לפי קושייתך תשנה המשנה גם ״נקובת הכבד״ — ואין זה כך.</div>
+  <div class="trans" data-when="en">The Gemara responds: And according to your reasoning, one can also ask: The mishna states that if the gallbladder was perforated, the animal is a tereifa. That which Rav Yitzḥak bar Yosef says that Rabbi Yoḥanan says with regard to this, that if the gallbladder was perforated but the liver sealed the perforation the animal is kosher, is difficult. If the liver were perforated against the perforation in the gallbladder, what would the halakha be? The animal would be a tereifa. If so, let the mishna also teach: An animal whose liver was perforated.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין מ״ח א — Chullin 48a:13</span></div>
+  <div class="orig">אֶלָּא, כִּי נִיקְּבָה דְּלָאו מִינֵּיהּ מִיטַּרְפָא – לָא קָתָנֵי; הָכָא נָמֵי, כֵּיוָן דְּלָאו מִינֵּיהּ מִיטַּרְפָא – לָא קָתָנֵי.</div>
+  <div class="trans" data-when="he">אלא צריך לומר: המשנה אינה שונה אבר שניקב כאשר אין הבהמה נטרפת מחמתו (כגון הכבד, שאינו מן הטריפות). כך גם כאן: כיוון שהדופן אינו האבר שהבהמה נטרפת מחמת נקיבתו — אין המשנה שונה אותו.</div>
+  <div class="trans" data-when="en">Rather, one must say that the mishna does not teach cases where the perforated organ is not the one by which the animal is rendered a tereifa. Here, too, in the case of a lung sealed by the chest wall, since the perforated organ, i.e., the chest wall, is not the one by which the animal is rendered a tereifa, the mishna does not teach it.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">צמחים שעלו בריאה — מעשי שוק</span><span data-when="en">Cysts that grew on the lung — market cases</span>
+      <span class="ref">Chullin 48a:14–48b:2</span></h2>
+  <div class="lead"><span data-when="he">רבה בר בר חנה שאל את שמואל על צמחים שעלו בריאה — כשרה; דין רב מתנא (מליא מוגלא טריפה) נאמר על הכוליא ולא על הריאה. שלושה מעשי שוק תומכים בהקלה: רבי יוחנן מחמיר אך רבי יהודה ברבי שמעון התיר, ורב נחמן, רבי אמי ורבי אסי ראו צמחים בשוק ולא אסרו.</span><span data-when="en">Rabba bar bar Ḥana asked Shmuel about cysts that grew on the lung — kosher; Rav Mattana's ruling (pus-filled is a tereifa) was said of the kidney, not the lung. Three market episodes support leniency: Rabbi Yoḥanan is stringent but Rabbi Yehuda son of Rabbi Shimon permitted, and Rav Naḥman, Rabbi Ami, and Rabbi Asi saw cysts in the market and did not forbid.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① רבה בר בר חנה לשמואל: העלתה צמחין מהו?<br/>כשרה — ודין רב מתנא בכוליא נאמר, לא בריאה"}:::question
+  S2["② רבי יוחנן מחמיר; ר׳ יהודה ברבי שמעון<br/>מורה להיתר משם ר׳ אלעזר ברבי שמעון"]:::statement
+  P3["③ רב נחמן ראה בשוק צמחים כַּנְדֵי כנדי<br/>ולא אמר להם ולא מידי"]:::proof
+  P4["④ רבי אמי ורבי אסי ראו בשוק טבריא<br/>טינרי טינרי — ולא אמרו ולא מידי"]:::proof
+  Q1 --> S2
+  S2 -->|מעשה| P3
+  P3 --> P4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Rabba bar bar Ḥana to Shmuel: it grew cysts, what is it?<br/>Kosher — Rav Mattana׳s ruling is about the kidney, not the lung"}:::question
+  S2["② Rabbi Yoḥanan is stringent; R. Yehuda son of R. Shimon<br/>instructs leniently in the name of R. Elazar son of R. Shimon"]:::statement
+  P3["③ Rav Naḥman saw jug-like cysts in the market<br/>and said nothing to the butchers"]:::proof
+  P4["④ Rabbi Ami and Rabbi Asi saw rock-like growths<br/>in the Tiberias market — and said nothing"]:::proof
+  Q1 --> S2
+  S2 -->|Episode| P3
+  P3 --> P4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בְּעָא … רַבָּה בַּר בַּר חָנָה … הֶעֶלְתָה צְמָחִין, מַהוּ? … כְּשֵׁרָה …<br/>הָהִיא בְּכוּלְיָא אִתְּמַר"}:::question
+  S2["② מְשַׁדַּר לְהוּ לְקַמֵּיהּ דְּרַבִּי יְהוּדָה בְּרַבִּי שִׁמְעוֹן, דְּמוֹרֵי בַּהּ … לְהֶיתֵּירָא,<br/>וְלֵיהּ לָא סְבִירָא לֵיהּ"]:::statement
+  P3["③ כִּי הֲוָה מְסַגֵּינַן בָּתְרֵיהּ דְּרַב נַחְמָן בְּשׁוּקָא … חָזֵי הָנָךְ<br/>דְּקָיְימָן כַּנְדֵי כַּנְדֵי, וְלָא אָמַר לְהוּ וְלָא מִידֵּי"]:::proof
+  P4["④ רַבִּי אַמֵּי וְרַבִּי אַסִּי … בְּשׁוּקָא דִּטְבֶרְיָא, חֲזֹנְהוּ הָנָךְ<br/>דְּקָיְימִי טִינָּרֵי טִינָּרֵי, וְלָא אָמְרִי לְהוּ וְלָא מִידֵּי"]:::proof
+  Q1 --> S2
+  S2 -->|מעשה| P3
+  P3 --> P4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ח א — Chullin 48a:14</span></div>
+  <div class="orig">בְּעָא מִינֵּיהּ רַבָּה בַּר בַּר חָנָה מִשְּׁמוּאֵל: הֶעֶלְתָה צְמָחִין, מַהוּ? אֲמַר לֵיהּ: כְּשֵׁרָה. אֲמַר לֵיהּ: אַף אֲנִי אוֹמֵר כֵּן, אֶלָּא שֶׁהַתַּלְמִידִים מִזְדַּנְּזִין בַּדָּבָר, דְּאָמַר רַב מַתְנָא: מַלְיָא מוּגְלָא – טְרֵפָה, מַיִם זַכִּים – כְּשֵׁרָה. אֲמַר לֵיהּ: הָהִיא בְּכוּלְיָא אִתְּמַר.</div>
+  <div class="trans" data-when="he">שאל רבה בר בר חנה את שמואל: ריאה שהעלתה צמחין (אבעבועות) — מהו? אמר לו: כשרה. אמר לו: אף אני אומר כן, אלא שהתלמידים מסתפקים בדבר, שהרי אמר רב מתנא: צמח מלא מוגלה — טריפה, מלא מים זכים — כשרה. אמר לו שמואל: אותו דין של רב מתנא נאמר על צמח שבכוליא (כליה), לא על הריאה.</div>
+  <div class="trans" data-when="en">§ Rabba bar bar Ḥana asked Shmuel: If the lung grew cysts full of pus, what is the halakha? Shmuel said to him: The animal is kosher. Rabba bar bar Ḥana said to him in reply: I also say so, that the animal is kosher, except that the students doubt the matter, as Rav Mattana says: If the cyst was full of pus, the animal is a tereifa; if it was full of clear fluid, it is kosher. Shmuel said to him: That halakha of Rav Mattana was stated with regard to a cyst on the kidney, not on the lung.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ח א — Chullin 48a:15</span></div>
+  <div class="orig">רַבִּי יִצְחָק בַּר יוֹסֵף הֲוָה קָאָזֵיל בָּתְרֵיהּ דְּרַבִּי יִרְמְיָה בְּשׁוּקָא דְּטַבָּחֵי, חֲזָנְהוּ לְהָנָךְ דְּקָיְימִין צִמְחֵי צִמְחֵי. אֲמַר לֵיהּ: לָא בָּעֵי מָר אוּמְצָא? אֲמַר לֵיהּ: לֵית לִי פְּרִיטֵי. אֲמַר לֵיהּ: אַקְּפַן אֲנָא. אֲמַר לֵיהּ: מָה אֶעֱבֵיד לָךְ, דְּכִי אָתוּ לְקַמֵּיהּ דְּרַבִּי יוֹחָנָן מְשַׁדַּר לְהוּ לְקַמֵּיהּ דְּרַבִּי יְהוּדָה בְּרַבִּי שִׁמְעוֹן, דְּמוֹרֵי בַּהּ מִשְּׁמֵיהּ דְּרַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן לְהֶיתֵּירָא, וְלֵיהּ לָא סְבִירָא לֵיהּ.</div>
+  <div class="trans" data-when="he">רבי יצחק בר יוסף הלך אחר רבי ירמיה בשוק הטבחים, וראה ריאות מלאות צמחים. רצה לברר את דינן, אמר לו: אין אדוני רוצה נתח בשר? אמר לו רבי ירמיה (שלא רצה להורות): אין לי מעות. אמר לו: אני אקיף לך (אקנה בהקפה). אמר לו רבי ירמיה: מה אעשה לך — כשהיו באים לפני רבי יוחנן בעניין זה, היה שולחם לרבי יהודה ברבי שמעון, שהיה מורה בכך להיתר בשם רבי אלעזר ברבי שמעון; ורבי יוחנן עצמו לא סבר כן, ואני מחמיר כדעתו.</div>
+  <div class="trans" data-when="en">The Gemara relates that Rabbi Yitzḥak bar Yosef was walking after Rabbi Yirmeya in the butchers’ market. He saw these lungs that were full of cysts, and he wished to determine the halakha with regard to them. He said to Rabbi Yirmeya: Doesn’t the Master desire a piece of meat? If so, meat from those animals is for sale. Rabbi Yirmeya, not wanting to issue a ruling with regard to the meat, said to him: I have no money. Rabbi Yitzḥak bar Yosef said to him: I will buy them for you on credit. Rabbi Yirmeya realized that he could not avoid issuing a ruling, so he said to him: What can I do for you? As when people came before Rabbi Yoḥanan with such lungs, he would send them before Rabbi Yehuda, son of Rabbi Shimon, who would instruct them in such cases in the name of Rabbi Elazar, son of Rabbi Shimon, to permit the meat for consumption. But Rabbi Yoḥanan himself does not hold accordingly, and does not permit the meat. I practice stringency in accordance with his opinion.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ח א — Chullin 48a:16</span></div>
+  <div class="orig">אָמַר רָבָא: כִּי הֲוָה מְסַגֵּינַן בָּתְרֵיהּ דְּרַב נַחְמָן בְּשׁוּקָא</div>
+  <div class="trans" data-when="he">אמר רבא: כאשר היינו מהלכים אחר רב נחמן בשוק</div>
+  <div class="trans" data-when="en">Rava said: When we would walk after Rav Naḥman in the market</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ח ב — Chullin 48b:1</span></div>
+  <div class="orig">דְּגִלְדָּאֵי, וְאָמְרִי לַהּ בְּשׁוּקָא דְּרַבָּנַן, חָזֵי הָנָךְ דְּקָיְימָן כַּנְדֵי כַּנְדֵי, וְלָא אָמַר לְהוּ וְלָא מִידֵּי.</div>
+  <div class="trans" data-when="he">של מפשיטי העורות (ויש אומרים בשוק החכמים), היה רואה ריאות אלו שהיו ״כַּנְדֵי כנדי״ — מלאות צמחים גדולים כעין כדים מלאי נוזל — ולא היה אומר לטבחים דבר; משמע שהכשירן.</div>
+  <div class="trans" data-when="en">of the skinners, and some say in the market of the Sages, he would see these lungs that were full of jugs, i.e., they were covered in large cysts full of liquid, and he would not say anything to the butchers. Evidently, he held that the animals were kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ח ב — Chullin 48b:2</span></div>
+  <div class="orig">רַבִּי אַמֵּי וְרַבִּי אַסִּי הֲווֹ חָלְפִי בְּשׁוּקָא דִּטְבֶרְיָא, (חָזֵי) [חֲזֹנְהוּ] הָנָךְ דְּקָיְימִי טִינָּרֵי טִינָּרֵי, וְלָא אָמְרִי לְהוּ וְלָא מִידֵּי.</div>
+  <div class="trans" data-when="he">רבי אמי ורבי אסי היו עוברים בשוק טבריא, וראו ריאות אלו שהיו ״טִינָּרֵי טינרי״ — מלאות צמחים קשים גדולים כסלעים — ולא אמרו לטבחים דבר; משמע שהכשירון.</div>
+  <div class="trans" data-when="en">The Gemara relates that Rabbi Ami and Rabbi Asi were passing through the market of Tiberias. They saw these lungs that were full of rocks, i.e., large, hard growths, and they did not say anything to the butchers. Evidently, they held that the animals were kosher.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">מחט שנמצאה בריאה — סימפון או נקב</span><span data-when="en">A needle found in the lung — bronchus or perforation</span>
+      <span class="ref">Chullin 48b:3–10</span></h2>
+  <div class="lead"><span data-when="he">מחט שנמצאה בריאה — שלושה מכשירים ושלושה מטריפים. במה נחלקו? לא בחסרון מבפנים (שלכולי עלמא אינו חסרון), אלא: דרך הסימפון באה (כשרה) או שניקבה (טריפה). מעשה בחתיכת ריאה: רבי ירמיה מקשה ״או שחסרה — מבפנים״, רבי אמי טורף כי אין רואים את כל הריאה. רב נחמן (סימפון שניקב) נדחה, רב אשי: אין מדמין טריפה לטריפה. ובסימפון רבה — תולים בדרך הסימפון.</span><span data-when="en">A needle found in the lung — three deem it kosher, three a tereifa. What is their dispute? Not over an internal deficiency (which none counts), but: did it come via the bronchus (kosher) or perforate its way in (tereifa)? A case of a lung-piece: Rabbi Yirmeya objects from "or missing — internally," and Rabbi Ami deems it a tereifa since the whole lung is unseen. Rav Naḥman (a perforated bronchus) is deflected; Rav Ashi: one does not compare one tereifa to another. And in the large bronchus — we attribute it to the respiratory route.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מחט שנמצאה בריאה: ר׳ יוחנן ר׳ אלעזר ר׳ חנינא<br/>מכשירין; ריש לקיש וחבריו טורפין"]:::statement
+  S2["② במאי פליגי? לא בחסרון מבפנים (לכ״ע אינו חסרון);<br/>אלא: סימפונא נקט ואתאי / נקובי נקיב ואתאי"]:::statement
+  Q3{"③ מחט בחיתוך ריאה — ר׳ אמי ור׳ יצחק נפחא סברו<br/>להכשיר; קושיא ׳או שחסרה׳ — מבפנים, שמיה חסרון!"}:::question
+  A4["④ ר׳ אמי טרף: רבנן הכשירו שראו ריאה שלמה,<br/>ואנו רואים רק חתיכה — דלמא מינקבה"]:::answer
+  Q5{"⑤ והרי רב נחמן: סימפונא דריאה דאינקיב — טריפה!<br/>(אם כן גם דרך סימפון תיטרף)"}:::question
+  A6["⑥ ההוא לחבירו איתמר (סימפון לסימפון);<br/>ורב נחמן: הדורא דכנתא — מגין עליה"]:::answer
+  C7["⑦ רב אשי: אין מדמין טריפה לטריפה.<br/>ובסימפונא רבה — אימא סימפונא נקט ואתאי"]:::conclusion
+  S1 --> S2
+  S2 -->|מעשה| Q3
+  Q3 -->|תירוץ| A4
+  A4 -->|קושיא| Q5
+  Q5 -->|תירוץ| A6
+  A6 --> C7
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① A needle found in the lung: R. Yoḥanan, R. Elazar, R. Ḥanina<br/>deem kosher; Reish Lakish and colleagues a tereifa"]:::statement
+  S2["② On what do they differ? Not internal deficiency (none counts it);<br/>but: it came via the bronchus / it perforated its way in"]:::statement
+  Q3{"③ A needle in a lung-piece — R. Ami and R. Yitzḥak Nappaḥa thought<br/>to permit; objection ׳or missing׳ — internal, counts as deficiency!"}:::question
+  A4["④ R. Ami deems it a tereifa: the Rabbis permitted seeing a whole lung,<br/>but we see only a piece — perhaps it was perforated"]:::answer
+  Q5{"⑤ But Rav Naḥman: a perforated bronchus — a tereifa!<br/>(so even via the bronchus it should be a tereifa)"}:::question
+  A6["⑥ That was said of one bronchus into another;<br/>and Rav Naḥman: a spiral colon — the other coil protects it"]:::answer
+  C7["⑦ Rav Ashi: one does not compare tereifot.<br/>And in the large bronchus — say it came via the bronchus"]:::conclusion
+  S1 --> S2
+  S2 -->|Case| Q3
+  Q3 -->|Answer| A4
+  A4 -->|Difficulty| Q5
+  Q5 -->|Answer| A6
+  A6 --> C7
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מַחַט שֶׁנִּמְצֵאת בָּרֵיאָה – רַבִּי יוֹחָנָן וְרַבִּי אֶלְעָזָר וְרַבִּי חֲנִינָא<br/>מַכְשְׁרִי, רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ … טָרְפִי"]:::statement
+  S2["② דְּכוּלֵּי עָלְמָא חִסָּרוֹן מִבִּפְנִים – לָא שְׁמֵיהּ חִסָּרוֹן … מָר סָבַר:<br/>סִמְפּוֹנָא נְקַט וַאֲתַאי, וּמָר סָבַר: נַקּוֹבֵי נַקֵּיב וַאֲתַאי"]:::statement
+  Q3{"③ הָהִיא מַחְטָא דְּאִשְׁתְּכַח בְּחִיתּוּכָא דְּרֵיאָה … סְבַר לְאַכְשׁוֹרַהּ.<br/>׳אוֹ שֶׁחָסְרָה׳ … לָאו מִבִּפְנִים … שְׁמֵיהּ חִסָּרוֹן"}:::question
+  A4["④ הֲדַר … לְקַמֵּיהּ דְּרַבִּי אַמֵּי וְטַרְפַהּ … הֵן הִכְשִׁירוּ … אָנוּ<br/>מֵאֵיזֶה טַעַם נַכְשִׁיר? דִּלְמָא אִי הֲוָה רֵיאָה קַמַּן מִינַּקְבָה"]:::answer
+  Q5{"⑤ וְהָאָמַר רַב נַחְמָן: הַאי סִמְפּוֹנָא דְּרֵיאָה<br/>דְּאִינְּקִיב – טְרֵפָה"}:::question
+  A6["⑥ הָהוּא לַחֲבֵירוֹ אִתְּמַר … וְהָאָמַר רַב נַחְמָן: הַאי הֲדוֹרָא<br/>דְּכַנְתָּא דְּאִינְּקִיב לַהֲדֵי חַבְרֵיהּ – מַגֵּין עֲלֵיהּ"]:::answer
+  C7["⑦ אֵין אוֹמְרִין בִּטְרֵפוֹת זוֹ דּוֹמָה לָזוֹ … בְּסִמְפּוֹנָא רַבָּה<br/>אִישְׁתְּכַח, אֵימָא סִמְפּוֹנָא נְקַט וַאֲתַאי"]:::conclusion
+  S1 --> S2
+  S2 -->|מעשה| Q3
+  Q3 -->|תירוץ| A4
+  A4 -->|קושיא| Q5
+  Q5 -->|תירוץ| A6
+  A6 --> C7
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ח ב — Chullin 48b:3</span></div>
+  <div class="orig">אִתְּמַר: מַחַט שֶׁנִּמְצֵאת בָּרֵיאָה – רַבִּי יוֹחָנָן וְרַבִּי אֶלְעָזָר וְרַבִּי חֲנִינָא מַכְשְׁרִי, רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ וְרַבִּי מָנִי בַּר פַּטִּישׁ וְרַבִּי שִׁמְעוֹן בֶּן אֶלְיָקִים טָרְפִי.</div>
+  <div class="trans" data-when="he">נאמר: מחט שנמצאה בריאת בהמה שחוטה — רבי יוחנן, רבי אלעזר ורבי חנינא מכשירין; ריש לקיש (רבי שמעון בן לקיש), רבי מני בר פטיש ורבי שמעון בן אליקים טורפין.</div>
+  <div class="trans" data-when="en">§ It was stated that the amora’im disagree with regard to a needle that was found in the lung of a slaughtered animal: Rabbi Yoḥanan and Rabbi Elazar and Rabbi Ḥanina deem the animal kosher, while Rabbi Shimon ben Lakish and Rabbi Mani bar Pattish and Rabbi Shimon ben Elyakim deem it a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ח ב — Chullin 48b:4</span></div>
+  <div class="orig">לֵימָא בְּהָא קָמִיפַּלְגִי, דְּמָר סָבַר: חִסָּרוֹן מִבִּפְנִים – שְׁמֵיהּ חִסָּרוֹן, וּמָר סָבַר: לָא שְׁמֵיהּ חִסָּרוֹן? לָא, דְּכוּלֵּי עָלְמָא חִסָּרוֹן מִבִּפְנִים – לָא שְׁמֵיהּ חִסָּרוֹן, וְהָכָא בְּהָא קָמִיפַּלְגִי: מָר סָבַר: סִמְפּוֹנָא נְקַט וַאֲתַאי, וּמָר סָבַר: נַקּוֹבֵי נַקֵּיב וַאֲתַאי.</div>
+  <div class="trans" data-when="he">ומציעים: נאמר שבזה נחלקו — שהמטריפים סוברים חסרון מבפנים (שיצר נקב פנימי במחט) שמיה חסרון וטריפה, והמכשירים סוברים שאינו חסרון. ודוחים: לא, לכולי עלמא חסרון מבפנים אינו שמיה חסרון; וכאן נחלקו בזה: לדעת המכשירים — המחט נכנסה דרך הסימפון (קנה הנשימה) בלא נקב; ולדעת המטריפים — ניקבה דרכה מן הוושט ובאה לריאה דרך נקב.</div>
+  <div class="trans" data-when="en">The Gemara suggests: Let us say that they disagree about this: That one Sage, i.e., those who deem it a tereifa, holds that a deficiency on the inside of the lung, created by the needle, is considered a deficiency, rendering the animal a tereifa; and one Sage, i.e., those who deem it kosher, holds that it is not considered a deficiency. The Gemara responds: No, everyone holds that a deficiency on the inside is not considered a deficiency. And here, in the case of a needle, the Sages disagree with regard to this: One Sage, i.e., those who deem it kosher, holds that the needle took the respiratory route and came into the lung without perforating the membrane; and one Sage, i.e., those who deem it a tereifa, holds that it perforated its way out of the digestive system and came through to the lung by perforating its membrane.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ח ב — Chullin 48b:5</span></div>
+  <div class="orig">הָהִיא מַחְטָא דְּאִשְׁתְּכַח בְּחִיתּוּכָא דְּרֵיאָה, אַיְיתוּהָ לְקַמֵּיהּ דְּרַבִּי אַמֵּי, סְבַר לְאַכְשׁוֹרַהּ. אֵיתִיבֵיהּ רַבִּי יִרְמְיָה, וְאִיתֵּימָא רַבִּי זְרִיקָא: ״הָרֵיאָה שֶׁנִּיקְּבָה אוֹ שֶׁחָסְרָה״. מַאי חָסְרָה? אִילֵימָא מִבַּחוּץ – הַיְינוּ נִיקְּבָה! אֶלָּא לָאו מִבִּפְנִים, וּשְׁמַע מִינַּהּ: חִסָּרוֹן מִבִּפְנִים – שְׁמֵיהּ חִסָּרוֹן.</div>
+  <div class="trans" data-when="he">מעשה במחט שנמצאה בחתיכת ריאה (לאחר שנחתכה לחתיכות), הביאוה לפני רבי אמי, וסבר להכשירהּ. הקשה לו רבי ירמיה (ויש אומרים רבי זריקא) מן המשנה: ״הריאה שניקבה או שחסרה״ — מהו ״חסרה״? אם תאמר חסרון מבחוץ — היינו ״ניקבה״! אלא ודאי חסרון מבפנים — ושמע מינה: חסרון מבפנים שמיה חסרון, והמחט ודאי חיסרה בפנים.</div>
+  <div class="trans" data-when="en">The Gemara relates that a certain needle was found in a piece of lung after it had been cut into pieces. People there brought it before Rabbi Ami, and he thought to deem it kosher. Rabbi Yirmeya, and some say Rabbi Zerika, raised an objection to this possible ruling from the mishna: The lung that was perforated or that was missing a piece renders the animal a tereifa. Now, what is the case of a lung that was missing a piece? If we say that it was missing a piece on the outside, this is the same as if it was perforated, since any missing piece of the lung wall constitutes a perforation. Rather, is it not referring to a missing piece on the inside? If so, learn from the mishna that a deficiency on the inside of an organ is considered a deficiency, and the needle certainly caused a deficiency inside the lung.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ח ב — Chullin 48b:6</span></div>
+  <div class="orig">הֲדַר שַׁדְּרוּהָ לְקַמֵּיהּ דְּרַבִּי יִצְחָק נַפָּחָא, סְבַר לְאַכְשׁוֹרַהּ, אֵיתִיבֵיהּ רַבִּי יִרְמְיָה, וְאִיתֵּימָא רַבִּי זְרִיקָא: ״הָרֵיאָה שֶׁנִּיקְּבָה אוֹ שֶׁחָסְרָה״. מַאי חָסְרָה? אִילֵימָא מִבַּחוּץ – הַיְינוּ נִיקְּבָה! אֶלָּא לָאו מִבִּפְנִים? וּשְׁמַע מִינַּהּ: חִסָּרוֹן מִבִּפְנִים – שְׁמֵיהּ חִסָּרוֹן!</div>
+  <div class="trans" data-when="he">רבי אמי לא הכריע, ולכן שלחו את הריאה לפני רבי יצחק נפחא; גם הוא סבר להכשירהּ. שוב הקשה לו רבי ירמיה (ויש אומרים רבי זריקא) מן המשנה: ״הריאה שניקבה או שחסרה״ — מהו ״חסרה״? אם מבחוץ — היינו ״ניקבה״! אלא ודאי מבפנים — ושמע מינה: חסרון מבפנים שמיה חסרון!</div>
+  <div class="trans" data-when="en">Rabbi Ami did not decide the matter, so they then sent the lung before Rabbi Yitzḥak Nappaḥa. He, too, thought to deem it kosher. Rabbi Yirmeya, and some say Rabbi Zerika, raised an objection to this from the mishna: The lung that was perforated or that was missing a piece renders the animal a tereifa. Now, what is the case of a lung that was missing a piece? If we say that it was missing a piece on the outside, this is the same as if it was perforated. Rather, is it not referring to a missing piece on the inside? If so, learn from the mishna that a deficiency on the inside of an organ is considered a deficiency.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ח ב — Chullin 48b:7</span></div>
+  <div class="orig">הֲדַר שַׁדְּרוּהָ לְקַמֵּיהּ דְּרַבִּי אַמֵּי וְטַרְפַהּ. אָמְרִי לֵיהּ: וְהָא רַבָּנַן מַכְשְׁרִי? אָמַר לָהֶן: הֵן הִכְשִׁירוּ, שֶׁיּוֹדְעִים מֵאֵיזֶה טַעַם הִכְשִׁירוּ, אָנוּ מֵאֵיזֶה טַעַם נַכְשִׁיר? דִּלְמָא אִי הֲוָה רֵיאָה קַמַּן מִינַּקְבָה.</div>
+  <div class="trans" data-when="he">החזירו את הריאה לפני רבי אמי, וטרפהּ. אמרו לו: והרי הרבנן (רבי יוחנן וחבריו) מכשירין? אמר להם: הם הכשירו מפני שיודעים מאיזה טעם — שראו ריאה שלמה ולא היה בה נקב; אבל אנו, מאיזה טעם נכשיר? שמא אילו הייתה הריאה השלמה לפנינו היינו רואים שקרומה ניקב.</div>
+  <div class="trans" data-when="en">They then sent the lung back before Rabbi Ami, and he deemed the animal a tereifa. They said to him: But don’t the Rabbis, i.e., Rabbi Yoḥanan, Rabbi Elazar, and Rabbi Ḥanina, deem it kosher? Rabbi Ami said to them: They deemed it kosher since they knew for which reason they deemed it kosher. They were confronted with a whole lung and could see that it had no perforation. But we, for which reason shall we deem it kosher? We see only part of the lung. Perhaps if the whole lung was before us we would see that its membrane was perforated.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ח ב — Chullin 48b:8</span></div>
+  <div class="orig">טַעְמָא דְּלֵיתַהּ, הָא אִיתַהּ וְלָא מִינַּקְבָה – כְּשֵׁרָה, וְהָאָמַר רַב נַחְמָן: הַאי סִמְפּוֹנָא דְּרֵיאָה דְּאִינְּקִיב – טְרֵפָה, הָהוּא לַחֲבֵירוֹ אִתְּמַר.</div>
+  <div class="trans" data-when="he">ומדייקים: הטעם שטרף הוא מפני שלא הייתה הריאה השלמה לפניו; הא אילו הייתה לפניו ולא נמצא נקב — כשרה. ומקשים: והרי אמר רב נחמן: סימפון (צינור אוויר) של הריאה שניקב — טריפה, ואם כן אף דרך הסימפון תיטרף! ומשיבים: אותו דין של רב נחמן נאמר בנקב מסימפון אחד לחברו (ששניהם קשים ואין סותם זה את זה).</div>
+  <div class="trans" data-when="en">The Gemara asks: One can infer that the reason he deemed it a tereifa is that the entire lung was not before him, but if it had been before him and the membrane had not been perforated, then he would have deemed the animal kosher. But doesn’t Rav Naḥman say: This bronchus of the lung that was perforated renders the animal a tereifa? Accordingly, even if the needle entered the lung through a bronchus the animal ought to be a tereifa. The Gemara responds: That statement of Rav Naḥman was stated in reference to a case where a needle pierced from one bronchus into another. Since the bronchi are hard, one bronchus cannot seal a perforation in another. By contrast, when a needle perforates the bronchi and continues into the flesh of the lung, soft tissue left behind can seal the perforation.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין מ״ח ב — Chullin 48b:9</span></div>
+  <div class="orig">וְהָאָמַר רַב נַחְמָן: הַאי הֲדוֹרָא דְּכַנְתָּא דְּאִינְּקִיב לַהֲדֵי חַבְרֵיהּ – מַגֵּין עֲלֵיהּ, אָמַר רַב אָשֵׁי: טְרֵפוֹת קָא מְדַמֵּי לַהֲדָדֵי? אֵין אוֹמְרִין בִּטְרֵפוֹת זוֹ דּוֹמָה לָזוֹ, שֶׁהֲרֵי חוֹתְכָהּ מִכָּאן וּמֵתָה, חוֹתְכָהּ מִכָּאן וְחַיָּה!</div>
+  <div class="trans" data-when="he">ומקשים: והרי אמר רב נחמן: הדורא דכנתא (לולאת המעי הסלילי) שניקב כנגד לולאה אחרת — חברתה מגינה עליו וסותמתו; אם כן מדוע סימפון אינו סותם נקב בסימפון אחר? אמר רב אשי: וכי מדמים טריפה לטריפה? אין אומרים בטריפות ״זו דומה לזו״ — שהרי חותך את הבהמה מכאן ומתה, חותך מכאן וחיה.</div>
+  <div class="trans" data-when="en">The Gemara asks: But doesn’t Rav Naḥman say: If this spiral colon was perforated against another coil of the intestine, the other coil protects it by sealing the perforation? If so, why does a bronchus not seal a perforation in another bronchus? Rav Ashi said: Are you comparing tereifot to one another? One cannot say with regard to tereifot: This is similar to that, as one cuts an animal from here, in one place, and it dies, while one cuts it from there, in another place, and it lives.</div>
+</div>
+<div class="quote">
+  <div><span class="num">7</span> <span class="ref">חולין מ״ח ב — Chullin 48b:10</span></div>
+  <div class="orig">הָהִיא מַחְטָא דְּאִישְׁתְּכַח בְּסִמְפּוֹנָא רַבָּה דְּרֵיאָה, אַתְיוּהָ לְקַמֵּיה דְּרַבָּנַן טָרוֹפָאֵי, לָא אֲמַרוּ בָּהּ לָא אִיסּוּר וְלָא הֶיתֵּר. הֶיתֵּר לָא אָמְרִי בַּהּ – כִּשְׁמַעְתַּיְיהוּ, אִיסּוּר נָמֵי לָא אָמְרִי בַּהּ – כֵּיוָן דִּבְסִמְפּוֹנָא רַבָּה אִישְׁתְּכַח, אֵימָא סִמְפּוֹנָא נְקַט וַאֲתַאי.</div>
+  <div class="trans" data-when="he">מעשה במחט שנמצאה בסימפון הגדול (הראשי) של הריאה, הביאוה לפני הרבנן המטריפים (ריש לקיש וחבריו), ולא אמרו בה לא איסור ולא היתר. היתר לא אמרו — כשיטתם המטריפה; אבל גם איסור לא אמרו — כיוון שנמצאה בסימפון הגדול, אפשר לומר שדרך הסימפון נכנסה ובאה, ולא ניקבה.</div>
+  <div class="trans" data-when="en">The Gemara recounts the case of a certain needle that was found in the large, i.e., main, bronchus of the lung. They brought it before the Rabbis who deem an animal tereifa if a needle is found in the lungs, i.e., Rabbi Shimon ben Lakish, Rabbi Mani bar Pattish, and Rabbi Shimon ben Elyakim. They did not say that it was prohibited, nor that it was permitted. They did not say it was permitted, in accordance with their ruling, but they also did not say it was prohibited since the needle was found in the large bronchus, and one can therefore say that it likely took the respiratory route and came into the lung rather than perforating through from the digestive system.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">מחט וקשית בכבד ובמרה</span><span data-when="en">A needle and a pit in the liver and gallbladder</span>
+      <span class="ref">Chullin 48b:11–49a:4</span></h2>
+  <div class="lead"><span data-when="he">מחט שנמצאה בכבד — רב אשי: בודקין את כיוון ה״קופא״ (חור המחט): לבר — נקובי נקיב (טריפה), לגיו — דרך חלל הדם (כשרה); ובמחט דקה — לעולם נקובי נקיב. הסוגיה משווה לבית הכוסות (אוכלים ומשקים דחקוה), מביאה מעשה במחט בסימפון הכבד (רבינא: ״שקילו גלימא דטרופאי״), וחותמת בקשית שבמרה — דקל דרך הסימפון, אבל זית מבזע בזע.</span><span data-when="en">A needle found in the liver — Rav Ashi: examine the eye's direction: outward — it perforated its way (tereifa); inward — through a blood vessel (kosher); but a thin needle always perforated. The sugya contrasts the reticulum (food and liquid pushed it), recounts a needle in the liver-duct (Ravina: "take the robe of those who deemed it a tereifa"), and closes with a pit in the gallbladder — a date came via the duct, but an olive pit bursts through.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מחט בחתיכת כבד — רב אשי: בבשר לא תיטרף!<br/>אלא חזינא: קופא לבר נקיב (טריפה), לגיו כשרה"]:::statement
+  S2["② והני מילי באלימתא; אבל קטינתא —<br/>לא שנא, נקובי נקיב ואתאי"]:::statement
+  Q3{"③ ומאי שנא ממחט בעובי בית הכוסות:<br/>מצד אחד כשרה, ולא חזינן קופא?"}:::question
+  A4["④ התם, כיוון דאיכא אוכלים ומשקים —<br/>אימא אוכלים ומשקים דחקוה"]:::answer
+  P5["⑤ מחט בסימפונא רבה דכבדא — רבינא:<br/>שקילו גלימא דטרופאי (חייבים בתשלום)"]:::proof
+  C6["⑥ קשית במרה — דקל סימפונא נקט ואתאי<br/>(מירבל רביל); אבל זית מבזע בזע"]:::conclusion
+  S1 --> S2
+  S2 -->|מאי שנא| Q3
+  Q3 -->|תירוץ| A4
+  A4 -->|מעשה| P5
+  P5 --> C6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① A needle in a liver-piece — Rav Ashi: flesh is no tereifa!<br/>Rather, we see: eye outward — perforated (tereifa), inward — kosher"]:::statement
+  S2["② And this is only a thick needle; but a thin one —<br/>it makes no difference, it perforated its way in"]:::statement
+  Q3{"③ How does this differ from a needle in the reticulum wall:<br/>from one side kosher, and we do not check the eye?"}:::question
+  A4["④ There, since food and liquid are present —<br/>say food and liquid pushed the eye through"]:::answer
+  P5["⑤ A needle in the liver-duct — Ravina:<br/>take the robe of those who deemed it a tereifa (they must pay)"]:::proof
+  C6["⑥ A pit in the gallbladder — a date came via the duct<br/>(it slips through); but an olive pit bursts through"]:::conclusion
+  S1 --> S2
+  S2 -->|How does it differ| Q3
+  Q3 -->|Answer| A4
+  A4 -->|Case| P5
+  P5 --> C6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אִילּוּ אִשְׁתְּכַח בְּבִשְׂרָא … הֲוָה טָרֵיף מָר? … חָזֵינָא,<br/>אִי קוֹפָא לְבַר נַקֵּיב, אִי קוֹפָא לְגָיו סִמְפּוֹנָא נְקַט וַאֲתַאי"]:::statement
+  S2["② וְהָנֵי מִילֵּי בְּאַלִּימְתָּא, אֲבָל קַטִּינְתָּא … נַקּוֹבֵי<br/>נַקֵּיב וַאֲתַאי"]:::statement
+  Q3{"③ וּמַאי שְׁנָא מִמַּחַט שֶׁנִּמְצֵאת בְּעוֹבִי בֵּית הַכּוֹסוֹת מִצַּד<br/>אֶחָד כְּשֵׁרָה … וְלָא אָמְרִינַן לִיחְזֵי אִי קוֹפָא לְבַר"}:::question
+  A4["④ הָתָם, כֵּיוָן דְּאִיכָּא אֳכָלִים וּמַשְׁקִים –<br/>אֵימָא אֳכָלִים וּמַשְׁקִים דַּחְקוּהָ"]:::answer
+  P5["⑤ הָהוּא מַחְטָא דְּאִישְׁתְּכַח בְּסִמְפּוֹנָא רַבָּה דְּכַבְדָּא …<br/>אֲמַר לְהוּ: שְׁקִילוּ גְּלִימָא דְּטָרוֹפָאֵי"]:::proof
+  C6["⑥ הָא וַדַּאי סִימְפּוֹנָא נְקַט וַאֲתַאי … וְהָנֵי מִילֵּי דְּדִיקְלָא,<br/>אֲבָל דְּזֵיתָא מִיבְזָע בָּזַע"]:::conclusion
+  S1 --> S2
+  S2 -->|מאי שנא| Q3
+  Q3 -->|תירוץ| A4
+  A4 -->|מעשה| P5
+  P5 --> C6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ח ב — Chullin 48b:11</span></div>
+  <div class="orig">הָהִיא מַחְטָא דְּאִישְׁתְּכַח בַּחֲתִיכָה דְּכַבְדָּא, סְבַר מָר בְּרֵיהּ דְּרַב יוֹסֵף לְמִיטְרְפַהּ, אֲמַר לֵיהּ רַב אָשֵׁי: אִילּוּ אִשְׁתְּכַח בְּבִשְׂרָא כְּהַאי גַוְונָא הֲוָה טָרֵיף מָר? אֶלָּא אָמַר רַב אָשֵׁי: חָזֵינָא, אִי קוֹפָא לְבַר – נַקּוֹבֵי נַקֵּיב וַאֲתַאי, אִי קוֹפָא לְגָיו – סִמְפּוֹנָא נְקַט וַאֲתַאי.</div>
+  <div class="trans" data-when="he">מעשה במחט שנמצאה בחתיכת כבד; סבר מר בנו של רב יוסף לטרוף את הבהמה. אמר לו רב אשי: אילו נמצאה המחט בבשר באופן זה, היה אדוני טורף? והרי כבד שניקב, ככבד ובשר, אינו מטריף כשלעצמו! אלא אמר רב אשי: בודקין — אם חור המחט (״קופא״) פונה כלפי חוץ (לחלל הקיבה), נקובי נקיב ובאה דרך הוושט (טריפה); אם הקופא פונה כלפי פנים, תפסה דרך חלל הדם ובאה לכבד (כשרה).</div>
+  <div class="trans" data-when="en">§ The Gemara relates that there was a certain needle that was found in a piece of liver. Mar, son of Rav Yosef, thought to deem the animal a tereifa. Rav Ashi said to him: If a needle had been found in the flesh, like this case where it was found in the liver, would the Master have deemed it a tereifa? A perforated liver, like perforated flesh, does not in itself render the animal a tereifa, as is evident from the mishna (42a). Rather, Rav Ashi said that we see: If the eye of the needle faces outward, toward the stomach cavity, one must presume that it perforated its way out of the gullet, rendering the animal a tereifa, and thereby came to the liver. If the eye of the needle faces inward, buried in the liver, and the sharp end of the needle is facing outward, one may presume that it took hold of a blood vessel and came to the liver through it, rather than through the gullet, and the animal is kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ח ב — Chullin 48b:12</span></div>
+  <div class="orig">וְהָנֵי מִילֵּי בְּאַלִּימְתָּא, אֲבָל קַטִּינְתָּא, לָא שְׁנָא קוֹפָא לְגָיו, לָא שְׁנָא קוֹפָא לְבַר, נַקּוֹבֵי נַקֵּיב וַאֲתַאי.</div>
+  <div class="trans" data-when="he">ודין זה (החילוק לפי כיוון הקופא) נאמר רק במחט עבה, שחור המחט אינו חד דיו לנקוב מעצמו; אבל במחט דקה — אין הבדל אם הקופא פנימה או החוצה, ולעולם תולים שנקובי נקיב ובאה דרך הוושט.</div>
+  <div class="trans" data-when="en">The Gemara adds: And this statement applies only to a thick needle, the eye of which is not sharp enough to cause a perforation by itself. But if the needle is thin, it is no different if the eye faces inward and it is no different if the eye faces outward, and one must presume that it perforated its way out of the gullet and thereby came to the liver.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ח ב — Chullin 48b:13</span></div>
+  <div class="orig">וּמַאי שְׁנָא מִמַּחַט שֶׁנִּמְצֵאת</div>
+  <div class="trans" data-when="he">ומקשים: ומה שונה דין זה מדין מחט שנמצאה</div>
+  <div class="trans" data-when="en">The Gemara asks: And in what way is this case different from that of a needle that is found</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ט א — Chullin 49a:1</span></div>
+  <div class="orig">בְּעוֹבִי בֵּית הַכּוֹסוֹת מִצַּד אֶחָד כְּשֵׁרָה, מִשְּׁנֵי צְדָדִין טְרֵפָה, וְלָא אָמְרִינַן לִיחְזֵי אִי קוֹפָא לְבַר אִי קוֹפָא לְגָיו?</div>
+  <div class="trans" data-when="he">בעובי דופן בית הכוסות (אחת הקיבות): אם המחט בולטת מצד אחד בלבד (הצד הפנימי) — כשרה, ואם משני הצדדים — טריפה; ובבולטת רק מבפנים אין אומרים ״נראה אם הקופא לחוץ או לפנים״, אלא כשרה אף אם הקופא פונה החוצה — ואין זה ראיה שניקבה דרך הוושט. מדוע שם אין בודקים את כיוון הקופא?</div>
+  <div class="trans" data-when="en">embedded in the thickness of the wall of the reticulum, where the halakha is as follows: If the needle protrudes from one side, i.e., the inner side of the stomach wall, the animal is kosher, but if it protrudes from both sides, it is a tereifa; and if it protrudes only on the inside we do not say: See if the eye of the needle is facing outward or if the eye of the needle is facing inward? Rather, the animal is deemed kosher even if the eye is facing outward, and that is not considered evidence that the needle perforated through the gullet into the chest cavity and then perforated the thickness of the reticulum.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ט א — Chullin 49a:2</span></div>
+  <div class="orig">אָמְרִי: הָתָם, כֵּיוָן דְּאִיכָּא אֳכָלִים וּמַשְׁקִים – אֵימָא אֳכָלִים וּמַשְׁקִים דַּחְקוּהָ.</div>
+  <div class="trans" data-when="he">משיבים: שם, בבית הכוסות, כיוון שיש בו אוכלים ומשקים, אפשר לומר שהאוכלים והמשקים דחקו את חור המחט והבליטוהו כלפי חוץ; לכן אף אם הקופא פונה החוצה, עדיין תולים שהמחט באה מבפנים והבהמה כשרה.</div>
+  <div class="trans" data-when="en">The Sages say in response: There, in the case of the reticulum, since there are food and liquid present, one may say that the food and liquid pushed the eye of the needle through the stomach wall. Therefore, even if the eye points outward, one may still presume that the needle came from the inside, and the animal is kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט א — Chullin 49a:3</span></div>
+  <div class="orig">הָהוּא מַחְטָא דְּאִישְׁתְּכַח בְּסִמְפּוֹנָא רַבָּה דְּכַבְדָּא, הוּנָא מָר בְּרֵיהּ דְּרַב אִידִי טָרֵיף, רַב אַדָּא בַּר מִנְיוֹמֵי מַכְשַׁר. אֲתוֹ שַׁיְילוּהּ לְרָבִינָא, אֲמַר לְהוּ: שְׁקִילוּ גְּלִימָא דְּטָרוֹפָאֵי.</div>
+  <div class="trans" data-when="he">מעשה במחט שנמצאה בצינור (סימפון) הגדול של הכבד; הונא מר בנו של רב אידי טורף, ורב אדא בר מניומי מכשיר. באו ושאלו את רבינא, אמר להם: ״שקילו גלימא דטרופאי״ — טלו את גלימת אלו שטרפו (כלומר חייבים לשלם לבעל הבהמה שהפסידוהו בשר כשר); הלכה כמכשיר.</div>
+  <div class="trans" data-when="en">The Gemara relates that there was a certain needle that was found in the large duct of a liver. Huna Mar, son of Rav Idi, deemed the animal a tereifa, while Rav Adda bar Minyumi deemed it kosher. They came and asked Ravina about the issue, and he said to them: Take the robe of those who deemed it a tereifa. They must pay restitution to the owner of the animal, who was wrongfully forced to discard his kosher meat.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין מ״ט א — Chullin 49a:4</span></div>
+  <div class="orig">הָהִיא קְשִׁיתָא דְּאִישְׁתְּכַח בְּמָרָה, אָמַר רַב אָשֵׁי: כִּי הֲוֵינַן בֵּי רַב כָּהֲנָא, אָמַר: הָא וַדַּאי סִימְפּוֹנָא נְקַט וַאֲתַאי, אַף עַל גַּב דְּלָא קָא נָפְקָא, מִירְבָּל הוּא דְּרָבֵיל לַיהּ, וְהָנֵי מִילֵּי דְּדִיקְלָא, אֲבָל דְּזֵיתָא מִיבְזָע בָּזַע.</div>
+  <div class="trans" data-when="he">מעשה בקשית (גלעין) שנמצאה במרה. אמר רב אשי: כשהיינו בבית רב כהנא, היה אומר על מקרה כזה: זו ודאי דרך הסימפון (הצינור המחבר את הכבד והמרה) נכנסה ובאה, שאינה חדה דיה לנקוב את המרה מבחוץ; ואף שאינה יוצאת בנקל אם דוחקים אותה לצינור, תנועות הגוף מגלגלות אותה לאט דרכו. ודין זה בגלעין של תמר (דקל), אבל גלעין של זית — חד הוא ומבזע (בוקע) את דופן המרה, ויש לחשוש שניקבה (טריפה).</div>
+  <div class="trans" data-when="en">The Gemara relates that there was a certain date pit that was found in a gallbladder. Rav Ashi said: When we were in the house of Rav Kahana as students, he would say with regard to such a case: This date pit certainly took the route of the duct connecting the liver and gallbladder and came through it to the gallbladder, as it is not sharp enough to have perforated the gallbladder from without. Even though it is large enough that it does not exit the gallbladder if one tries to squeeze it into the duct, one may still assume that the movements of the animal’s body gradually cause it to slip through the duct. The Gemara adds: And this statement applies only to the pit of a palm, i.e., of a date, but the pit of an olive is pointed. Therefore, one must be concerned that it has pierced the wall of the gallbladder, rendering the animal a tereifa.</div>
+</div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var badges = qs[i].querySelectorAll('.num');
+      for (var j = 0; j < badges.length; j++) {
+        if (parseInt(badges[j].textContent, 10) === n) return qs[i];
+      }
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
