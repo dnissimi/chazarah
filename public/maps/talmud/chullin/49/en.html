@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין מ״ט</title>
+<meta name="description" content="המשך דיני טריפות הריאה — ״ריאה״ שמאירה את העיניים, תליית נקב בטבח ובזאב, ומחלוקת ר׳ שמעון בנקיבת הסמפון; ודיני חלב הקיבה — אם כוהנים נהגו בו היתר, מחלוקת ר׳ ישמעאל ור׳ עקיבא, ואם חלב סותם את הנקב, חימצא ובר חימצא.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="49">
+<meta name="gemara-map:sefaria-ref" content="Chullin 49">
+<meta name="gemara-map:topic-he" content="חלב הקיבה וטריפות הריאה">
+<meta name="gemara-map:topic-en" content="Abomasum fat and lung tereifot">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין מ״ט">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 49">
+<meta name="gemara-map:blurb-he" content="המשך דיני טריפות הריאה — ״ריאה״ שמאירה את העיניים, תליית נקב בטבח ובזאב, ומחלוקת ר׳ שמעון בנקיבת הסמפון; ודיני חלב הקיבה — אם כוהנים נהגו בו היתר, מחלוקת ר׳ ישמעאל ור׳ עקיבא, ואם חלב סותם את הנקב, חימצא ובר חימצא.">
+<meta name="gemara-map:blurb-en" content="More lung-tereifa laws — the lung that 'lights up the eyes', attributing a perforation to the butcher or a wolf, and Rabbi Shimon's dispute on perforation to the bronchus; then the fat on the abomasum — whether the priests permitted it, the Rabbi Yishmael–Rabbi Akiva dispute, whether fat seals a perforation, and ḥimtza versus bar ḥimtza.">
+<meta name="gemara-map:sugya-count" content="6">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין מ״ט</span><span data-when="en">Sugya map — Chullin 49</span></h1>
+    <div class="subtitle"><span data-when="he">חולין מ״ט א:ה׳–נ׳ א:ה׳ · Chullin 49a:5–50a:5 · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 49a:5–50a:5 · חולין מ״ט א:ה׳–נ׳ א:ה׳ · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> סוף דיני טריפות הריאה — ״ריאה״ מאירת עיניים (על ידי סמנין), נקב במקום משמוש הטבח או שניטלה מזאב תולין להקל, ואין הלכה כר׳ שמעון המצריך נקב לסמפון. ומשם — חלב שעל הקיבה: כוהנים נהגו בו היתר, ונחלקו ר׳ ישמעאל ור׳ עקיבא; חלב טהור (ולרב ששת אף טמא) סותם נקב — אך לא חלב שאינו מהודק; וחימצא ובר חימצא — אחד סותם ואחד לא, וקומצין מה שמעליו.</span>
+    <span data-when="en"><b>Bottom line:</b> The close of the lung-tereifa laws — the "lung [rei'a]" that lights up the eyes (only when treated), a perforation where the butcher handled it or in meat from a wolf is attributed leniently, and the halakha is not like Rabbi Shimon, who requires perforation to the bronchus. Then the fat on the abomasum: the priests permitted it, and Rabbi Yishmael and Rabbi Akiva dispute it; kosher fat (and per Rav Sheshet even non-kosher) seals a perforation — but loosely-attached fat does not; and the ḥimtza and bar ḥimtza — one seals and one does not, and one takes a handful off the top.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="sugya overview" id="overview">
+  <h2><span data-when="he">מפת־על — ששת שלבי הסוגיה</span><span data-when="en">Overview — the six stages of the sugya</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · הריאה — ״מאירה״, ותליית נקב<br/>מ״ט א:ה׳–י׳"]:::statement
+  O2["2 · ר׳ שמעון — עד שתינקב לסמפון<br/>מ״ט א:י״א–י״ד"]:::statement
+  O3["3 · חלב הקיבה — כוהנים נהגו היתר<br/>מ״ט א:ט״ו–י״ט"]:::statement
+  O4["4 · שתי הברייתות — ואיפוך<br/>מ״ט א:כ׳–מ״ט ב:ה׳"]:::question
+  O5["5 · האם חלב סותם את הנקב<br/>מ״ט ב:ו׳–י״ג"]:::question
+  O6["6 · חימצא ובר חימצא — וקומצין<br/>מ״ט ב:י״ד–נ׳ א:ה׳"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · The lung — ׳lights up׳, and attributing a perforation<br/>49a:5–10"]:::statement
+  O2["2 · Rabbi Shimon — until perforated to the bronchus<br/>49a:11–14"]:::statement
+  O3["3 · Fat on the abomasum — the priests permitted it<br/>49a:15–19"]:::statement
+  O4["4 · The two baraitot — and reverse them<br/>49a:20–49b:5"]:::question
+  O5["5 · Does fat seal a perforation<br/>49b:6–13"]:::question
+  O6["6 · Ḥimtza and bar ḥimtza — and a handful<br/>49b:14–50a:5"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+    </script>
+  </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">הריאה — ״מאירה״, ותליית הנקב</span><span data-when="en">The lung — it "lights up", and attributing a perforation</span>
+      <span class="ref">Chullin 49a:5–10</span></h2>
+  <div class="lead"><span data-when="he">ר׳ יוחנן: הריאה מאירה את העיניים — והגמרא מבררת אם דווקא על ידי סמנין. ואחר כך: נקב שנמצא במקום שמשמשת בו יד הטבח, או בבשר שניטל מזאב — תולין להקל; וכן בתולעת, לאחר שחיטה.</span><span data-when="en">Rabbi Yoḥanan: the lung lights up the eyes — and the Gemara clarifies whether only through treatment. Then: a perforation found where the butcher's hand handles it, or in meat recovered from a wolf — is attributed leniently; likewise a worm-hole, presumed after slaughter.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ יוחנן: ״ריאה״ — שמאירה את העינים"]:::statement
+  Q2{"② איבעיא: לאכילה כמות שהיא,<br/>או על ידי סמנין?"}:::question
+  P3["③ תא שמע: אווזא בזוזא, וריאה בארבעה —<br/>לאכילה לינקוט בזוזא"]:::proof
+  C4["④ אלא — על ידי סמנין"]:::conclusion
+  S5["⑤ נקב במקום משמוש יד הטבח, ובזאב,<br/>ומורנא — תולין להקל"]:::statement
+  S1 -->|איבעיא| Q2
+  Q2 -->|תא שמע| P3
+  P3 -->|מסקנה| C4
+  C4 -.->|המשך| S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rabbi Yoḥanan: ׳rei׳a׳ — because it lights up the eyes"]:::statement
+  Q2{"② Dilemma: eaten as is,<br/>or only when treated with substances?"}:::question
+  P3["③ Come and hear: a goose for a dinar, its lung for four —<br/>if eaten as is, buy a whole goose"]:::proof
+  C4["④ Rather — only when treated"]:::conclusion
+  S5["⑤ A perforation where the butcher handled it, in a wolf,<br/>and a worm — attributed leniently"]:::statement
+  S1 -->|Dilemma| Q2
+  Q2 -->|Come and hear| P3
+  P3 -->|Conclude| C4
+  C4 -.->|Continues| S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① לָמָּה נִקְרָא שְׁמָהּ רֵיאָה –<br/>שֶׁמְּאִירָה אֶת הָעֵינַיִם"]:::statement
+  Q2{"② אִיבַּעְיָא לְהוּ: לַאֲכִילָה,<br/>אוֹ עַל יְדֵי סַמָּנִין?"}:::question
+  P3["③ אֲוָוזָא בְּזוּזָא, וְרֵיאָה דִּידַהּ בְּאַרְבְּעָה …<br/>לִינְקֹט בְּזוּזָא וְלֵיכוֹל"]:::proof
+  C4["④ אֶלָּא, עַל יְדֵי סַמָּנִין"]:::conclusion
+  S5["⑤ הֵיכָא דִּמְמַשְׁמְשָׁא יְדֵיהּ דְּטַבָּחָא … תָּלֵינַן בִּזְאֵב …<br/>מוּרְנָא, לְאַחַר שְׁחִיטָה פָּרֵישׁ"]:::statement
+  S1 -->|איבעיא| Q2
+  Q2 -->|תא שמע| P3
+  P3 -->|מסקנה| C4
+  C4 -.->|המשך| S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span><span class="num">2</span> <span class="ref">חולין מ״ט א — Chullin 49a:5</span></div>
+  <div class="orig">אָמַר רַבִּי יוֹחָנָן: לָמָּה נִקְרָא שְׁמָהּ רֵיאָה – שֶׁמְּאִירָה אֶת הָעֵינַיִם. אִיבַּעְיָא לְהוּ: לַאֲכִילָה, אוֹ עַל יְדֵי סַמָּנִין?</div>
+  <div class="trans" data-when="he">אמר ר׳ יוחנן: למה נקראת ״ריאה״ — לפי שהיא מאירה את העיניים של האוכלהּ. הסתפקו: האם זה דווקא כשאוכלים אותה כמות שהיא, או רק על ידי טיפול בסמים ותערובות?</div>
+  <div class="trans" data-when="en">§ The Gemara returns to its discussion of the lung: Rabbi Yoḥanan says: Why is the lung called rei’a in Hebrew? Because it lights up [me’ira] the eyes of one who eats it. A dilemma was raised before the Sages: Is Rabbi Yoḥanan referring to a lung eaten as is, or is he referring to a lung eaten only through its treatment with certain substances?</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span><span class="num">4</span> <span class="ref">חולין מ״ט א — Chullin 49a:6</span></div>
+  <div class="orig">תָּא שְׁמַע, דְּאָמַר רַב הוּנָא בַּר יְהוּדָה: אֲוָוזָא בְּזוּזָא, וְרֵיאָה דִּידַהּ בְּאַרְבְּעָה. וְאִי סָלְקָא דַעְתָּךְ לַאֲכִילָה – לִינְקֹט בְּזוּזָא וְלֵיכוֹל! אֶלָּא, עַל יְדֵי סַמָּנִין.</div>
+  <div class="trans" data-when="he">בוא ושמע ראיה: אמר רב הונא בר יהודה — אווז נמכר בזוז, וריאתו לבדה בארבעה זוזים. ואם תאמר שהריאה ״מאירה״ באכילה כמות שהיא — היה לו לקנות אווז שלם בזוז ולאכול גם את ריאתו! אלא ודאי שמעלתה רק על ידי סמנין.</div>
+  <div class="trans" data-when="en">The Gemara suggests: Come and hear a resolution from that which Rav Huna bar Yehuda says: A goose may be purchased for a dinar, but its lung may be purchased for four dinars. And if it should enter your mind that Rabbi Yoḥanan is referring to eating the lung without treating it, one has no incentive to buy a lung separately for more money. Let him buy the whole goose for a dinar and eat the lung that comes included. Rather, it must be that the lung gains special properties only through treatment with certain substances, and this treatment is the reason for the higher price.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט א — Chullin 49a:7</span></div>
+  <div class="orig">אִינַּקְבָה רֵיאָה הֵיכָא דִּמְמַשְׁמְשָׁא יְדֵיהּ דְּטַבָּחָא, תָּלֵינַן אוֹ לָא תָּלֵינַן? רַב אַדָּא בַּר נָתָן אָמַר: תָּלֵינַן, מָר זוּטְרָא בְּרֵיהּ דְּרַב מָרִי אָמַר: לָא תָּלֵינַן, וְהִלְכְתָא: תָּלֵינַן.</div>
+  <div class="trans" data-when="he">נמצאת הריאה נקובה במקום שיד הטבח ממשמשת בו לאחר השחיטה — האם תולים את הנקב במשמוש (ומכשירים), או לא? רב אדא בר נתן: תולים; מר זוטרא בריה דרב מרי: אין תולים; וההלכה — תולים.</div>
+  <div class="trans" data-when="en">§ The Gemara asks: If the lung is perforated where the hand of the butcher handles it after slaughter, do we attribute the perforation to the butcher’s handling, or do we not attribute the perforation to the handling, in which case the animal is a tereifa? Rav Adda bar Natan says: We attribute it to the butcher’s handling, while Mar Zutra, son of Rav Mari, says: We do not attribute it to the handling. And the halakha is that we attribute it to the handling.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט א — Chullin 49a:8</span></div>
+  <div class="orig">אָמַר רַב שְׁמוּאֵל בְּרֵיהּ דְּרַבִּי אֲבָהוּ: אַבָּא מֵרֵישֵׁי כַּלֵּי דְּרַפְרָם הֲוָה, וַאֲמַר: תָּלֵינַן. אַמְרוּהָ קַמֵּיהּ לְהָא דְּמָר זוּטְרָא בְּרֵיהּ דְּרַב מָרִי, וְלָא קַבְּלַהּ.</div>
+  <div class="trans" data-when="he">אמר רב שמואל בריה דר׳ אבהו: אבי היה מראשי כלת הלימוד של רפרם, ואמר — תולים. אמרו לפניו את דברי מר זוטרא בריה דרב מרי (שאין תולים), ולא קיבל אותם.</div>
+  <div class="trans" data-when="en">Rav Shmuel, son of Rabbi Abbahu, said: My father was one of the heads of the kalla lectures of Rafram, and he said: We attribute it to the handling. They said this halakha of Mar Zutra, son of Rav Mari, who held the opposite, before Rav Shmuel, and he did not accept it.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט א — Chullin 49a:9</span></div>
+  <div class="orig">אָמַר רַב מְשַׁרְשְׁיָא: כְּוָותֵיהּ דַּאֲבוּהּ דְּאַבָּא מִסְתַּבְּרָא, דְּהָא תָּלֵינַן בִּזְאֵב.</div>
+  <div class="trans" data-when="he">אמר רב משרשיא: מסתבר כדעת אביו של אבא (רב אדא בר נתן, שתולים), שהרי מצאנו שתולים אף בזאב — בשר שניטל מפי זאב ונמצא בו נקב, תולים שהזאב עשאו.</div>
+  <div class="trans" data-when="en">Rav Mesharshiyya said: It stands to reason that the halakha is in accordance with the opinion of Grandfather, i.e., Rav Adda bar Natan, as we attribute perforations to a wolf. If slaughtered meat is recovered from a wolf and found to have a perforation that would have rendered the animal a tereifa, one may attribute the perforation to the wolf and presume that it did not exist beforehand.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט א — Chullin 49a:10</span></div>
+  <div class="orig">מוּרְנָא, פְּלִיגִי בַּהּ רַב יוֹסֵף בַּר דּוֹסַאי וְרַבָּנַן, חַד אָמַר: קוֹדֶם שְׁחִיטָה פָּרֵישׁ, וְחַד אָמַר: לְאַחַר שְׁחִיטָה פָּרֵישׁ, וְהִלְכְתָא: לְאַחַר שְׁחִיטָה פָּרֵישׁ.</div>
+  <div class="trans" data-when="he">נקב שנעשה על ידי תולעת (מורנא): נחלקו בו רב יוסף בר דוסאי והרבנן — אחד אומר שהתולעת יצאה ונקבה לפני השחיטה (וטריפה), ואחד אומר שיצאה לאחר השחיטה (וכשרה); וההלכה — לאחר שחיטה יצאה.</div>
+  <div class="trans" data-when="en">Furthermore, if a perforation was caused by a worm [murana], Rav Yosef bar Dosai and the Rabbis disagree. One says that the worm emerged from the lung and perforated it before the slaughter, and the animal is a tereifa, and one says that it emerged after the slaughter, and the animal is kosher. And the halakha is that one presumes that it emerged after the slaughter.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">ר׳ שמעון — עד שתינקב לסמפון</span><span data-when="en">Rabbi Shimon — until perforated to the bronchus</span>
+      <span class="ref">Chullin 49a:11–14</span></h2>
+  <div class="lead"><span data-when="he">ר׳ שמעון במשנה: הריאה אינה טריפה עד שתינקב לסמפון — ורבה בר תחליפא מדייק: לסמפון הגדול. אחר כך נחלקו אמוראים מה אמר ר׳ יהושע בן לוי בשם ר׳ מלוך — ולמסקנה: אין הלכה כר׳ שמעון.</span><span data-when="en">Rabbi Shimon in the mishna: the lung is not a tereifa until perforated to the bronchus — and Rabba bar Taḥlifa specifies: to the large bronchus. Then the amora'im dispute what Rabbi Yehoshua ben Levi said in Rabbi Malokh's name — and the conclusion: the halakha is not like Rabbi Shimon.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה — ר׳ שמעון: עד שתינקב<br/>(רבה בר תחליפא: לסמפון הגדול)"]):::mishnah
+  S2["② רב אחא לפני רב הונא: ריב״ל אמר<br/>הלכה כר׳ שמעון"]:::statement
+  Q3{"③ רב הונא: מלוך ערבאה אמרת? —<br/>אין הלכה כר׳ שמעון אמר!"}:::question
+  S4["④ ר׳ זירא לרב ביבי: ר׳ מלוך אמר לנו<br/>אין הלכה; ובידי — ר׳ יצחק בר אמי: הלכה"]:::statement
+  C5["⑤ ואין הלכה כר׳ שמעון"]:::conclusion
+  M1 -->|מימרא| S2
+  S2 -->|השגה| Q3
+  Q3 -.->|עדות נגדית| S4
+  S4 -->|מסקנה| C5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna — Rabbi Shimon: until perforated<br/>(Rabba bar Taḥlifa: to the large bronchus)"]):::mishnah
+  S2["② Rav Aḥa before Rav Huna: RYBL says<br/>the halakha is like Rabbi Shimon"]:::statement
+  Q3{"③ Rav Huna: you mean Malokh the Arab? —<br/>he said the halakha is NOT like Rabbi Shimon!"}:::question
+  S4["④ Rabbi Zeira to Rav Beivai: Malokh told us 'not';<br/>but I have R. Yitzḥak bar Ami: it IS the halakha"]:::statement
+  C5["⑤ And the halakha is not like Rabbi Shimon"]:::conclusion
+  M1 -->|Statement| S2
+  S2 -->|Challenge| Q3
+  Q3 -.->|Counter-report| S4
+  S4 -->|Conclude| C5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① רַבִּי שִׁמְעוֹן אוֹמֵר: עַד שֶׁתִּינָּקֵב …<br/>עַד שֶׁתִּינָּקֵב לְסִמְפּוֹן גָּדוֹל"]):::mishnah
+  S2["② אָמַר רַבִּי מַלּוּךְ אָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי:<br/>הֲלָכָה כְּרַבִּי שִׁמְעוֹן"]:::statement
+  Q3{"③ מַלּוּךְ עַרְבָאָה קָאָמְרַתְּ? —<br/>אֵין הֲלָכָה כְּרַבִּי שִׁמְעוֹן קָאָמַר"}:::question
+  S4["④ וַאֲמַר לַן: אֵין הֲלָכָה … הָכִי אָמַר<br/>רַבִּי יִצְחָק בַּר אַמֵּי … הֲלָכָה כְּרַבִּי שִׁמְעוֹן"]:::statement
+  C5["⑤ וְאֵין הֲלָכָה כְּרַבִּי שִׁמְעוֹן"]:::conclusion
+  M1 -->|מימרא| S2
+  S2 -->|השגה| Q3
+  Q3 -.->|עדות נגדית| S4
+  S4 -->|מסקנה| C5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ט א — Chullin 49a:11</span></div>
+  <div class="orig">רַבִּי שִׁמְעוֹן אוֹמֵר: עַד שֶׁתִּינָּקֵב. אָמַר רַבָּה בַּר תַּחְלִיפָא אָמַר רַב יִרְמְיָה בַּר אַבָּא: עַד שֶׁתִּינָּקֵב לְסִמְפּוֹן גָּדוֹל.</div>
+  <div class="trans" data-when="he">המשנה: ר׳ שמעון אומר — אין הריאה טריפה עד שתינקב. אמר רבה בר תחליפא בשם רב ירמיה בר אבא: כוונתו עד שתינקב אל הסמפון הגדול (קנה הנשימה הראשי שממנו מתפצלים הסמפונות הקטנים).</div>
+  <div class="trans" data-when="en">§ The mishna states: Rabbi Shimon says: An animal with a perforated lung is not a tereifa until it is perforated through to the bronchi. With regard to this, Rabba bar Taḥlifa says that Rav Yirmeya bar Abba says: Rabbi Shimon meant specifically that it is not a tereifa unless it is perforated through to the large bronchus, from which the smaller bronchi branch out.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ט א — Chullin 49a:12</span></div>
+  <div class="orig">יָתֵיב רַב אַחָא בַּר אַבָּא קַמֵּיהּ דְּרַב הוּנָא, וְיָתֵיב וְקָאָמַר: אָמַר רַבִּי מַלּוּךְ אָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: הֲלָכָה כְּרַבִּי שִׁמְעוֹן. אֲמַר לֵיהּ: מַלּוּךְ עַרְבָאָה קָאָמְרַתְּ? אֵין הֲלָכָה כְּרַבִּי שִׁמְעוֹן קָאָמַר!</div>
+  <div class="trans" data-when="he">ישב רב אחא בר אבא לפני רב הונא ואמר: ר׳ מלוך אמר בשם ר׳ יהושע בן לוי — הלכה כר׳ שמעון. אמר לו רב הונא: על מלוך הערבי אתה מדבר? הוא אמר ההיפך — אין הלכה כר׳ שמעון!</div>
+  <div class="trans" data-when="en">The Gemara relates that Rav Aḥa bar Abba sat before Rav Huna, and he was sitting and saying: Rabbi Malokh says that Rabbi Yehoshua ben Levi says: The halakha is in accordance with the opinion of Rabbi Shimon. Rav Huna said to him: Are you saying this in the name of Malokh the Arab? He says that the halakha is not in accordance with Rabbi Shimon.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ט א — Chullin 49a:13</span></div>
+  <div class="orig">כִּי סָלֵיק רַבִּי זֵירָא, אַשְׁכְּחֵיהּ לְרַב בִּיבִי דְּיָתֵיב וְקָאָמַר: אָמַר רַבִּי מַלּוּךְ אָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: הֲלָכָה כְּרַבִּי שִׁמְעוֹן. אֲמַר לֵיהּ: חַיֵּי דְּמָר, דַּאֲנָא וְרַבִּי חִיָּיא בַּר אַבָּא וְרַב אַסִּי אִיקַּלְעִינַן לְאַתְרֵיהּ דְּרַבִּי מַלּוּךְ, וַאֲמַרִי לֵיהּ: אִי אָמַר מָר הֲלָכָה כְּרַבִּי שִׁמְעוֹן? וַאֲמַר לַן: אֵין הֲלָכָה כְּרַבִּי שִׁמְעוֹן אֲמַרִי. וְאַתְּ מָה בִּידָךְ? אֲמַר לֵיהּ: הָכִי אָמַר רַבִּי יִצְחָק בַּר אַמֵּי אָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: הֲלָכָה כְּרַבִּי שִׁמְעוֹן.</div>
+  <div class="trans" data-when="he">כשעלה ר׳ זירא לארץ ישראל מצא את רב ביבי יושב ואומר: ר׳ מלוך אמר בשם ריב״ל — הלכה כר׳ שמעון. אמר לו ר׳ זירא: חיי המר! אני ור׳ חייא בר אבא ורב אסי הזדמנו למקומו של ר׳ מלוך ושאלנוהו: האם אמרת הלכה כר׳ שמעון? ואמר לנו: ״אין הלכה כר׳ שמעון״ אמרתי. ושאל רב ביבי: ומה יש בידך? אמר לו: כך אמר ר׳ יצחק בר אמי בשם ריב״ל — הלכה כר׳ שמעון.</div>
+  <div class="trans" data-when="en">The Gemara continues: When Rabbi Zeira went up to Eretz Yisrael, he found Rav Beivai, who was sitting and saying: Rabbi Malokh says that Rabbi Yehoshua ben Levi says: The halakha is in accordance with the opinion of Rabbi Shimon. Rabbi Zeira said to him: On the Master’s life, I and Rabbi Ḥiyya bar Abba and Rav Asi visited the place of residence of Rabbi Malokh, and we said to him: Did the Master say that the halakha is in accordance with the opinion of Rabbi Shimon? And he said to us: I said that the halakha is not in accordance with the opinion of Rabbi Shimon. Rav Beivai asked Rabbi Zeira: And you, what more do you have in your possession on this matter? Rabbi Zeira said to him: This is what Rabbi Yitzḥak bar Ami says that Rabbi Yehoshua ben Levi says: The halakha is in accordance with the opinion of Rabbi Shimon.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט א — Chullin 49a:14</span></div>
+  <div class="orig">וְאֵין הֲלָכָה כְּרַבִּי שִׁמְעוֹן.</div>
+  <div class="trans" data-when="he">ולמסקנה: אין הלכה כר׳ שמעון — כל נקב בקרומי הריאה מטריף את הבהמה.</div>
+  <div class="trans" data-when="en">The Gemara rules: And the halakha is not in accordance with the opinion of Rabbi Shimon. Any perforation of the membranes of the lung renders the animal a tereifa.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">חלב הקיבה — כוהנים נהגו היתר</span><span data-when="en">Fat on the abomasum — the priests permitted it</span>
+      <span class="ref">Chullin 49a:15–19</span></h2>
+  <div class="lead"><span data-when="he">המשנה: ניקבה הקיבה — טריפה. ר׳ אושעיא: חלב שעל הקיבה — כוהנים נהגו בו היתר, כר׳ ישמעאל, וסימנך ״ישמעאל כהנא מסייע כהני״. הגמרא מבררת היכן ר׳ ישמעאל מסייע לכוהנים — בדרשת ברכת כוהנים.</span><span data-when="en">The mishna: a perforated abomasum is a tereifa. Rabbi Oshaya: the fat on the abomasum — the priests permitted it, like Rabbi Yishmael; mnemonic: "Yishmael the priest helps the priests." The Gemara clarifies where Yishmael helps the priests — in the derivation of the priestly blessing.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ אושעיא: חלב הקיבה —<br/>כוהנים נהגו היתר, כר׳ ישמעאל"]:::statement
+  Q2{"② מאי מסייע כהני? —<br/>היכן ר׳ ישמעאל מסייע לכוהנים?"}:::question
+  A3["③ ר׳ ישמעאל: ״ואני אברכם״ —<br/>הקב״ה מברך את הכוהנים"]:::answer
+  A4["④ ר׳ עקיבא: הקב״ה מסכים על ידם;<br/>וברכת כוהנים מ״ואברכה מברכיך״"]:::answer
+  C5["⑤ ומאי מסייע — דמוקי ברכת כוהנים<br/>במקום ברכת ישראל"]:::conclusion
+  S1 -->|מאי היא| Q2
+  Q2 -->|דעת ר׳ ישמעאל| A3
+  Q2 -->|דעת ר׳ עקיבא| A4
+  A3 -->|מסקנה| C5
+  A4 -.->|מסקנה| C5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rabbi Oshaya: the fat on the abomasum —<br/>the priests permitted it, like Rabbi Yishmael"]:::statement
+  Q2{"② What is 'helps the priests'? —<br/>where does Rabbi Yishmael help them?"}:::question
+  A3["③ Rabbi Yishmael: 'and I will bless them' —<br/>God blesses the priests"]:::answer
+  A4["④ Rabbi Akiva: God affirms their blessing;<br/>priests׳ blessing from 'I will bless those who bless you'"]:::answer
+  C5["⑤ How does he help? — he sets the priests׳ blessing<br/>in the same verse as Israel׳s"]:::conclusion
+  S1 -->|What is it| Q2
+  Q2 -->|Yishmael׳s view| A3
+  Q2 -->|Akiva׳s view| A4
+  A3 -->|Conclude| C5
+  A4 -.->|Conclude| C5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① חֵלֶב שֶׁעַל גַּבֵּי קֵבָה – כֹּהֲנִים נָהֲגוּ בּוֹ הֶיתֵּר,<br/>כְּרַבִּי יִשְׁמָעֵאל … ״יִשְׁמָעֵאל כָּהֲנָא מְסַיַּיע כָּהֲנֵי״"]:::statement
+  Q2{"② מַאי הִיא? —<br/>וּמַאי מְסַיַּיע כָּהֲנֵי?"}:::question
+  A3["③ רַבִּי יִשְׁמָעֵאל: ״וַאֲנִי אֲבָרְכֵם״ –<br/>הַקָּדוֹשׁ בָּרוּךְ הוּא מְבָרֵךְ לַכֹּהֲנִים"]:::answer
+  A4["④ רַבִּי עֲקִיבָא: מַסְכִּים עַל יָדָם …<br/>בְּרָכָה לְכֹהֲנִים מִ״וַּאֲבָרְכָה מְבָרְכֶיךָ״"]:::answer
+  C5["⑤ דְּמוֹקֵי לֵהּ לְבִרְכַּת כֹּהֲנִים<br/>בִּמְקוֹם בְּרָכָה דְּיִשְׂרָאֵל"]:::conclusion
+  S1 -->|מאי היא| Q2
+  Q2 -->|דעת ר׳ ישמעאל| A3
+  Q2 -->|דעת ר׳ עקיבא| A4
+  A3 -->|מסקנה| C5
+  A4 -.->|מסקנה| C5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ט א — Chullin 49a:15</span></div>
+  <div class="orig">נִיקְּבָה הַקֵּבָה. אָמַר רַבִּי יִצְחָק בַּר נַחְמָנִי אָמַר רַבִּי אוֹשַׁעְיָא: חֵלֶב שֶׁעַל גַּבֵּי קֵבָה – כֹּהֲנִים נָהֲגוּ בּוֹ הֶיתֵּר, כְּרַבִּי יִשְׁמָעֵאל שֶׁאָמַר מִשּׁוּם אֲבוֹתָיו. וְסִימָנָיךְ: ״יִשְׁמָעֵאל כָּהֲנָא מְסַיַּיע כָּהֲנֵי״.</div>
+  <div class="trans" data-when="he">המשנה אמרה: ניקבה הקיבה — טריפה. אמר ר׳ יצחק בר נחמני בשם ר׳ אושעיא: החלב שעל גבי הקיבה — הכוהנים נהגו בו היתר ואכלוהו עם הקיבה שניתנה להם ממתנות כהונה, כדעת ר׳ ישמעאל שאמר משום אבותיו (שהוא חלב מותר). וסימנך לזכור את הדעה המקילה: ״ישמעאל הכהן מסייע לכוהנים״.</div>
+  <div class="trans" data-when="en">§ The mishna states: If the abomasum was perforated, the animal is a tereifa. Concerning this, Rabbi Yitzḥak bar Naḥmani says that Rabbi Oshaya says: With regard to fat that is on the abomasum, the priests accustomed themselves to consider it permitted, and they would eat it along with the rest of the abomasum, which was given to them from non-sacred animals as one of the gifts of the priesthood. This is in accordance with the opinion of Rabbi Yishmael that he says in the name of his forefathers. And since there is a disagreement between the Sages with regard to this issue, your mnemonic to remember the lenient opinion is the idiom: Yishmael the priest generally helps the priests.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ט א — Chullin 49a:16</span></div>
+  <div class="orig">מַאי הִיא? דְּתַנְיָא: ״כֹּה תְבָרְכוּ אֶת בְּנֵי יִשְׂרָאֵל״, רַבִּי יִשְׁמָעֵאל אוֹמֵר: לָמַדְנוּ בְּרָכָה לְיִשְׂרָאֵל מִפִּי כֹּהֲנִים, לְכֹהֲנִים עַצְמָן לֹא לָמַדְנוּ. כְּשֶׁהוּא אוֹמֵר: ״וַאֲנִי אֲבָרְכֵם״ – הֱוֵי אוֹמֵר: כֹּהֲנִים מְבָרְכִין לְיִשְׂרָאֵל, וְהַקָּדוֹשׁ בָּרוּךְ הוּא מְבָרֵךְ לַכֹּהֲנִים.</div>
+  <div class="trans" data-when="he">היכן ר׳ ישמעאל ״מסייע לכוהנים״? כדתניא על הפסוק ״כה תברכו את בני ישראל״ — ר׳ ישמעאל אומר: למדנו שיש ברכה לישראל מפי הכוהנים, אך ברכה לכוהנים עצמם לא למדנו; וכשהוא אומר ״ואני אברכם״ — הוי אומר: הכוהנים מברכים את ישראל, והקב״ה מברך את הכוהנים.</div>
+  <div class="trans" data-when="en">The Gemara clarifies: What is this, i.e., where does Rabbi Yishmael help the priests? As it is taught in a baraita: The verse states with regard to the priestly benediction: “So you shall bless the children of Israel” (Numbers 6:23). Rabbi Yishmael says: We learn from this verse about a blessing for Israel from the mouth of the priests, but we have not learned about a blessing for the priests themselves. When it says afterward with regard to the priests: “And they shall put My name upon the children of Israel, and I will bless them” (Numbers 6:27), you must say: The priests bless Israel, and the Holy One, Blessed be He, blesses the priests.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ט א — Chullin 49a:17</span></div>
+  <div class="orig">רַבִּי עֲקִיבָא אוֹמֵר: לָמַדְנוּ בְּרָכָה לְיִשְׂרָאֵל מִפִּי כֹהֲנִים, מִפִּי גְבוּרָה לֹא לָמַדְנוּ. כְּשֶׁהוּא אוֹמֵר ״וַאֲנִי אֲבָרְכֵם״ – הֱוֵי אוֹמֵר: כֹּהֲנִים מְבָרְכִין לְיִשְׂרָאֵל, וְהַקָּדוֹשׁ בָּרוּךְ הוּא מַסְכִּים עַל יָדָם.</div>
+  <div class="trans" data-when="he">ר׳ עקיבא אומר אחרת: למדנו ברכה לישראל מפי הכוהנים, אך ברכה לישראל מפי הגבורה (מפי הקב״ה ישירות) לא למדנו; וכשהוא אומר ״ואני אברכם״ — הוי אומר: הכוהנים מברכים את ישראל, והקב״ה מסכים על ידם. כלומר ״אברכם״ מוסב על ישראל.</div>
+  <div class="trans" data-when="en">Rabbi Akiva says a different interpretation: We learned from the verse about a blessing for Israel from the mouth of the priests, but we have not learned about a blessing for Israel from the mouth of the Almighty. When it says afterward: “And they shall put My name upon the children of Israel, and I will bless them,” you must say: The priests bless Israel, and the Holy One, Blessed be He, affirms their blessing. The word “them” is referring to Israel.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ט א — Chullin 49a:18</span></div>
+  <div class="orig">אֶלָּא רַבִּי עֲקִיבָא, בְּרָכָה לְכֹהֲנִים מְנָא לֵיהּ? אָמַר רַב נַחְמָן בַּר יִצְחָק: מִ״וַּאֲבָרְכָה מְבָרְכֶיךָ״.</div>
+  <div class="trans" data-when="he">ואם כן, לדעת ר׳ עקיבא — מניין שיש ברכה לכוהנים עצמם? אמר רב נחמן בר יצחק: מן הפסוק שנאמר לאברהם ״ואברכה מברכיך״ — כל המברך את ישראל מתברך.</div>
+  <div class="trans" data-when="en">The Gemara asks: But then from where does Rabbi Akiva learn about a blessing for the priests? Rav Naḥman bar Yitzḥak said: He learns it from God’s promise to Abraham: “And I will bless them that bless you” (Genesis 12:3). All who bless the Jewish people are blessed themselves.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט א — Chullin 49a:19</span></div>
+  <div class="orig">וּמַאי מְסַיַּיע כָּהֲנֵי? דְּמוֹקֵי לֵהּ לְבִרְכַּת כֹּהֲנִים בִּמְקוֹם בְּרָכָה דְּיִשְׂרָאֵל.</div>
+  <div class="trans" data-when="he">ואם גם ר׳ עקיבא מודה שיש ברכה לכוהנים — במה דווקא ר׳ ישמעאל ״מסייע לכוהנים״? בכך שהוא מעמיד את ברכת הכוהנים באותו מקום (אותו פסוק) של ברכת ישראל — ללמד שמקבלים את אותה ברכה.</div>
+  <div class="trans" data-when="en">The Gemara asks: And in what sense does only Rabbi Yishmael help the priests, given that Rabbi Akiva concedes that the priests are also blessed? The Gemara responds: He helps the priests in the sense that he establishes the blessing for the priests in the same place, the same verse, that one finds the blessing of Israel, indicating that they receive the same blessing.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">שתי הברייתות — ואיפוך</span><span data-when="en">The two baraitot — and reverse them</span>
+      <span class="ref">Chullin 49a:20–49b:5</span></h2>
+  <div class="lead"><span data-when="he">דרשת ״כל החלב״: ברייתא ראשונה — ר׳ ישמעאל מרבה חלב הדקין, ר׳ עקיבא חלב הקיבה. ברייתא שנייה הפוכה. רבין בשם ר׳ יוחנן: איפוך הראשונה (כי השנייה מדויקת ב״מה״) — ולמסקנה ר׳ ישמעאל עצמו אוסר, ורק ״משום אבותיו״ אמר היתר.</span><span data-when="en">The derivation of "all the fat": the first baraita — Rabbi Yishmael includes the intestinal fat, Rabbi Akiva the abomasum fat. The second baraita is reversed. Ravin in Rabbi Yoḥanan's name: reverse the first (since the second is precise with "Just as") — and in conclusion Rabbi Yishmael himself forbids, saying the lenient view only "in his forefathers' name."</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא א׳: ר׳ ישמעאל — ״כל״ לרבות חלב הדקין;<br/>ר׳ עקיבא — חלב הקיבה"]:::statement
+  Q2{"② ורמינהי: ברייתא ב׳ הפוכה — ר׳ שמעון (ישמעאל)<br/>ור׳ עקיבא בקרום ונקלף"}:::question
+  A3["③ רבין בשם ר׳ יוחנן: כך הצעת המשנה,<br/>ואיפוך קמייתא"]:::answer
+  Q4{"④ מאי חזית דאפכת קמייתא? איפוך בתרייתא!"}:::question
+  A5["⑤ שאני הכא — דקתני ״מה״, דווקא"]:::answer
+  C6["⑥ אי הכי כר׳ עקיבא! — שאמר משום<br/>אבותיו, וליה לא סבירא ליה"]:::conclusion
+  S1 -->|ורמינהי| Q2
+  Q2 -->|תירוץ| A3
+  A3 -->|קושיא| Q4
+  Q4 -->|תירוץ| A5
+  A5 -->|מסקנה| C6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita 1: Rabbi Yishmael — ׳all׳ includes intestinal fat;<br/>Rabbi Akiva — the abomasum fat"]:::statement
+  Q2{"② Contradiction: Baraita 2 is reversed — Rabbi Shimon (Yishmael)<br/>and Rabbi Akiva on membrane-and-peeled"}:::question
+  A3["③ Ravin citing Rabbi Yoḥanan: such is the layout,<br/>reverse the first baraita"]:::answer
+  Q4{"④ Why reverse the first? Reverse the second instead!"}:::question
+  A5["⑤ The second is different — it teaches ׳Just as׳, so it is precise"]:::answer
+  C6["⑥ Then it is like Rabbi Akiva! — Yishmael said it in his<br/>forefathers׳ name, but does not himself hold so"]:::conclusion
+  S1 -->|Contradiction| Q2
+  Q2 -->|Answer| A3
+  A3 -->|Difficulty| Q4
+  Q4 -->|Answer| A5
+  A5 -->|Conclude| C6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ״אֶת כׇּל הַחֵלֶב … ״ – לְהָבִיא חֵלֶב שֶׁעַל גַּבֵּי הַדַּקִּין, רַבִּי יִשְׁמָעֵאל;<br/>רַבִּי עֲקִיבָא: חֵלֶב שֶׁעַל גַּבֵּי הַקֵּבָה"]:::statement
+  Q2{"② וּרְמִינְהִי: ״אֶת הַחֵלֶב אֲשֶׁר עַל הַקֶּרֶב״ – רַבִּי שִׁמְעוֹן …<br/>רַבִּי עֲקִיבָא … תּוֹתָב קְרוּם וְנִקְלָף"}:::question
+  A3["③ שְׁלַח רָבִין מִשְּׁמֵיהּ דְּרַבִּי יוֹחָנָן:<br/>כָּךְ הִיא הַצָּעָה … וְאֵיפוֹךְ קַמַּיְיתָא"]:::answer
+  Q4{"④ מַאי חָזֵית דְּאָפְכַתְּ קַמַּיְיתָא?<br/>אֵיפוֹךְ בָּתְרָיְיתָא!"}:::question
+  A5["⑤ שָׁאנֵי הָכָא, כֵּיוָן דְּקָתָנֵי ״מָה״, דַּוְוקָא"]:::answer
+  C6["⑥ אִי הָכִי, כְּרַבִּי עֲקִיבָא הִיא! … שֶׁאָמַר מִשּׁוּם<br/>אֲבוֹתָיו, וְלֵיהּ לָא סְבִירָא לֵיהּ"]:::conclusion
+  S1 -->|ורמינהי| Q2
+  Q2 -->|תירוץ| A3
+  A3 -->|קושיא| Q4
+  Q4 -->|תירוץ| A5
+  A5 -->|מסקנה| C6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ט א — Chullin 49a:20</span></div>
+  <div class="orig">רַבִּי יִשְׁמָעֵאל שֶׁאָמַר מִשּׁוּם אֲבוֹתָיו, מַאי הִיא? דְּתַנְיָא: ״אֶת כׇּל הַחֵלֶב אֲשֶׁר עַל הַקֶּרֶב</div>
+  <div class="trans" data-when="he">הדעה של ר׳ ישמעאל שאמר משום אבותיו — מהי? כדתניא בברייתא על הפסוק ״את כל החלב אשר על הקרב…״:</div>
+  <div class="trans" data-when="en">It was stated that the priests accustomed themselves to permit the fat on the abomasum, in accordance with the statement of Rabbi Yishmael that he says in the name of his forefathers. The Gemara clarifies: What is this statement? As it is taught in a baraita that when the verse states with regard to forbidden fats mentioned in the Torah: “All the fat that is upon the innards” (Leviticus 3:3),</div>
+</div>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ט ב — Chullin 49b:1</span></div>
+  <div class="orig">וְגוֹ׳״ – לְהָבִיא חֵלֶב שֶׁעַל גַּבֵּי הַדַּקִּין, דִּבְרֵי רַבִּי יִשְׁמָעֵאל. רַבִּי עֲקִיבָא אוֹמֵר: לְהָבִיא חֵלֶב שֶׁעַל גַּבֵּי הַקֵּבָה.</div>
+  <div class="trans" data-when="he">תיבת ״כל״ באה לרבות את החלב שעל הדקין (המעיים הדקים) לאיסור — דברי ר׳ ישמעאל; ר׳ עקיבא אומר: ״כל״ בא לרבות את החלב שעל הקיבה. לפי ר׳ ישמעאל בברייתא זו חלב הקיבה מותר.</div>
+  <div class="trans" data-when="en">the word “all” serves to include the fat that is on the small intestines; this is the statement of Rabbi Yishmael. Rabbi Akiva says: The word “all” serves to include the fat that is on the abomasum. According to Rabbi Yishmael, the fat of the abomasum is permitted.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ט ב — Chullin 49b:2</span></div>
+  <div class="orig">וּרְמִינְהִי: ״אֶת הַחֵלֶב אֲשֶׁר עַל הַקֶּרֶב״ – רַבִּי שִׁמְעוֹן אוֹמֵר: מָה חֵלֶב הַמְכַסֶּה אֶת הַקֶּרֶב קְרוּם וְנִקְלָף, אַף כֹּל קְרוּם וְנִקְלָף. רַבִּי עֲקִיבָא אוֹמֵר: מָה חֵלֶב הַמְכַסֶּה אֶת הַקֶּרֶב תּוֹתָב קְרוּם וְנִקְלָף, אַף כֹּל תּוֹתָב קְרוּם וְנִקְלָף.</div>
+  <div class="trans" data-when="he">ומקשים סתירה מברייתא אחרת על הפסוק ״את החלב אשר על הקרב״: ר׳ שמעון (הוא ר׳ ישמעאל) אומר — מה חלב המכסה את הקרב הוא קרום ונקלף, אף כל חלב שהוא קרום ונקלף אסור (ובכלל זה חלב הקיבה). ר׳ עקיבא אומר — מה חלב המכסה את הקרב פרוש (״תותב״) וקרום ונקלף, אף כל הפרוש וקרום ונקלף אסור (כגון חלב הדקין), אך חלב הקיבה מהודק ומותר. נמצא ששתי הברייתות סותרות זו את זו.</div>
+  <div class="trans" data-when="en">And the Gemara raises a contradiction from another baraita: The verse states: “The fat that covers the innards, and all the fat that is upon the innards” (Leviticus 3:3). Rabbi Shimon, i.e., Rabbi Yishmael, says: Just as the fat that covers the innards possesses a membrane, and that membrane is easily peeled off, so too, all fat possessing a membrane and whose membrane is easily peeled is forbidden, including the fat on the abomasum. Rabbi Akiva says: Just as the fat that covers the innards is spread out loosely over them, and it possesses a membrane, and the membrane is easily peeled off, so too, all fat that is spread out loosely, and possesses a membrane, and whose membrane is easily peeled, e.g., the fat on the intestines, is forbidden. The fat on the abomasum is fixed tightly and is therefore permitted. It would seem from this baraita that Rabbi Akiva and Rabbi Yishmael contradict themselves.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ט ב — Chullin 49b:3</span></div>
+  <div class="orig">שְׁלַח רָבִין מִשְּׁמֵיהּ דְּרַבִּי יוֹחָנָן: כָּךְ הִיא הַצָּעָה שֶׁל מִשְׁנָה, וְאֵיפוֹךְ קַמַּיְיתָא.</div>
+  <div class="trans" data-when="he">שלח רבין בשם ר׳ יוחנן: כך היא ההצעה (הנוסח) הנכונה של הברייתא — הברייתא השנייה מדויקת, ויש להפוך את ייחוס הדעות בברייתא הראשונה. נמצא שר׳ עקיבא אוסר חלב הדקין, ור׳ ישמעאל אוסר אף חלב הקיבה.</div>
+  <div class="trans" data-when="en">Ravin sent an answer in the name of Rabbi Yoḥanan: Such is the proper layout of the mishna, i.e., the baraita. The latter attribution of the opinions is correct, and one must reverse the attribution of opinions in the first baraita. Accordingly, Rabbi Akiva deems the fat on the intestines prohibited, while Rabbi Yishmael deems the fat on the abomasum prohibited as well.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span><span class="num">5</span> <span class="ref">חולין מ״ט ב — Chullin 49b:4</span></div>
+  <div class="orig">מַאי חָזֵית דְּאָפְכַתְּ קַמַּיְיתָא? אֵיפוֹךְ בָּתְרָיְיתָא! שָׁאנֵי הָכָא, כֵּיוָן דְּקָתָנֵי ״מָה״, דַּוְוקָא.</div>
+  <div class="trans" data-when="he">מה ראית להפוך דווקא את הברייתא הראשונה? הפוך את השנייה! ומשיבים: שונה כאן — כיוון שהברייתא השנייה שונה בלשון ״מה … אף״ ונותנת טעם מדויק לכל דעה, ודאי שהיא מדויקת גם בייחוס השמות, ולכן הראשונה היא שנהפכת.</div>
+  <div class="trans" data-when="en">The Gemara asks: What did you see that led you to reverse the first baraita? Why not reverse the second baraita instead? The Gemara responds: The second baraita here is different, since it teaches using the formula: Just as. Because it takes care to specifically provide the textual justifications for the opinions, it is presumably accurate about the attributions as well.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין מ״ט ב — Chullin 49b:5</span></div>
+  <div class="orig">אִי הָכִי, כְּרַבִּי יִשְׁמָעֵאל? כְּרַבִּי עֲקִיבָא הִיא! אָמַר רַב נַחְמָן בַּר יִצְחָק: שֶׁאָמַר מִשּׁוּם אֲבוֹתָיו, וְלֵיהּ לָא סְבִירָא לֵיהּ.</div>
+  <div class="trans" data-when="he">אם כן, כיצד אמר ר׳ אושעיא שהכוהנים נהגו היתר כר׳ ישמעאל? הרי לפי האיפוך ר׳ ישמעאל אוסר, וההיתר הוא דעת ר׳ עקיבא! אמר רב נחמן בר יצחק: ר׳ אושעיא התכוון רק שר׳ ישמעאל מסר את ההיתר בשם אבותיו, אך הוא עצמו אינו סובר כך אלא אוסר את חלב הקיבה.</div>
+  <div class="trans" data-when="en">The Gemara asks: If so, how can Rabbi Oshaya claim above that the priests acted in accordance with the opinion of Rabbi Yishmael? It was actually in accordance with the opinion of Rabbi Akiva. Rav Naḥman bar Yitzḥak said: Rabbi Oshaya meant only that Rabbi Yishmael says the lenient opinion in the name of his forefathers, but Rabbi Yishmael himself does not hold accordingly, and he considers the fat of the abomasum forbidden.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">האם חלב סותם את הנקב</span><span data-when="en">Does fat seal a perforation</span>
+      <span class="ref">Chullin 49b:6–13</span></h2>
+  <div class="lead"><span data-when="he">רב: חלב טהור סותם נקב בקיבה, טמא אינו סותם; רב ששת: שניהם סותמים. ר׳ זירא מסתפק בחלב חיה, ואביי דוחה. שני מעשים אצל רבא — חלב טמא וכוס דבש מגולה — נדחים ב״התורה חסה״, ובכל אחד חולקים עליו. ולבסוף: חלב כמין כובע אינו סותם.</span><span data-when="en">Rav: kosher fat seals an abomasum perforation, non-kosher does not; Rav Sheshet: both seal. Rabbi Zeira's dilemma on undomesticated-animal fat, deflected by Abaye. Two cases before Rava — non-kosher fat and exposed honey — answered by "the Torah spares money", each rebutted. Finally: hat-shaped fat does not seal.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב: חלב טהור סותם, טמא אינו סותם;<br/>רב ששת: אף טמא סותם"]:::statement
+  Q2{"② בעי ר׳ זירא: חלב חיה — סותם<br/>(טהור) או לא (אינו מהודק)?"}:::question
+  A3["③ אביי: פשיטא — אינו מהודק, ואינו סותם"]:::answer
+  Q4{"④ מעשה: נקב שסתמו חלב טמא; רבא — חסה<br/>על ממונן; רב פפא: איסורא דאורייתא!"}:::question
+  Q5{"⑤ מעשה: דבש מגולה; רבא — חסה על ממונן;<br/>רנב״י: סכנת נפשות (ר׳ שמעון אוסר)!"}:::question
+  A6["⑥ אודי בציר — דשדו ביה גילויא;<br/>ואודי בדבש — ר׳ שמעון בן אלעזר אוסר"]:::answer
+  S7["⑦ רב נחמן: חלב העשוי ככובע אינו סותם<br/>(חיטי דכרכשא או טרפשא דליבא)"]:::statement
+  S1 -->|איבעיא| Q2
+  Q2 -->|דחייה| A3
+  S1 -.->|מעשה| Q4
+  Q4 -->|מעשה נוסף| Q5
+  Q5 -->|הודאות| A6
+  A6 -.->|חתימה| S7
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav: kosher fat seals, non-kosher does not;<br/>Rav Sheshet: non-kosher also seals"]:::statement
+  Q2{"② Rabbi Zeira׳s dilemma: undomesticated-animal fat —<br/>seals (kosher) or not (not firmly attached)?"}:::question
+  A3["③ Abaye: obvious — it is not attached, and does not seal"]:::answer
+  Q4{"④ Case: a hole sealed by non-kosher fat; Rava — Torah spares<br/>money; Rav Pappa: a Torah prohibition!"}:::question
+  Q5{"⑤ Case: exposed honey; Rava — Torah spares money;<br/>RNBY: mortal danger (Rabbi Shimon forbids)!"}:::question
+  A6["⑥ Concede on brine — they cast exposed liquid into it;<br/>concede on honey — R. Shimon b. Elazar forbids"]:::answer
+  S7["⑦ Rav Naḥman: hat-shaped fat does not seal<br/>(rectum grains or the heart׳s membrane)"]:::statement
+  S1 -->|Dilemma| Q2
+  Q2 -->|Rejection| A3
+  S1 -.->|Case| Q4
+  Q4 -->|Another case| Q5
+  Q5 -->|Concessions| A6
+  A6 -.->|Closing| S7
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רַב: חֵלֶב טָהוֹר – סוֹתֵם, טָמֵא – אֵינוֹ סוֹתֵם;<br/>וְרַב שֵׁשֶׁת: אֶחָד זֶה וְאֶחָד זֶה סוֹתֵם"]:::statement
+  Q2{"② בָּעֵי רַבִּי זֵירָא: חֵלֶב חַיָּה מַאי? …<br/>אוֹ דִלְמָא מִשּׁוּם דִּמְהַדַּק, וְהַאי לָא מְהַדַּק?"}:::question
+  A3["③ אָמַר אַבָּיֵי: מַאי תִּיבְּעֵי לֵיהּ? נְהִי דִּשְׁרֵי<br/>בַּאֲכִילָה, אִהַדּוֹקֵי לָא מְהַדַּק"]:::answer
+  Q4{"④ נֶקֶב דְּסַתְמֵהּ חֵלֶב טָמֵא … הַתּוֹרָה חָסָה<br/>… רַב, וְאִיסּוּרָא דְּאוֹרָיְיתָא!"}:::question
+  Q5{"⑤ בֻּסְתְּקָא דְּדוּבְשָׁא … הַתּוֹרָה חָסָה …<br/>רַבִּי שִׁמְעוֹן, וְסַכָּנַת נְפָשׁוֹת!"}:::question
+  A6["⑥ אוֹדִי לִי … בְּצִיר, שָׁדוּ לֵיהּ בְּצִיר; אוֹדִי לִי …<br/>בִּדְבַשׁ, רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר … אוֹסֵר בִּדְבַשׁ"]:::answer
+  S7["⑦ אָמַר רַב נַחְמָן: חֵלֶב הֶעָשׂוּי כְּכוֹבַע אֵינוֹ סוֹתֵם …<br/>חִיטֵּי דְּכַרְכְּשָׁא … טַרְפְּשָׁא דְּלִיבָּא"]:::statement
+  S1 -->|איבעיא| Q2
+  Q2 -->|דחייה| A3
+  S1 -.->|מעשה| Q4
+  Q4 -->|מעשה נוסף| Q5
+  Q5 -->|הודאות| A6
+  A6 -.->|חתימה| S7
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ט ב — Chullin 49b:6</span></div>
+  <div class="orig">אָמַר רַב: חֵלֶב טָהוֹר – סוֹתֵם, טָמֵא – אֵינוֹ סוֹתֵם. וְרַב שֵׁשֶׁת אוֹמֵר: אֶחָד זֶה וְאֶחָד זֶה סוֹתֵם.</div>
+  <div class="trans" data-when="he">אמר רב: חלב טהור (מותר באכילה) — סותם נקב שבקיבה ומכשיר; חלב טמא (אסור) — אינו סותם, והבהמה טריפה. ורב ששת אומר: אחד זה ואחד זה — שניהם סותמים.</div>
+  <div class="trans" data-when="en">§ The Gemara discusses a connection between the issue of fats and that of tereifot: Rav says: Kosher fat effectively seals a perforation that it covers, and the animal is not rendered a tereifa. Non-kosher fat does not effectively seal a perforation, and the animal is a tereifa. And Rav Sheshet says: Both this and that fat effectively seal a perforation.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ט ב — Chullin 49b:7</span></div>
+  <div class="orig">בָּעֵי רַבִּי זֵירָא: חֵלֶב חַיָּה מַאי? דַּוְקָא אָמַר חֵלֶב טָהוֹר סוֹתֵם, וְהַאי נָמֵי טָהוֹר הוּא, אוֹ דִלְמָא מִשּׁוּם דִּמְהַדַּק, וְהַאי לָא מְהַדַּק?</div>
+  <div class="trans" data-when="he">הסתפק ר׳ זירא: חלב של חיה — שכולו מותר באכילה — מהו? האם רב נקט ״חלב טהור סותם״ בדווקא, וגם זה טהור וסותם; או שמא הטעם הוא משום שחלב הקיבה מהודק וצמוד, וחלב החיה אינו מהודק — ולכן אינו סותם?</div>
+  <div class="trans" data-when="en">Rabbi Zeira raises a dilemma: With regard to the fat of an undomesticated animal, all of which is permitted for consumption, what is the halakha? Shall one say that Rav specifically said that kosher fat seals a perforation, and since this too, i.e., all the fat of an undomesticated animal, is kosher, it is all considered an effective seal? Or perhaps Rav specified that permitted fat of a domesticated animal seals a perforation only because it is firmly attached. But this, the fat on the innards of an undomesticated animal, is not firmly attached, and it is not an effective seal, even though it is permitted for consumption.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ט ב — Chullin 49b:8</span></div>
+  <div class="orig">אָמַר אַבָּיֵי: מַאי תִּיבְּעֵי לֵיהּ? נְהִי דִּשְׁרֵי בַּאֲכִילָה, אִהַדּוֹקֵי לָא מְהַדַּק.</div>
+  <div class="trans" data-when="he">אמר אביי: מה הספק לר׳ זירא? אף שחלב החיה מותר באכילה — הרי הוא אינו מהודק, ופשוט שאינו סותם.</div>
+  <div class="trans" data-when="en">Abaye said: Why does Rabbi Zeira raise this dilemma? Granted that the fat of the innards is permitted for consumption, but still, it is not firmly attached and clearly does not form an effective seal.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ט ב — Chullin 49b:9</span></div>
+  <div class="orig">הָהוּא נֶקֶב דְּסַתְמֵהּ חֵלֶב טָמֵא, דַּאֲתָא לְקַמֵּיהּ דְּרָבָא. אָמַר רָבָא: לְמַאי נֵיחוּשׁ לַהּ? חֲדָא – דְּהָא אָמַר רַב שֵׁשֶׁת: חֵלֶב טָמֵא נָמֵי סוֹתֵם, וְעוֹד – הַתּוֹרָה חָסָה עַל מָמוֹנָם שֶׁל יִשְׂרָאֵל. אֲמַר לֵיהּ רַב פָּפָּא לְרָבָא: רַב, וְאִיסּוּרָא דְּאוֹרָיְיתָא, וְאַתְּ אָמְרַתְּ ״הַתּוֹרָה חָסָה עַל מָמוֹנָן שֶׁל יִשְׂרָאֵל״?!</div>
+  <div class="trans" data-when="he">מעשה בנקב בקיבה שנסתם בחלב טמא, ובא לפני רבא. אמר רבא: מה יש לחשוש? אחת — שהרי רב ששת אמר שאף חלב טמא סותם; ועוד — התורה חסה על ממונם של ישראל ויש להקל. אמר לו רב פפא לרבא: הרי יש את דעת רב (שחלב טמא אינו סותם), והדבר איסור דאורייתא — ואיך תאמר ״התורה חסה על ממונם״ להקל בכך?!</div>
+  <div class="trans" data-when="en">The Gemara relates: There was a certain perforation that was sealed by non-kosher fat that came before Rava. Rava said: With regard to what need we be concerned? First, doesn’t Rav Sheshet say: Non-kosher fat also effectively seals a perforation? And furthermore, in general, the Torah spares the money of the Jewish people, and it is appropriate to rule leniently in this regard. Rav Pappa said to Rava: But there is also the opinion of Rav that non-kosher fat does not seal a perforation, and this dispute concerns a prohibition by Torah law, and yet you say that the Torah spares the money of the Jewish people? One cannot rely on this principle to rule in accordance with the lenient opinion with regard to such matters.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט ב — Chullin 49b:10</span></div>
+  <div class="orig">מִנְיוֹמִין כַּנְדּוּקָא אִיגַּלִּי לֵיהּ בֻּסְתְּקָא דְּדוּבְשָׁא, אֲתָא לְקַמֵּיהּ דְּרָבָא. אָמַר רָבָא: לְמַאי נֵיחוּשׁ לַהּ? חֲדָא – דִּתְנַן, שְׁלֹשָׁה מַשְׁקִים אֲסוּרִים מִשּׁוּם גִּילּוּי: הַיַּיִן וְהַמַּיִם וְהֶחָלָב, וּשְׁאָר כׇּל הַמַּשְׁקִים מוּתָּרִים, וְעוֹד – הַתּוֹרָה חָסָה עַל מָמוֹנָם שֶׁל יִשְׂרָאֵל. אֲמַר לֵיהּ רַב נַחְמָן בַּר יִצְחָק לְרָבָא: רַבִּי שִׁמְעוֹן, וְסַכָּנַת נְפָשׁוֹת, וְאַתְּ אָמְרַתְּ ״הַתּוֹרָה חָסָה עַל מָמוֹנָם שֶׁל יִשְׂרָאֵל״?</div>
+  <div class="trans" data-when="he">מעשה במניומין יצרן הכדים, שנתגלתה לו חבית דבש (שהיתה מגולה, וחשש שמא שתה ממנה נחש), ובא לפני רבא. אמר רבא: מה יש לחשוש? אחת — שלמדנו שרק שלושה משקים אסורים משום גילוי: יין, מים וחלב, ושאר המשקים (ובכללם דבש) מותרים; ועוד — התורה חסה על ממונם של ישראל. אמר לו רב נחמן בר יצחק לרבא: הרי יש את דעת ר׳ שמעון (שדבש מגולה אסור), והדבר סכנת נפשות — ואיך תאמר ״התורה חסה על ממונם״?</div>
+  <div class="trans" data-when="en">The Gemara relates a similar episode: Manyumin the jug maker had a jug [bisteka] full of honey that was left uncovered, and he was concerned it might have been contaminated by snake venom. He came before Rava to inquire as to the halakha. Rava said: With regard to what need we be concerned? First, as we learned in a mishna (Terumot 8:4): Three liquids are prohibited due to exposure: Wine, water, and milk; and all other liquids are permitted. Honey, therefore, is permitted. And furthermore, the Torah spares the money of the Jewish people. Rav Naḥman bar Yitzḥak said to Rava: But there is also the opinion of Rabbi Shimon that exposed honey is prohibited, and this dispute concerns a matter of mortal danger, and yet you say that the Torah spares the money of the Jewish people?</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ט ב — Chullin 49b:11</span></div>
+  <div class="orig">רַבִּי שִׁמְעוֹן מַאי הִיא? דְּתַנְיָא: חֲמִשָּׁה אֵין בָּהֶם מִשּׁוּם גִּילּוּי: צִיר, וָחוֹמֶץ, שֶׁמֶן, וּדְבַשׁ, וּמוּרְיָיס. רַבִּי שִׁמְעוֹן אוֹמֵר: אַף הֵן יֵשׁ בָּהֶן מִשּׁוּם גִּילּוּי. וְאָמַר רַבִּי שִׁמְעוֹן: אֲנִי רָאִיתִי נָחָשׁ שֶׁשָּׁתָה צִיר בְּצַיְדָּן. אָמְרוּ לוֹ: שָׁטְיָא הֲוָה, וְאֵין מְבִיאִין רְאָיָה מִן הַשּׁוֹטִים.</div>
+  <div class="trans" data-when="he">מהי דעת ר׳ שמעון? כדתניא: חמישה משקים אין בהם דין גילוי (שאין נחש שותה מהם): ציר, חומץ, שמן, דבש ומורייס. ר׳ שמעון אומר: אף הם יש בהם משום גילוי. ואמר ר׳ שמעון: אני ראיתי נחש ששתה ציר בצידן. אמרו לו חכמים: נחש שוטה היה, ואין מביאין ראיה מן השוטים.</div>
+  <div class="trans" data-when="en">The Gemara clarifies: What is this opinion of Rabbi Shimon? As it is taught in a baraita: Five liquids are not subject to the prohibition of exposure, since snakes do not drink from them: Fish brine, vinegar, oil, honey, and fish gravy [morayes] made from fish brine mixed with oil and salt. Rabbi Shimon says: Even they are subject to prohibition due to exposure. And Rabbi Shimon said: I once saw a snake that drank fish brine in Tzaidan. The Rabbis said to him: That snake was strange, i.e., it behaved differently than other snakes, and one does not bring a proof from strange creatures.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין מ״ט ב — Chullin 49b:12</span></div>
+  <div class="orig">אֲמַר לֵיהּ: אוֹדִי לִי מִיהַת בְּצִיר, דְּהָא רַב פָּפָּא וְרַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ וְרַבָּנַן, כִּי הֲוָה לְהוּ גִּילּוּיָא, שָׁדוּ לֵיהּ בְּצִיר. אֲמַר לֵיהּ: אוֹדִי לִי מִיהָא בִּדְבַשׁ, דְּרַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר קָאֵי כְּוָותֵיהּ, דְּתַנְיָא: וְכֵן הָיָה רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹסֵר בִּדְבַשׁ.</div>
+  <div class="trans" data-when="he">אמר לו רבא לרנב״י: הודה לי לפחות בציר שאין בו דין גילוי, שהרי רב פפא ורב הונא בריה דרב יהושע והרבנן, כשהיה להם משקה מגולה, היו זורקים אותו לתוך ציר (שחריפותו מבטלת את ארס הנחש) — משמע שהציר עצמו אינו אסור. אמר לו רנב״י: הודה לי לפחות בדבש שאסור משום גילוי, שהרי ר׳ שמעון בן אלעזר עומד כדעת ר׳ שמעון, כדתניא: וכן היה ר׳ שמעון בן אלעזר אוסר בדבש.</div>
+  <div class="trans" data-when="en">Rava said to Rav Naḥman bar Yitzḥak: Concede to me, at least, with regard to fish brine that it is not prohibited by exposure, as when Rav Pappa and Rav Huna, son of Rabbi Yehoshua, and the Sages would have a case of exposure of some liquid, they would cast it into fish brine. The sharpness of the brine neutralizes the snake venom. Accordingly, just as the halakha is not in accordance with the opinion of Rabbi Shimon with regard to fish brine, so too it is not in accordance with his opinion with regard to honey. Rav Naḥman bar Yitzḥak said to him: Concede to me, at least, with regard to honey that it is prohibited by exposure, as Rabbi Shimon ben Elazar held in accordance with the opinion of Rabbi Shimon. As it is taught in a baraita: And likewise, Rabbi Shimon ben Elazar would deem exposed honey prohibited.</div>
+</div>
+<div class="quote">
+  <div><span class="num">7</span> <span class="ref">חולין מ״ט ב — Chullin 49b:13</span></div>
+  <div class="orig">אָמַר רַב נַחְמָן: חֵלֶב הֶעָשׂוּי כְּכוֹבַע אֵינוֹ סוֹתֵם. הֵיכָא? אָמְרִי לַהּ: חִיטֵּי דְּכַרְכְּשָׁא, וְאָמְרִי לַהּ: טַרְפְּשָׁא דְּלִיבָּא.</div>
+  <div class="trans" data-when="he">חוזרים לעניין החלב הסותם. אמר רב נחמן: חלב העשוי כמין כובע (מורם ואינו צמוד) אינו סותם נקב, אף שהוא מותר באכילה. והיכן הוא? יש אומרים: גרגירי החלב שעל פי הטבעת (כרכשא), שאם ניקבו טריפה; ויש אומרים: הקרום שסביב הלב (טרפש הלב), שאם ניקב לחללו טריפה.</div>
+  <div class="trans" data-when="en">The Gemara returns to the initial discussion with regard to fats and perforations: Rav Naḥman says: Permitted fat that is made like a hat does not effectively seal a perforation, even though it is permitted for consumption. The Gemara clarifies: Where is this fat? Some say it is the grains of fat found on the rectum, which, if perforated, renders the animal a tereifa. And some say that it is the membrane surrounding the heart, which, if perforated to the chambers, renders the animal a tereifa.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">חימצא ובר חימצא — וקומצין</span><span data-when="en">Ḥimtza and bar ḥimtza — and a handful</span>
+      <span class="ref">Chullin 49b:14–50a:5</span></h2>
+  <div class="lead"><span data-when="he">רבא שמע מרב נחמן שני חלבים בקיבה — חימצא ובר חימצא — אחד סותם ואחד לא, ולא ידע איזה; ונפסק: בר חימצא סותם. הגמרא מבררת מי מהם, מעמידה בשתי לשונות (אקשתא/אייתרא), וחותמת במנהג ארץ ישראל לקמוץ את החלב שמעל היתר ולאכול את השאר.</span><span data-when="en">Rava heard from Rav Naḥman about two abomasum fats — ḥimtza and bar ḥimtza — one seals and one does not, and he did not know which; ruled: bar ḥimtza seals. The Gemara identifies which, settles it in two versions (the bow / the bowstring), and closes with the Eretz-Yisrael practice of taking a handful off the top and eating the rest.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רבא: שמעתי מרב נחמן — חימצא ובר חימצא,<br/>חד סתים וחד לא; בר חימצא סותם"]:::statement
+  Q2{"② הי חימצא והי בר חימצא?"}:::question
+  A3["③ תא שמע: אינהו מיכל אכלי,<br/>ולדידן אף לא סתים"]:::answer
+  S4["④ לשון א׳: דאקשתא — לכו״ע אסור;<br/>פליגי באייתרא"]:::statement
+  S5["⑤ איכא דאמרי: דאייתרא — לכו״ע שרי;<br/>פליגי באקשתא"]:::statement
+  C6["⑥ מנהג ארץ ישראל: מקמצין —<br/>קומצין החלב, ואוכלין השאר"]:::conclusion
+  S1 -->|קושיא| Q2
+  Q2 -->|תא שמע| A3
+  A3 -->|לישנא קמא| S4
+  A3 -->|איכא דאמרי| S5
+  S4 -.->|מנהג| C6
+  S5 -.->|מנהג| C6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rava: I heard from Rav Naḥman — ḥimtza and bar ḥimtza,<br/>one seals and one does not; bar ḥimtza seals"]:::statement
+  Q2{"② Which is the ḥimtza and which the bar ḥimtza?"}:::question
+  A3["③ Come and hear: they eat it,<br/>and for us it does not even seal"]:::answer
+  S4["④ Version 1: the bow-fat — all forbid it;<br/>they dispute the bowstring-fat"]:::statement
+  S5["⑤ Some say: the bowstring-fat — all permit it;<br/>they dispute the bow-fat"]:::statement
+  C6["⑥ Eretz-Yisrael practice: take a handful —<br/>scoop off the fat, eat the rest"]:::conclusion
+  S1 -->|Difficulty| Q2
+  Q2 -->|Come and hear| A3
+  A3 -->|First version| S4
+  A3 -->|Some say| S5
+  S4 -.->|Practice| C6
+  S5 -.->|Practice| C6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שְׁמַעִית מִינֵּיהּ דְּרַב נַחְמָן תַּרְתֵּי, חִימְצָא וּבַר חִימְצָא …<br/>בַּר חִימְצָא סָתֵים, חִימְצָא לָא סָתֵים"]:::statement
+  Q2{"② הֵי חִימְצָא וְהֵי בַּר חִימְצָא?"}:::question
+  A3["③ תָּא שְׁמַע … אִינְהוּ מֵיכָל אָכְלִי,<br/>וּלְדִידַן מִיסְתָּם נָמֵי לָא סָתֵים"]:::answer
+  S4["④ דְּאַקַּשְׁתָּא – כּוּלֵּי עָלְמָא לָא פְּלִיגִי דַּאֲסִיר,<br/>כִּי פְּלִיגִי – דְּאַיִּיתְרָא"]:::statement
+  S5["⑤ אִיכָּא דְּאָמְרִי, דְּאַיִּיתְרָא – לָא פְּלִיגִי דִּשְׁרֵי,<br/>כִּי פְּלִיגִי – דְּאַקַּשְׁתָּא"]:::statement
+  C6["⑥ אָמַר רַב אַוְיָא אָמַר רַבִּי אַמֵּי: מְקַמְּצִין …<br/>קְמַצוּ וְהַבוּ לֵיהּ, וַאֲכַל"]:::conclusion
+  S1 -->|קושיא| Q2
+  Q2 -->|תא שמע| A3
+  A3 -->|לישנא קמא| S4
+  A3 -->|איכא דאמרי| S5
+  S4 -.->|מנהג| C6
+  S5 -.->|מנהג| C6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ט ב — Chullin 49b:14</span></div>
+  <div class="orig">אָמַר רָבָא: שְׁמַעִית מִינֵּיהּ דְּרַב נַחְמָן תַּרְתֵּי, חִימְצָא וּבַר חִימְצָא, חַד סָתֵים וְחַד לָא סָתֵים, וְלָא יָדַעְנָא הֵי מִינַּיְיהוּ. רַב הוּנָא בַּר חִינָּנָא וְרַב הוּנָא בְּרֵיהּ דְּרַב נַחְמָן אָמַר: בַּר חִימְצָא סָתֵים, חִימְצָא לָא סָתֵים. אָמַר רַב טָבוּת: וְסִימָנָיךְ – יָפֶה כֹּחַ הַבֵּן מִכֹּחַ הָאָב.</div>
+  <div class="trans" data-when="he">אמר רבא: שמעתי מרב נחמן שני חלבים שעל הקיבה — ״חימצא״ ו״בר חימצא״ (בנה של חימצא) — אחד סותם נקב ואחד אינו סותם, ואיני יודע איזה מהם. רב הונא בר חיננא ורב הונא בריה דרב נחמן אמרו: בר חימצא סותם, חימצא אינו סותם. אמר רב טבות: וסימנך — יפה כוח הבן מכוח האב (הבן — בר חימצא — חזק יותר).</div>
+  <div class="trans" data-when="en">§ Rava said: I heard from Rav Naḥman about two fats found on the abomasum, in different places. One is called the ḥimtza and one the bar ḥimtza, meaning: Son of ḥimtza. One effectively seals a perforation of the abomasum, and one does not effectively seal a perforation of the abomasum. But I do not know which of them is which. Rav Huna bar Ḥinnana and Rav Huna, son of Rav Naḥman, said: The bar ḥimtza seals; the ḥimtza does not seal. Rav Tavot said: And your mnemonic is: The power of the son is greater than the power of the father.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ט ב — Chullin 49b:15</span></div>
+  <div class="orig">הֵי חִימְצָא וְהֵי בַּר חִימְצָא? תָּא שְׁמַע, דְּאָמַר רַב נַחְמָן: אִינְהוּ מֵיכָל אָכְלִי,</div>
+  <div class="trans" data-when="he">ומבררים: איזה הוא ה״חימצא״ ואיזה ה״בר חימצא״? בוא ושמע ממה שאמר רב נחמן (על אחד מהחלבים): הם — בני ארץ ישראל — אוכלים אותו, ומחשיבים אותו מותר באכילה,</div>
+  <div class="trans" data-when="en">The Gemara asks: Which is the ḥimtza and which is the bar ḥimtza? The Gemara suggests: Come and hear proof from that which Rav Naḥman says with regard to one of the fats on the abomasum. Can it be that they, the residents of Eretz Yisrael, eat it, considering it permitted for consumption,</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין נ׳ א — Chullin 50a:1</span></div>
+  <div class="orig">וּלְדִידַן מִיסְתָּם נָמֵי לָא סָתֵים.</div>
+  <div class="trans" data-when="he">ולנו — בני בבל — לא רק שאסור באכילה, אלא אף אינו סותם נקב? לא ייתכן שחלב זה אסור מן התורה אם בני ארץ ישראל אוכלים אותו; ואף שאנו מחמירים באכילתו, עדיין ייתכן שהוא סותם את הנקב.</div>
+  <div class="trans" data-when="en">and to us, the residents of Babylonia, not only is it forbidden but it also does not seal a perforation? It cannot be that this fat is forbidden by Torah law if they permit it for consumption. Even though we are stringent with regard to its consumption, we may still maintain that it effectively seals a perforation.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין נ׳ א — Chullin 50a:2</span></div>
+  <div class="orig">דְּאַקַּשְׁתָּא – כּוּלֵּי עָלְמָא לָא פְּלִיגִי דַּאֲסִיר, כִּי פְּלִיגִי – דְּאַיִּיתְרָא.</div>
+  <div class="trans" data-when="he">הקיבה עשויה כמין קשת: הצד החיצוני מעוקל כקשת (״אקשתא״), והצד הפנימי ישר כמיתר (״אייתרא״). החלב שעל הקשת — לכל הדעות, אף בני ארץ ישראל, אסור באכילה, וזהו ה״חימצא״ שאינו סותם. כי נחלקו — בחלב שעל המיתר: בני ארץ ישראל מתירים ובני בבל אוסרים, ובו אמר רב נחמן שאף בני בבל יודו שסותם, וזהו ה״בר חימצא״.</div>
+  <div class="trans" data-when="en">The Gemara explains: The abomasum is shaped like a bow. The side facing outward is curved like the bow itself, while the side facing inward is flat and straight like the bowstring. With regard to the fat that is on the bow, everyone agrees, even the residents of Eretz Yisrael, that it is forbidden for consumption. This fat, then, is the ḥimtza, which does not seal a perforation according to Rav Naḥman. When they disagree, it is with regard to the fat that is on the bowstring. The residents of Eretz Yisrael permit it for consumption, while those of Babylonia prohibit it. According to Rav Naḥman, the residents of Babylonia should concede that it is nevertheless an effective seal. This, then, is the bar ḥimtza.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין נ׳ א — Chullin 50a:3</span></div>
+  <div class="orig">אִיכָּא דְּאָמְרִי, דְּאַיִּיתְרָא – כּוּלֵּי עָלְמָא לָא פְּלִיגִי דִּשְׁרֵי, כִּי פְּלִיגִי – דְּאַקַּשְׁתָּא.</div>
+  <div class="trans" data-when="he">יש אומרים בהיפך: החלב שעל המיתר (״אייתרא״) — לכל הדעות מותר, וזהו ה״בר חימצא״ הסותם. כי נחלקו — בחלב שעל הקשת (״אקשתא״): בני ארץ ישראל מתירים ובני בבל אוסרים, וזהו ה״חימצא״.</div>
+  <div class="trans" data-when="en">There are those who say that with regard to the fat that is on the bowstring, everyone agrees that it is permitted. This, then, is the bar ḥimtza. When they disagree, it is with regard to the fat that is on the bow. The residents of Eretz Yisrael permit it, but the residents of Babylonia prohibit it. This, then, is the ḥimtza.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין נ׳ א — Chullin 50a:4</span></div>
+  <div class="orig">כִּי הָא דְּאָמַר רַב אַוְיָא אָמַר רַבִּי אַמֵּי: מְקַמְּצִין, וְכֵן אָמַר רַבִּי יַנַּאי מִשּׁוּם זָקֵן אֶחָד: מְקַמְּצִין. אָמַר רַב אַוְיָא: הֲוָה קָאֵימְנָא קַמֵּיהּ דְּרַבִּי אַמֵּי, קְמַצוּ וְהַבוּ לֵיהּ, וַאֲכַל.</div>
+  <div class="trans" data-when="he">וזה שאמרנו שבני ארץ ישראל מתירים את החלב שעל המיתר — באופן זה: כדברי רב אויא בשם ר׳ אמי — ״מקמצין״, כלומר קומצים ונוטלים את שכבת החלב העליונה (שהיא האסורה מן הפסוק ״כל החלב אשר על הקרב״), והשאר מותר. וכן אמר ר׳ ינאי משום זקן אחד: מקמצין. אמר רב אויא: עמדתי לפני ר׳ אמי, קמצו את החלב ונתנו לו את השאר, ואכל.</div>
+  <div class="trans" data-when="en">The Gemara adds: When it was stated that only the residents of Eretz Yisrael permit the fat on the bowstring for consumption, this means that they would eat it in a manner like that which Rav Avya says that Rabbi Ami says: One takes a handful of the fat that lies above the fat on the bowstring, since this is the fat prohibited by the verse: “And all the fat that is upon the innards” (Leviticus 3:3), and the rest is permitted for consumption. And so says Rabbi Yannai, also a resident of Eretz Yisrael, in the name of a certain elder: One takes a handful. Rav Avya said: I was standing before Rabbi Ami. The people there took a handful of the fat on the bowstring and gave him the remaining fat, and he ate from it.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין נ׳ א — Chullin 50a:5</span></div>
+  <div class="orig">שַׁמָּעֵיהּ דְּרַבִּי חֲנִינָא הֲוָה קָאֵי קַמֵּיהּ דְּרַבִּי חֲנִינָא, אֲמַר לֵיהּ: קְמוֹץ, הַב לִי דְּאֵיכוֹל. חַזְיֵיהּ דַּהֲוָה קָמְחַסֵּם, אֲמַר לֵיהּ: בַּבְלָאָה אַתְּ, גּוֹם שְׁדִי.</div>
+  <div class="trans" data-when="he">משמשו של ר׳ חנינא (מארץ ישראל) עמד לפניו, ואמר לו ר׳ חנינא: קמוץ ותן לי לאכול. ראה ר׳ חנינא שהמשמש מהסס (כי כבבלי החמיר באותו חלב), אמר לו: בבלי אתה ורגיל לאסור את כל החלב הזה — אם כן חתוך והשלך את הכול.</div>
+  <div class="trans" data-when="en">The Gemara relates: The attendant of Rabbi Ḥanina was standing before Rabbi Ḥanina, a resident of Eretz Yisrael. Rabbi Ḥanina said to him: Take off a handful from that fat on the bowstring and give me the rest so that I will eat from it. Rabbi Ḥanina saw that the attendant was hesitating, so he said to him: You are a Babylonian and usually consider all of this fat forbidden. If so, cut off all the fat and throw it away.</div>
+</div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var badges = qs[i].querySelectorAll('.num');
+      for (var j = 0; j < badges.length; j++) {
+        if (parseInt(badges[j].textContent, 10) === n) return qs[i];
+      }
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
