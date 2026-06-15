@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין מ״ז</title>
+<meta name="description" content="סימני טריפות הריאה: חמש אונות וסדרן, מראות הריאה (ככוחלא, ירוקה, אדומה, ככבדא), בדיקת ריאה אטומה ואוושׁא, וריאה שנשפכה כקיתון — חיסרון מבפנים אינו חיסרון.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="47">
+<meta name="gemara-map:sefaria-ref" content="Chullin 47">
+<meta name="gemara-map:topic-he" content="טריפות הריאה — מראות וצורות">
+<meta name="gemara-map:topic-en" content="Tereifot of the lung">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין מ״ז">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 47">
+<meta name="gemara-map:blurb-he" content="סימני טריפות הריאה: חמש אונות וסדרן (וחריגות שהוכשרו), מראות הריאה — ככוחלא ועד ככבדא וירוקה־כשרה, בדיקת ריאה אטומה וריאה דאוושׁא בנוצה וברוק, וריאה שנשפכה כקיתון כשרה — שחיסרון מבפנים אינו שמיה חיסרון, ובלבד שהסמפונות קיימים.">
+<meta name="gemara-map:blurb-en" content="Signs of a tereifa lung: the five lobes and their order (with deviations that were nonetheless deemed kosher); the lung's colors — from eye-shadow dark to liver-like and kosher green; testing a sealed or sound-emitting lung with a feather and saliva; and a lung that liquefied like water from a jug, which is kosher — for a deficiency on the inside is no deficiency, provided the bronchi remain intact.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין מ״ז</span><span data-when="en">Sugya map — Chullin 47</span></h1>
+    <div class="subtitle"><span data-when="he">חולין מ״ז א:ב׳–מ״ח א:א׳ · Chullin 47a:2–48a:1 · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 47a:2–48a:1 · חולין מ״ז א:ב׳–מ״ח א:א׳ · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> פירוט סימני טריפות הריאה. רבא: חמש אונות בסדר קבוע, ויש חריגות שהוכשרו (עינוניתא דוורדא). מראות הריאה — מן ה״ככוחלא״ הכשרה ועד ה״כדיותא״ הטריפה, וירוקה כְּכַרָּתֵי כשרה. בודקים ריאה אטומה או דאוושׁא בנוצה, רוק ומים פושרים. וריאה שנשפכה כקיתון — כשרה, שחיסרון מבפנים אינו חיסרון, ובלבד שהסמפונות קיימים.</span>
+    <span data-when="en"><b>Bottom line:</b> A catalogue of signs that render a lung a tereifa. Rava: five lobes in a fixed order, with deviations that were nonetheless deemed kosher (the "little rose lobe"). The lung's colors — from kosher eye-shadow dark to a tereifa ink-black, with leek-green kosher. A sealed or sound-emitting lung is tested with a feather, saliva, and tepid water. And a lung that liquefied like water from a jug is kosher — for a deficiency on the inside is no deficiency — provided the bronchi remain intact.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="sugya overview" id="overview">
+  <h2><span data-when="he">מפת־על — חמשת שלבי הסוגיה</span><span data-when="en">Overview — the five stages of the sugya</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · חמש אונות וסדרן — וחריגות שהוכשרו<br/>מ״ז א:ב׳–מ״ז ב:א׳"]:::statement
+  O2["2 · מראות הריאה — כשרה וטריפה<br/>מ״ז ב:ב׳–ז׳"]:::statement
+  O3["3 · בדיקת ריאה אטומה ודאוושׁא<br/>מ״ז ב:ח׳–י׳"]:::statement
+  O4["4 · ריאה שנשפכה כקיתון — כשרה<br/>מ״ז ב:י״א–ט״ו"]:::statement
+  O5["5 · נימוקה, ניטלה, התליע — כשרה<br/>מ״ז ב:ט״ז–מ״ח א:א׳"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · Five lobes and their order — with kosher deviations<br/>47a:2–47b:1"]:::statement
+  O2["2 · The lung׳s colors — kosher and tereifa<br/>47b:2–7"]:::statement
+  O3["3 · Testing a sealed or sound-emitting lung<br/>47b:8–10"]:::statement
+  O4["4 · A lung poured out like water — kosher<br/>47b:11–15"]:::statement
+  O5["5 · Atrophied, removed, infested — kosher<br/>47b:16–48a:1"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">חמש אונות וסדרן — וחריגות שהוכשרו</span><span data-when="en">Five lobes and their order — and kosher deviations</span>
+      <span class="ref">Chullin 47a:2–47b:1</span></h2>
+  <div class="lead"><span data-when="he">רבא קובע: לריאה חמש אונות, שלוש מימין ושתיים משמאל; חסר, יתר או חליף — טריפה. שני מעשים מסייגים: מרימר הכשיר אונה יתרה (אין הלכה כרבא ביתרת), ועינוניתא דוורדא הכשרה — אך רק מבפנים.</span><span data-when="en">Rava rules: the lung has five lobes, three on the right and two on the left; missing, extra, or switched — a tereifa. Two incidents qualify this: Mareimar deemed an extra lobe kosher (the halakha is not like Rava on an extra lobe), and the "little rose lobe" is kosher — but only on the inner face.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רבא: חמש אונות — ג׳ מימין ב׳ משמאל;<br/>חסר או יתר או חליף — טריפה"]:::statement
+  S2["② מעשה: מרימר הכשיר אונה יתרה —<br/>אין הלכה כרבא ביתרת"]:::conclusion
+  S3["③ ודווקא העומדת בדרא דאוני,<br/>אבל ביני ביני — טריפה"]:::statement
+  S4["④ מעשה: רב הונא — היתרה ביני ביני<br/>היא עינוניתא דוורדא, ומגוואי — כשרה"]:::answer
+  S5["⑤ אבל אגבּהּ, אפילו כטרפא דאסא —<br/>טריפה"]:::statement
+  S1 -->|מעשה| S2
+  S1 -->|סייג| S3
+  S3 -->|מעשה| S4
+  S4 -->|אבל אגבּהּ| S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rava: five lobes — 3 on the right, 2 on the left;<br/>missing, extra, or switched — a tereifa"]:::statement
+  S2["② Incident: Mareimar deemed an extra lobe kosher —<br/>the halakha is not like Rava on an extra lobe"]:::conclusion
+  S3["③ Only when it stands in line with the lobes;<br/>but in between the sides — a tereifa"]:::statement
+  S4["④ Incident: Rav Huna — the extra one in between<br/>is the ׳little rose lobe׳; on the inner face — kosher"]:::answer
+  S5["⑤ But on the back, even as small as<br/>a myrtle leaf — a tereifa"]:::statement
+  S1 -->|Incident| S2
+  S1 -->|Qualification| S3
+  S3 -->|Incident| S4
+  S4 -->|But on the back| S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① חָמֵשׁ אוּנֵּי אִית לַהּ לְרֵיאָה … חַסִּיר<br/>אוֹ יַתִּיר אוֹ חֲלִיף – טְרֵפָה"]:::statement
+  S2["② הָהוּא יַתִּירְתָּא … אַכְשְׁרַהּ … לֵית הִלְכְתָא<br/>כְּוָותֵיהּ דְּרָבָא בִּיתֶרֶת"]:::conclusion
+  S3["③ וְהָנֵי מִילֵּי דְּקָיְימָא בְּדָרָא דְּאוּנֵּי,<br/>אֲבָל בֵּינֵי בֵּינֵי – טְרֵפָה"]:::statement
+  S4["④ כֹּל הָנֵי חֵיוֵי בָּרָיָיתָא הָכִי אִית לְהוּ … עֵינוּנִיתָא<br/>דְּוַורְדָּא … וְהָנֵי מִילֵּי מִגַּוַּאי"]:::answer
+  S5["⑤ אֲבָל אַגַּבַּהּ, אֲפִילּוּ כְּטַרְפָּא<br/>דְאָסָא – טְרֵפָה"]:::statement
+  S1 -->|מעשה| S2
+  S1 -->|סייג| S3
+  S3 -->|מעשה| S4
+  S4 -->|אבל אגבּהּ| S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ז א — Chullin 47a:2</span></div>
+  <div class="orig">וְאָמַר רָבָא: חָמֵשׁ אוּנֵּי אִית לַהּ לְרֵיאָה, אַפַּהּ כְּלַפֵּי גַּבְרָא – תְּלָתָא מִיַּמִּינָא וְתַרְתֵּי מִשְּׂמָאלָא. חַסִּיר אוֹ יַתִּיר אוֹ חֲלִיף – טְרֵפָה.</div>
+  <div class="trans" data-when="he">ועוד אמר רבא: לריאה חמש אונות. כאשר הבהמה תלויה ופניה (פני הריאה) מופנים אל הבודק — שלוש אונות מימינו ושתיים משמאלו. אם חסרה אונה, או יש אונה יתרה, או שהאונות מחולפות (שתיים מימין ושלוש משמאל) — הבהמה טריפה.</div>
+  <div class="trans" data-when="en">§ And Rava says: The lung has five lobes [unnei]. When the animal hangs by its legs with its face toward the person checking it, he sees three lobes on his right and two on his left. If the animal is missing a lobe or has an extra lobe, or if the lobes were switched, with two on the right and three on the left, the animal is a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ז א — Chullin 47a:3</span></div>
+  <div class="orig">הָהוּא יַתִּירְתָּא דַּאֲתַאי לְקַמֵּיהּ דְּמָרִימָר, הֲוָה יָתֵיב רַב אַחָא אַבָּבָא. אֲמַר לֵיהּ: מַאי אֲמַר לָךְ? אֲמַר לֵיהּ: אַכְשְׁרַהּ נִיהֲלִי. אֲמַר לֵיהּ: הֲדַר עַיְּילַהּ קַמֵּיהּ! אֲמַר לֵיהּ: זִיל אֵימָא לֵיהּ לְמַאן דְּיָתֵיב אַבָּבָא, לֵית הִלְכְתָא כְּוָותֵיהּ דְּרָבָא בִּיתֶרֶת.</div>
+  <div class="trans" data-when="he">מעשה בריאה בעלת אונה יתרה שהובאה לפני מרימר. רב אחא ישב בפתח. כשיצא בעל הבהמה שאלו רב אחא: מה אמר לך מרימר? השיב: הכשירהּ לי. תמה רב אחא (שהדבר נגד רבא) ואמר לו: חזור והכניסהּ לפניו! הבין מרימר מדוע נשאל שוב, ואמר לבעל הבהמה: לך אמור למי שיושב בפתח — אין הלכה כרבא באונה יתרה.</div>
+  <div class="trans" data-when="en">The Gemara relates that a certain lung that had an extra lobe was brought before Mareimar. Rav Aḥa was sitting at the door of Mareimar’s house. When the animal’s owner was leaving, Rav Aḥa said to him: What did Mareimar say to you? The man said to him: Mareimar deemed it kosher. Rav Aḥa was surprised by this, because it contradicts Rava’s statement, so he said to him: Turn around and bring the animal before him. The owner did so. Mareimar realized why he was being asked twice, and said to him: Go tell whomever is sitting at the door: The halakha is not in accordance with the opinion of Rava in the case of an animal that has an extra lobe.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ז א — Chullin 47a:4</span></div>
+  <div class="orig">וְהָנֵי מִילֵּי – דְּקָיְימָא בְּדָרָא דְּאוּנֵּי, אֲבָל בֵּינֵי בֵּינֵי – טְרֵפָה.</div>
+  <div class="trans" data-when="he">ודבר זה (שהכשירו אונה יתרה) אמור דווקא כשהאונה היתרה עומדת בשורת האונות, מימין או משמאל; אבל אם היא נמצאת בין שני הצדדים (לא בשורה) — הבהמה טריפה.</div>
+  <div class="trans" data-when="en">The Gemara adds: And this statement applies only when the extra lobe stands in line with the other lobes, on the left or right. But if it is in between the two sides, the animal is a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ז א — Chullin 47a:5</span></div>
+  <div class="orig">הָהוּא בֵּינֵי בֵּינֵי דַּאֲתָא לְקַמֵּיהּ דְּרַב אָשֵׁי, סָבַר רַב אָשֵׁי לְמִיטְרְפַהּ. אֲמַר לֵיהּ רַב הוּנָא מָר בַּר אַוְיָא: כֹּל הָנֵי חֵיוֵי בָּרָיָיתָא הָכִי אִית לְהוּ, וְקָרוּ לַהּ טַבָּחֵי עֵינוּנִיתָא דְּוַורְדָּא. וְהָנֵי מִילֵּי מִגַּוַּאי,</div>
+  <div class="trans" data-when="he">מעשה באונה יתרה שעמדה בין הצדדים, שהובאה לפני רב אשי; סבר רב אשי להטריפהּ. אמר לו רב הונא מר בר אויא: כל הבהמות הרועות בשדה כך יש להן (אונה כזו), והטבחים קוראים לה ״עינוניתא דוורדא״ (אונת הוורד הקטנה). ודבר זה (שכשרה) אמור דווקא כשהיא בצד הפנימי של הריאה, הפונה אל הלב.</div>
+  <div class="trans" data-when="en">The Gemara relates that a certain animal with an extra lobe in between the two sides was brought before Rav Ashi. Rav Ashi thought to deem it a tereifa. Rav Huna Mar bar Avya said to him: All those animals that graze outside in the fields have extra lobes like this, and butchers call it the little rose lobe. The Gemara adds: And this statement applies only when the extra lobe is on the inside face of the lung, facing the heart.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ז ב — Chullin 47b:1</span></div>
+  <div class="orig">אֲבָל אַגַּבַּהּ, אֲפִילּוּ כְּטַרְפָּא דְאָסָא – טְרֵפָה.</div>
+  <div class="trans" data-when="he">אבל אם האונה היתרה היא על גבּהּ (הצד החיצוני) של הריאה — אפילו קטנה כעלה של הדס, הבהמה טריפה.</div>
+  <div class="trans" data-when="en">But if it is on the back of the lung, even if it is as small as a myrtle leaf, the animal is a tereifa.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">מראות הריאה — כשרה וטריפה</span><span data-when="en">The lung's colors — kosher and tereifa</span>
+      <span class="ref">Chullin 47b:2–7</span></h2>
+  <div class="lead"><span data-when="he">סדרה של מימרות על צבעי הריאה. רפרם: ריאה כאוּפְתָּא (חתיכת עץ) — טריפה. רבא: ככוחלא — כשרה, כדיותא — טריפה. ירוקה ואדומה כשרות (ממעשי רבי נתן במילה). רב כהנא: ככבדא כשרה, כבשׂרא טריפה. רב סמא: ירוקה כשרה היא דווקא ככרתי.</span><span data-when="en">A run of statements on the lung's colors. Rafram: a lung like a wood-chip — a tereifa. Rava: eye-shadow dark — kosher; ink-black — a tereifa. Green and red are kosher (from Rabbi Natan's circumcision incidents). Rav Kahana: liver-like — kosher, flesh-like — a tereifa. Rav Sama: the kosher green is specifically leek-green.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רפרם: ריאה הדומה לאוּפְתָּא<br/>(חתיכת עץ) — טריפה"]:::statement
+  S2["② רבא: ככוחלא — כשרה,<br/>כדיותא — טריפה (שחור לקוי)"]:::statement
+  S3["③ ירוקה ואדומה — כשרות,<br/>מדרבי נתן"]:::statement
+  P4["④ ראיה: שני מעשי מילה של רבי נתן —<br/>אדום וירוק הִמתינו, נימולו וחיו"]:::proof
+  S5["⑤ רב כהנא: ככבדא — כשרה,<br/>כבשׂרא — טריפה (סימן: ובשר בשדה)"]:::statement
+  S6["⑥ רב סמא: ככשותא ומוריקא וביעתא — טריפה;<br/>הירוקה הכשרה — ככרתי"]:::statement
+  S1 --> S2
+  S2 --> S3
+  S3 -->|מדרבי נתן| P4
+  P4 --> S5
+  S5 --> S6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rafram: a lung resembling a wood-chip<br/>(uppeta) — a tereifa"]:::statement
+  S2["② Rava: eye-shadow dark — kosher;<br/>ink-black — a tereifa (black is decayed)"]:::statement
+  S3["③ Green and red — kosher,<br/>as derived from Rabbi Natan"]:::statement
+  P4["④ Proof: Rabbi Natan׳s two circumcisions —<br/>red and green infants waited, were circumcised, lived"]:::proof
+  S5["⑤ Rav Kahana: liver-like — kosher;<br/>flesh-like — a tereifa (sign: flesh in the field)"]:::statement
+  S6["⑥ Rav Sama: dodder, saffron, egg-yolk — tereifa;<br/>the kosher green — leek-green"]:::statement
+  S1 --> S2
+  S2 --> S3
+  S3 -->|From Rabbi Natan| P4
+  P4 --> S5
+  S5 --> S6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הַאי רֵיאָה דְּדָמְיָא לְאוּפְתָּא – טְרֵפָה"]:::statement
+  S2["② כְּכוּחְלָא – כְּשֵׁרָה, כִּדְיוֹתָא – טְרֵפָה …<br/>שָׁחוֹר אָדוֹם הוּא, אֶלָּא שֶׁלָּקָה"]:::statement
+  S3["③ יְרוּקָּה – כְּשֵׁרָה … אֲדוּמָּה –<br/>כְּשֵׁרָה, מִדְּרַבִּי נָתָן"]:::statement
+  P4["④ רַבִּי נָתָן … רְאִיתִיו שֶׁהָיָה אָדוֹם … שֶׁהָיָה יָרוֹק …<br/>הִמְתִּינָה לוֹ וּמָלָה אוֹתוֹ וְחָיָה"]:::proof
+  S5["⑤ כְּכַבְדָּא – כְּשֵׁרָה, כְּבִשְׂרָא – טְרֵפָה,<br/>וְסִימָנָיךְ: וּבָשָׂר בַּשָּׂדֶה טְרֵפָה"]:::statement
+  S6["⑥ דְּדָמְיָא כִּכְשׁוּתָא וּכְמוֹרִיקָא וּכְגוֹן בֵּיעֲתָא – טְרֵפָה …<br/>יְרוּקָּה דִּכְשֵׁרָה … כְּכַרָּתֵי"]:::statement
+  S1 --> S2
+  S2 --> S3
+  S3 -->|מדרבי נתן| P4
+  P4 --> S5
+  S5 --> S6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ז ב — Chullin 47b:2</span></div>
+  <div class="orig">אָמַר רַפְרָם: הַאי רֵיאָה דְּדָמְיָא לְאוּפְתָּא – טְרֵפָה. אִיכָּא דְּאָמְרִי בַּחֲזוּתָא, וְאִיכָּא דְּאָמְרִי בְּגִישְׁתָּא. אִיכָּא דְּאָמְרִי דִּנְפִיחָה, וְאִיכָּא דְּאָמְרִי דִּפְחִיזָא, וְאִיכָּא דְּאָמְרִי דְּשִׁיעָא, דְּלֵית לַהּ חִיתּוּכָא דְאוּנֵּי.</div>
+  <div class="trans" data-when="he">אמר רפרם: ריאה זו הדומה לאוּפְתָּא (חתיכת עץ) — טריפה. יש אומרים שהדמיון הוא במראֶהָ (חיוורת כעץ), ויש אומרים במישושה (קשה כעץ). יש אומרים שהיא נפוחה, ויש אומרים שהיא קלה (פחיזא), ויש אומרים שהיא חלקה (שׁיעא), שאין בה חיתוך וחלוקה לאונות.</div>
+  <div class="trans" data-when="en">§ Rafram says: This lung that is similar to a chip of wood renders the animal a tereifa. There are those who say that the similarity lies in its appearance, i.e., if it is pale like wood. And there are those who say that it lies in its feeling, i.e., if it is hard like wood. There are those who say that it is swollen. And there are those who say that it is light. And there are those who say that it is completely smooth, that it has no sectioning of lobes.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ז ב — Chullin 47b:3</span></div>
+  <div class="orig">אָמַר רָבָא: כְּכוּחְלָא – כְּשֵׁרָה, כִּדְיוֹתָא – טְרֵפָה, דְּאָמַר רַבִּי חֲנִינָא: שָׁחוֹר אָדוֹם הוּא, אֶלָּא שֶׁלָּקָה.</div>
+  <div class="trans" data-when="he">אמר רבא: ריאה שמראֶהָ כּחוֹל כחול־כהה (״כוחלא״) — כשרה; אבל אם מראֶהָ שחור כדיו (״דיותא״) — טריפה. שכן אמר רבי חנינא: דם הנראה שחור — אדום הוא ביסודו, אלא שלקה והשחיר; השחרות סימן ללקות, והריאה מקולקלת.</div>
+  <div class="trans" data-when="en">§ Rava says: If the lung assumed a dark color like eye shadow, the animal is kosher. If its color is black like ink, the animal is a tereifa. As Rabbi Ḥanina says: Menstrual blood that appears black is actually red, except that it decayed. Black color is therefore a sign of decay, and the lung is assumed to be defective.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span><span class="num">4</span> <span class="ref">חולין מ״ז ב — Chullin 47b:4</span></div>
+  <div class="orig">יְרוּקָּה – כְּשֵׁרָה, מִדְּרַבִּי נָתָן. אֲדוּמָּה – כְּשֵׁרָה, מִדְּרַבִּי נָתָן. דְּתַנְיָא: רַבִּי נָתָן אוֹמֵר: פַּעַם אַחַת הָלַכְתִּי לִכְרַכֵּי הַיָּם, בָּאתָה אִשָּׁה אַחַת לְפָנַי שֶׁמָּלָה בְּנָהּ רִאשׁוֹן וָמֵת, שֵׁנִי וָמֵת, שְׁלִישִׁי – הֱבִיאַתּוּ לְפָנַי. רְאִיתִיו שֶׁהָיָה אָדוֹם, אָמַרְתִּי לָהּ: בִּתִּי, הַמְתִּינִי לוֹ עַד שֶׁיִּבָּלַע בּוֹ דָּמוֹ. הִמְתִּינָה לוֹ וּמָלָה אוֹתוֹ וְחָיָה, וְהָיוּ קוֹרִין אוֹתוֹ נָתָן הַבַּבְלִי עַל שְׁמִי.</div>
+  <div class="trans" data-when="he">ריאה ירוקה — כשרה, וכן אדומה — כשרה, ולומדים זאת ממעשה רבי נתן. כדתניא: רבי נתן אומר: פעם אחת הלכתי לכרכי הים, ובאה אישה לפניי שמלה בנה הראשון ומת, השני ומת; את השלישי הביאה לפניי. ראיתיו שהיה אדום (מרוב דם), אמרתי לה: בתי, המתיני לו עד שייבָּלַע בו דמו. המתינה, מלה אותו וחי, והיו קוראים אותו ״נתן הבבלי״ על שמי. הרי שאדמומיות עוברת ומתרפאת.</div>
+  <div class="trans" data-when="en">The Gemara continues: If the lung was green, the animal is kosher, as can be derived from the episode of Rabbi Natan. And if it was red, it is kosher, as can be derived from the episode of Rabbi Natan. As it is taught in a baraita: Rabbi Natan says: Once I went to the cities overseas, where one woman came before me who circumcised her first son and he died, and she circumcised her second son and he died, and out of concern that circumcising her third son might cause him to die as well, she brought him before me. I saw that he was red, so I said to her: My daughter, wait for him until his blood is absorbed into him. She waited for him until his blood was absorbed into him and then circumcised him, and he survived. And they would call him Natan the Babylonian after my name. This incident indicates that a red lung can heal.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ז ב — Chullin 47b:5</span></div>
+  <div class="orig">וְשׁוּב פַּעַם אַחַת הָלַכְתִּי לִמְדִינַת קַפּוֹטְקְיָא, בָּאתָה אִשָּׁה לְפָנַי, שֶׁמָּלָה בְּנָהּ רִאשׁוֹן וָמֵת, שֵׁנִי וָמֵת, שְׁלִישִׁי הֱבִיאַתּוּ לְפָנַי, רְאִיתִיו שֶׁהָיָה יָרוֹק, הֵצַצְתִּי בּוֹ וְלֹא הָיָה בּוֹ דַּם בְּרִית, אָמַרְתִּי לָהּ: בִּתִּי, הַמְתִּינִי לוֹ עַד שֶׁיִּפּוֹל בּוֹ דָּמוֹ, הִמְתִּינָה לוֹ וּמָלָה אוֹתוֹ וְחָיָה, וְהָיוּ קוֹרִין אוֹתוֹ נָתָן הַבַּבְלִי עַל שְׁמִי.</div>
+  <div class="trans" data-when="he">ועוד פעם אחת הלכתי למדינת קפוטקיא, ובאה אישה לפניי שמלה בנה הראשון ומת, השני ומת; את השלישי הביאה לפניי. ראיתיו שהיה ירוק (חיוור), הצצתי בו ולא היה בו דם ברית (מיעוט דם). אמרתי לה: בתי, המתיני לו עד שיתמלא בו דמו. המתינה, מלה אותו וחי, והיו קוראים אותו ״נתן הבבלי״ על שמי. הרי שגם ירקות (חיוורון) חוזרת ומתרפאת.</div>
+  <div class="trans" data-when="en">Rabbi Natan further related: And on another occasion I went to the state of Cappadocia, and a woman came before me who circumcised her first son and he died, and she circumcised her second son and he died. Out of concern that circumcising her third son might cause him to die as well, she brought him before me. I saw that he was green, i.e., pale. I looked at him and saw that he did not have the blood of circumcision in him, i.e., he had a deficiency of blood such that no blood would emerge from the circumcision. I said to her: My daughter, wait until his blood enters him. She waited for his blood to increase and then circumcised him, and he survived. And they would call his name Natan the Babylonian after my name. This incident indicates that a green lung can heal as well.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ז ב — Chullin 47b:6</span></div>
+  <div class="orig">אָמַר רַב כָּהֲנָא: כְּכַבְדָּא – כְּשֵׁרָה, כְּבִשְׂרָא – טְרֵפָה, וְסִימָנָיךְ: ״וּבָשָׂר בַּשָּׂדֶה טְרֵפָה״.</div>
+  <div class="trans" data-when="he">אמר רב כהנא: ריאה שמראֶהָ ככבד (אדמדם־חום) — כשרה; אבל אם מראֶהָ כבשׂר — טריפה. וסימן לזכור שהבשׂר טריפה: הכתוב ״וּבָשָׂר בַּשָּׂדֶה טְרֵפָה״ (שמות כב).</div>
+  <div class="trans" data-when="en">Rav Kahana says: If the lung has an appearance like the liver, the animal is kosher. If it has an appearance like flesh, the animal is a tereifa. And your mnemonic to remember that the latter is a tereifa is the verse: “You shall not eat any flesh that is torn of animals [tereifa] in the field” (Exodus 22:30).</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין מ״ז ב — Chullin 47b:7</span></div>
+  <div class="orig">אָמַר רַב סַמָּא בְּרֵיהּ דְּרָבָא: הַאי רֵיאָה דְּדָמְיָא כִּכְשׁוּתָא, וּכְמוֹרִיקָא, וּכְגוֹן בֵּיעֲתָא – טְרֵפָה. אֶלָּא יְרוּקָּה דִּכְשֵׁרָה הֵיכִי דָּמְיָא? כְּכַרָּתֵי.</div>
+  <div class="trans" data-when="he">אמר רב סמא בנו של רבא: ריאה שמראֶהָ ככשׁוּת (צמח מטפס), או כמוריקא (כרכום־זעפרן), או כחלמון ביצה — טריפה (כל אלו גוני ירוק־צהוב לקויים). ואם כן, הירוקה שכשרה — כיצד נראית? ככרתי (ירוק עז של כרשה).</div>
+  <div class="trans" data-when="en">Rav Sama, son of Rava, says: This lung whose appearance resembles dodder, or saffron, or has a yellow color such as that of an egg yolk, renders the animal a tereifa. Since all of these appearances are various shades of green, the Gemara asks: But the green lung that is kosher, what is it like? The Gemara responds: It is like a leek.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">בדיקת ריאה אטומה ודאוושׁא</span><span data-when="en">Testing a sealed or sound-emitting lung</span>
+      <span class="ref">Chullin 47b:8–10</span></h2>
+  <div class="lead"><span data-when="he">שיטות בדיקה: רבינא לאוטם בריאה — קורעים; אם יש מוגלא כשרה, ואם לא בודקים בנוצה ורוק. רב יוסף: קרום שעלה מחמת מכה אינו קרום; וריאה דאוושׁא (משמיעה קול) בודקים בנוצה ובמים פושרים — לא בחמים ולא בקרים — והאוושׁא היא זיקא בין הקרומים.</span><span data-when="en">Testing methods: Ravina for a sealed area — cut it open; if there is pus it is kosher, if not, test with a feather and saliva. Rav Yosef: a scab-membrane from a wound is no membrane; a sound-emitting lung is tested with a feather and tepid water — not hot, not cold — and the sound is air between the membranes.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רבינא: אטום בריאה — קורעים;<br/>יש מוגלא — כשרה; אין — נוצה/רוק"]:::statement
+  S2["② רב יוסף: קרום שעלה מחמת מכה —<br/>אינו קרום"]:::statement
+  S3["③ רב יוסף: ריאה דאוושׁא — אם יודעים מקום הקול,<br/>נוצה/גילא/רוק; מבצבצא — טריפה"]:::statement
+  S4["④ ואם לא יודעים — בודקים בפושרים:<br/>לא חמים (כווצי) ולא קרים (מטרשי)"]:::answer
+  C5["⑤ מסקנה: התחתון ניקב, העליון לא;<br/>והאוושׁא — זיקא דביני וביני"]:::conclusion
+  S1 --> S2
+  S2 --> S3
+  S3 -->|ואי לא ידעינן| S4
+  S4 --> C5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Ravina: a sealed area — cut it open;<br/>pus — kosher; none — feather/saliva"]:::statement
+  S2["② Rav Yosef: a scab-membrane from a wound —<br/>is not a true membrane"]:::statement
+  S3["③ Rav Yosef: a lung that emits a sound — if we know where,<br/>feather/straw/saliva; if it bubbles — tereifa"]:::statement
+  S4["④ If we do not know — test in tepid water:<br/>not hot (contracts), not cold (cracks)"]:::answer
+  C5["⑤ Conclusion: the inner is perforated, the outer not;<br/>the sound — air in between the membranes"]:::conclusion
+  S1 --> S2
+  S2 --> S3
+  S3 -->|If we do not know| S4
+  S4 --> C5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָטוּם בְּרֵיאָה … קָרְעִינַן לַהּ, אִי אִית בַּהּ מוּגְלָא –<br/>כְּשֵׁרָה, וְאִי לָא – גַּדְפָּא אוֹ רוּקָּא"]:::statement
+  S2["② קְרוּם שֶׁעָלָה מֵחֲמַת מַכָּה בָּרֵיאָה –<br/>אֵינוֹ קְרוּם"]:::statement
+  S3["③ הַאי רֵיאָה דְּאָוְושָׁא, אִי יָדְעִינַן הֵיכָא … גַּדְפָּא<br/>אוֹ גִילָא אוֹ רוּקָּא, אִי מְבַצְבְּצָא – טְרֵפָה"]:::statement
+  S4["④ בְּחַמִּימֵי לָא דְּכָוְוצִי, בְּקָרִירֵי לָא דִּמְטָרְשִׁי,<br/>אֶלָּא בָּדְקִינַן לַהּ בְּפָשׁוֹרֵי"]:::answer
+  C5["⑤ תַּתָּאָה אִינְּקִיב, עִילָּאָה לָא אִינְּקִיב,<br/>וְהַאי דְּאָוְושָׁא – זִיקָא דְּבֵינֵי וּבֵינֵי הוּא"]:::conclusion
+  S1 --> S2
+  S2 --> S3
+  S3 -->|ואי לא ידעינן| S4
+  S4 --> C5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ז ב — Chullin 47b:8</span></div>
+  <div class="orig">אָמַר רָבִינָא: אָטוּם בְּרֵיאָה, מַיְיתִינַן סַכִּינָא וְקָרְעִינַן לַהּ, אִי אִית בַּהּ מוּגְלָא – וַדַּאי מֵחֲמַת מוּגְלָא הוּא, וּכְשֵׁרָה, וְאִי לָא – מוֹתְבִינַן עֲלַהּ גַּדְפָּא אוֹ רוּקָּא, אִי מְבַצְבְּצָא – כְּשֵׁרָה, וְאִי לָא – טְרֵפָה.</div>
+  <div class="trans" data-when="he">אמר רבינא: אם יש מקום אטום בריאה שאינו מתנפח — מביאים סכין וקורעים אותו. אם יש בו מוגלה — ודאי שנאטם מחמת המוגלה, וכשרה. ואם אין בו מוגלה — מניחים על הפתח נוצה או רוק ומנפחים את הריאה: אם הנוצה מתנדנדת או הרוק מבעבע (סימן שאוויר מגיע לשם) — כשרה, ואם לא — יש פגם, וטריפה.</div>
+  <div class="trans" data-when="en">§ Ravina says: If there was a sealed area in the lung that does not inflate, we bring a knife and tear it open. If there is pus in the sealed area, then it was definitely sealed due to the pus, and the animal is kosher. But if we do not find pus there, we lay a feather or saliva on the opening and inflate the lung. If the saliva bubbles or the feather moves, the animal is kosher, since some air does reach the area, and if not, there is some defect in the lung, and the animal is a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ז ב — Chullin 47b:9</span></div>
+  <div class="orig">אָמַר רַב יוֹסֵף: קְרוּם שֶׁעָלָה מֵחֲמַת מַכָּה בָּרֵיאָה – אֵינוֹ קְרוּם, וְאָמַר רַב יוֹסֵף: הַאי רֵיאָה דְּאָוְושָׁא, אִי יָדְעִינַן הֵיכָא אָוְושָׁא – מַנְּחִינַן עֲלַהּ גַּדְפָּא אוֹ גִילָא אוֹ רוּקָּא, אִי מְבַצְבְּצָא – טְרֵפָה, וְאִי לָא – כְּשֵׁרָה, וְאִי לָא יָדְעִינַן לַהּ – מַיְיתִינַן מְשִׁיכְלְתָא דְּמַיָּא פָּשׁוֹרֵי וּמוֹתְבִינַן לַהּ בְּגַוַּהּ.</div>
+  <div class="trans" data-when="he">אמר רב יוסף: קרום שעלה (על נֶקֶב) מחמת מכה בריאה — אינו נחשב קרום, שכן אינו מתקיים. ועוד אמר רב יוסף: ריאה המשמיעה קול בשעת ניפוח (״דאוושׁא״) — אם יודעים מהיכן הקול, מניחים שם נוצה או גבעול או רוק: אם מבעבע (שהאוויר יוצא משם) — טריפה, שהריאה ניקבה בשני הקרומים; ואם לא — כשרה. ואם אין יודעים מהיכן הקול — מביאים גיגית מים פושרים ומניחים בתוכה את הריאה.</div>
+  <div class="trans" data-when="en">Rav Yosef says: A membrane that appeared due to a wound in the lung, i.e., a scab that covered a perforation through the lung, is not considered a true membrane, since it does not last. And Rav Yosef says: With regard to this lung that emits a sound when inflated, if we know from where it emits a sound, we set a feather, or straw, or saliva on that point. If the saliva bubbles when the lung is inflated, the animal is a tereifa, since this proves that the lung is perforated through both membranes. And if not, the animal is kosher. And if we do not know from where it emits a sound, we bring a basin of tepid water and set the lung inside it.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span><span class="num">5</span> <span class="ref">חולין מ״ז ב — Chullin 47b:10</span></div>
+  <div class="orig">בְּחַמִּימֵי לָא – דְּכָוְוצִי, בְּקָרִירֵי לָא – דִּמְטָרְשִׁי, אֶלָּא בָּדְקִינַן לַהּ בְּפָשׁוֹרֵי. אִי מְבַצְבְּצָא – טְרֵפָה, וְאִי לָא – כְּשֵׁרָה. תַּתָּאָה אִינְּקִיב, עִילָּאָה לָא אִינְּקִיב, וְהַאי דְּאָוְושָׁא – זִיקָא דְּבֵינֵי וּבֵינֵי הוּא.</div>
+  <div class="trans" data-when="he">אין בודקים במים חמים — מפני שהם מכווצים את הריאה וסוגרים את הנֶקֶב; ולא במים קרים — מפני שהם מקשים את הריאה ועלולים לבקעהּ; אלא בודקים במים פושרים. אם מבעבע — טריפה, ואם לא — כשרה, שכן ברור שרק הקרום הפנימי ניקב והחיצון שלם, והקול שנשמע הוא רוח (זיקא) הנעה בחלל שבין שני הקרומים.</div>
+  <div class="trans" data-when="en">One cannot place it in hot water, as it causes the lung to contract, closing the perforation. And one cannot place it in cold water, as it hardens the lung and may cause it to crack. Rather, we check it in tepid water. If the water bubbles, the animal is a tereifa. And if not, the animal is kosher, since it is apparent that only the inner membrane is perforated and the outer membrane is not perforated, and the fact that it emits a sound is due to the air moving in the space between the two membranes.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">ריאה שנשפכה כקיתון — כשרה</span><span data-when="en">A lung poured out like water — kosher</span>
+      <span class="ref">Chullin 47b:11–15</span></h2>
+  <div class="lead"><span data-when="he">עולא בשם רבי יוחנן: ריאה שנשפכה כקיתון — כשרה, כי חיסרון מבפנים אינו חיסרון. רבי אבא מקשה ממשנת ״חסרה״, ונדחה לרבי שמעון. מעשה רבי נתן אצל רבי חנניה מסייע. רבא מסייג: ובלבד שהסמפונות קיימים — ונבדק בצעא דקוניא.</span><span data-when="en">Ulla citing Rabbi Yoḥanan: a lung poured out like water from a jug is kosher, since a deficiency on the inside is no deficiency. Rabbi Abba objects from the mishna's "missing a piece," and is deflected via Rabbi Shimon. Rabbi Natan's deed at Rabbi Ḥananya's supports it. Rava qualifies: only if the bronchi remain — tested in a glazed vessel.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עולא א״ר יוחנן: ריאה שנשפכה כקיתון — כשרה;<br/>חיסרון מבפנים לא שמיה חיסרון"]:::statement
+  Q2{"② איתיביה רבי אבא: ״נחסרה״ — אם מבחוץ היינו<br/>ניקבה, אלא מבפנים — ושמע מינה חיסרון!"}:::question
+  A3["③ לעולם מבחוץ — וצריכא לרבי שמעון<br/>(עד שתינקב לבית הסמפונות)"]:::answer
+  P4["④ מעשה: רבי חנניה חלש, רבי נתן וגדולי הדור —<br/>ריאה שנשפכה כקיתון, ואכשרהּ"]:::proof
+  S5["⑤ רבא: והוא דקיימי סמפונות;<br/>בודקים בצעא דקוניא — שוריָיקי חיוורי — טריפה"]:::statement
+  S1 -->|איתיביה| Q2
+  Q2 -->|תירוץ| A3
+  A3 --> P4
+  P4 -->|סייג| S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Ulla citing R. Yoḥanan: a lung poured out like water — kosher;<br/>a deficiency on the inside is no deficiency"]:::statement
+  Q2{"② R. Abba objects: ׳missing a piece׳ — if outside, that is<br/>perforated; so inside — learn a deficiency counts!"}:::question
+  A3["③ Actually outside — and it is needed for R. Shimon<br/>(not a tereifa until perforated through to the bronchi)"]:::answer
+  P4["④ Incident: R. Ḥananya was sick; R. Natan and the great scholars —<br/>a lung poured out like water, and he deemed it kosher"]:::proof
+  S5["⑤ Rava: only if the bronchi remain;<br/>test in a glazed vessel — white streaks — tereifa"]:::statement
+  S1 -->|Objection| Q2
+  Q2 -->|Answer| A3
+  A3 --> P4
+  P4 -->|Qualification| S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רֵיאָה שֶׁנִּשְׁפְּכָה כְּקִיתוֹן, כְּשֵׁרָה …<br/>חִסָּרוֹן מִבִּפְנִים לָא שְׁמֵיהּ חִסָּרוֹן"]:::statement
+  Q2{"② הָרֵיאָה שֶׁנִּיקְּבָה אוֹ שֶׁחָסְרָה … אֶלָּא לָאו מִבִּפְנִים,<br/>וּשְׁמַע מִינַּהּ חִסָּרוֹן מִבִּפְנִים שְׁמֵיהּ חִסָּרוֹן"}:::question
+  A3["③ לְעוֹלָם מִבַּחוּץ … לָא צְרִיכָא לְרַבִּי שִׁמְעוֹן,<br/>עַד שֶׁתִּנָּקֵב לְבֵית הַסִּמְפּוֹנוֹת"]:::answer
+  P4["④ רַבִּי חֲנַנְיָה חֲלַשׁ … רַבִּי נָתָן וְכׇל גְּדוֹלֵי הַדּוֹר,<br/>אַיְיתוֹ … רֵיאָה שֶׁנִּשְׁפְּכָה כְּקִיתוֹן, וְאַכְשְׁרַהּ"]:::proof
+  S5["⑤ רָבָא: וְהוּא דְּקָיְימִי סִמְפּוֹנוֹת … צָעָא דְּקוּנְיָא …<br/>אִי אִית בַּהּ שׁוּרְיָיקֵי חִיוָּרֵי – טְרֵפָה"]:::statement
+  S1 -->|איתיביה| Q2
+  Q2 -->|תירוץ| A3
+  A3 --> P4
+  P4 -->|סייג| S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ז ב — Chullin 47b:11</span></div>
+  <div class="orig">אָמַר עוּלָּא אָמַר רַבִּי יוֹחָנָן: רֵיאָה שֶׁנִּשְׁפְּכָה כְּקִיתוֹן, כְּשֵׁרָה. אַלְמָא קָסָבַר: חִסָּרוֹן מִבִּפְנִים לָא שְׁמֵיהּ חִסָּרוֹן.</div>
+  <div class="trans" data-when="he">אמר עולא בשם רבי יוחנן: ריאה שנימוחה מבפנים ובשרה נשפך כמים מקיתון (כד) — כשרה. משמע שרבי יוחנן סובר: חיסרון מבפנים אינו נחשב חיסרון; רק חיסרון בדופן או בקרום הריאה מטריף.</div>
+  <div class="trans" data-when="en">§ Ulla says that Rabbi Yoḥanan says: An animal with a lung that liquefied and can be poured out like water from a jug is kosher. The Gemara notes: Evidently, Rabbi Yoḥanan holds that a deficiency on the inside of an organ is not considered a deficiency. Only a deficiency in the wall or membrane of an organ renders an animal a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ז ב — Chullin 47b:12</span></div>
+  <div class="orig">אֵיתִיבֵיהּ רַבִּי אַבָּא לְעוּלָּא: ״הָרֵיאָה שֶׁנִּיקְּבָה אוֹ שֶׁחָסְרָה״. מַאי חָסְרָה? אִילֵימָא מִבַּחוּץ – הַיְינוּ נִיקְּבָה! אֶלָּא לָאו מִבִּפְנִים, וּשְׁמַע מִינַּהּ: חִסָּרוֹן מִבִּפְנִים שְׁמֵיהּ חִסָּרוֹן!</div>
+  <div class="trans" data-when="he">הקשה רבי אבא לעולא ממשנתנו: ״הריאה שניקבה או שחסרה — טריפה״. מהי ״חסרה״? אם תאמר שחסרה מבחוץ — הרי זה ממש כ״ניקבה״ (וכפל לשון מיותר)! אלא בהכרח שחסרה מבפנים — ושמע מינה שחיסרון מבפנים שמו חיסרון, ומטריף, נגד רבי יוחנן!</div>
+  <div class="trans" data-when="en">Rabbi Abba raised an objection to Ulla from the mishna, which states: The lung that was perforated or that was missing a piece renders the animal a tereifa. What is the case of a lung that was missing a piece? If we say that it was missing a piece on the outside, this is the same as if it was perforated, since any missing piece of the lung wall would constitute a perforation. Rather, is it not referring to a missing piece on the inside? If so, learn from the mishna that a deficiency on the inside of an organ is considered a deficiency to render the animal a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ז ב — Chullin 47b:13</span></div>
+  <div class="orig">לָא, לְעוֹלָם מִבַּחוּץ, וּדְקָא אָמְרַתְּ הַיְינוּ נִיקְּבָה – לָא צְרִיכָא לְרַבִּי שִׁמְעוֹן, דְּאָמַר: עַד שֶׁתִּנָּקֵב לְבֵית הַסִּמְפּוֹנוֹת. הָנֵי מִילֵּי נֶקֶב דְּלֵית בֵּיהּ חִסָּרוֹן, אֲבָל נֶקֶב דְּאִית בֵּיהּ חִסָּרוֹן – אֲפִילּוּ רַבִּי שִׁמְעוֹן מוֹדֶה.</div>
+  <div class="trans" data-when="he">משיבים: לא; לעולם המשנה עוסקת בחסרה מבחוץ, ומה שהקשית שזה כ״ניקבה״ — לא קשה, כי נצרך לדעת רבי שמעון, האומר שאין הריאה טריפה אלא אם ניקבה עד בית הסמפונות. בא הכתוב לחדש: דין רבי שמעון אמור דווקא בנֶקֶב שאין בו חיסרון; אבל נֶקֶב שיש עמו חיסרון בשר — אפילו רבי שמעון מודה שטריפה, אף שלא הגיע לסמפונות.</div>
+  <div class="trans" data-when="en">The Gemara responds: No, the mishna actually is referring to a missing piece on the outside. And with regard to that which you said: This is the same as if it was perforated, one may respond that no, it is necessary to mention both cases to account for the opinion of Rabbi Shimon in the mishna, who says: It is not a tereifa until the lung is perforated through to the bronchi. By mentioning both cases, the mishna teaches that this statement of Rabbi Shimon applies only to a small perforation that does not constitute a deficiency. But in the case of a perforation so large that it constitutes a deficiency, even Rabbi Shimon concedes that it renders the animal a tereifa even if the perforation does not reach the bronchi.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ז ב — Chullin 47b:14</span></div>
+  <div class="orig">רַבִּי חֲנַנְיָה חֲלַשׁ, עָל לְגַבֵּיהּ רַבִּי נָתָן וְכׇל גְּדוֹלֵי הַדּוֹר, אַיְיתוֹ קַמֵּיהּ רֵיאָה שֶׁנִּשְׁפְּכָה כְּקִיתוֹן, וְאַכְשְׁרַהּ.</div>
+  <div class="trans" data-when="he">מעשה: רבי חנניה חלה; נכנסו לבקרו רבי נתן וכל גדולי הדור. הביאו לפניו ריאה שנשפכה כקיתון, והכשירהּ. הרי ראיה לדברי עולא ורבי יוחנן.</div>
+  <div class="trans" data-when="en">The Gemara relates that Rabbi Ḥananya became sick. Rabbi Natan and all the eminent scholars of the generation entered before him to visit. They brought before him a lung that could be poured out like water from a jug, and he deemed the animal kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ז ב — Chullin 47b:15</span></div>
+  <div class="orig">אָמַר רָבָא: וְהוּא דְּקָיְימִי סִמְפּוֹנוֹת. אֲמַר לֵיהּ רַב אַחָא בְּרֵיהּ דְּרָבָא לְרַב אָשֵׁי: מְנָא יָדְעִינַן? אֲמַר לֵיהּ: מַיְיתִינַן צָעָא דְּקוּנְיָא, וְשָׁפְכִינַן לַהּ בְּגַוֵּיהּ. אִי אִית בַּהּ שׁוּרְיָיקֵי חִיוָּרֵי – טְרֵפָה, וְאִי לָא – כְּשֵׁרָה.</div>
+  <div class="trans" data-when="he">אמר רבא: ריאה שנשפכה כשרה רק אם הסמפונות (צינורות האוויר) עדיין קיימים ולא נימוחו; שאל רב אחא בנו של רבא את רב אשי: מניין נדע אם הסמפונות קיימים? השיב לו: מביאים צלחת חרס מצופה (״צעא דקוניא״) ושופכים לתוכה את החומר שנשפך; אם יש בו פסים לבנים (שׁוריָיקי חיוורי) — סימן שהסמפונות נימוחו, וטריפה; ואם לא — כשרה.</div>
+  <div class="trans" data-when="en">Rava said: This is the halakha only if the bronchi still exist and only the flesh of the lung has liquefied. Rav Aḥa, son of Rava, said to Rav Ashi: From where do we know whether the bronchi still exist? Rav Ashi said to him: We bring a glazed earthenware vessel with no cracks, so the contents can be observed, and we pour the lung into it. If there are white streaks in it, the animal is a tereifa, as the white streaks are remains of the liquefied bronchi. And if not, the animal is kosher.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">נימוקה, ניטלה, התליע — כשרה</span><span data-when="en">Atrophied, removed, infested — kosher</span>
+      <span class="ref">Chullin 47b:16–48a:1</span></h2>
+  <div class="lead"><span data-when="he">המשך רשימת ההכשרים: רב נחמן — ריאה שנימוקה וקרומה קיים, כשרה, וברייתא מסייעת (אפילו מחזקת רביעית). ניטלה שלפוחית — כשרה. והתליע כבד — מעשה שעלו בני עסיא שלוש רגלים ליבנה, וברגל השלישי התירוהו.</span><span data-when="en">The list of leniencies continues: Rav Naḥman — a lung that atrophied with its membrane intact is kosher, and a baraita supports it (even holding a quarter-log). A removed womb — kosher. And an infested liver — the residents of Asia Minor went up to Yavne thrice, and on the third occasion it was permitted.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב נחמן: ריאה שנימוקה וקרומה קיים —<br/>כשרה"]:::statement
+  P2["② תניא נמי הכי: אפילו מחזקת רביעית —<br/>כשרה"]:::proof
+  S3["③ ניטלה שלפוחית שלהּ — כשרה"]:::statement
+  C4["④ התליע כבד — מעשה: עלו בני עסיא ג׳ רגלים<br/>ליבנה; ברגל השלישי התירוהו"]:::conclusion
+  S1 -->|תניא נמי הכי| P2
+  P2 --> S3
+  S3 --> C4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Naḥman: a lung that atrophied with its<br/>membrane intact — kosher"]:::statement
+  P2["② So too a baraita: even if it can hold a<br/>quarter-log — kosher"]:::proof
+  S3["③ If its womb was removed — kosher"]:::statement
+  C4["④ An infested liver — an incident: Asia Minor went up<br/>thrice to Yavne; on the third occasion, permitted"]:::conclusion
+  S1 -->|So too a baraita| P2
+  P2 --> S3
+  S3 --> C4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רֵיאָה שֶׁנִּימּוֹקָה וּקְרוּם שֶׁלָּהּ קַיָּים –<br/>כְּשֵׁרָה"]:::statement
+  P2["② תַּנְיָא נָמֵי הָכִי … אֲפִילּוּ מַחְזֶקֶת<br/>רְבִיעִית – כְּשֵׁרָה"]:::proof
+  S3["③ נִיטְּלָה שַׁלְפּוּחִית שֶׁלָּהּ – כְּשֵׁרָה"]:::statement
+  C4["④ הִתְלִיעַ כָּבֵד שֶׁלָּהּ … עָלוּ … בְּנֵי עַסְיָא שְׁלֹשָׁה<br/>רְגָלִים לְיַבְנֶה, לְרֶגֶל שְׁלִישִׁי הִתִּירוּהָ לָהֶם"]:::conclusion
+  S1 -->|תניא נמי הכי| P2
+  P2 --> S3
+  S3 --> C4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span><span class="num">2</span> <span class="ref">חולין מ״ז ב — Chullin 47b:16</span></div>
+  <div class="orig">אָמַר רַב נַחְמָן: רֵיאָה שֶׁנִּימּוֹקָה וּקְרוּם שֶׁלָּהּ קַיָּים – כְּשֵׁרָה. תַּנְיָא נָמֵי הָכִי: רֵיאָה שֶׁנִּימּוֹקָה וּקְרוּם שֶׁלָּהּ קַיָּים, אֲפִילּוּ מַחְזֶקֶת רְבִיעִית – כְּשֵׁרָה. נִיטְּלָה</div>
+  <div class="trans" data-when="he">אמר רב נחמן: ריאה שבשרה נימוק (נמס) אך קרומה החיצוני קיים — כשרה. וברייתא מסייעת: ריאה שנימוקה וקרומה קיים — אפילו אם החלל שנתרוקן מן הבשר מחזיק רביעית (לוג) נוזל — כשרה. (תחילת רשימת ״ניטלה״.)</div>
+  <div class="trans" data-when="en">Rav Naḥman says: If the lung was partially atrophied and only part of the flesh remains, but its membrane still exists, the animal is kosher. The Gemara notes: This is also taught in a baraita: If the lung was atrophied, but its membrane still exists, even if the space vacated by the atrophied lung can hold a quarter-log of fluid, the animal is kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span><span class="num">4</span> <span class="ref">חולין מ״ח א — Chullin 48a:1</span></div>
+  <div class="orig">שַׁלְפּוּחִית שֶׁלָּהּ – כְּשֵׁרָה. הִתְלִיעַ כָּבֵד שֶׁלָּהּ – זֶה הָיָה מַעֲשֶׂה, וְעָלוּ עָלֶיהָ בְּנֵי עַסְיָא שְׁלֹשָׁה רְגָלִים לְיַבְנֶה, לְרֶגֶל שְׁלִישִׁי הִתִּירוּהָ לָהֶם.</div>
+  <div class="trans" data-when="he">אם ניטלה שלפוחית (כיס) שלהּ — כשרה. אם התליע הכבד שלהּ (התמלא תולעים) — זה היה מעשה, ועלו אנשי עסיא (מקום) שלוש פעמים ברגלים אל הסנהדרין ביבנה לשאול על דינו; ברגל השלישי, לאחר שהתיישבו בדבר — התירוהו להם.</div>
+  <div class="trans" data-when="en">If its womb was removed, the animal is kosher. If its liver became infested by worms, with regard to this there was an incident, and the residents of Asia Minor went up on three occasions to the great Sanhedrin in Yavne to inquire with regard to the halakha. On the first two occasions they did not receive an answer; on the third occasion, after the Sanhedrin had deliberated, they permitted the animal to them.</div>
+</div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var badges = qs[i].querySelectorAll('.num');
+      for (var j = 0; j < badges.length; j++) {
+        if (parseInt(badges[j].textContent, 10) === n) return qs[i];
+      }
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
