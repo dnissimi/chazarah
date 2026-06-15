@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<!--
+  gemara-map — Chullin 44 (44a:10-45a:1), bilingual HE/EN, self-describing.
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין מ״ד</title>
+<meta name="description" content="עיקור סימנים ופסוקת הגרגרת: שמואל מכשיר תורבץ הוושט שניטל רובו, ונחלק רב פפא; וכמה רוב הגרגרת. ומכאן לדיני הוראת חכם — אין חברו רשאי להתיר, וכיצד מותר לחכם לאכול ולקנות מן הטרפה שהתיר.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="44">
+<meta name="gemara-map:sefaria-ref" content="Chullin 44">
+<meta name="gemara-map:topic-he" content="עיקור סימנים והוראת חכם">
+<meta name="gemara-map:topic-en" content="Ripped simanim and a Sage's ruling">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין מ״ד">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 44">
+<meta name="gemara-map:blurb-he" content="עיקור סימנים ופסוקת הגרגרת: שמואל מכשיר תורבץ הוושט שניטל רובו, ונחלק רב פפא; וכמה רוב הגרגרת. ומכאן לדיני הוראת חכם — אין חברו רשאי להתיר, וכיצד מותר לחכם לאכול ולקנות מן הטרפה שהתיר.">
+<meta name="gemara-map:blurb-en" content="Ripped simanim and a cut windpipe: Shmuel permits an animal whose gullet-entrance is mostly detached, and Rav Pappa disputes; and how much of the windpipe counts as a majority. From there to the laws of a Sage's ruling — another may not permit what one prohibited, and how a Sage may eat and buy from the tereifa he permitted.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין מ״ד</span><span data-when="en">Sugya map — Chullin 44</span></h1>
+    <div class="subtitle"><span data-when="he">חולין מ״ד א:י׳–מ״ה א:א׳ · Chullin 44a:10–45a:1 · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 44a:10–45a:1 · חולין מ״ד א:י׳–מ״ה א:א׳ · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> תחילה דיני טריפה — עיקור סימנים: שמואל מכשיר תורבץ הוושט שניטל רובו (לא כולו), רב פפא מקשה משום עיקור, והדבר תלוי בין ״אקפולי״ ל״אפרוקי״; וכמה ״רוב״ בפסוקת הגרגרת. מכאן עוברת הסוגיה למעשה שבא לפני רב, שנשלח לרבה בר בר חנה והכשירוֹ — ומכך נפתח דיון בהלכות הוראת חכם: אין חבר רשאי להתיר מה שאסר, וכיצד מותר לחכם לאכול ולקנות מטרפה שהתיר (מילתא דתליא בסברא מול גמרא, ומתקלא מוכח) — ובשבח הרואה טרפה לעצמו ושונא מתנות.</span>
+    <span data-when="en"><b>Bottom line:</b> First the laws of tereifa — ripped simanim: Shmuel permits an animal whose gullet-entrance is mostly (not wholly) detached, Rav Pappa objects from "ripping," and it turns on "peeled off" versus "forcibly separated"; and how much counts as a "majority" of a cut windpipe. The sugya then turns to a case brought before Rav, sent to Rabba bar bar Ḥana who permitted it — opening a discussion of a Sage's ruling: another may not permit what one prohibited, and how a Sage may eat and buy from a tereifa he permitted (a matter of tradition versus reasoning, and the scale proves the price) — closing in praise of one who "sees his own tereifa" and hates gifts.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="sugya overview" id="overview">
+  <h2><span data-when="he">מפת־על — חמשת שלבי הסוגיה</span><span data-when="en">Overview — the five stages of the sugya</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · תורבץ הוושט שניטל — עיקור סימנים<br/>מ״ד א:י׳–ט״ו"]:::statement
+  O2["2 · פסוקת הגרגרת ברובה — מעשה דרב<br/>מ״ד א:ט״ז–מ״ד ב:ב׳"]:::statement
+  O3["3 · אין חברו רשאי להתיר — וכיצד אכל?<br/>מ״ד ב:ג׳–ו׳"]:::question
+  O4["4 · חשד, ומתקלא מוכח<br/>מ״ד ב:ז׳–ט׳"]:::answer
+  O5["5 · הרואה טרפה לעצמו ושונא מתנות<br/>מ״ד ב:י׳–מ״ה א:א׳"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  O1["1 · A detached gullet-entrance — ripped simanim<br/>44a:10–15"]:::statement
+  O2["2 · A windpipe cut in its majority — the case before Rav<br/>44a:16–44b:2"]:::statement
+  O3["3 · Another may not permit — and how could he eat?<br/>44b:3–6"]:::question
+  O4["4 · Suspicion, and the scale proves the price<br/>44b:7–9"]:::answer
+  O5["5 · One who sees his own tereifa and hates gifts<br/>44b:10–45a:1"]:::conclusion
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+  </section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">תורבץ הוושט שניטל — עיקור סימנים</span><span data-when="en">A detached gullet-entrance — ripped simanim</span>
+      <span class="ref">Chullin 44a:10–15</span></h2>
+  <div class="lead"><span data-when="he">שמואל מכשיר תורבץ הוושט שניטל כולו מן הלחי, ומביא ראיה מן המשנה. רב פפא מקשה: הרי יש כאן עיקור סימנים! הסוגיה מיישבת את המשנה (איגום מעל הסימנים), מתקנת את שמואל ל״רובו״, ומיישבת את הסתירה בין ״אקפולי״ ל״אפרוקי״.</span><span data-when="en">Shmuel deems kosher an animal whose gullet-entrance was wholly detached from the jaw, citing the mishna. Rav Pappa objects: surely this is a ripping of the simanim! The sugya resolves the mishna (severed above the simanim), emends Shmuel to "mostly," and reconciles the contradiction between "peeled off" and "forcibly separated."</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שמואל: תורבץ הוושט שניטל כולו מהלחי —<br/>כשר; וראיה מהמשנה: ניטל הלחי התחתון — כשר"]:::statement
+  Q2{"② מתקיף רב פפא: והאיכא עיקור סימנים?"}:::question
+  Q3{"③ ולרב פפא קשה גם המשנה:<br/>ניטל הלחי — כשר!"}:::question
+  A4["④ המשנה לרב פפא לא קשה — הא דאיגום<br/>מעל הסימנים; אבל לשמואל קשה"]:::answer
+  A5["⑤ לא תימא כולו — אלא אימא רובו"]:::answer
+  Q6{"⑥ והא אמר שמואל: סימנים שנדלדלו ברובן — טרפה!<br/>תירוץ: הא דאקפולי, התם דאפרוקי"}:::answer
+  S1 -->|מתקיף| Q2
+  Q2 -->|וגם| Q3
+  Q3 -->|בשלמא| A4
+  A4 -->|תירוץ לשמואל| A5
+  A5 -->|קושיא ויישוב| Q6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Shmuel: a gullet-entrance wholly detached from the jaw —<br/>kosher; proof from the mishna: lower jaw detached — kosher"]:::statement
+  Q2{"② Rav Pappa objects: but isn׳t there a ripping of the simanim?"}:::question
+  Q3{"③ For Rav Pappa the mishna is also hard:<br/>jaw detached — yet kosher!"}:::question
+  A4["④ For Rav Pappa the mishna is fine — severed above<br/>the simanim; but it is hard for Shmuel"]:::answer
+  A5["⑤ Do not say ׳wholly׳ — rather say ׳mostly׳"]:::answer
+  Q6{"⑥ But Shmuel said: simanim mostly detached — tereifa!<br/>Answer: that is ׳peeled off,׳ this is ׳forcibly separated׳"}:::answer
+  S1 -->|Objection| Q2
+  Q2 -->|And also| Q3
+  Q3 -->|Granted| A4
+  A4 -->|Answer for Shmuel| A5
+  A5 -->|Difficulty and answer| Q6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תּוּרְבַּץ הַוֶּושֶׁט שֶׁנִּיטַּל כּוּלּוֹ מִלֶּחִי – כָּשֵׁר,<br/>וּתְנָא תּוּנָא: נִיטַּל לֶחִי הַתַּחְתּוֹן – כָּשֵׁר"]:::statement
+  Q2{"② מַתְקֵיף לַהּ רַב פָּפָּא:<br/>וְהָאִיכָּא עִיקּוּר סִימָנִים?"}:::question
+  Q3{"③ וּלְרַב פָּפָּא קַשְׁיָא מַתְנִיתִין:<br/>נִיטַּל לֶחִי הַתַּחְתּוֹן – כָּשֵׁר"}:::question
+  A4["④ בִּשְׁלָמָא מַתְנִיתִין לְרַב פָּפָּא לָא קַשְׁיָא, הָא דְּאִיגּוּם<br/>אִיגּוֹמֵי מֵעִילָּוֵי סִימָנִים, אֶלָּא לִשְׁמוּאֵל קַשְׁיָא"]:::answer
+  A5["⑤ לָא תֵּימָא כּוּלּוֹ,<br/>אֶלָּא אֵימָא רוּבּוֹ"]:::answer
+  Q6{"⑥ וְהָאָמַר שְׁמוּאֵל: סִימָנִים שֶׁנִּדַּלְדְּלוּ בְּרוּבָּן – טְרֵפָה?<br/>הָא דְּאִקְּפַל אִיקְּפוֹלֵי, הָתָם דְּאִפְּרוּק אִפְּרוֹקֵי"}:::answer
+  S1 -->|מתקיף| Q2
+  Q2 -->|וגם| Q3
+  Q3 -->|בשלמא| A4
+  A4 -->|תירוץ לשמואל| A5
+  A5 -->|קושיא ויישוב| Q6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ד א — Chullin 44a:10</span></div>
+  <div class="orig">אָמַר רַב נַחְמָן אָמַר שְׁמוּאֵל: תּוּרְבַּץ הַוֶּושֶׁט שֶׁנִּיטַּל כּוּלּוֹ מִלֶּחִי – כָּשֵׁר, וּתְנָא תּוּנָא: נִיטַּל לֶחִי הַתַּחְתּוֹן – כָּשֵׁר.</div>
+  <div class="trans" data-when="he">אמר רב נחמן בשם שמואל: ״תורבץ הוושט״ (ראש הוושט העליון) שניטל כולו מן הלחי — הבהמה כשרה. ותנא של המשנה שנה כמותו (לקמן נ״ד): ניטל הלחי התחתון — כשרה.</div>
+  <div class="trans" data-when="en">§ Rav Naḥman says that Shmuel says: If the entrance of the gullet was completely detached from the jaw, the animal is kosher. And the tanna of the mishna also taught this later (54a): If the lower jaw was detached entirely, it is kosher.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ד א — Chullin 44a:11</span></div>
+  <div class="orig">מַתְקֵיף לַהּ רַב פָּפָּא: וְהָאִיכָּא עִיקּוּר סִימָנִים?</div>
+  <div class="trans" data-when="he">מקשה רב פפא: הרי כשניטל ראש הוושט יש כאן עיקור סימנים (הוושט והקנה נעקרו ממקומם) — וזה אמור להטריף!</div>
+  <div class="trans" data-when="en">Rav Pappa objects to this: How can Shmuel say that if the entrance of the gullet is detached the animal is kosher? But isn’t there ripping of the simanim, the gullet and the windpipe, from their place? This should render the animal a tereifa.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ד א — Chullin 44a:12</span></div>
+  <div class="orig">וּלְרַב פָּפָּא קַשְׁיָא מַתְנִיתִין: נִיטַּל לֶחִי הַתַּחְתּוֹן – כָּשֵׁר.</div>
+  <div class="trans" data-when="he">והגמרא מעירה: לפי רב פפא קשה גם המשנה עצמה: ״ניטל הלחי התחתון — כשר״; והרי כשניטל הלחי בהכרח נעקרו הסימנים עמו, שהם מחוברים אליו!</div>
+  <div class="trans" data-when="en">The Gemara interjects: But according to Rav Pappa, the mishna is difficult as well, since it states: If the lower jaw was detached, it is kosher. If the lower jaw is detached, the windpipe and gullet will necessarily be detached as well, since they are attached to it.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ד א — Chullin 44a:13</span></div>
+  <div class="orig">בִּשְׁלָמָא מַתְנִיתִין לְרַב פָּפָּא לָא קַשְׁיָא, הָא דְּאִיעֲקוּר אִיעֲקוֹרֵי, הָא דְּאִיגּוּם אִיגּוֹמֵי מֵעִילָּוֵי סִימָנִים, אֶלָּא לִשְׁמוּאֵל קַשְׁיָא!</div>
+  <div class="trans" data-when="he">בשלמא המשנה אינה קשה לרב פפא: עיקור סימנים מטריף רק כשהסימנים ממש נעקרו מן הלחי; ואילו המשנה עוסקת בלחי שנכרת (״איגום״) מעל מקום חיבור הסימנים, כך שהסימנים נשארו מחוברים לבשר. אבל לשמואל, שהכשיר ניטל ראש הוושט עצמו, קשה!</div>
+  <div class="trans" data-when="en">The Gemara responds: Granted, the mishna is not difficult for Rav Pappa. This halakha, that the ripping of the simanim renders the animal a tereifa, applies only when the simanim are completely ripped from the jaw. That statement of the mishna, that an animal whose jaw is detached is kosher, is referring to a case where the lower jaw is severed above its connection to the simanim, which themselves remain connected to the remaining flesh of the jaw. But the halakha that the ripping of the simanim renders the animal a tereifa is difficult for Shmuel. How can an animal remain kosher when the entrance of its gullet is removed, if this entails the ripping of the simanim?</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ד א — Chullin 44a:14</span></div>
+  <div class="orig">לָא תֵּימָא כּוּלּוֹ, אֶלָּא אֵימָא רוּבּוֹ.</div>
+  <div class="trans" data-when="he">מתרצים: אל תאמר ששמואל הכשיר כשניטל ראש הוושט ״כולו״; אלא אמור שהכשיר רק כשניטל ״רובו״.</div>
+  <div class="trans" data-when="en">The Gemara responds: Do not say that Shmuel deems the animal kosher if the entrance of the gullet was completely detached. Rather, say that he deems it kosher only if it was mostly detached.</div>
+</div>
+<div class="quote">
+  <div><span class="num">6</span> <span class="ref">חולין מ״ד א — Chullin 44a:15</span></div>
+  <div class="orig">וְהָאָמַר רַבָּה בַּר בַּר חָנָה אָמַר שְׁמוּאֵל: סִימָנִים שֶׁנִּדַּלְדְּלוּ בְּרוּבָּן – טְרֵפָה? אָמַר רַב שִׁישָׁא בְּרֵיהּ דְּרַב אִידִי: הָא דְּאִקְּפַל אִיקְּפוֹלֵי, הָתָם דְּאִפְּרוּק אִפְּרוֹקֵי.</div>
+  <div class="trans" data-when="he">ומקשים: והרי רבה בר בר חנה אמר בשם שמואל עצמו: סימנים שנדלדלו (נתרופפו) ברובם — טרפה! אמר רב שישא בנו של רב אידי: כאן (שמכשיר) מדובר ש״נקלף״ ראש הוושט מהבשר אך נשאר רצוף במקום אחד ויכול לחזור; ושם (שמטריף) מדובר ש״נפרק״ — הסימנים נותקו ומחוברים רק בנתחים מפוזרים, ושוב אינו חוזר.</div>
+  <div class="trans" data-when="en">The Gemara asks: But doesn’t Rabba bar bar Ḥana say that Shmuel says: Simanim that were detached in their majority render the animal a tereifa? Rav Sheisha, son of Rav Idi, said: This statement of Shmuel, that the animal is kosher even if the simanim are mostly detached, applies only to a case in which the entrance of the gullet was peeled off from the flesh of the jaw, such that the connected tissue is concentrated in one area. In such a case, the animal might recover. There, where Shmuel deems the animal a tereifa, he is referring to a case in which the simanim were forcibly separated [de’ippruk ipprukei] from the jaw and are connected only by a few discontinuous pieces of flesh. In such a case the animal cannot recover.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">פסוקת הגרגרת ברובה — מעשה דרב</span><span data-when="en">A windpipe cut in its majority — the case before Rav</span>
+      <span class="ref">Chullin 44a:16–44b:2</span></h2>
+  <div class="lead"><span data-when="he">המשנה מנתה ״פסוקת הגרגרת״ כטרפה. הברייתא: שיעורה ברובה; ונחלקו בלשון רב — רוב עוביה או רוב חללה. במעשה שבא לפני רב, בדק רב ברוב עוביה, העירוהו תלמידיו, ושלחהּ לרבה בר בר חנה שהכשירהּ ברוב חללה וקנה מבשרה.</span><span data-when="en">The mishna listed a cut windpipe as a tereifa. The baraita: its measure is its majority; and they dispute Rav's wording — the majority of its width or of its space. In a case brought before Rav, he checked by majority of width, his students reminded him, and he sent it to Rabba bar bar Ḥana, who deemed it kosher by majority of space and bought its meat.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ״פסוקת הגרגרת״: כמה רובה?<br/>רב אמר…"]:::statement
+  S2["② …רוב עוביה; ואמרי לה: רוב חללה"]:::statement
+  S3["③ מעשה: פסוקת באה לפני רב, בדק ברוב עוביה;<br/>אמרו לו רב כהנא ורב אסי — רוב חללה לימדתנו!"]:::statement
+  C4["④ שלחהּ לרבה בר בר חנה — בדקהּ ברוב חללה,<br/>אכשרהּ, וזבן מינה בישרא"]:::conclusion
+  S1 --> S2
+  S2 -->|מעשה| S3
+  S3 -->|שדרה| C4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ׳A cut windpipe׳: how much is its majority?<br/>Rav says…"]:::statement
+  S2["② …majority of its width; some say: of its space"]:::statement
+  S3["③ A case: a cut windpipe came before Rav, who checked by width;<br/>Rav Kahana and Rav Asi: you taught us — by its space!"]:::statement
+  C4["④ He sent it to Rabba bar bar Ḥana — checked by space,<br/>deemed it kosher, and bought meat from it"]:::conclusion
+  S1 --> S2
+  S2 -->|A case| S3
+  S3 -->|He sent it| C4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① כַּמָּה פְּסוּקַת הַגַּרְגֶּרֶת? בְּרוּבָּהּ.<br/>וְכַמָּה רוּבָּה? רַב אָמַר…"]:::statement
+  S2["② רוֹב עוֹבְיָהּ,<br/>וְאָמְרִי לַהּ: רוֹב חֲלָלָהּ"]:::statement
+  S3["③ הָהִיא פְּסוּקַת … דַּאֲתַאי לְקַמֵּיהּ דְּרַב … בָּדֵיק לַהּ בְּרוֹב עוֹבְיָהּ.<br/>אֲמַרוּ … רַב כָּהֲנָא וְרַב אַסִּי: לִימַּדְתָּנוּ רַבֵּינוּ בְּרוֹב חֲלָלָהּ"]:::statement
+  C4["④ שַׁדְּרֵיהּ לְקַמֵּיהּ דְּרַבָּה בַּר בַּר חָנָה, בַּדְקַהּ בְּרוֹב חֲלָלָהּ<br/>וְאַכְשְׁרַהּ, וּזְבַן מִינַּהּ … בִּישְׂרָא"]:::conclusion
+  S1 --> S2
+  S2 -->|מעשה| S3
+  S3 -->|שדרה| C4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ד א — Chullin 44a:16</span></div>
+  <div class="orig">וּפְסוּקַת הַגַּרְגֶּרֶת. תָּנָא: כַּמָּה פְּסוּקַת הַגַּרְגֶּרֶת? בְּרוּבָּהּ. וְכַמָּה רוּבָּה? רַב אָמַר:</div>
+  <div class="trans" data-when="he">המשנה מנתה גם ״פסוקת הגרגרת״ (הקנה שנחתך לרוחבו) כטרפה. שנו בברייתא: כמה צריך שייפסק הקנה כדי להטריף? ברובו. וכמה הוא ״רובו״? רב אמר:</div>
+  <div class="trans" data-when="en">§ The mishna states: Or an animal with a cut windpipe, cut across its width, is a tereifa. With regard to this the Sages taught: How much must the windpipe be cut to render the animal a tereifa? In its majority. And how much is its majority? Rav says:</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ד ב — Chullin 44b:1</span></div>
+  <div class="orig">רוֹב עוֹבְיָהּ, וְאָמְרִי לַהּ: רוֹב חֲלָלָה.</div>
+  <div class="trans" data-when="he">— רוב עוביו (כולל עובי דופן הקנה); ויש שמסרו בשם רב: רוב חללו (השטח הפנימי בלבד, ללא דופן הקנה).</div>
+  <div class="trans" data-when="en">The majority of its width, counting the width of the wall of the windpipe itself, the thickness of which is uneven. And some say that Rav says: The majority of its space, the inner area of the cross section of the windpipe, not counting the width of the windpipe wall.</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span><span class="num">4</span> <span class="ref">חולין מ״ד ב — Chullin 44b:2</span></div>
+  <div class="orig">הָהִיא פְּסוּקַת הַגַּרְגֶּרֶת דַּאֲתַאי לְקַמֵּיהּ דְּרַב, יָתֵיב וְקָא בָּדֵיק לַהּ בְּרוֹב עוֹבְיָהּ. אֲמַרוּ לֵיהּ רַב כָּהֲנָא וְרַב אַסִּי לְרַב: לִימַּדְתָּנוּ רַבֵּינוּ בְּרוֹב חֲלָלָהּ! שַׁדְּרֵיהּ לְקַמֵּיהּ דְּרַבָּה בַּר בַּר חָנָה, בַּדְקַהּ בְּרוֹב חֲלָלָהּ וְאַכְשְׁרַהּ, וּזְבַן מִינַּהּ בִּתְלֵיסַר אִיסְתֵּירֵי פְּשִׁיטֵי בִּישְׂרָא.</div>
+  <div class="trans" data-when="he">בהמה אחת שגרגרתהּ נפסקה הובאה לפני רב לבדיקה, וישב ובדק אותה לפי רוב עובי הקנה. אמרו לו רב כהנא ורב אסי: רבנו, הרי לימדתנו שמודדים ברוב חללה! שלח רב את הבהמה לרבה בר בר חנה, שבדקהּ ברוב חללה והכשירהּ, וקנה מבשרה בשלוש־עשרה איסתירין פשוטות.</div>
+  <div class="trans" data-when="en">The Gemara recounts: There was a certain animal with a cut windpipe that came before Rav, i.e., it was brought for inspection to decide whether it was kosher. Rav was sitting and checking it to see if the windpipe had been cut in the majority of its width. Rav Kahana and Rav Asi said to Rav: Didn’t you teach us, our teacher, that a cut windpipe is measured by the majority of its space? Rav sent the animal before Rabba bar bar Ḥana, who checked it in the majority of its space and deemed it kosher, and purchased meat from it at the price of thirteen plain istera coins.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">אין חברו רשאי להתיר — וכיצד אכל?</span><span data-when="en">Another may not permit — and how could he eat?</span>
+      <span class="ref">Chullin 44b:3–6</span></h2>
+  <div class="lead"><span data-when="he">כיצד הכשיר רבה בר בר חנה מה שרב עמד לאסור? אין חבר רשאי להתיר — אך רב עדיין לא אסר בפועל. וכיצד אכל מבשרה? פסוק יחזקאל ודרשתו על ״בהמה שהורה בה חכם״; והיישוב: זו מילתא דתליא בסברא, ורבה בר בר חנה סמך על גמרא (מסורת).</span><span data-when="en">How did Rabba bar bar Ḥana permit what Rav was about to prohibit? Another may not permit — but Rav had not yet formally prohibited. And how could he eat from it? Ezekiel's verse and its midrash on "an animal a Sage ruled upon"; the resolution: that applies to a matter of reasoning, while Rabba bar bar Ḥana relied on a received tradition.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① והיכי עביד הכי? חכם שאסר — אין חברו רשאי להתיר!<br/>תירוץ: שאני הכא, דרב לא אסר"}:::question
+  Q2{"② וכיון שהורה בה חכם, היכי אכל מינה?<br/>והכתיב ביחזקאל: ״ונבלה וטרפה לא אכלתי״"}:::question
+  S3["③ דרשה: ״לא בא בפי בשר פיגול״ — שלא אכלתי<br/>מבהמה שהורה בה חכם (ומשום ר׳ נתן: שלא הורמו מתנותיה)"]:::statement
+  A4["④ הני מילי — מילתא דתליא בסברא;<br/>רבה בר בר חנה אגמריה (מסורת) סמך"]:::answer
+  Q1 -->|וכיון שהורה| Q2
+  Q2 -->|דרשה| S3
+  S3 -->|תירוץ| A4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① How could he do this? If a Sage prohibited — another may not permit!<br/>Answer: it is different here, Rav did not prohibit"}:::question
+  Q2{"② And once a Sage ruled, how could he eat from it?<br/>For Ezekiel writes: ׳carcass or tereifa I have not eaten׳"}:::question
+  S3["③ Midrash: ׳no piggul flesh came into my mouth׳ — that I never ate<br/>from an animal a Sage ruled upon (per R. Natan: whose gifts were not separated)"]:::statement
+  A4["④ This applies only to a matter that depends on reasoning;<br/>Rabba bar bar Ḥana relied on his learning (tradition)"]:::answer
+  Q1 -->|And once he ruled| Q2
+  Q2 -->|Midrash| S3
+  S3 -->|Answer| A4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① וְהֵיכִי עָבֵיד הָכִי? … חָכָם … אָסַר – אֵין חֲבֵירוֹ רַשַּׁאי לְהַתִּיר!<br/>שָׁאנֵי הָכָא, דְּרַב לָא אֲסַר מֵיסָר"}:::question
+  Q2{"② וְכֵיוָן דְּאוֹרִי בַּהּ חָכָם, הֵיכִי אֲכַל מִינַּהּ? וְהָא כְּתִיב:<br/>״וּנְבֵלָה וּטְרֵפָה לֹא אָכַלְתִּי״"}:::question
+  S3["③ ״וְלֹא בָא בְּפִי בְּשַׂר פִּגּוּל״ – שֶׁלֹּא אָכַלְתִּי מִבְּהֵמָה שֶׁהוֹרָה בָּהּ חָכָם.<br/>מִשּׁוּם רַבִּי נָתָן: שֶׁלֹּא הוּרְמוּ מַתְּנוֹתֶיהָ"]:::statement
+  A4["④ הָנֵי מִילֵּי – מִילְּתָא דְתַלְיָא בִּסְבָרָא,<br/>רַבָּה בַּר בַּר חָנָה אַגְּמָרֵיהּ סְמַךְ"]:::answer
+  Q1 -->|וכיון שהורה| Q2
+  Q2 -->|דרשה| S3
+  S3 -->|תירוץ| A4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ד ב — Chullin 44b:3</span></div>
+  <div class="orig">וְהֵיכִי עָבֵיד הָכִי? וְהָתַנְיָא: חָכָם שֶׁטִּימֵּא – אֵין חֲבֵירוֹ רַשַּׁאי לְטַהֵר, אָסַר – אֵין חֲבֵירוֹ רַשַּׁאי לְהַתִּיר! שָׁאנֵי הָכָא, דְּרַב לָא אֲסַר מֵיסָר.</div>
+  <div class="trans" data-when="he">ושואלים: כיצד עשה כך רבה בר בר חנה — הכשיר מה שרב עמד לאסור? והרי שנינו בברייתא: חכם שטימא דבר — אין חברו רשאי לטהרו, אסר — אין חברו רשאי להתירו! ומשיבים: שונה כאן, שרב עדיין לא אסר בפועל אלא רק עמד לבדוק.</div>
+  <div class="trans" data-when="en">The Gemara asks: And how could Rabba bar bar Ḥana do this, i.e., deem permitted an animal that Rav was going to deem prohibited? But isn’t it taught in a baraita: If a halakhic authority deemed an item impure, another halakhic authority is not allowed to deem it pure; likewise, if he prohibited it, another authority is not allowed to permit it? The Gemara responds: It is different here, since Rav did not actually prohibit the animal. He merely considered doing so, but he sent it to Rabba bar bar Ḥana before issuing a formal ruling.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span> <span class="ref">חולין מ״ד ב — Chullin 44b:4</span></div>
+  <div class="orig">וְכֵיוָן דְּאוֹרִי בַּהּ חָכָם, הֵיכִי אֲכַל מִינַּהּ? וְהָא כְּתִיב: ״וָאֹמַר אֲהָהּ ה׳ אֱלֹהִים הִנֵּה נַפְשִׁי לֹא מְטֻמָּאָה וּנְבֵלָה וּטְרֵפָה לֹא אָכַלְתִּי מִנְּעוּרַי וְעַד עַתָּה וְלֹא בָא בְּפִי בְּשַׂר פִּגּוּל״.</div>
+  <div class="trans" data-when="he">וממשיכים לשאול: ומשהורה בה חכם (אפילו להיתר), כיצד אכל רבה בר בר חנה מבשרה? והרי כתוב ביחזקאל: ״ואומַר אֲהָהּ ה׳ אלוהים, הנה נפשי לא מטומאה, ונבלה וטרפה לא אכלתי מנעוריי ועד עתה, ולא בא בפי בשר פיגול״ — ויש בו רמז לפרישות יתרה.</div>
+  <div class="trans" data-when="en">The Gemara asks: And once a halakhic authority has ruled with regard to the animal, even to permit it, how could Rabba bar bar Ḥana eat from it? But isn’t it written: “Then I said: Alas, Lord God, my soul has not become impure; and from my youth until now I have not eaten an unslaughtered carcass, or a tereifa; and no piggul flesh came into my mouth” (Ezekiel 4:14).</div>
+</div>
+<div class="quote">
+  <div><span class="num">3</span> <span class="ref">חולין מ״ד ב — Chullin 44b:5</span></div>
+  <div class="orig">״הִנֵּה נַפְשִׁי לֹא מְטֻמָּאָה״ – שֶׁלֹּא הִרְהַרְתִּי בַּיּוֹם לָבֹא לִידֵי טוּמְאָה בַּלַּיְלָה, ״וּנְבֵלָה וּטְרֵפָה לֹא אָכַלְתִּי״ – שֶׁלֹּא אָכַלְתִּי בְּשַׂר ״כּוֹס כּוֹס״ מֵעוֹלָם, ״וְלֹא בָא בְּפִי בְּשַׂר פִּגּוּל״ – שֶׁלֹּא אָכַלְתִּי מִבְּהֵמָה שֶׁהוֹרָה בָּהּ חָכָם. מִשּׁוּם רַבִּי נָתָן אָמְרוּ: שֶׁלֹּא אָכַלְתִּי מִבְּהֵמָה שֶׁלֹּא הוּרְמוּ מַתְּנוֹתֶיהָ.</div>
+  <div class="trans" data-when="he">דרשו חכמים את הפסוק: ״הנה נפשי לא מטומאה״ — שלא הרהרתי ביום כדי לבוא לידי טומאת קרי בלילה; ״ונבלה וטרפה לא אכלתי״ — שלא אכלתי מעולם בשר בהמה מסוכנת שממהרים לשוחטה (״כוס כוס״, מהר מהר) לפני שתמות; ״ולא בא בפי בשר פיגול״ — שלא אכלתי מבהמה שהורה בה חכם להתיר מתוך ספק. ומשום רבי נתן אמרו: שלא אכלתי מבהמה שלא הורמו ממנה מתנות כהונה.</div>
+  <div class="trans" data-when="en">The Sages interpreted the verse as follows: “My soul has not been become impure” means that I did not think of sexual thoughts during the day so as to come to the impurity of a seminal emission at night. “I have not eaten an unslaughtered carcass, or a tereifa” means that I never ate the flesh of an animal that was in danger of imminent death, leading one to say: Slaughter it, slaughter it quickly, before it dies. “And no piggul flesh came into my mouth,” means that I never ate from an animal with regard to which there was uncertainty whether it is prohibited and a Sage issued a ruling to permit it. The Sages said in the name of Rabbi Natan: The phrase means that I never ate from an animal from which the gifts of the priesthood, the foreleg, jaw, and abomasum, were not separated. The above acts are technically permitted but unseemly. How, then, could Rabba bar bar Ḥana consume the meat of this animal?</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ד ב — Chullin 44b:6</span></div>
+  <div class="orig">הָנֵי מִילֵּי – מִילְּתָא דְתַלְיָא בִּסְבָרָא, רַבָּה בַּר בַּר חָנָה אַגְּמָרֵיהּ סְמַךְ.</div>
+  <div class="trans" data-when="he">ומשיבים: דברים אלו (שאין ראוי לחכם לאכול ממה שהתיר בעצמו) אמורים רק בדבר התלוי בסברה ובשיקול דעת; אבל רבה בר בר חנה סמך כאן על גמרא — מסורת מפורשת שקיבל, ובזה אין כל פגם.</div>
+  <div class="trans" data-when="en">The Gemara responds: This statement, that it is unseemly for a halakhic authority to rely on his own ruling to permit the meat, applies only to a matter that depends on reasoning. Rabba bar bar Ḥana relied on his learning, i.e., a received tradition. There is nothing unseemly about relying upon a received tradition.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">חשד, ומתקלא מוכח</span><span data-when="en">Suspicion, and the scale proves the price</span>
+      <span class="ref">Chullin 44b:7–9</span></h2>
+  <div class="lead"><span data-when="he">קושיה נוספת: גם אם מותר, ״הרחק מן הכיעור״ — לא היה לו לקנות מחשש חשד. תירוץ: זה רק בדבר הנמכר באומדן, אך כאן ״מתקלא מוכח״ — המשקל מוכיח שלא קיבל הנחה. ומסבירים את ההבדל ממעשה רבה ובתו בת רב חסדא בבכור.</span><span data-when="en">A further objection: even if permitted, "keep far from unseemliness" — he should not have bought it, for fear of suspicion. Answer: that applies only to what is sold by appraisal, but here "the scale proves" he received no discount. And they explain the difference from the case of Rabba and his wife, daughter of Rav Ḥisda, with a firstborn.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① ותיפוק ליה משום חשדא: דן והתיר — רשאי ליקח,<br/>אבל ״הרחק מן הכיעור״ — לא יקנה!"}:::question
+  A2["② הני מילי מידי דמזבין משומא;<br/>הכא מתקלא מוכח (המשקל מוכיח)"]:::answer
+  S3["③ כי הא דרבה שרא טרפתא וזבן מינה; אמרה לו בת רב חסדא:<br/>אבא שרי בוכרא ולא זבן מיניה!"]:::statement
+  A4["④ רבה: בוכרא דאשומא מזדבן, הכא מתקלא מוכח —<br/>מאי איכא, אומצא מעלייתא? כל יומא מזבני לי!"]:::answer
+  Q1 -->|תירוץ| A2
+  A2 -->|כי הא| S3
+  S3 -->|אמר לה| A4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Derive it from suspicion: a judge who permitted may buy,<br/>but ׳keep far from unseemliness׳ — he should not!"}:::question
+  A2["② This applies only to what is sold by appraisal;<br/>here the scale proves the price"]:::answer
+  S3["③ As when Rabba permitted a tereifa and bought from it; Rav Ḥisda׳s daughter:<br/>Father permitted a firstborn but did not buy from it!"]:::statement
+  A4["④ Rabba: a firstborn is sold by appraisal, here the scale proves —<br/>what is there, a superior cut? They sell me one every day!"]:::answer
+  Q1 -->|Answer| A2
+  A2 -->|As in the case| S3
+  S3 -->|He said to her| A4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① וְתִיפּוֹק לֵיהּ מִשּׁוּם חֲשָׁדָא … כּוּלָּן רַשָּׁאִין לִיקַּח,<br/>אֲבָל … הַרְחֵק מִן הַכִּיעוּר וּמִן הַדּוֹמֶה לוֹ"}:::question
+  A2["② הָנֵי מִילֵּי מִידֵּי דִּמְזַבֵּין מִשּׁוּמָא,<br/>הָכָא מַתְקְלָא מוֹכַח"]:::answer
+  S3["③ כִּי הָא דְּרַבָּה שְׁרָא טְרֵפְתָּא וּזְבַן מִינַּהּ בִּישְׂרָא. אֲמַרָה לֵיהּ בַּת רַב חִסְדָּא:<br/>אַבָּא שָׁרֵי בּוּכְרָא וְלָא זָבֵן מִינֵּיהּ בִּישְׂרָא"]:::statement
+  A4["④ הָנֵי מִילֵּי בּוּכְרָא דְּאַשּׁוּמָא מִזְדְּבַן, הָכָא מַתְקְלָא מוֹכַח, מַאי אִיכָּא –<br/>מִשּׁוּם אוּמְצָא מְעַלַּיְיתָא? כֹּל יוֹמָא … זַבִּנוּ לִי"]:::answer
+  Q1 -->|תירוץ| A2
+  A2 -->|כי הא| S3
+  S3 -->|אמר לה| A4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ד ב — Chullin 44b:7</span></div>
+  <div class="orig">וְתִיפּוֹק לֵיהּ מִשּׁוּם חֲשָׁדָא, דְּתַנְיָא: דָּן אֶת הַדִּין, זִיכָּה וְחַיָּיב, טִימֵּא וְטִיהֵר, אָסַר וְהִתִּיר, וְכֵן הָעֵדִים שֶׁהֵעִידוּ – כּוּלָּן רַשָּׁאִין לִיקַּח, אֲבָל אָמְרוּ חֲכָמִים: הַרְחֵק מִן הַכִּיעוּר וּמִן הַדּוֹמֶה לוֹ.</div>
+  <div class="trans" data-when="he">ומקשים: ותימצא לך עוד טעם שלא היה לו לקנות — משום חשד! שכן שנינו בברייתא: דיין שדן והכריע (זיכה או חייב, טימא או טיהר, אסר או התיר), וכן עדים שהעידו — כולם רשאים מן הדין לקנות את הדבר שהתירו; אבל אמרו חכמים: ״הרחק מן הכיעור ומן הדומה לו״ — שלא ייראה כנהנה מדינו.</div>
+  <div class="trans" data-when="en">The Gemara objects: But let one derive that Rabba bar bar Ḥana should not have purchased the meat due to suspicion, as it is taught in a baraita: If one issued a judgment, acquitted or convicted, deemed impure or pure, prohibited or permitted; or if witnesses testified with regard to a case, in all of these instances the judges or witnesses are allowed to purchase the item that they deemed permitted. But the Sages said: Distance yourself from unseemliness and from things similar to it. If so, Rabba bar bar Ḥana should not have purchased the meat that he himself permitted.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ד ב — Chullin 44b:8</span></div>
+  <div class="orig">הָנֵי מִילֵּי מִידֵּי דִּמְזַבֵּין מִשּׁוּמָא, הָכָא מַתְקְלָא מוֹכַח, כִּי הָא דְּרַבָּה שְׁרָא טְרֵפְתָּא וּזְבַן מִינַּהּ בִּישְׂרָא, אֲמַרָה לֵיהּ בַּת רַב חִסְדָּא: אַבָּא שָׁרֵי בּוּכְרָא וְלָא זָבֵן מִינֵּיהּ בִּישְׂרָא.</div>
+  <div class="trans" data-when="he">ומשיבים: דברים אלו (החשש מן הכיעור) אמורים רק בדבר הנמכר לפי אומדן ערכו, ששם אפשר לחשוד שניתנה לדיין הנחה תמורת פסיקתו; אבל כאן ״מתקלא מוכח״ — המשקל מוכיח שהדיין שילם את המחיר הרגיל. כעין מעשה שהיה: רבה התיר ספק טרפה וקנה מבשרה; אמרה לו אשתו בת רב חסדא: אבא (רב חסדא) התיר בכור ולא קנה מבשרו — ומדוע אתה נוהג אחרת?</div>
+  <div class="trans" data-when="en">The Gemara responds: This statement applies only to an item that is sold based on an appraisal of its value and not by standard measure. In such cases onlookers might suspect that the judge is receiving a favorable price in return for his judgment. But here, the weight of the meat proves that the judge is not receiving a discount, but is paying the standard price. This is like that incident where Rabba permitted a possible tereifa for consumption and bought meat from it. His wife, the daughter of Rav Ḥisda, said to him: Father permitted a firstborn animal, declaring that it possessed a blemish that renders it permitted for consumption, but did not buy meat from it. Why are you acting differently?</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ד ב — Chullin 44b:9</span></div>
+  <div class="orig">אֲמַר לַהּ: הָנֵי מִילֵּי בּוּכְרָא דְּאַשּׁוּמָא מִזְדְּבַן, הָכָא מַתְקְלָא מוֹכַח, מַאי אִיכָּא – מִשּׁוּם אוּמְצָא מְעַלַּיְיתָא? כֹּל יוֹמָא אוּמְצָא מְעַלַּיְיתָא זַבִּנוּ לִי.</div>
+  <div class="trans" data-when="he">אמר לה רבה: דברים אלו (שאין לקנות) אמורים בבכור, שנמכר לפי אומדן ערכו ויש מקום לחשד; אבל כאן המשקל מוכיח שאיני משלם פחות מן הראוי. ומה עוד יש לחשוד — שמא קיבלתי נתח בשר משובח? הרי בכל יום מוכרים לי נתח משובח, ואין בכך כל חידוש.</div>
+  <div class="trans" data-when="en">Rabba said to her: That matter applies to a firstborn, which is sold based on appraisal of its value. Here, the weight of the meat proves that I am paying the standard price and not unfairly deriving benefit from my judgment. What suspicion is there in this case? Will people suspect me because I received a superior piece of meat? Every day they sell me a superior piece of meat.</div>
+</div>
+  </section>
+
+  <section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">הרואה טרפה לעצמו ושונא מתנות</span><span data-when="en">One who sees his own tereifa and hates gifts</span>
+      <span class="ref">Chullin 44b:10–45a:1</span></h2>
+  <div class="lead"><span data-when="he">דברי שבח: רב חסדא — תלמיד חכם הוא ״הרואה טרפה לעצמו״, והוא ״שונא מתנות יחיה״. מר זוטרא: הקורא ושונה ורואה טרפה לעצמו — ״יגיע כפיך כי תאכל״, ורב זביד: שני עולמות. ולסיום, מנהג ר׳ אלעזר שלא נטל מתנות מבי נשיאה, לעומת ר׳ זירא שהלך כשהזמינוהו — ״איתיקורי דמתייקרו בי״.</span><span data-when="en">Words of praise: Rav Ḥisda — a Torah scholar is "one who sees his own tereifa," and he is "he that hates gifts shall live." Mar Zutra: one who reads, studies, sees his own tereifa — "when you eat the labor of your hands," and Rav Zevid: two worlds. And finally, R. Elazar's practice of not taking gifts from the Nasi's house, versus R. Zeira who went when invited — "it is an honor for them to honor me."</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב חסדא: איזהו תלמיד חכם?<br/>הרואה טרפה לעצמו; והוא ״שונא מתנות יחיה״"]:::statement
+  S2["② מר זוטרא משמיה דרב חסדא: הקורא ושונה ורואה טרפה לעצמו —<br/>״יגיע כפיך כי תאכל אשריך וטוב לך״"]:::statement
+  S3["③ רב זביד: זוכה לשני עולמות —<br/>״אשריך״ בעולם הזה, ״וטוב לך״ לעולם הבא"]:::statement
+  S4["④ ר׳ אלעזר: לא נטל ולא הלך לבי נשיאה —<br/>״ושונא מתנות יחיה״"]:::statement
+  C5["⑤ ר׳ זירא: לא נטל, אך כשהזמינוהו הלך —<br/>״איתיקורי הוא דמתייקרו בי״"]:::conclusion
+  S1 -->|מר זוטרא| S2
+  S2 -->|רב זביד| S3
+  S3 -->|מעשה| S4
+  S4 -->|לעומתו| C5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Ḥisda: who is a Torah scholar?<br/>One who sees his own tereifa; and he ׳hates gifts and shall live׳"]:::statement
+  S2["② Mar Zutra citing Rav Ḥisda: one who reads, studies, sees his own tereifa —<br/>׳when you eat the labor of your hands, happy shall you be׳"]:::statement
+  S3["③ Rav Zevid: he merits two worlds —<br/>׳happy shall you be׳ in this world, ׳well with you׳ in the next"]:::statement
+  S4["④ R. Elazar: took nothing, nor went, to the Nasi׳s house —<br/>׳he that hates gifts shall live׳"]:::statement
+  C5["⑤ R. Zeira: took nothing, but when invited he went —<br/>׳it is an honor for them to honor me׳"]:::conclusion
+  S1 -->|Mar Zutra| S2
+  S2 -->|Rav Zevid| S3
+  S3 -->|A case| S4
+  S4 -->|By contrast| C5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אֵיזֶהוּ תַּלְמִיד חָכָם? זֶה הָרוֹאֶה טְרֵפָה לְעַצְמוֹ.<br/>אֵיזֶהוּ ״שׂוֹנֵא מַתָּנֹת יִחְיֶה״? זֶה הָרוֹאֶה טְרֵפָה לְעַצְמוֹ"]:::statement
+  S2["② דָּרֵשׁ מָר זוּטְרָא … כׇּל מִי שֶׁקּוֹרֵא וְשׁוֹנֶה, וְרוֹאֶה טְרֵפָה לְעַצְמוֹ …<br/>״יְגִיעַ כַּפֶּיךָ כִּי תֹאכֵל אַשְׁרֶיךָ וְטוֹב לָךְ״"]:::statement
+  S3["③ רַב זְבִיד אָמַר: זוֹכֶה … שְׁנֵי עוֹלָמוֹת … ״אַשְׁרֶיךָ״ – בְּעוֹלָם הַזֶּה,<br/>״וְטוֹב לָךְ״ – לָעוֹלָם הַבָּא"]:::statement
+  S4["④ רַבִּי אֶלְעָזָר … לָא שָׁקֵיל … לָא אָזֵיל.<br/>אָמַר … דִּכְתִיב: ״וְשׂוֹנֵא מַתָּנוֹת יִחְיֶה״"]:::statement
+  C5["⑤ רַבִּי זֵירָא, כִּי מְשַׁדְּרִי לֵיהּ, לָא שָׁקֵיל, כִּי … מַזְמְנִין לֵיהּ, אָזֵיל. אֲמַר:<br/>אִתְיַיקּוֹרֵי הוּא דְּמִתְיַיקְּרוּ בִּי"]:::conclusion
+  S1 -->|מר זוטרא| S2
+  S2 -->|רב זביד| S3
+  S3 -->|מעשה| S4
+  S4 -->|לעומתו| C5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+<div class="quote">
+  <div><span class="num">1</span> <span class="ref">חולין מ״ד ב — Chullin 44b:10</span></div>
+  <div class="orig">אָמַר רַב חִסְדָּא: אֵיזֶהוּ תַּלְמִיד חָכָם? זֶה הָרוֹאֶה טְרֵפָה לְעַצְמוֹ. וְאָמַר רַב חִסְדָּא: אֵיזֶהוּ ״שׂוֹנֵא מַתָּנֹת יִחְיֶה״? זֶה הָרוֹאֶה טְרֵפָה לְעַצְמוֹ.</div>
+  <div class="trans" data-when="he">אמר רב חסדא: איזהו תלמיד חכם? זה ה״רואה טרפה לעצמו״ — שכאשר מתעורר ספק בבהמת עצמו, הוא מטריפהּ ואינו חס על ממונו. ועוד אמר רב חסדא: מיהו זה שעליו נאמר ״ושונא מתנות יחיה״? זה ה״רואה טרפה לעצמו״ — שנזהר שלא ליהנות מן הספק.</div>
+  <div class="trans" data-when="en">The Gemara cites an aphorism: Rav Ḥisda says: Who is a Torah scholar? This is one who sees his own tereifa. In other words, when the status of his own animal is uncertain, he deems it prohibited without concern for his own monetary loss. And Rav Ḥisda says: Who is referred to by the verse: “He that hates gifts shall live” (Proverbs 15:27)? This is one who sees his own tereifa. He is careful to avoid deriving benefit from that which is not his own, and even from items that are his concerning which it is questionable whether or not they are permitted.</div>
+</div>
+<div class="quote">
+  <div><span class="num">2</span><span class="num">3</span> <span class="ref">חולין מ״ד ב — Chullin 44b:11</span></div>
+  <div class="orig">דָּרֵשׁ מָר זוּטְרָא מִשְּׁמֵיהּ דְּרַב חִסְדָּא: כׇּל מִי שֶׁקּוֹרֵא וְשׁוֹנֶה, וְרוֹאֶה טְרֵפָה לְעַצְמוֹ, וְשִׁימֵּשׁ תַּלְמִידֵי חֲכָמִים – עָלָיו הַכָּתוּב אוֹמֵר: ״יְגִיעַ כַּפֶּיךָ כִּי תֹאכֵל אַשְׁרֶיךָ וְטוֹב לָךְ״. רַב זְבִיד אָמַר: זוֹכֶה וְנוֹחֵל שְׁנֵי עוֹלָמוֹת, הָעוֹלָם הַזֶּה וְהָעוֹלָם הַבָּא, ״אַשְׁרֶיךָ״ – בְּעוֹלָם הַזֶּה, ״וְטוֹב לָךְ״ – לָעוֹלָם הַבָּא.</div>
+  <div class="trans" data-when="he">דרש מר זוטרא בשם רב חסדא: כל מי שקורא מקרא ושונה משנה, ורואה טרפה לעצמו, ושימש תלמידי חכמים ללמוד הוראה — עליו אומר הכתוב: ״יגיע כפיך כי תאכל, אשריך וטוב לך״. רב זביד אמר: זוכה ונוחל שני עולמות — העולם הזה והעולם הבא: ״אשריך״ בעולם הזה, ״וטוב לך״ לעולם הבא.</div>
+  <div class="trans" data-when="en">Mar Zutra taught in the name of Rav Ḥisda: Anyone who reads the Torah and studies the Mishna, and sees his own tereifa, and has served Torah scholars to learn the ways of halakhic judgment, about him the verse states: “When you eat the labor of your hands, happy shall you be, and it shall be well with you” (Psalms 128:2). Rav Zevid says: Such a person merits inheriting two worlds, this world and the World-to-Come. When the verse states: “Happy shall you be,” it means in this world, and when it states: “And it shall be well with you,” it is referring to the World-to-Come.</div>
+</div>
+<div class="quote">
+  <div><span class="num">4</span> <span class="ref">חולין מ״ד ב — Chullin 44b:12</span></div>
+  <div class="orig">רַבִּי אֶלְעָזָר, כִּי הֲווֹ מְשַׁדְּרִי לֵיהּ מִבֵּי נְשִׂיאָה מִידֵּי, לָא שָׁקֵיל, וְכִי הֲווֹ מְזַמְּנִי לֵיהּ, לָא אָזֵיל. אָמַר: לָא קָא בָּעֵי מָר דְּאֵיחֵי? דִּכְתִיב: ״וְשׂוֹנֵא מַתָּנוֹת יִחְיֶה״. רַבִּי זֵירָא, כִּי מְשַׁדְּרִי לֵיהּ, לָא שָׁקֵיל, כִּי הֲווֹ מַזְמְנִין לֵיהּ, אָזֵיל. אֲמַר:</div>
+  <div class="trans" data-when="he">רבי אלעזר — כשהיו שולחים לו מתנה מבית הנשיא, לא היה נוטל; וכשהיו מזמינים אותו לסעודה, לא היה הולך. אמר: וכי אין אדוני (זה ששולח) רוצה שאחיה? והרי כתוב ״ושונא מתנות יחיה״. רבי זירא — כשהיו שולחים לו, לא היה נוטל; אך כשהיו מזמינים אותו, היה הולך. אמר:</div>
+  <div class="trans" data-when="en">With regard to the verse: “He that hates gifts shall live,” the Gemara relates that when they would send Rabbi Elazar some gift from the house of the Nasi, he would not take it. And when they would invite him, he would not go there. When declining these offers, he said to them: Does Master not desire that I live? As it is written: “He that hates gifts shall live.” By contrast, when they would send a gift to Rabbi Zeira, he would not take it, but when they would invite him he would go. He said in explanation:</div>
+</div>
+<div class="quote">
+  <div><span class="num">5</span> <span class="ref">חולין מ״ה א — Chullin 45a:1</span></div>
+  <div class="orig">אִתְיַיקּוֹרֵי הוּא דְּמִתְיַיקְּרוּ בִּי.</div>
+  <div class="trans" data-when="he">״כבוד הוא להם שהם מתכבדים בי״ — בואי אינו לטובתי אלא לכבודם; ולכן הלך כשהזמינוהו, אף שלא נטל מתנות.</div>
+  <div class="trans" data-when="en">It is an honor for them to honor me. My attendance is not for my benefit but for theirs.</div>
+</div>
+  </section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }
+  }
+
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var bs = qs[i].querySelectorAll('.num');
+      for (var j = 0; j < bs.length; j++) {
+        if (parseInt(bs[j].textContent, 10) === n) return qs[i];
+      }
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
