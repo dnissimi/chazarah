@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין נ״ג</title>
+<meta name="description" content="מפת הסוגיא של חולין נ״ג: המשך דיני דרוסה — שאר עופות טמאים, שועל וכלב, ארבעת תנאי הדריסה של אביי, ארי בין השוורים, מחלוקת רב ושמואל בספק דרוסה, ובדיקת הדרוסה עד דין שמוטה ושחוטה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="53">
+<meta name="gemara-map:sefaria-ref" content="Chullin 53">
+<meta name="gemara-map:topic-he" content="דרוסה — ספק ובדיקה">
+<meta name="gemara-map:topic-en" content="Clawing — doubt and inspection">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין נ״ג">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 53">
+<meta name="gemara-map:blurb-he" content="דרוסה רק ביד בציפורן מדעת ומחיים; בספק דרוסה חוששים, ובדיקתה כנגד בני המעיים — ויש שהרחיבו עד כל בית החלל.">
+<meta name="gemara-map:blurb-en" content="Clawing only by foreleg, claw, intent, and while alive; doubtful clawing is feared, and inspection runs by the intestines — some extend it to the whole cavity.">
+<meta name="gemara-map:sugya-count" content="6">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין נ״ג</span><span data-when="en">Sugya map — Chullin 53</span></h1>
+    <div class="subtitle"><span data-when="he">חולין נ״ג א — נ״ד א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 53a–54a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> הדף משלים את גדרי <b>הדרוסה</b>: אילו טורפים דורסים (שועל, כלב, שאר עופות), וארבעת תנאי הדריסה של אביי — <b>ביד, בציפורן, מדעת ומחיים</b>. במחלוקת רב ושמואל ב<b>ספק דרוסה</b> נפסק לחומרה (חוששים), ובדיקת הדרוסה היא כנגד בני המעיים — שמא האדים הבשר; ויש שהרחיבו עד כל בית החלל. הדף נחתם בדין <b>שמוטה ושחוטה</b>.</span>
+    <span data-when="en"><b>Bottom line:</b> The daf completes the laws of <b>clawing</b>: which predators claw (fox, dog, other birds), and Abaye's four conditions — <b>foreleg, claw, intent, and while alive</b>. In the Rav–Shmuel dispute over <b>doubtful clawing</b> the stringent view prevails (we are concerned), and inspection runs by the intestines for reddened flesh — some extend it to the whole cavity. It closes with the law of a <b>dislocated-then-slaughtered windpipe</b>.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין נ״ג</span><span data-when="en">Overview — Chullin 53</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,color:#1f2937;
+  O1["13 · שאר עופות טמאים"]:::statement
+  O2["14 · דרוסה לשועל וכלב"]:::statement
+  O3["15 · ארבעת תנאי הדריסה"]:::statement
+  O4["16 · ארי בין השוורים — ספק"]:::statement
+  O5["17 · ספק דרוסה — רב ושמואל"]:::statement
+  O6(["18 · בדיקת הדרוסה ושמוטה ושחוטה"]):::conclusion
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-13"
+  click O2 "#sugya-14"
+  click O3 "#sugya-15"
+  click O4 "#sugya-16"
+  click O5 "#sugya-17"
+  click O6 "#sugya-18"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,color:#1f2937;
+  O1["13 · Other non-kosher birds"]:::statement
+  O2["14 · Clawing by a fox and a dog"]:::statement
+  O3["15 · The four conditions of clawing"]:::statement
+  O4["16 · A lion among the oxen — doubt"]:::statement
+  O5["17 · Doubtful clawing — Rav and Shmuel"]:::statement
+  O6(["18 · Inspecting a clawed animal; dislocated windpipe"]):::conclusion
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-13"
+  click O2 "#sugya-14"
+  click O3 "#sugya-15"
+  click O4 "#sugya-16"
+  click O5 "#sugya-17"
+  click O6 "#sugya-18"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-13">
+  <h2><span class="badge"><span data-when="he">סוגיה 13</span><span data-when="en">Sugya 13</span></span>
+      <span data-when="he">שאר עופות טמאים</span><span data-when="en">Other non-kosher birds</span>
+      <span class="ref">Chullin 53a:4–5</span></h2>
+  <div class="lead"><span data-when="he">האם רק נץ דורס עוף, או אף שאר עופות טמאים — ובאיזה יחס גודל.</span><span data-when="en">Does only a hawk claw a bird, or other non-kosher birds too — and at what relative size.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רב אשי: שאר עופות טמאים — יש להם דרוסה? רב הלל: רב כהנא אמר יש"]:::statement
+  Q1{"② והאנן תנן ׳ודרוסת הנץ בעוף הדק׳ — משמע רק נץ?"}:::question
+  A1["② נץ דורס אף בדכוותיה, ושאר עופות רק בדזוטרא מינייהו; ואיכא דאמרי: נץ אף בדרבי מיניה"]:::answer
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Rav Ashi: do other non-kosher birds claw? Rav Hillel: Rav Kahana said yes"]:::statement
+  Q1{"② But we learned ׳clawing by a hawk on a small bird׳ — only a hawk?"}:::question
+  A1["② A hawk claws even one its own size; the others only one smaller; some say: a hawk even one larger"]:::answer
+  S1 -->|question| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① שְׁאָר עוֹפוֹת טְמֵאִין, יֵשׁ לָהֶן דְּרוּסָה? … שְׁאָר עוֹפוֹת טְמֵאִין יֵשׁ לָהֶן דְּרוּסָה"]:::statement
+  Q1{"② וְהָאֲנַן תְּנַן: ׳וּדְרוּסַת הַנֵּץ בְּעוֹף הַדַּק׳!"}:::question
+  A1["② דְּרוּסַת הַנֵּץ בְּדִכְוָותֵיהּ, וְאִינָךְ בִּדְזוּטְרָא מִינַּיְיהוּ … נֵץ בִּדְרַבִּי מִינֵּיהּ"]:::answer
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ג א — Chullin 53a:4</span></div>
+    <div class="orig">בָּעֵי רַב אָשֵׁי: שְׁאָר עוֹפוֹת טְמֵאִין, יֵשׁ לָהֶן דְּרוּסָה אוֹ אֵין לָהֶן דְּרוּסָה? אֲמַר לֵיהּ רַב הִלֵּל לְרַב אָשֵׁי: כִּי הֲוֵינַן בֵּי רַב כָּהֲנָא, אֲמַר: שְׁאָר עוֹפוֹת טְמֵאִין יֵשׁ לָהֶן דְּרוּסָה.</div>
+    <div class="trans" data-when="he">המשנה דיברה בדרוסת הנץ. שאל רב אשי: שאר עופות טמאים (מלבד הנץ) — האם יש להם דרוסה? אמר לו רב הלל: כשהיינו בבית רב כהנא, אמר ששאר עופות טמאים יש להם דרוסה.</div>
+    <div class="trans" data-when="en">§ The mishna states that a small bird clawed by a hawk is a tereifa. Rav Ashi raises a dilemma: With regard to other non-kosher birds beside a hawk, do they render a bird a tereifa through clawing, or do they not render it a tereifa through clawing? Rav Hillel said to Rav Ashi: When we were in the study hall of Rav Kahana, he said: Other non-kosher birds do render a bird a tereifa through clawing.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ג א — Chullin 53a:5</span></div>
+    <div class="orig">וְהָאֲנַן תְּנַן: ״וּדְרוּסַת הַנֵּץ בְּעוֹף הַדַּק״! דְּרוּסַת הָנֵץ בְּדִכְוָותֵיהּ, וְאִינָךְ בִּדְזוּטְרָא מִינַּיְיהוּ. וְאִיכָּא דְּאָמְרִי: דְּרוּסַת הַנֵּץ בִּדְרַבִּי מִינֵּיהּ, וְאִינָךְ בְּדִכְוָותַיְיהוּ.</div>
+    <div class="trans" data-when="he">קושיא: והרי שנינו ״ודרוסת הנץ בעוף הדק״ — משמע שרק הנץ דורס. תירוץ: הנץ דורס אף עוף בגודלו, ושאר העופות הטמאים דורסים רק עוף קטן מהם. ואיכא דאמרי: הנץ דורס אף עוף גדול ממנו, ושאר העופות רק עוף בגודלם.</div>
+    <div class="trans" data-when="en">The Gemara asks: But didn’t we learn in the mishna: Or if it was clawed by a hawk in the case of a small bird, it is a tereifa? Apparently, only a hawk renders a small bird a tereifa through clawing. The Gemara responds: The mishna means that a small bird clawed by a hawk is rendered a tereifa even in a case where it is as large as the hawk. But these other non-kosher birds can render a small bird a tereifa only in a case where it is smaller than them. And there are those who say: A small bird clawed by a hawk is rendered a tereifa even in a case where it is larger than the hawk. But these other non-kosher birds can render a small bird a tereifa only in a case where it is, at most, as large as them.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-14">
+  <h2><span class="badge"><span data-when="he">סוגיה 14</span><span data-when="en">Sugya 14</span></span>
+      <span data-when="he">דרוסה לשועל וכלב</span><span data-when="en">Clawing by a fox and a dog</span>
+      <span class="ref">Chullin 53a:6–7</span></h2>
+  <div class="lead"><span data-when="he">שתי גרסאות הפוכות לדברי רב שימי על השועל, וכל אחת מיישבת את מעשה השועל בבית היני אחרת.</span><span data-when="en">Two opposite versions of Rav Shimi on the fox, each resolving the Beit Hini incident differently.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  S1["① רב שימי: אין דרוסה לשועל. והא מעשה דרב דימי — שועל דרס רחל, ואמרו ׳יש׳! רב ספרא: חתול היה"]:::statement
+  S2["② איכא דאמרי: יש דרוסה לשועל. והא אמרו ׳אין׳! רב ספרא: כלב היה; רב יוסף: אין דרוסה לכלב"]:::statement
+  S1 -->|לישנא אחרינא| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  S1["① Rav Shimi: a fox does not claw. But Rav Dimi's incident — a fox clawed a ewe, and they said ׳yes׳! Rav Safra: it was a cat"]:::statement
+  S2["② Some say: a fox does claw. But they said ׳no׳! Rav Safra: it was a dog; Rav Yosef: a dog does not claw"]:::statement
+  S1 -->|other version| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  S1["① אֵין דְּרוּסָה לְשׁוּעָל … וְדָרַס שׁוּעָל רָחֵל … וְאָמְרוּ: יֵשׁ דְּרוּסָה! אָמַר רַב סָפְרָא: הָהִיא חָתוּל הֲוָה"]:::statement
+  S2["② יֵשׁ דְּרוּסָה לְשׁוּעָל … וְאָמְרוּ: אֵין דְּרוּסָה! … הָהוּא כֶּלֶב הֲוָה … נָקְטִינַן אֵין דְּרוּסָה לְכֶלֶב"]:::statement
+  S1 -->|לישנא אחרינא| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ג א — Chullin 53a:6</span></div>
+    <div class="orig">אָמַר רַב כָּהֲנָא מִשְּׁמֵיהּ דְּרַב שִׁימִי בַּר אָשֵׁי: אֵין דְּרוּסָה לְשׁוּעָל. אִינִי? וְהָא כִּי אֲתָא רַב דִּימִי אָמַר: מַעֲשֵׂה וְדָרַס שׁוּעָל רָחֵל בַּמֶּרְחָץ שֶׁל בֵּית הִינֵי, וּבָא מַעֲשֶׂה לִפְנֵי חֲכָמִים, וְאָמְרוּ: יֵשׁ דְּרוּסָה! אָמַר רַב סָפְרָא: הָהִיא חָתוּל הֲוָה.</div>
+    <div class="trans" data-when="he">רב כהנא בשם רב שימי בר אשי: אין דרוסה לשועל. תמיהה: והרי כשבא רב דימי סיפר שמעשה בשועל שדרס רחל במרחץ של בית היני, ובא הדבר לפני חכמים ואמרו ׳יש דרוסה׳! יישוב: אמר רב ספרא — באותו מעשה חתול היה, ולא שועל.</div>
+    <div class="trans" data-when="en">§ Rav Kahana said in the name of Rav Shimi bar Ashi: A fox does not render an animal a tereifa through clawing. The Gemara asks: Is that so? But when Rav Dimi came from Eretz Yisrael to Babylonia he said: There was an incident in which a fox clawed a ewe in the bathhouse of Beit Hini, and the incident came before the Sages, and they said: This is a case of clawing. Rav Safra said in response: In that case the predator was a cat, not a fox.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ג א — Chullin 53a:7</span></div>
+    <div class="orig">אִיכָּא דְּאָמְרִי, אָמַר רַב כָּהֲנָא מִשְּׁמֵיהּ דְּרַב שִׁימִי בַּר אָשֵׁי: יֵשׁ דְּרוּסָה לְשׁוּעָל. אִינִי? וְהָא כִּי אֲתָא רַב דִּימִי אָמַר: מַעֲשֶׂה וְדָרַס שׁוּעָל רָחֵל בַּמֶּרְחָץ שֶׁל בֵּית הִינֵי, וּבָא מַעֲשֶׂה לִפְנֵי חֲכָמִים, וְאָמְרוּ: אֵין דְּרוּסָה! אָמַר רַב סָפְרָא: הָהוּא כֶּלֶב הֲוָה. אָמַר רַב יוֹסֵף: נָקְטִינַן אֵין דְּרוּסָה לְכֶלֶב.</div>
+    <div class="trans" data-when="he">איכא דאמרי בהיפוך: רב כהנא בשם רב שימי — יש דרוסה לשועל. תמיהה: והרי במעשה בית היני אמרו חכמים ׳אין דרוסה׳! יישוב: רב ספרא — באותו מעשה כלב היה. ורב יוסף הוסיף: בידינו מסורת שאין דרוסה לכלב.</div>
+    <div class="trans" data-when="en">There are those who say the above exchange differently: Rav Kahana said in the name of Rav Shimi bar Ashi: A fox does render an animal a tereifa through clawing. The Gemara asks: Is that so? But when Rav Dimi came from Eretz Yisrael to Babylonia he said: There was an incident in which a fox clawed a ewe in the bathhouse of Beit Hini, and the incident came before the Sages, and they said: This is not a case of clawing. Rav Safra said in response: In that case the predator was a dog, not a fox. And Rav Yosef said: We have a tradition that a dog does not render an animal a tereifa through clawing.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-15">
+  <h2><span class="badge"><span data-when="he">סוגיה 15</span><span data-when="en">Sugya 15</span></span>
+      <span data-when="he">ארבעת תנאי הדריסה</span><span data-when="en">The four conditions of clawing</span>
+      <span class="ref">Chullin 53a:8–9</span></h2>
+  <div class="lead"><span data-when="he">אביי מגדיר ארבעה תנאים לדרוסה, והגמרא מבררת את הצורך בתנאי ״מחיים״.</span><span data-when="en">Abaye lays down four conditions for clawing; the Gemara probes why ׳while alive׳ is needed.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אביי: אין דרוסה אלא ביד, בציפורן, מדעת, ומחיים"]:::statement
+  Q1{"② שלא מדעת אמרת לא — לאחר מיתה מיבעיא?"}:::question
+  A1["② צריכא: דרס ופסקו ידו — הארס נזרק בשליפה ולא בדריסה"]:::answer
+  S1 -->|דיוק| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Abaye: clawing only by foreleg, by claw, intentionally, and while alive"]:::statement
+  Q1{"② If unintentional fails, why state ׳after death׳ at all?"}:::question
+  A1["② Needed: it clawed alive, then its hand was cut off — venom is injected on withdrawal, not on clawing"]:::answer
+  S1 -->|inference| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אֵין דְּרוּסָה אֶלָּא בַּיָּד … בְּצִפּוֹרֶן … מִדַּעַת … מֵחַיִּים"]:::statement
+  Q1{"② הַשְׁתָּא שֶׁלֹּא מִדַּעַת אָמְרַתְּ לָא, לְאַחַר מִיתָה מִיבַּעְיָא?"}:::question
+  A1["② דְּדָרֵיס וּפַסְקוּהָ לִידֵיהּ … בַּהֲדֵי דְּשָׁלֵיף שָׁדֵי זִיהֲרֵיהּ"]:::answer
+  S1 -->|דיוק| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ג א — Chullin 53a:8</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: נָקְטִינַן, אֵין דְּרוּסָה אֶלָּא בַּיָּד, לְאַפּוֹקֵי רֶגֶל דְּלָא. אֵין דְּרוּסָה אֶלָּא בְּצִפּוֹרֶן, לְאַפּוֹקֵי שֵׁן דְּלָא. אֵין דְּרוּסָה אֶלָּא מִדַּעַת, לְאַפּוֹקֵי שֶׁלֹּא מִדַּעַת דְּלָא. אֵין דְּרוּסָה אֶלָּא מֵחַיִּים, לְאַפּוֹקֵי לְאַחַר מִיתָה דְּלָא.</div>
+    <div class="trans" data-when="he">אביי: בידינו מסורת — אין דרוסה אלא בארבעה תנאים: ביד (רגל הקדמית), ולא ברגל האחורית; בציפורן, ולא בשן (שאין בה ארס); מדעת הטורף, ולא שלא מדעת (כגון שנפל במקרה); ומחיים, ולא לאחר מיתת הטורף.</div>
+    <div class="trans" data-when="en">§ With regard to the definition of clawing that renders an animal a tereifa, Abaye said: We have a tradition: Clawing is only with the foreleg, to the exclusion of clawing with the hind leg, which does not render the animal a tereifa. Additionally, clawing is only with the claw, to the exclusion of savaging with the tooth, which does not render the animal a tereifa, because the teeth contain no venom. And clawing is only through an intentional act, to the exclusion of an unintentional act, which does not render the animal a tereifa, e.g., if the predator accidentally fell on the prey with its claws outstretched. And clawing is only while the predator is alive, to the exclusion of a case where it clawed an animal after death, which does not render the animal a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ג א — Chullin 53a:9</span></div>
+    <div class="orig">אָמְרִי: הַשְׁתָּא שֶׁלֹּא מִדַּעַת אָמְרַתְּ לָא, לְאַחַר מִיתָה מִיבַּעְיָא? לָא צְרִיכָא, דְּדָרֵיס וּפַסְקוּהָ לִידֵיהּ. מַהוּ דְּתֵימָא: בַּהֲדֵי דְּדָרֵיס שָׁדֵי זִיהֲרֵיהּ, קָא מַשְׁמַע לַן: בַּהֲדֵי דְּשָׁלֵיף שָׁדֵי זִיהֲרֵיהּ.</div>
+    <div class="trans" data-when="he">קושיא: אם שלא מדעת אינו מטריף, פשיטא שלאחר מיתה אינו מטריף! תירוץ: צריך לחדש זאת למקרה שדרס בעודו חי, וחתכו את ידו והציפורן עדיין נעוצה בבשר. סלקא דעתך שהארס נזרק בשעת הדריסה — קא משמע לן שהארס נזרק דווקא בשעת שליפת הציפורן; וכאן, כיוון שמת לפני השליפה, כשרה.</div>
+    <div class="trans" data-when="en">The Sages say: Now that you said that an unintentional act of clawing does not render an animal a tereifa, is it necessary to say that clawing after death is ineffective? The Gemara responds: No, it is necessary to teach this halakha for a case where the predator clawed while still alive, and they cut off its hand with its claws still inside the prey’s flesh. Lest you say: It injects its venom while it claws, Abaye teaches us that it injects its venom while it withdraws its claws. Accordingly, where the venom has yet to be injected before its death, i.e., before its hand is severed, the animal is kosher.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-16">
+  <h2><span class="badge"><span data-when="he">סוגיה 16</span><span data-when="en">Sugya 16</span></span>
+      <span data-when="he">ארי בין השוורים — ספק דרוסה</span><span data-when="en">A lion among the oxen — doubtful clawing</span>
+      <span class="ref">Chullin 53a:10–14</span></h2>
+  <div class="lead"><span data-when="he">ציפורן בגב השור — ספק אם הארי דרס; רב מקל, ואביי מסייג מתי הספק קיים בכלל.</span><span data-when="en">A claw in an ox's back — doubt whether the lion clawed; Rav is lenient, and Abaye limits when the doubt even arises.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רב: ארי בין השוורים ונמצא ציפורן בגב אחד — אין חוששין; אימר בכותל נתחכך"]:::statement
+  Q1{"② אדרבה — רוב שוורים מתחככים ואין ציפורן נשמטת; אימר ארי דרסו!"}:::question
+  A1["③ איכא למימר הכי והכי — אוקי תורא אחזקיה; ורב לטעמיה: אין חוששין לספק דרוסה"]:::answer
+  S2["④ אביי: דווקא ציפורן, אבל מקום ציפורן חוששין; ודווקא לחה, אבל יבשה משתמטת"]:::statement
+  S3["⑤ ולחה — דווקא חדא; אבל תרתי ותלת חוששין, והוא דקיימא בדרא דסיחופיה"]:::statement
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|סייג| S2
+  S2 -->|סייג| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Rav: a lion among oxen, a claw found in one's back — no concern; say it rubbed against a wall"]:::statement
+  Q1{"② On the contrary — most oxen rub and no claw stays; say the lion clawed it!"}:::question
+  A1["③ Either way may be said — leave the ox in its presumption; and Rav is consistent: no concern in doubtful clawing"]:::answer
+  S2["④ Abaye: only an actual claw; a mere claw-mark — concern; and only moist, for a dry claw slips out"]:::statement
+  S3["⑤ And moist — only one; but two or three — concern, provided they sit in a row like a paw"]:::statement
+  S1 -->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -->|qualified| S2
+  S2 -->|qualified| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אֲרִי שֶׁנִּכְנַס לְבֵין הַשְּׁוָורִים, וְנִמְצָא צִפּוֹרֶן בְּגַבּוֹ … אֵין חוֹשְׁשִׁין … אֵימַר בַּכּוֹתֶל נִתְחַכֵּךְ"]:::statement
+  Q1{"② אַדְּרַבָּה, רוֹב שְׁוָורִים מִתְחַכְּכִין … אֵימַר אֲרִי דְּרָסוֹ!"}:::question
+  A1["③ אִיכָּא לְמֵימַר הָכִי … אוֹקֵי תּוֹרָא אַחֶזְקֵיהּ … רַב לְטַעְמֵיהּ: אֵין חוֹשְׁשִׁין לִסְפֵק דְּרוּסָה"]:::answer
+  S2["④ לָא אֲמַרַן אֶלָּא צִפּוֹרֶן, אֲבָל מְקוֹם צִפּוֹרֶן חוֹשְׁשִׁין … לַחָה, אֲבָל יְבֵשָׁה עָבְדָה דְּמִשְׁתַּמְטָא"]:::statement
+  S3["⑤ וְלַחָה … אֶלָּא חֲדָא, אֲבָל תַּרְתֵּי וּתְלָת – חָיְישִׁינַן, וְהוּא דְּקָיְימָא בְּדָרָא דְּסִיחוּפֵיהּ"]:::statement
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|סייג| S2
+  S2 -->|סייג| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ג א — Chullin 53a:10</span></div>
+    <div class="orig">אָמַר רַבָּה בַּר רַב הוּנָא אָמַר רַב: אֲרִי שֶׁנִּכְנַס לְבֵין הַשְּׁוָורִים, וְנִמְצָא צִפּוֹרֶן בְּגַבּוֹ שֶׁל אֶחָד מֵהֶן – אֵין חוֹשְׁשִׁין שֶׁמָּא אֲרִי דְּרָסוֹ. מַאי טַעְמָא? רוֹב אֲרָיוֹת דּוֹרְסִין וּמִיעוּטָן אֵין דּוֹרְסִין, וְכׇל הַדּוֹרֵס – אֵין צִפׇּרְנוֹ נִשְׁמֶטֶת, וְזֹאת, הוֹאִיל וְצִפּוֹרֶן יוֹשֶׁבֶת לוֹ בְּגַבּוֹ – אֵימַר בַּכּוֹתֶל נִתְחַכֵּךְ.</div>
+    <div class="trans" data-when="he">רבה בר רב הונא בשם רב: ארי שנכנס בין השוורים, ואחר כך נמצאה ציפורן בגב אחד מהם — אין חוששים שמא הארי דרסו. הטעם: אף שרוב אריות דורסים, כל הדורס אין ציפורנו נשמטת בדריסה; וכיוון שכאן הציפורן יושבת בגב, מסתבר שהשור נתחכך בכותל שהיתה בו ציפורן תקועה.</div>
+    <div class="trans" data-when="en">§ Rabba bar Rav Huna says that Rav says: If a lion entered among the oxen, and afterward a claw was found stuck in the back of one of the oxen, one need not be concerned that perhaps the lion clawed it. What is the reason for this? Even though a majority of lions claw their prey and only a minority of them do not claw, still, it is known with regard to any lion that claws that its claw is not ripped out in the process. And therefore, with regard to this ox, since a claw sits in its back, say that it rubbed against a wall that had a claw embedded in it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ג א — Chullin 53a:11</span></div>
+    <div class="orig">אַדְּרַבָּה, רוֹב שְׁוָורִים מִתְחַכְּכִין, וּמִיעוּטָן אֵין מִתְחַכְּכִין, וְכׇל הַמִּתְחַכֵּךְ – אֵין צִפּוֹרֶן יוֹשֶׁבֶת לוֹ בְּגַבּוֹ, וְזֶה, הוֹאִיל וְצִפּוֹרֶן יוֹשֶׁבֶת לוֹ בְּגַבּוֹ, אֵימַר אֲרִי דְּרָסוֹ!</div>
+    <div class="trans" data-when="he">קושיא הפוכה: אדרבה — רוב שוורים מתחככים בכותל, אך כל המתחכך אין ציפורן נשארת תקועה בגבו; וכיוון שכאן ציפורן יושבת בגב, מסתבר דווקא שהארי דרסו!</div>
+    <div class="trans" data-when="en">The Gemara objects: On the contrary, say that even though a majority of oxen rub against the wall and only a minority do not rub, still, it is known with regard to any ox that rubs that a claw does not sit in its back. And therefore, with regard to this ox, since a claw sits in its back, say that the lion clawed it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ג א — Chullin 53a:12</span></div>
+    <div class="orig">אִיכָּא לְמֵימַר הָכִי, וְאִיכָּא לְמֵימַר הָכִי – אוֹקֵי (מִילְּתָא) [תּוֹרָא] אַחֶזְקֵיהּ, הָוֵה לֵיהּ סְפֵק דְּרוּסָה; וְרַב לְטַעְמֵיהּ, דְּאָמַר: אֵין חוֹשְׁשִׁין לִסְפֵק דְּרוּסָה.</div>
+    <div class="trans" data-when="he">יישוב: יש לומר כך ויש לומר כך — ומשהספק שקול, מעמידים את השור על חזקתו (שאינו טריפה); ונמצא שזהו ספק דרוסה. ורב לשיטתו, שאמר: אין חוששים לספק דרוסה.</div>
+    <div class="trans" data-when="en">The Gemara responds: One can say this, and one can say that. Therefore, establish the matter according to its presumptive status, in which case the ox is not a tereifa. Accordingly, the ox is permitted because this case is one of uncertainty as to whether the animal was clawed, and Rav conforms to his standard line of reasoning, as he says: One need not be concerned in a case of uncertainty as to whether an animal was clawed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ג א — Chullin 53a:13</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: לָא אֲמַרַן אֶלָּא צִפּוֹרֶן, אֲבָל מְקוֹם צִפּוֹרֶן – חוֹשְׁשִׁין, וְצִפּוֹרֶן נָמֵי לָא אֲמַרַן אֶלָּא לַחָה, אֲבָל יְבֵשָׁה – עָבְדָה דְּמִשְׁתַּמְטָא.</div>
+    <div class="trans" data-when="he">אביי מסייג: לא אמרנו להקל אלא כשנמצאה ציפורן ממש בגב, שכן ציפורן אינה נשמטת בדריסה; אבל אם נמצא רק מקום ציפורן (נקב) — חוששין. ואף בציפורן עצמה לא הקלנו אלא בלחה (מחוברת היטב), אבל יבשה — דרכה להישמט בדריסה, וחוששין.</div>
+    <div class="trans" data-when="en">Abaye said: We said that one need not be concerned that the lion clawed the ox only when the claw was found in its back, since it is known that a claw is not ripped out during clawing. But if only the spot of a claw was found, i.e., a perforation, one must be concerned. And even if the claw was found in its back, we said that one need not be concerned only when it was moist, since this indicates it was well connected to the flesh. Accordingly, if the lion had clawed the ox, this claw would not have been ripped out. But if the claw was dry, one must be concerned, because it happens that such a claw is ripped out during clawing.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ג א — Chullin 53a:14</span></div>
+    <div class="orig">וְלַחָה נָמֵי לָא אֲמַרַן, אֶלָּא חֲדָא, אֲבָל תַּרְתֵּי וּתְלָת – חָיְישִׁינַן, וְהוּא דְּקָיְימָא בְּדָרָא דְּסִיחוּפֵיהּ.</div>
+    <div class="trans" data-when="he">ואף בציפורן לחה לא הקלנו אלא בציפורן אחת; אבל אם נמצאו שתיים או שלוש ציפורניים — חוששין, שאין דרך שייתקעו כמה בכותל. וזאת דווקא כשהן מסודרות בשורה, כדרך שהן בכף רגלו של הארי.</div>
+    <div class="trans" data-when="en">And with regard to a moist claw as well, we said that one need not be concerned only when one claw was found in its back. But if there were two or three claws embedded in its back, we must be concerned, because multiple claws were not likely to be embedded in the wall. And this is the halakha only where they are situated in a row as they are in the paw of a lion.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-17">
+  <h2><span class="badge"><span data-when="he">סוגיה 17</span><span data-when="en">Sugya 17</span></span>
+      <span data-when="he">ספק דרוסה — רב ושמואל</span><span data-when="en">Doubtful clawing — Rav and Shmuel</span>
+      <span class="ref">Chullin 53a:15–53b:8</span></h2>
+  <div class="lead"><span data-when="he">מחלוקת יסוד: ספק דרוסה — מקילים או מחמירים? נפסק לחומרה, וכמה מעשים ממחישים זאת.</span><span data-when="en">A foundational dispute: doubtful clawing — lenient or stringent? The stringent view prevails, illustrated by several incidents.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב: אין חוששין לספק דרוסה; שמואל: חוששין"]:::statement
+  S2["② כולי עלמא מקילים בספק נכנס, ספק כלב/חתול, שתק וישב; נחלקו: הוא שותק והן מקרקרות"]:::statement
+  C1["④ אמימר: הלכתא חוששין לספק דרוסה; רב אשי על דעת רב — לא שמיע/לא סבירא"]:::conclusion
+  S3["⑤ ואיבעית אימא: הדר ביה רב — שרקפא דספק דרוסות שלח לשמואל, חנקן והשליכן לנהר; אתריה דשמואל הוה"]:::statement
+  S4["⑦ למה לחנקן ולהשליכן בנהר? שמא יפרחו, שמא תקלה, שמא ימכרו לישראל — לפרסומי איסורא"]:::statement
+  S5["⑩ בר אווזא דרב אשי: ספק קניא ספק שונרא — אימר קניא מחייה, כשרה"]:::statement
+  S1 -->|הסבר| S2
+  S2 -->|הלכה| C1
+  C1 -->|טעם נוסף| S3
+  S3 -->|בירור| S4
+  C1 -->|יישום| S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav: no concern in doubtful clawing; Shmuel: there is concern"]:::statement
+  S2["② All agree to be lenient in doubt of entry, dog vs cat, quiet and seated; they dispute: it silent and they clucking"]:::statement
+  C1["④ Ameimar: the halakha is we are concerned; Rav Ashi on Rav's view — I did not hear / hold it"]:::conclusion
+  S3["⑤ Or: Rav retracted — a basket of doubtfully-clawed birds sent to Shmuel, who strangled them and threw them in the river; it was Shmuel's locale"]:::statement
+  S4["⑦ Why strangle and river them? Lest they fly off, lest a mishap, lest sold to a Jew — to publicize the prohibition"]:::statement
+  S5["⑩ Rav Ashi's duck: doubt reed vs cat — say a reed struck it, kosher"]:::statement
+  S1 -->|explained| S2
+  S2 -->|halakha| C1
+  C1 -->|further reason| S3
+  S3 -->|clarified| S4
+  C1 -->|applied| S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רַב אָמַר: אֵין חוֹשְׁשִׁין לִסְפֵק דְּרוּסָה, וּשְׁמוּאֵל אָמַר: חוֹשְׁשִׁין"]:::statement
+  S2["② סָפֵק עָל סָפֵק לָא עָל – אֵימָא לָא עָל … כִּי פְּלִיגִי דְּאִיהוּ קָא שָׁתֵיק וְאִינְהוּ קָמְקַרְקְרָן"]:::statement
+  C1["④ אָמַר אַמֵּימָר: הִלְכְתָא חוֹשְׁשִׁין לִסְפֵק דְּרוּסָה … לָא שְׁמִיעַ לִי, לָא סְבִירָא לִי"]:::conclusion
+  S3["⑤ הֲדַר בֵּיהּ רַב … שַׁרְקָפָא דִּסְפֵק דְּרוּסוֹת … חַנְקִינְהוּ וּשְׁדָנְהוּ בְּנַהֲרָא … אַתְרֵיהּ דִּשְׁמוּאֵל הֲוָה"]:::statement
+  S4["⑦ לְמָה לְמִיחְנְקִינְהוּ … מְפָרְחָן … אָתֵי לִידֵי תַקָּלָה … אָתוּ לְזַבּוֹנִינְהוּ לְיִשְׂרָאֵל … לְפַרְסוֹמֵי מִלְּתָא דְּאִיסּוּרָא"]:::statement
+  S5["⑩ הָהוּא בַּר אֲוָוזָא … ספֵק קַנְיָא סְפֵק שׁוּנָרָא – אֵימַר קַנְיָא מַחְיֵיהּ"]:::statement
+  S1 -->|הסבר| S2
+  S2 -->|הלכה| C1
+  C1 -->|טעם נוסף| S3
+  S3 -->|בירור| S4
+  C1 -->|יישום| S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ג א — Chullin 53a:15</span></div>
+    <div class="orig">אִיתְּמַר: רַב אָמַר: אֵין חוֹשְׁשִׁין לִסְפֵק דְּרוּסָה, וּשְׁמוּאֵל אָמַר: חוֹשְׁשִׁין לִסְפֵק דְּרוּסָה.</div>
+    <div class="trans" data-when="he">נחלקו: רב אומר שאין חוששים לספק דרוסה — בספק מקילים; ושמואל אומר שחוששים לספק דרוסה — ומצריך בדיקה.</div>
+    <div class="trans" data-when="en">§ It was stated: Rav says: One need not be concerned in a case of uncertainty as to whether an animal was clawed. And Shmuel says: One must be concerned in a case of uncertainty as to whether an animal was clawed, and the animal must be inspected.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ג א — Chullin 53a:16</span></div>
+    <div class="orig">דְּכוּלֵּי עָלְמָא, סָפֵק עָל, סָפֵק לָא עָל – אֵימָא לָא עָל. סְפֵק כַּלְבָּא, סְפֵק שׁוּנָרָא – אֵימָא כַּלְבָּא. עָל, שְׁתֵיק וְיָתֵיב בֵּינַיְיהוּ – אֵימַר שְׁלָמָא שַׁוִּי. קְטַע רֵישֵׁיהּ דְּחַד מִינַּיְיהוּ – נָח מֵרִיתְחֵיהּ. אִיהוּ קָא מְעַוֵּאי וְאִינְהוּ קָמְקַרְקְרָן – בַּעוֹתֵי קָא מְבַעֲתִי</div>
+    <div class="trans" data-when="he">תיחום המחלוקת: לדברי הכל מקילים — ספק אם הטורף נכנס, אמור שלא נכנס; ספק כלב ספק חתול, אמור כלב (שאינו דורס); נכנס ושתק וישב ביניהם, אמור עשה שלום ולא דרס; ערף ראש אחד מהם, אמור שככה חמתו; הוא שואג והם מקרקרים — מבעיתים…</div>
+    <div class="trans" data-when="en">The Gemara explains: Everyone agrees that in a case where it is uncertain whether a predator entered the pen or coop and uncertain whether it did not enter, I will say that it did not enter. Furthermore, if it is known that an animal entered but it is uncertain whether it was a dog and uncertain whether it was a cat, I will say that it was a dog, which cannot render an animal a tereifa through clawing. And even if a predator entered, but it was quiet and sat among the animals, I will say it made peace with them, as though it were tame, and did not claw them. And if it decapitated one of them, I will say that its anger subsided afterward, and it did not claw other animals. And if it was roaring and they were clucking, I will say that they are only frightening</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ג ב — Chullin 53b:1</span></div>
+    <div class="orig">אַהֲדָדֵי. כִּי פְּלִיגִי דְּאִיהוּ קָא שָׁתֵיק וְאִינְהוּ קָמְקַרְקְרָן: מָר סָבַר מַעֲשֶׂה קָא עָבֵיד בְּהוּ, וּמָר סָבַר מֵחֲמַת בִּעֲתוּתֵיהּ הוּא דְּקָא עָבְדָן.</div>
+    <div class="trans" data-when="he">…זה את זה (מפחד), ואין חוששים. נקודת המחלוקת: כשהטורף שותק והעופות מקרקרים — שמואל סובר שהוא דורס בהם, ולכן הם מקרקרים; ורב סובר שהם מקרקרים מחמת פחד בלבד, ואינו בהכרח דורס.</div>
+    <div class="trans" data-when="en">each other, and one need not be concerned. They disagree when the lion is quiet and the birds are clucking. One Sage, Shmuel, holds: They are clucking because it is acting upon them, i.e., clawing them, and one Sage, Rav, holds that they are doing this out of fear of the predator, but it is not necessarily clawing them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ג ב — Chullin 53b:2</span></div>
+    <div class="orig">אָמַר אַמֵּימָר: הִלְכְתָא חוֹשְׁשִׁין לִסְפֵק דְּרוּסָה. אֲמַר לֵיהּ רַב אָשֵׁי לְאַמֵּימָר: הַאי דְּרַב מַאי? אֲמַר לֵיהּ: לָא שְׁמִיעַ לִי, כְּלוֹמַר, לָא סְבִירָא לִי.</div>
+    <div class="trans" data-when="he">אמימר פסק: הלכה שחוששים לספק דרוסה (כשמואל). שאל רב אשי: ומה עם דברי רב המקל? השיב אמימר: לא שמעתי אותם — כלומר, איני סובר כמותם.</div>
+    <div class="trans" data-when="en">Ameimar said: The halakha is that one must be concerned in a case of uncertainty as to whether an animal was clawed. Rav Ashi said to Ameimar: What about this statement of Rav that one need not be concerned? Ameimar said to him: I did not hear that statement; that is to say, I do not hold in accordance with it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ג ב — Chullin 53b:3</span></div>
+    <div class="orig">וְאִי בָּעֵית אֵימָא: הֲדַר בֵּיהּ רַב לְגַבֵּי דִּשְׁמוּאֵל, דְּהָהוּא שַׁרְקָפָא דִּסְפֵק דְּרוּסוֹת, דַּאֲתָא לְקַמֵּיהּ דְּרַב, שַׁדְּרִינְהוּ לְקַמֵּיהּ דִּשְׁמוּאֵל, חַנְקִינְהוּ וּשְׁדָנְהוּ בְּנַהֲרָא. וְאִי סָלְקָא דַּעְתָּךְ לָא הֲדַר בֵּיהּ – לִישְׁרִינְהוּ?</div>
+    <div class="trans" data-when="he">ואפשר לומר אחרת: רב חזר בו והודה לשמואל. ראיה: סל עופות שהיה ספק דרוסים בא לפני רב, ושלחם לשמואל; שמואל חנקם והשליכם לנהר. ואם תעלה בדעתך שרב לא חזר בו — מדוע לא התירם?</div>
+    <div class="trans" data-when="en">Or if you wish, say instead that Rav retracted his statement and conceded to Shmuel that one must be concerned in a case of uncertainty. As there was a certain basket of birds concerning which there was uncertainty as to whether they had been clawed by a hawk that entered among them, which came before Rav. Rav sent them before Shmuel to issue a ruling, and Shmuel strangled them and threw them in the river. And if it enters your mind that Rav did not retract his statement, then let him permit them for consumption. Why did he send them to Shmuel?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ג ב — Chullin 53b:4</span></div>
+    <div class="orig">אֶלָּא מַאי הֲדַר בֵּיהּ? לֵיסְרִינְהוּ! אֶלָּא, אַתְרֵיהּ דִּשְׁמוּאֵל הֲוָה.</div>
+    <div class="trans" data-when="he">דחיית הראיה: ואם תאמר שרב אכן חזר בו ואסר — אם כן יאסרם בעצמו, ולמה שלחם לשמואל? אלא, מקומו של שמואל היה, ולא ראוי היה לרב לפסוק שם הפך דעת שמואל.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: Rather, what will you say, that Rav really did retract? If so, let him prohibit them for consumption without sending them to Shmuel. Rather, he sent the birds to Shmuel because it was Shmuel’s place, and although Rav disagreed with Shmuel, it would be improper to issue a contradictory ruling.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ג ב — Chullin 53b:5</span></div>
+    <div class="orig">לְמָה לִּי לְמִיחְנְקִינְהוּ? לִישְׁדִּינְהוּ הָכִי בְּנַהֲרָא! מְפָרְחָן וְסָלְקָן.</div>
+    <div class="trans" data-when="he">בירור התנהגות שמואל: למה חנקם? ישליכם לנהר כמות שהם! תשובה: חשש שמא יפרחו ויעלו מן הנהר, ויגיעו ליד ישראל שיאכלם.</div>
+    <div class="trans" data-when="en">The Gemara asks: Why do I need Shmuel to strangle the birds? Let him simply throw them into the river as is. The Gemara responds: Shmuel was concerned lest they fly and leave the river and eventually end up in the possession of an unwitting Jew.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין נ״ג ב — Chullin 53b:6</span></div>
+    <div class="orig">וּלְשַׁהִינְהוּ שְׁנֵים עָשָׂר חוֹדֶשׁ? אָתֵי בְּהוּ לִידֵי תַקָּלָה. וְלִיזַבְּנִינְהוּ לְגוֹיִם? אָתוּ לְזַבּוֹנִינְהוּ לְיִשְׂרָאֵל.</div>
+    <div class="trans" data-when="he">ועוד: ישהה אותם שנים עשר חודש, ואם יחיו יוכח שאינם טריפות? תשובה: שמא תארע תקלה וייאכלו קודם. ימכרם לגויים? תשובה: שמא הגויים ימכרום בחזרה לישראל.</div>
+    <div class="trans" data-when="en">The Gemara objects: But let him delay killing them for twelve months. If they survive it will prove that they are not tereifot, and they will be permitted. The Gemara responds: Shmuel was concerned lest people encounter a stumbling block, as they might forget that these birds are prohibited and eat them before twelve months have passed. The Gemara asks: But let him sell them to gentiles so that they will not be a stumbling block. The Gemara responds: Shmuel was concerned that perhaps the gentiles will come to sell them back to Jews.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין נ״ג ב — Chullin 53b:7</span></div>
+    <div class="orig">וְלִיחְנְקִינְהוּ וְלִישְׁדִּינְהוּ לְאַשְׁפָּה? וְלִיטַעְמָיךְ, נִישְׁדִּינְהוּ לִכְלָבִים! אֶלָּא, לְפַרְסוֹמֵי מִלְּתָא דְּאִיסּוּרָא.</div>
+    <div class="trans" data-when="he">ועוד: יחנקם וישליכם לאשפה? ולשיטתך — ישליכם לכלבים שייהנו מהם! אלא, השליכם דווקא לנהר, מקום פומבי, כדי לפרסם שהדבר אסור.</div>
+    <div class="trans" data-when="en">The Gemara objects: But let him strangle them and throw them into the garbage. Why did Shmuel throw them into the river? The Gemara responds: And according to your reasoning, we should throw them to the dogs, as at least then they will come to some use. Rather, Shmuel threw them into the river, a public place, in order to publicize the matter of the prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין נ״ג ב — Chullin 53b:8</span></div>
+    <div class="orig">הָהוּא בַּר אֲוָוזָא דַּהֲוָה בֵּי רַב אָשֵׁי, עָל לְבֵינֵי קְנַיָּא, נְפַק אֲתָא כִּי מְמַסְמַס קוֹעֵיהּ דְּמָא. אָמַר רַב אָשֵׁי: לָא אָמְרִינַן סְפֵק כַּלְבָּא סְפֵק שׁוּנָרָא – אֵימַר כַּלְבָּא? הָכָא נָמֵי, סְפֵק קַנְיָא סְפֵק שׁוּנָרָא – אֵימַר קַנְיָא מַחְיֵיהּ.</div>
+    <div class="trans" data-when="he">אווז בבית רב אשי נכנס בין הקנים ויצא כשצווארו מרוט ומגואל בדם. אמר רב אשי: והרי אומרים ספק כלב ספק חתול — אמור כלב (שאינו דורס)? אף כאן, ספק שקנה פצעו ספק שחתול דרסו — אמור שהקנה הכהו, וכשר.</div>
+    <div class="trans" data-when="en">The Gemara relates that there was a certain duck that was in the house of Rav Ashi. The duck entered between the reeds, and it came out with its throat stained with blood. Rav Ashi said: Do we not say: If it is uncertain whether the predator was a dog and uncertain whether it was a cat, I will say that it was a dog, which cannot claw an animal effectively? Here, too, since it is uncertain whether the duck was injured by a reed and uncertain whether it was injured by a cat, I will say that a reed struck it, and the duck is not a tereifa.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-18">
+  <h2><span class="badge"><span data-when="he">סוגיה 18</span><span data-when="en">Sugya 18</span></span>
+      <span data-when="he">בדיקת הדרוסה ושמוטה ושחוטה</span><span data-when="en">Inspecting a clawed animal; the dislocated windpipe</span>
+      <span class="ref">Chullin 53b:9–54a:8</span></h2>
+  <div class="lead"><span data-when="he">היכן וכמה בודקים דרוסה, מהו ״נתמסמס הבשר״, ושיעור דרוסת הוושט והקנה — עד דין שמוטה ושחוטה החותם.</span><span data-when="en">Where and how far a clawed animal is inspected, what ׳rotted flesh׳ means, and the threshold for a clawed gullet and windpipe — down to the closing law of a dislocated-then-slaughtered windpipe.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בני רבי חייא: דרוסה צריכה בדיקה כנגד בני מעיים; וכבר פירשה שמואל"]:::statement
+  S2["③ איבעיא דאילפא: יש דרוסה לסימנים? בדיקה כנגד בית החלל כולו, ואף בסימנין"]:::statement
+  S3["④ סימנים שנדלדלו — ברובן"]:::statement
+  S4["⑤ נתמסמס הבשר — רואין אותו כאילו אינו; וזהו שהרופא גורדו ומעמידו על בשר חי"]:::statement
+  S5["⑦ רב נחמן: בקוץ עד שתינקב, בדרוסה משיאדים; רב זביד: סימנים עד שיאדימו עצמם"]:::statement
+  S6["⑧ דרוסת הוושט והקנה — במשהו, שהארס צורב והולך"]:::statement
+  S7["⑩ נחלקו בהיקף הבדיקה: כנגד בני מעיים, או — לדעת רב — מכפא ועד אטמא"]:::statement
+  C1["⑭ שמוטה ושחוטה — רב: כשרה; ר׳ יוחנן: יביא ויקיף; רב נחמן: דווקא שלא תפס בסימנים"]:::conclusion
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Sons of R. Ḥiyya: a clawed animal needs inspection by the intestines; Shmuel already said so"]:::statement
+  S2["③ Ilfa's dilemma: is there clawing of the simanim? Inspect the whole cavity, even the simanim"]:::statement
+  S3["④ Simanim that became detached — in their majority"]:::statement
+  S4["⑤ Rotted flesh — viewed as if absent; this is flesh a doctor scrapes down to the living flesh"]:::statement
+  S5["⑦ Rav Naḥman: a thorn — until it perforates; clawing — once it reddens; Rav Zevid: simanim until they themselves redden"]:::statement
+  S6["⑧ A clawed gullet and windpipe — any amount, for the venom keeps burning"]:::statement
+  S7["⑩ They dispute the scope: by the intestines, or — per Rav — from the skull to the thigh"]:::statement
+  C1["⑭ Dislocated-then-slaughtered windpipe — Rav: kosher; R. Yoḥanan: bring and compare; Rav Naḥman: only if he did not grip the simanim"]:::conclusion
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① דְּרוּסָה שֶׁאָמְרוּ – צְרִיכָה בְּדִיקָה כְּנֶגֶד בְּנֵי מֵעַיִים … כְּבָר פֵּירְשַׁהּ שְׁמוּאֵל"]:::statement
+  S2["③ בָּעֵי אִילְפָא: יֵשׁ דְּרוּסָה לְסִימָנִים? … כְּנֶגֶד בֵּית הֶחָלָל כּוּלּוֹ, וַאֲפִילּוּ בְּסִימָנִין"]:::statement
+  S3["④ סִימָנִים שֶׁנִּדַּלְדְּלוּ בְּרוּבָּן"]:::statement
+  S4["⑤ נִתְמַסְמֵס הַבָּשָׂר – רוֹאִין אוֹתוֹ כְּאִילּוּ אֵינוֹ … שֶׁהָרוֹפֵא גּוֹרְדוֹ וּמַעֲמִידוֹ עַל בָּשָׂר חַי"]:::statement
+  S5["⑦ בְּקוֹץ – עַד שֶׁתִּינָּקֵב … בִּדְרוּסָה – מִשֶּׁיַּאֲדִים בָּשָׂר … עַד שֶׁיַּאֲדִימוּ סִימָנִים עַצְמָם"]:::statement
+  S6["⑧ וֶושֶׁט … דְּרוּסָתוֹ בְּמַשֶּׁהוּ … זִיהֲרֵיהּ מִקְלָא קָלֵי וְאָזֵיל"]:::statement
+  S7["⑩ צְרִיכָה בְּדִיקָה כְּנֶגֶד בְּנֵי מֵעַיִים … מוֹרֵי בַּהּ רַב מִכַּפָּא וְעַד אַטְמָא"]:::statement
+  C1["⑭ שְׁמוּטָה וּשְׁחוּטָה – כְּשֵׁרָה … יָבִיא וְיַקִּיף … אֶלָּא שֶׁלֹּא תָּפַס בְּסִימָנִים"]:::conclusion
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ג ב — Chullin 53b:9</span></div>
+    <div class="orig">אָמְרִי בְּנֵי רַבִּי חִיָּיא: דְּרוּסָה שֶׁאָמְרוּ – צְרִיכָה בְּדִיקָה כְּנֶגֶד בְּנֵי מֵעַיִים.</div>
+    <div class="trans" data-when="he">בני רבי חייא (יהודה וחזקיה): דרוסה שאמרו שצריכה בדיקה — בודקים את הבשר שכנגד בני המעיים; אם האדים, טריפה, שכן הארס עתיד לנקוב את המעיים.</div>
+    <div class="trans" data-when="en">§ The sons of Rabbi Ḥiyya, Yehuda and Ḥizkiyya, said: A clawed animal, about which the Sages said one must be concerned, requires inspection of the flesh adjacent to the intestines. If the flesh surrounding the intestines reddened, the animal is a tereifa, because the venom will eventually penetrate the body cavity and perforate the intestines themselves.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ג ב — Chullin 53b:10</span></div>
+    <div class="orig">אָמַר רַב יוֹסֵף: הָא דִּבְנֵי רַבִּי חִיָּיא – כְּבָר פָּירְשַׁהּ שְׁמוּאֵל, דְּאָמַר שְׁמוּאֵל מִשּׁוּם רַבִּי חֲנִינָא בֶּן אַנְטִיגְנוֹס: דְּרוּסָה שֶׁאָמְרוּ – צְרִיכָה בְּדִיקָה כְּנֶגֶד בְּנֵי מֵעַיִים.</div>
+    <div class="trans" data-when="he">רב יוסף: דברי בני רבי חייא כבר נאמרו על ידי שמואל בשם רבי חנינא בן אנטיגנוס — שדרוסה צריכה בדיקה כנגד בני המעיים.</div>
+    <div class="trans" data-when="en">Rav Yosef said: This statement of the sons of Rabbi Ḥiyya was already explained by Shmuel, as Shmuel says in the name of Rabbi Ḥanina ben Antigonus: A clawed animal, about which they said one must be concerned, requires inspection adjacent to the intestines.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ג ב — Chullin 53b:11</span></div>
+    <div class="orig">בָּעֵי אִילְפָא: יֵשׁ דְּרוּסָה לְסִימָנִים אוֹ אֵין דְּרוּסָה לְסִימָנִים? אָמַר רַבִּי זֵירָא: הָא דְּבָעֵי אִילְפָא – כְּבָר פֵּירְשַׁהּ רַב חָנָן בַּר רָבָא, דְּאָמַר רַב חָנָן בַּר רָבָא אָמַר רַב: דְּרוּסָה שֶׁאָמְרוּ צְרִיכָה בְּדִיקָה כְּנֶגֶד בֵּית הֶחָלָל כּוּלּוֹ, וַאֲפִילּוּ בְּסִימָנִין.</div>
+    <div class="trans" data-when="he">אילפא שאל: האם יש דרוסה לסימנים (הקנה והוושט) — האם הארס חודר אליהם? אמר ר׳ זירא: כבר פירשה רב חנן בר רבא בשם רב — דרוסה צריכה בדיקה כנגד כל בית החלל, ואף בסימנין.</div>
+    <div class="trans" data-when="en">Ilfa raises a dilemma: Is there clawing with regard to the simanim, or is there no clawing with regard to the simanim? Does the venom penetrate the simanim as it does the intestines? Rabbi Zeira said: This dilemma that Ilfa raises was already explained by Rav Ḥanan bar Rava, as Rav Ḥanan bar Rava says that Rav says: A clawed animal, about which they said one must be concerned, requires inspection of the flesh adjacent to the entire body cavity, and even in the area of the simanim.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ג ב — Chullin 53b:12</span></div>
+    <div class="orig">בָּעֵי אִילְפָא: סִימָנִין שֶׁנִּדַּלְדְּלוּ, בְּכַמָּה? אָמַר רַבִּי זֵירָא: הָא דְּבָעֵי אִילְפָא – כְּבָר פֵּירְשַׁהּ רַבָּה בַּר בַּר חָנָה, דְּאָמַר רַבָּה בַּר בַּר חָנָה אָמַר שְׁמוּאֵל: סִימָנִים שֶׁנִּדַּלְדְּלוּ בְּרוּבָּן.</div>
+    <div class="trans" data-when="he">אילפא שאל עוד: סימנים שנדלדלו (נתנתקו מחיבורם) — בכמה מטריף? אמר ר׳ זירא: כבר פירשה רבה בר בר חנה בשם שמואל — סימנים שנדלדלו ברובם, טריפה.</div>
+    <div class="trans" data-when="en">Ilfa raises another dilemma: With regard to simanim that were detached, how much detachment renders the animal a tereifa? Rabbi Zeira said: This dilemma that Ilfa raises was already explained by Rabba bar bar Ḥana, as Rabba bar bar Ḥana says that Shmuel says: With regard to simanim that were detached, if they were detached in their majority the animal is a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ג ב — Chullin 53b:13</span></div>
+    <div class="orig">בָּעֵי רַב אַמֵּי: הֲמַסְמָסָה מַהוּ? אָמַר רַבִּי זֵירָא: הָא דְּבָעֵי רַב אַמֵּי – כְּבָר פֵּירְשַׁהּ רַב יְהוּדָה, דְּאָמַר רַב יְהוּדָה אָמַר רַב: בִּדְרוּסָה, עַד שֶׁיַּאֲדִים בָּשָׂר כְּנֶגֶד בְּנֵי מֵעַיִים; נִתְמַסְמֵס הַבָּשָׂר – רוֹאִין אוֹתוֹ כְּאִילּוּ אֵינוֹ.</div>
+    <div class="trans" data-when="he">רב אמי שאל: בשר שנימוח (נתמסמס) במקום הדריסה — מהו? אמר ר׳ זירא: כבר פירשה רב יהודה בשם רב — בדרוסה אינה טריפה עד שיאדים הבשר כנגד בני המעיים; ואם נתמסמס הבשר, רואים אותו כאילו אינו, וכאילו ניטל.</div>
+    <div class="trans" data-when="en">Rav Ami raises a dilemma: What is the halakha with regard to an animal that was clawed in an area not surrounding the body cavity, such as the legs, and rot was found in the flesh of that area? Rabbi Zeira said: This dilemma that Rav Ami raises was already explained by Rav Yehuda, as Rav Yehuda says that Rav says: With regard to a clawed animal, the injury does not render it a tereifa unless the flesh adjacent to the intestine reddens; but if the flesh rotted, one views the rotten area as if it does not exist. If the animal would be a tereifa when missing this flesh, it is also a tereifa if the flesh rotted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ג ב — Chullin 53b:14</span></div>
+    <div class="orig">הֵיכִי דָּמֵי נִתְמַסְמֵס? אָמַר רַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ: כֹּל שֶׁהָרוֹפֵא גּוֹרְדוֹ וּמַעֲמִידוֹ עַל בָּשָׂר חַי. אָמַר רַב אָשֵׁי: כִּי הֲוֵינַן בֵּי רַב כָּהֲנָא, אַיְיתוֹ קַמַּן הָהִיא רֵיאָה, דְּכִי הֲווֹ מוֹתְבִי לַהּ – יָתְבָה שַׁפִּיר, וְכִי הֲווֹ מַדְלוּ לַהּ – הֲוָה תָּלְחָה וְנָפְלָה תִּילְחֵי תִּילְחֵי, וְטָרֵיפְנָא לַהּ מִדְּרַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ.</div>
+    <div class="trans" data-when="he">היכי דמי נתמסמס? אמר רב הונא בריה דרב יהושע: כל בשר שהרופא גורדו ומסירו עד שמעמיד את הבהמה על בשר חי בריא. סיפר רב אשי: בבית רב כהנא הביאו ריאה שכשהניחוה ישבה יפה, אך כשהגביהוה התפוררה ונפלה חתיכות־חתיכות — וטרפנו אותה על פי דברי רב הונא בריה דרב יהושע.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is considered rotten flesh? Rav Huna, son of Rav Yehoshua, said: It is any flesh in such a state that the doctor scrapes it off and leaves the animal with its raw flesh exposed so that it will heal. Rav Ashi said: When we were in the study hall of Rav Kahana they brought before us a certain lung that, when they would set it down, would sit well, but when they would pick it up it would disintegrate and fall into pieces. And we deemed it a tereifa based on the statement of Rav Huna, son of Rav Yehoshua, that one views rotten flesh as if it does not exist. Since the animal would be a tereifa if missing the lung (see 42a), it is also a tereifa if the lung is rotten.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ג ב — Chullin 53b:15</span></div>
+    <div class="orig">רַב נַחְמָן אָמַר: בְּקוֹץ – עַד שֶׁתִּינָּקֵב לֶחָלָל, בִּדְרוּסָה – מִשֶּׁיַּאֲדִים בָּשָׂר כְּנֶגֶד בְּנֵי מֵעַיִים. רַב זְבִיד מַתְנֵי הָכִי: בִּדְרוּסָה – מִשֶּׁיַּאֲדִים בָּשָׂר כְּנֶגֶד בְּנֵי מֵעַיִים, בְּסִימָנִים – עַד שֶׁיַּאֲדִימוּ סִימָנִים עַצְמָם.</div>
+    <div class="trans" data-when="he">רב נחמן: נדקרה בקוץ — אינה טריפה עד שייקוב הקוץ אל החלל; אבל בדרוסה — משהאדים הבשר כנגד בני המעיים. רב זביד שנה כך: בדרוסה משהאדים הבשר כנגד בני המעיים; ובדרוסה בסימנים — אינה טריפה עד שיאדימו הסימנים עצמם (ולא די שיאדים הבשר סביבם).</div>
+    <div class="trans" data-when="en">Rav Naḥman said: If an animal was pierced by a thorn, it is not a tereifa until it is perforated to the cavity of the body. But in the case of a clawed animal, once the flesh adjacent to the intestines reddens, it is a tereifa. Rav Zevid would teach the halakha in this manner: In the case of a clawed animal, once the flesh adjacent to the intestines reddens it is a tereifa; but if it was clawed in the simanim, it is not a tereifa unless the simanim themselves redden. If only the flesh around them reddens, the animal is kosher, since the venom may not penetrate to the simanim themselves.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין נ״ג ב — Chullin 53b:16</span></div>
+    <div class="orig">אָמַר רַב פַּפִּי, בָּעֵי רַב בִּיבִי בַּר אַבָּיֵי:</div>
+    <div class="trans" data-when="he">אמר רב פפי שרב ביבי בר אביי שאל שאלה (ופירושה בקטע הבא):</div>
+    <div class="trans" data-when="en">Rav Pappi said: Rav Beivai bar Abaye raises a dilemma:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין נ״ד א — Chullin 54a:1</span></div>
+    <div class="orig">וֶושֶׁט נְקוּבָתוֹ בְּמַשֶּׁהוּ, דְּרוּסָתוֹ בְּמַשֶּׁהוּ. קָנֶה נְקוּבָתוֹ בִּכְאִיסָּר, דְּרוּסָתוֹ בְּכַמָּה? בָּתַר דְּבַעְיָא הֲדַר פַּשְׁטַהּ: אֶחָד זֶה וְאֶחָד זֶה בְּמַשֶּׁהוּ. מַאי טַעְמָא? זִיהֲרֵיהּ מִקְלָא קָלֵי וְאָזֵיל.</div>
+    <div class="trans" data-when="he">השאלה: הוושט נקיבתו במשהו, ולכן גם דריסתו במשהו (משהאדים כל שהוא). אך הקנה נקיבתו רק בכאיסר — ודריסתו בכמה? לאחר ששאל, פשט בעצמו: אחד זה ואחד זה — במשהו. הטעם: ארס הדריסה צורב והולך ומרחיב את הנקב, ולכן די במשהו.</div>
+    <div class="trans" data-when="en">If the gullet is perforated in any amount, the animal is a tereifa, as taught in the mishna (42a). Therefore, if the gullet is clawed and any amount of its flesh reddens, the animal is a tereifa as well. But a perforation of the windpipe renders the animal a tereifa only where it is the size of an issar. If clawed, what amount of its flesh must redden in order to render it a tereifa? After he raised the dilemma he then resolved it: Both this and that render the animal a tereifa if any amount of its flesh reddened. What is the reason for this? It is because its venom burns continuously around the circumference of the hole and widens it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין נ״ד א — Chullin 54a:2</span></div>
+    <div class="orig">יָתֵיב רַב יִצְחָק בַּר שְׁמוּאֵל בַּר מָרְתָּא קַמֵּיהּ דְּרַב נַחְמָן, וְיָתֵיב וְקָאָמַר: דְּרוּסָה שֶׁאָמְרוּ – צְרִיכָה בְּדִיקָה כְּנֶגֶד בְּנֵי מֵעַיִים. רַב נַחְמָן אָמַר: הָאֱלֹהִים! מוֹרֵי בַּהּ רַב מִכַּפָּא וְעַד אַטְמָא.</div>
+    <div class="trans" data-when="he">רב יצחק בר שמואל בר מרתא ישב לפני רב נחמן ואמר: דרוסה צריכה בדיקה כנגד בני המעיים בלבד. אמר רב נחמן: האלהים! רב היה מורה לבדוק אותה בכל גופה — מן הכף (הכתף) ועד הירך.</div>
+    <div class="trans" data-when="en">The Gemara relates: Rav Yitzḥak bar Shmuel bar Marta sat before Rav Naḥman, and he was sitting and saying: A clawed animal, about which the Sages said one must be concerned, requires inspection adjacent to the intestines to see that the flesh has not reddened. Rav Naḥman said to him: By God! Rav would teach that it must be inspected over its entire body, from the flesh around the hollow to that of the thigh.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין נ״ד א — Chullin 54a:3</span></div>
+    <div class="orig">מַאי כַּפָּא? אִילֵּימָא כַּפָּא דִּידָא – הַיְינוּ כְּנֶגֶד בְּנֵי מֵעַיִים, אֶלָּא מִכַּפָּא דְּמוֹחָא עַד אַטְמָא.</div>
+    <div class="trans" data-when="he">מהו ״כפא״? אם כף היד (הכתף) — הרי זה כמעט כנגד בני המעיים, ולא חידש רב נחמן דבר. אלא, כוונתו מכף המוח (הגולגולת) ועד הירך — כלומר כל אורך הגוף.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the hollow? If we say that it is the hollow of the foreleg, i.e., its shoulder, then the area between it and the thigh is the same as the area adjacent to the intestines, and Rav Naḥman has said nothing new. Rather, Rav Naḥman referred to the area from the hollow of the brain, i.e., the skull, to the thigh.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין נ״ד א — Chullin 54a:4</span></div>
+    <div class="orig">כִּי סְלֵיק רַב חִיָּיא בַּר יוֹסֵף, אַשְׁכְּחִינְהוּ לְרַבִּי יוֹחָנָן וְרֵישׁ לָקִישׁ דְּיָתְבִי וְקָאָמְרִי: דְּרוּסָה שֶׁאָמְרוּ – צְרִיכָה בְּדִיקָה כְּנֶגֶד בְּנֵי מֵעַיִים. אֲמַר לְהוּ: הָאֱלֹהִים! מוֹרֵי בַּהּ רַב מִכַּפָּא וְעַד אַטְמָא. אֲמַר לֵיהּ רֵישׁ לָקִישׁ: מַנּוּ רַב וּמַנּוּ רַב? וְלָא יָדַעְנָא לֵיהּ!</div>
+    <div class="trans" data-when="he">כשעלה רב חייא בר יוסף לארץ ישראל, מצא את ר׳ יוחנן וריש לקיש אומרים: דרוסה צריכה בדיקה כנגד בני המעיים. אמר להם: האלהים! רב היה מורה מן הכף ועד הירך. אמר לו ריש לקיש בזלזול: מי הוא רב, ומי הוא רב? איני מכירו!</div>
+    <div class="trans" data-when="en">The Gemara relates that when Rav Ḥiyya bar Yosef went up from Babylonia to Eretz Yisrael, he found that Rabbi Yoḥanan and Reish Lakish were sitting and saying: A clawed animal, about which they said one must be concerned, requires inspection adjacent to the intestines. Rav Ḥiyya bar Yosef said to them: By God! Rav would teach that it must be inspected from the flesh around the hollow to that of the thigh. Reish Lakish said to him: Who is this Rav, and who is this Rav? I do not know who he is.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין נ״ד א — Chullin 54a:5</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹחָנָן: וְלָא נְהִירָא לֵיהּ לְאוֹתוֹ תַּלְמִיד שֶׁשִּׁימֵּשׁ אֶת רַבִּי רַבָּה, וְרַבִּי חִיָּיא? וְהָאֱלֹהִים! כׇּל אוֹתָן שָׁנִים שֶׁשִּׁימֵּשׁ אוֹתוֹ תַּלְמִיד בִּישִׁיבָה, אֲנִי שִׁמַּשְׁתִּי בַּעֲמִידָה, וּמַאן גְּבַר? הוּא גְּבַר בְּכוֹלָּא.</div>
+    <div class="trans" data-when="he">אמר ר׳ יוחנן לריש לקיש: האם אינך זוכר את אותו תלמיד ששימש את רבי הגדול ואת ר׳ חייא? האלהים! כל אותן שנים ששימש אותו תלמיד בישיבה (מתוך כבוד), אני שימשתי בעמידה; ומי גדול? הוא גדול בכול — בתורה ובמעלה.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan said to him: But don’t you remember that student who served the great Rabbi Yehuda HaNasi and Rabbi Ḥiyya and studied under them? But by God! All those years that this student served in the yeshiva, he was held to be one of the most important students and was allowed to sit during study, while I held a lower status and served while standing up. And who was greater? He was greater in all things, in Torah and piety.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין נ״ד א — Chullin 54a:6</span></div>
+    <div class="orig">מִיָּד פָּתַח רֵישׁ לָקִישׁ וַאֲמַר: בְּרַם זָכוּר אוֹתוֹ הָאִישׁ לַטּוֹב, שֶׁאָמְרוּ שְׁמוּעָה מִפִּיו: שְׁמוּטָה וּשְׁחוּטָה – כְּשֵׁרָה, שֶׁאִי אֶפְשָׁר לַשְּׁמוּטָה שֶׁתֵּיעָשֶׂה שְׁחוּטָה.</div>
+    <div class="trans" data-when="he">מיד פתח ריש לקיש (בכבוד) ואמר: אכן, זכור אותו האיש (רב) לטוב, שאמרו בשמו הלכה: קנה שנשמט מן הגרון ואחר כך נמצא שחוט, ספק אם נשמט קודם השחיטה — כשרה, שאי אפשר שקנה שמוט יישחט, שהרי היה נשמט מתחת הסכין.</div>
+    <div class="trans" data-when="en">Immediately, Reish Lakish began to speak and said: Indeed [beram], that man, Rav, is remembered for the good, as they said this halakha in his name: If an animal’s windpipe is dislocated from the throat, and it has already been slaughtered, and it is uncertain whether it was dislocated before or after slaughter, the animal is kosher, as it is impossible for an animal with a dislocated windpipe to be slaughtered. A dislocated windpipe would have slipped away from the knife, and therefore the animal must have been slaughtered while it was still attached.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין נ״ד א — Chullin 54a:7</span></div>
+    <div class="orig">וְרַבִּי יוֹחָנָן אוֹמֵר: יָבִיא וְיַקִּיף.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן חולק: אין הדבר ודאי; אלא יביא את הקנה ויעשה בו חתך חדש ויקיף — ישווה בין שני החתכים. דומים — סימן שגם החתך הראשון נעשה לאחר שנשמט, וטריפה; שונים — קדמה השחיטה לשמיטה, וכשרה.</div>
+    <div class="trans" data-when="en">And Rabbi Yoḥanan says: This is not certain; rather, one should bring the windpipe, make a new slit in it, and compare the two slits. If they are similar, then the first slit by the slaughtering knife was also made after the windpipe was dislocated, and the animal is a tereifa. If they are different, then the slaughter preceded the dislocation of the windpipe and the animal is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין נ״ד א — Chullin 54a:8</span></div>
+    <div class="orig">אָמַר רַב נַחְמָן: לֹא שָׁנוּ אֶלָּא שֶׁלֹּא תָּפַס בְּסִימָנִים, אֲבָל תָּפַס בְּסִימָנִים וְשָׁחַט – אֶפְשָׁר לַשְּׁמוּטָה שֶׁתֵּיעָשֶׂה שְׁחוּטָה.</div>
+    <div class="trans" data-when="he">רב נחמן מסייג את דברי רב: לא אמרו ש״אי אפשר לשמוטה שתישחט״ אלא כשלא אחז בסימנים בשעת השחיטה; אבל אם תפס בסימנים ביד ושחט — אפשר שקנה שמוט יישחט, שהרי אינו נשמט מתחת הסכין, וחוזר הספק.</div>
+    <div class="trans" data-when="en">Rav Naḥman said: The Sages taught that it is impossible to slaughter a dislocated windpipe only in cases where he did not grip the simanim during slaughter. But if he gripped the simanim and slaughtered the animal, then it is possible for an animal with a dislocated windpipe to be slaughtered, since it will not slip away from the knife.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
