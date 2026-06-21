@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין נ״א</title>
+<meta name="description" content="מפת הסוגיא של חולין נ״א: מחט בבית הכוסות, ואחריה דיני נפולה — אימתי חוששים לריסוק אברים בבהמה שנפלה, בולד, בבית המטבחיים, ובעוף שנפל.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="51">
+<meta name="gemara-map:sefaria-ref" content="Chullin 51">
+<meta name="gemara-map:topic-he" content="נפולה וחשש ריסוק אברים">
+<meta name="gemara-map:topic-en" content="Falls and shattered limbs">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין נ״א">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 51">
+<meta name="gemara-map:blurb-he" content="מחט שניקבה לגמרי טריפה; ובנפולה חוששים לריסוק אברים — אלא אם כן יש הוכחה שלא נחבטה.">
+<meta name="gemara-map:blurb-en" content="A needle that pierces through is treifa; a fallen animal is feared shattered unless there is proof it was unharmed.">
+<meta name="gemara-map:sugya-count" content="7">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין נ״א</span><span data-when="en">Sugya map — Chullin 51</span></h1>
+    <div class="subtitle"><span data-when="he">חולין נ׳ ב — נ״ב א · נמשך מן הסוגיא הקודמת בנ׳ ב · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 50b–52a · expanded back to 50b · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> מחט שנמצאה בדופן בית הכוסות — ניקבה לחוץ טריפה, וקורט דם מכריע אם הנקב קדם לשחיטה. משם עוברת הגמרא לדיני <b>נפולה</b>: בהמה (או עוף) שנפלה — חוששים שנתרסקו אבריה ואסורה, אלא אם כן יש סימן שלא נחבטה: שעמדה, שהלכה, שהמשטח רך, או שאין דרכו להזיק.</span>
+    <span data-when="en"><b>Bottom line:</b> A needle in the reticulum wall is treifa if it pierced through to the outside, and a drop of blood decides whether the perforation preceded slaughter. The sugya then turns to <b>falls</b>: an animal (or bird) that fell is feared to have shattered limbs and is forbidden — unless something shows it was unharmed: it stood, it walked, the surface was soft, or the impact was harmless.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין נ״א</span><span data-when="en">Overview — Chullin 51</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · מחט בבית הכוסות"]):::mishnah
+  O2["2 · נפלה מן הגג — ריסוק אברים"]:::statement
+  O3["3 · בית הרחם — אין ריסוק בולד"]:::statement
+  O4["4 · בית המטבחיים — אין ריסוק"]:::statement
+  O5["5 · עמדה או הלכה — בדיקה ומעת־לעת"]:::statement
+  O6["6 · מה בודקים בנפולה"]:::statement
+  O7["7 · עוף שנפל — מים ומשטחים"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · Needle in the reticulum"]):::mishnah
+  O2["2 · Fell from a roof — shattered limbs"]:::statement
+  O3["3 · The womb — no shattering in a newborn"]:::statement
+  O4["4 · The slaughterhouse — no shattering"]:::statement
+  O5["5 · Stood or walked — inspection and 24h"]:::statement
+  O6["6 · What a fallen animal needs checked"]:::statement
+  O7["7 · A bird that fell — water and surfaces"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">מחט בבית הכוסות</span><span data-when="en">A needle in the reticulum</span>
+      <span class="ref">Chullin 50b:11–51a:5</span></h2>
+  <div class="lead"><span data-when="he">מחט שניקבה את הדופן לגמרי — טריפה, וקורט דם מגלה אם הנקב קדם לשחיטה.</span><span data-when="en">A needle that pierced the wall through is treifa; a drop of blood reveals whether the perforation preceded slaughter.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: מחט בבית הכוסות — צד אחד כשרה, שני צדדים טריפה"]:::statement
+  S2["② מבחן הדם: קורט דם — לפני שחיטה, טריפה; אין דם — לאחר שחיטה, כשרה"]:::statement
+  S3["③ הגליד פי המכה — ג׳ ימים קודם; בספק — המוציא מחברו עליו הראיה"]:::statement
+  Q1{"④ קושיא: מה שונה משאר נקובים, שטריפה אף בלי דם?"}:::question
+  A1["④ תירוץ: כאן יש מחט — אילו קדם לשחיטה, דם היה נסרך עליה"]:::answer
+  Q2{"⑤ מעשה: רב עוירא — מחט מצד אחד, וטרפה רבי"}:::question
+  C1["⑥ מסקנה: רבי הפך ומצא קורט דם מנגד — ניקב לחוץ; מתניתין היא"]:::conclusion
+  S1 --> S2 --> S3
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|לכאורה סתירה| Q2
+  Q2 -->|יישוב| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: needle in reticulum — one side kosher, both sides treifa"]:::statement
+  S2["② Blood test: a drop = before slaughter, treifa; none = after, kosher"]:::statement
+  S3["③ Scab over the wound = 3 days earlier; if doubtful, burden on the claimant"]:::statement
+  Q1{"④ Question: why unlike other perforations, treifa even without blood?"}:::question
+  A1["④ Answer: here there is a needle — blood would have clung to it if before slaughter"]:::answer
+  Q2{"⑤ Incident: Rav Avira — needle one side, yet Rabbi ruled treifa"}:::question
+  C1["⑥ Resolution: Rabbi turned it, found blood opposite — pierced through; just the Mishnah"]:::conclusion
+  S1 --> S2 --> S3
+  S1 -->|question| Q1
+  Q1 -->|answer| A1
+  A1 -.->|seeming contradiction| Q2
+  Q2 -->|resolved| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מַחַט שֶׁנִּמְצֵאת בְּעוֹבִי בֵּית הַכּוֹסוֹת מִצַּד אֶחָד – כְּשֵׁרָה, מִשְּׁנֵי צְדָדִים – טְרֵפָה"]:::statement
+  S2["② נִמְצָא עָלֶיהָ קוֹרֶט דָּם … שֶׁלִּפְנֵי שְׁחִיטָה … לֹא נִמְצָא … שֶׁלְּאַחַר שְׁחִיטָה"]:::statement
+  S3["③ הִגְלִיד פִּי הַמַּכָּה … הַמּוֹצִיא מֵחֲבֵירוֹ עָלָיו הָרְאָיָה"]:::statement
+  Q1{"④ וּמַאי שְׁנָא מִכֹּל נְקוּבֵי דְּעָלְמָא, דְּאַף עַל גַּב דְּלֵיכָּא דָּם טָרֵיף מָר?"}:::question
+  A1["④ הָכָא כֵּיוָן דְּאִיכָּא מַחַט … מִיסְרָךְ הֲוָה סָרֵיךְ"]:::answer
+  Q2{"⑤ מַעֲשֶׂה … מַחַט שֶׁנִּמְצֵאת … מִצַּד אֶחָד, וּטְרָפָהּ"}:::question
+  C1["⑥ וַהֲפָכָהּ רַבִּי וּמָצָא עָלֶיהָ קוֹרֶט דָּם וּטְרָפָהּ … מַתְנִיתִין הִיא"]:::conclusion
+  S1 --> S2 --> S3
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|לכאורה סתירה| Q2
+  Q2 -->|יישוב| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ׳ ב — Chullin 50b:11</span></div>
+    <div class="orig">הֶמְסֵס וּבֵית הַכּוֹסוֹת, תָּנוּ רַבָּנַן: מַחַט שֶׁנִּמְצֵאת בְּעוֹבִי בֵּית הַכּוֹסוֹת מִצַּד אֶחָד – כְּשֵׁרָה, מִשְּׁנֵי צְדָדִים – טְרֵפָה. נִמְצָא עָלֶיהָ קוֹרֶט דָּם –</div>
+    <div class="trans" data-when="he">המשנה מנתה המסס ובית הכוסות שניקבו לחוץ. ברייתא: מחט הנמצאת בעובי דופן בית הכוסות — אם ניקבה רק מצד אחד, כשרה; ומשני הצדדים, היינו שניקבה את הדופן לגמרי, טריפה. ואם נמצא קורט דם על המחט —</div>
+    <div class="trans" data-when="en">§ The mishna states: An animal is a tereifa if the omasum or the reticulum was perforated to the outside, i.e., to the abdominal cavity. With regard to this, the Sages taught: In the case of a needle that is found in the thickness of the reticulum, if it pierced the wall from only one side, the animal is kosher. If it pierced the wall from both sides, i.e., the needle completely pierced the wall of the stomach, it is a tereifa. But even if it protrudes from both sides, it is not always a tereifa, and it may be inspected further: If a drop of congealed blood is found on top of the needle,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״א א — Chullin 51a:1</span></div>
+    <div class="orig">בְּיָדוּעַ שֶׁלִּפְנֵי שְׁחִיטָה, לֹא נִמְצָא עָלֶיהָ קוֹרֶט דָּם – בְּיָדוּעַ שֶׁלְּאַחַר שְׁחִיטָה.</div>
+    <div class="trans" data-when="he">— בידוע שהנקב נעשה לפני השחיטה, וטריפה; ואם לא נמצא עליה קורט דם — בידוע שלאחר השחיטה, כשהדם כבר חדל לזוב, וכשרה.</div>
+    <div class="trans" data-when="en">it is certain that the perforation was created before the slaughter of the animal, and it is therefore a tereifa. If a drop of blood is not found on it, it is certain that it occurred after the slaughter, when the blood of the animal had stopped flowing. The animal is therefore kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״א א — Chullin 51a:2</span></div>
+    <div class="orig">הִגְלִיד פִּי הַמַּכָּה – בְּיָדוּעַ שֶׁשְּׁלֹשָׁה יָמִים קוֹדֶם שְׁחִיטָה. לֹא הִגְלִיד פִּי הַמַּכָּה – הַמּוֹצִיא מֵחֲבֵירוֹ עָלָיו הָרְאָיָה.</div>
+    <div class="trans" data-when="he">דין ממוני נלווה: אם נקרם עור על פי הנקב — בידוע שהנקב קדם לשחיטה בשלושה ימים, והקונה יכול לתבוע את כספו. לא הגליד — ספק, וההלכה: המוציא מחברו עליו הראיה, ועל הקונה להוכיח שהנקב קדם לקנייה.</div>
+    <div class="trans" data-when="en">If a scab covered the opening of the wound, i.e., the perforation, it is certain that the perforation occurred three days before the slaughter. Consequently, if the animal was sold less than three days before the slaughter, the buyer can claim that the transaction was performed in error, as he did not intend to purchase a tereifa animal, and the seller must refund the buyer. If a scab did not cover the opening of the wound, and it is uncertain whether the perforation occurred before or after the animal was purchased, the burden of proof rests upon the claimant. Accordingly, the buyer must furnish proof that the perforation occurred before the purchase in order to demand a refund.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״א א — Chullin 51a:3</span></div>
+    <div class="orig">וּמַאי שְׁנָא מִכֹּל נְקוּבֵי דְּעָלְמָא, דְּאַף עַל גַּב דְּלֵיכָּא דָּם טָרֵיף מָר? הָתָם לֵיכָּא מִידֵּי לְמִיסְרַךְ, הָכָא כֵּיוָן דְּאִיכָּא מַחַט, אִי אִיתָא דְּקוֹדֶם שְׁחִיטָה הוּא – מִיסְרָךְ הֲוָה סָרֵיךְ.</div>
+    <div class="trans" data-when="he">קושיא: ומדוע נקב זה שונה מכל שאר נקבים, שבהם מטריפים אף כשאין דם? תירוץ: בשאר נקבים אין דבר שהדם ייסרך עליו, אבל כאן יש מחט — ואילו הנקב קדם לשחיטה, הדם היה נסרך עליה. משחסר דם, הנקב לאחר שחיטה.</div>
+    <div class="trans" data-when="en">The Gemara asks: But in what way is this case different from all other perforations, where even though there is no blood on the wound the Master deems the animal a tereifa? The Gemara responds: There, in all other cases, there is nothing to which the blood can attach. Even if the wound had bled, the blood would be reabsorbed into the flesh. Here, since there is a needle, it follows that if it is the case that the perforation occurred before slaughter, blood from the wound would have attached to the needle. Accordingly, if there is no blood on the needle, it is certain that the perforation occurred after slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״א א — Chullin 51a:4</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב סָפְרָא לְאַבָּיֵי: חֲזִי מָר הַאי צוּרְבָּא מֵרַבָּנַן דַּאֲתָא מִמַּעְרְבָא, וְאָמַר: רַב עַוִּירָא שְׁמֵנִי, וְאָמַר: מַעֲשֶׂה וּבָא לִפְנֵי רַבִּי מַחַט שֶׁנִּמְצֵאת בְּעוֹבִי בֵּית הַכּוֹסוֹת מִצַּד אֶחָד, וּטְרָפָהּ. שְׁלַח לֵיהּ לָא אֲתָא לְגַבֵּיהּ, אֲזַל הוּא לְגַבֵּיהּ. הֲוָה קָאֵי אַאִיגָּרָא, אָמַר: נֵיחוֹת מָר וְנֵיתֵי. לָא נָחֵית, סָלֵיק הוּא לְגַבֵּיהּ. אֲמַר לֵיהּ: אֵימָא לִי גּוּפָא דְעוֹבָדָא הֵיכִי הֲוָה?</div>
+    <div class="trans" data-when="he">רב ספרא לאביי: בא תלמיד חכם מארץ ישראל, רב עוירא שמו, ומסר שמעשה בא לפני רבי במחט שנמצאה בעובי בית הכוסות מצד אחד — וטרפה רבי. הדבר סותר את הברייתא, שמצד אחד כשרה. אביי שלח לו, ולא בא; הלך אליו, ומצאו עומד על הגג. ביקש שירד, ולא ירד, ועלה אליו ושאל: ספר לי כיצד היה המעשה ממש.</div>
+    <div class="trans" data-when="en">The Gemara relates that Rav Safra said to Abaye: Did the Master see a Torah scholar who came from the West, Eretz Yisrael, and said: My name is Rav Avira? He said that there was an incident that came before Rabbi Yehuda HaNasi involving a needle that was found in the thickness of the reticulum protruding from only one side, and he deemed the animal a tereifa. Abaye sent a message to Rav Avira calling for him to come and explain the matter, since this contradicts the baraita that states that the animal is a tereifa only if the needle protrudes from both sides. Rav Avira did not come before him, so Abaye went before Rav Avira. Rav Avira was standing on the roof. Abaye said to him: Let Master descend and come, but Rav Avira did not descend. Abaye ascended to him and said to him: Say to me, what were the circumstances of the incident itself?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״א א — Chullin 51a:5</span></div>
+    <div class="orig">אֲמַר לֵיהּ: מַפְטִיר כְּנֵסִיּוֹת אֲנָא, לְעֵילָּא מֵרַבִּי רַבָּה. וַהֲוָה רַב הוּנָא צִיפּוֹרָאָה וְרַבִּי יוֹסֵי מָדָאָה יוֹשְׁבִין לְפָנָיו, וּבָאת לִפְנֵי רַבִּי מַחַט שֶׁנִּמְצֵאת בְּעוֹבִי בֵּית הַכּוֹסוֹת מִצַּד אֶחָד, וַהֲפָכָהּ רַבִּי וּמָצָא עָלֶיהָ קוֹרֶט דָּם וּטְרָפָהּ, וְאָמַר: אִם אֵין שָׁם מַכָּה, קוֹרֶט דָּם מִנַּיִן? אֲמַר לֵיהּ: טְרָא טַרְיֵיהּ לְהָהוּא גַּבְרָא! מַתְנִיתִין הִיא: הֶמְסֵס וּבֵית הַכּוֹסוֹת שֶׁנִּיקְּבוּ לַחוּץ.</div>
+    <div class="trans" data-when="he">רב עוירא: באה לפני רבי מחט שנמצאה מצד אחד, והפך רבי את בית הכוסות ומצא קורט דם בצד שכנגד, וטרפה, ואמר: אם אין שם מכה, מנין קורט הדם? נמצא שניקבה לחוץ משני הצדדים. אביי: אם כן, לחינם טרחת אותי — זו עצמה המשנה, ״המסס ובית הכוסות שניקבו לחוץ״.</div>
+    <div class="trans" data-when="en">Rav Avira said to him: I am a director of assemblies in the study hall. I was standing above the Great Rabbi Yehuda HaNasi, and Rav Huna of Tzippori and Rabbi Yosei of Media were sitting before him, and a needle came before Rabbi Yehuda HaNasi that was found in the thickness of the reticulum protruding from one side, i.e., the inside, and Rabbi Yehuda HaNasi turned the reticulum over and found a drop of blood on the outside, parallel to the wound on the inside, and he deemed the animal a tereifa. And he said: If there is no wound on the outside there as well, from where is this drop of blood? Abaye said to Rav Avira: He caused that man trouble needlessly, i.e., you troubled me for no reason. This is nothing more than the mishna, which states that an animal is a tereifa if the omasum or the reticulum was perforated to the outside.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">נפלה מן הגג — ריסוק אברים</span><span data-when="en">Fell from a roof — shattered limbs</span>
+      <span class="ref">Chullin 51a:6–12</span></h2>
+  <div class="lead"><span data-when="he">המשנה: בהמה שנפלה — חוששים שנתרסקו אבריה. רב הונא: אם יש סימן שלא נחבטה, אין חוששים.</span><span data-when="en">The Mishna: a fallen animal is feared shattered. Rav Huna: where something shows it was unharmed, we do not worry.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: נפלה מן הגג — חוששים לריסוק אברים"]):::mishnah
+  S1["① רב הונא: הניחה למעלה ומצאה למטה — אין חוששים"]:::statement
+  Q1{"② מאי טעמא — יש לה במה להיאחז, או אמדה נפשה?"}:::question
+  A1["③ רב אשי: אמדה נפשה — וגם גדי שקפץ אמד נפשו"]:::answer
+  S2["④ אימרתא ששמטה רגליה: שיגרון שכיח, חוט השדרה לא — הלכה כרב יימר"]:::statement
+  S3["⑤ זכרים המנגחים — אין חוששים; ואם נפלו לארץ — חוששים"]:::statement
+  S4["⑥ אילים שהשליכום גנבים — על מותניהם, אין חוששים; החזירום מיראה — חוששים"]:::statement
+  S5["⑦ הכה לאורך כל השדרה — אין חוששים; חצי הגב / קיטרי / מכה לרוחב — חוששים"]:::statement
+  M1 -->|רב הונא| S1
+  S1 -->|מאי טעמא| Q1
+  Q1 -->|תירוץ| A1
+  S1 -->|ועוד| S2
+  S1 -->|ועוד| S3
+  S1 -->|ועוד| S4
+  S1 -->|ועוד| S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: fell from a roof — feared shattered"]):::mishnah
+  S1["① Rav Huna: left it above, found it below — no concern"]:::statement
+  Q1{"② Why? Because it had something to grip, or because it judged itself fit?"}:::question
+  A1["③ Rav Ashi: it judged itself — and the kid that jumped judged itself too"]:::answer
+  S2["④ Ewe dragging its legs: rheumatism is common, a cut cord is not — halakha like Rav Yeimar"]:::statement
+  S3["⑤ Rams that butt — no concern; but if they fell to the ground — concern"]:::statement
+  S4["⑥ Rams thieves toss land on their hips, no concern; returned out of fear — concern"]:::statement
+  S5["⑦ A blow along the whole spine — no concern; mid-back / knots / a crosswise blow — concern"]:::statement
+  M1 -->|Rav Huna| S1
+  S1 -->|why| Q1
+  Q1 -->|answer| A1
+  S1 -->|further| S2
+  S1 -->|further| S3
+  S1 -->|further| S4
+  S1 -->|further| S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① נָפְלָה מִן הַגָּג"]):::mishnah
+  S1["① הִנִּיחַ בְּהֵמָה לְמַעְלָה וּבָא וּמְצָאָהּ לְמַטָּה – אֵין חוֹשְׁשִׁין מִשּׁוּם רִיסּוּקֵי אֵבָרִים"]:::statement
+  Q1{"② מִשּׁוּם דְּאִית לַהּ מִידֵּי לְמִסְרַךְ … אוֹ דִלְמָא מִשּׁוּם דְּאָמְדָה נַפְשָׁהּ?"}:::question
+  A1["③ מִשּׁוּם דְּאָמְדָה נַפְשָׁהּ, וְהַאי נָמֵי אָמֵדה נַפְשֵׁהּ"]:::answer
+  S2["④ שִׁגְרוֹנָא שְׁכִיחַ, חוּט הַשִּׁדְרָה לָא שְׁכִיחַ … הִלְכְתָא כְּרַב יֵימַר"]:::statement
+  S3["⑤ זְכָרִים הַמְנַגְּחִין … אֵין חוֹשְׁשִׁין … אִי נְפוּל לְאַרְעָא – וַדַּאי חָיְישִׁינַן"]:::statement
+  S4["⑥ הָנֵי דִּכְרֵי דְּגָנְבִי גַּנָּבֵי … שָׁדוּ לְהוּ אַמׇּתְנַיְיהוּ … אַהְדְּרִינְהוּ – וַדַּאי חָיְישִׁינַן"]:::statement
+  S5["⑦ כְּנֶגֶד כׇּל הַשִּׁדְרָה … אֵין חוֹשְׁשִׁין … אַפַּלְגֵי דְּגַבָּא / קִיטְרֵי / אַפַּסְקִית – חָיְישִׁינַן"]:::statement
+  M1 -->|רב הונא| S1
+  S1 -->|מאי טעמא| Q1
+  Q1 -->|תירוץ| A1
+  S1 -->|ועוד| S2
+  S1 -->|ועוד| S3
+  S1 -->|ועוד| S4
+  S1 -->|ועוד| S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״א א — Chullin 51a:6</span></div>
+    <div class="orig">נָפְלָה מִן הַגָּג, אָמַר רַב הוּנָא: הִנִּיחַ בְּהֵמָה לְמַעְלָה, וּבָא וּמְצָאָהּ לְמַטָּה – אֵין חוֹשְׁשִׁין מִשּׁוּם רִיסּוּקֵי אֵבָרִים.</div>
+    <div class="trans" data-when="he">המשנה: ״נפלה מן הגג״ — טריפה, מחשש שנתרסקו אבריה. רב הונא: אם הניח בהמה למעלה על הגג, ובא ומצאהּ למטה ולא ראה אותה נופלת — אין חוששים לריסוק אברים, שמן הסתם קפצה מדעתה ולא נחבטה.</div>
+    <div class="trans" data-when="en">§ The mishna states: An animal that fell from the roof is a tereifa, since its limbs may have been shattered. Rav Huna says: If one left an animal above, on the roof, and he came back and found it below, but did not see it fall, one need not be concerned with regard to the shattering of limbs. One may presume that it jumped intentionally and was not injured.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״א א — Chullin 51a:7</span></div>
+    <div class="orig">הָהוּא גַּדְיָא דַּהֲוָה לֵיהּ לְרָבִינָא, דַּחֲזָא חוּשְׁלָא בְּאִיפּוּמָא דְּגַר, נְפַל מֵאִיגָּרָא לְאַרְעָא, אַתְיוּהּ לְקַמֵּיהּ דְּרַב אָשֵׁי. אֲמַר לֵיהּ: הָא דְּאָמַר רַב הוּנָא ״הִנִּיחַ בְּהֵמָה לְמַעְלָה וּבָא וּמְצָאָהּ לְמַטָּה אֵין חוֹשְׁשִׁין מִשּׁוּם רִיסּוּקֵי אֵבָרִים״, מִשּׁוּם דְּאִית לַהּ מִידֵּי לְמִסְרַךְ, וְהַאי לֵית לֵיהּ מִידֵּי לְמִסְרַךְ? אוֹ דִלְמָא מִשּׁוּם דְּאָמְדָה נַפְשָׁהּ, וְהַאי נָמֵי אָמֵדה נַפְשֵׁהּ?</div>
+    <div class="trans" data-when="he">גדי של רבינא ראה גריסים דרך ארובה, קפץ ונפל מן הגג לארץ. שאל רבינא את רב אשי: טעמו של רב הונא — מפני שיש לבהמה במה להיאחז בירידתה? אם כן, גדי זה שקפץ בעד הארובה אין לו במה להיאחז, וצריך לחשוש. או שמא הטעם שהבהמה אומדת את עצמה לפני קפיצתה? אם כן גם גדי זה אמד את עצמו, ואין חוששים.</div>
+    <div class="trans" data-when="en">The Gemara relates: There was a certain kid belonging to Ravina that saw barley groats through an open skylight. It jumped down through the skylight and fell from the roof to the ground. The case came before Rav Ashi, and Ravina said to him: What is the rationale for this statement that Rav Huna says, that if one left an animal above and he came back and found it below, one need not be concerned about the possible shattering of limbs? Is it because the animal usually has something to grab hold of? If so, since this kid jumped through a skylight, it did not have something to grab hold of, and one must be concerned. Or perhaps it is because the animal evaluates itself and determines that it can jump without injury. If so, this kid also evaluated itself before jumping, and one need not be concerned.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״א א — Chullin 51a:8</span></div>
+    <div class="orig">אֲמַר לֵיהּ: מִשּׁוּם דְּאָמְדָה נַפְשָׁהּ, וְהַאי נָמֵי אָמֵדה נַפְשֵׁהּ.</div>
+    <div class="trans" data-when="he">רב אשי השיב: הטעם הוא שהבהמה אומדת את עצמה לפני הקפיצה, וגם גדי זה אמד את עצמו — לפיכך אין חוששים לריסוק אברים.</div>
+    <div class="trans" data-when="en">Rav Ashi said to him: It is because the animal evaluates itself before jumping, and this kid also evaluated itself before jumping. Therefore, one need not be concerned about the possible shattering of limbs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״א א — Chullin 51a:9</span></div>
+    <div class="orig">הָהִיא אִימַּרְתָּא דַּהֲוָה בֵּי רַב חֲבִיבָא, דַּהֲווֹ שָׁדְרָן כַּרְעַיהּ בָּתְרָיָיתָא. אָמַר רַב יֵימַר: הַאי שִׁיגְרוֹנָא נַקְטַיהּ. מַתְקֵיף לַהּ רָבִינָא: וְדִלְמָא חוּט הַשִּׁדְרָה אִיפְּסִיק? בַּדְקוּהָ, אַשְׁכְּחוּהָ כְּרָבִינָא. וַאֲפִילּוּ הָכִי, הִלְכְתָא כְּרַב יֵימַר, שִׁגְרוֹנָא שְׁכִיחַ, חוּט הַשִּׁדְרָה לָא שְׁכִיחַ.</div>
+    <div class="trans" data-when="he">כבשה בבית רב חביבא הייתה גוררת את רגליה האחוריות. רב יימר: שיגרון (מחלת פרקים) אחזהּ. רבינא הקשה: שמא חוט השדרה נפסק, וטריפה? בדקוה ומצאו כדברי רבינא. ואף על פי כן ההלכה כרב יימר, שאין לחשוש: שיגרון שכיח, ופסיקת חוט השדרה אינה שכיחה.</div>
+    <div class="trans" data-when="en">The Gemara relates that there was a certain ewe that was in the house of Rav Ḥaviva, whose hind legs would drag. Rav Yeimar said: This ewe suffers from rheumatism [shigrona], and this is why she drags her legs. Ravina objects to this: But perhaps the spinal cord was cut, and this is why the ewe dragged her legs, and the animal is a tereifa. They inspected her and found that the spinal cord was cut, as Ravina said. The Gemara notes: And even so, the halakha is in accordance with the opinion of Rav Yeimar, since rheumatism is common, but a cut spinal cord is not common. Accordingly, one need not be concerned about the possibility of a cut spinal cord.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״א א — Chullin 51a:10</span></div>
+    <div class="orig">אָמַר רַב הוּנָא: זְכָרִים הַמְנַגְּחִין זֶה אֶת זֶה – אֵין חוֹשְׁשִׁין מִשּׁוּם רִיסּוּקֵי אֵבָרִים, אַף עַל גַּב דְּמִידְּווּ וְקָיְימִי – צִימְרָא בְּעָלְמָא הוּא דְּנָקֵט לְהוּ; אִי נְפוּל לְאַרְעָא – וַדַּאי חָיְישִׁינַן.</div>
+    <div class="trans" data-when="he">רב הונא: אילים זכרים המנגחים זה את זה — אין חוששים לריסוק אברים, ואף שהם דוויים ועומדים במקומם, אין זה אלא חום וכאב שאחזם. אבל אם נפלו לארץ מחמת הנגיחה — ודאי חוששים שנתרסקו.</div>
+    <div class="trans" data-when="en">Rav Huna also says: With regard to rams that butt one another, one need not be concerned with regard to shattering of limbs. Even though they are in pain and stand still, it is only a fever that afflicts them; one need not be concerned about the possibility of severe injuries. But if they fall to the ground due to the impact, we certainly must be concerned that their limbs may have been shattered.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״א א — Chullin 51a:11</span></div>
+    <div class="orig">אָמַר רַב מְנַשֵּׁי: הָנֵי דִּכְרֵי דְּגָנְבִי גַּנָּבֵי – אֵין חוֹשְׁשִׁין מִשּׁוּם רִיסּוּק אֵבָרִים, מַאי טַעְמָא? כִּי שָׁדוּ לְהוּ אַמׇּתְנַיְיהוּ שָׁדוּ לְהוּ, כִּי הֵיכִי דְּלִירְהֲטוּ קַמַּיְיהוּ. אַהְדְּרִינְהוּ – וַדַּאי חָיְישִׁינַן; וְהָנֵי מִילֵּי דְּאַהְדְּרִינְהוּ מֵחֲמַת יִרְאָה, אֲבָל מֵחֲמַת תְּשׁוּבָה – תְּשׁוּבָה מְעַלַּיְיתָא הוּא דְּעָבְדִי.</div>
+    <div class="trans" data-when="he">רב מנשי: אילים שגנבים גונבים ומשליכים מעבר לגדר — אין חוששים לריסוק אברים, שכן הם משליכים אותם על מותניהם כדי שיוכלו לרוץ לפניהם. החזירום הגנבים — ודאי חוששים, כי אז אינם נזהרים בהשלכתם. ודווקא כשהחזירום מחמת יראת תפיסה; אבל אם החזירום מתוך תשובה, תשובה גמורה עשו ונזהרו.</div>
+    <div class="trans" data-when="en">Rav Menashei says: With regard to these rams that thieves steal and throw over the fence, one need not be concerned with regard to the shattering of limbs. What is the reason for this? When the thieves throw them over the fence, they throw them so that they land on their hips, where they will not be injured, so that they will be able to run before them. But if the thieves returned them to the owner, we certainly must be concerned that their limbs may have been shattered, since thieves do not throw them carefully when returning them. And this statement applies only when they return them due to fear of being caught, or are otherwise forced to return them. But if they return them due to repentance, they have performed full-fledged repentance and will take care to return them without injury.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״א א — Chullin 51a:12</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה אָמַר רַב: הִכָּהּ עַל רֹאשָׁהּ וְהָלְכָה לָהּ כְּלַפֵּי זְנָבָהּ, עַל זְנָבָהּ וְהָלְכָה לָהּ כְּלַפֵּי רֹאשָׁהּ, כְּנֶגֶד כׇּל הַשִּׁדְרָה כּוּלָּהּ – אֵין חוֹשְׁשִׁין מִשּׁוּם רִיסּוּקֵי אֵבָרִים, וְאִי שְׁלֵים חוּטְרָא אַפַּלְגֵי דְּגַבָּא – חָיְישִׁינַן; וְאִי אִית בַּהּ קִיטְרֵי – חָיְישִׁינַן; וְאִי מַחְיַיהּ אַפַּסְקִית – חָיְישִׁינַן.</div>
+    <div class="trans" data-when="he">רב יהודה בשם רב: הכה את הבהמה במקל בראשה והמקל נמשך לכיוון הזנב, או בזנב והמקל לכיוון הראש — כלומר המכה לאורך כל השדרה — אין חוששים לריסוק אברים. אבל אם המקל כלה באמצע הגב, או שיש בו קשרים בולטים, או שהכהּ לרוחב הגב — חוששים שנפגעה השדרה.</div>
+    <div class="trans" data-when="en">Rav Yehuda says that Rav says: If one hit an animal on its head with a stick, and the length of the stick continued toward its back; or if one hit the animal on its tail and the length of the stick continued toward its head, such that in either case the blow extended along the entire spine, one need not be concerned with regard to the shattering of limbs. But if the length of the stick concluded at the middle of the back, we must be concerned that the strike caused an injury to the spine. And if there are knots, i.e., protrusions, on the stick, we must be concerned that it injured the spine, even if the stick fell across the entire back. And if he struck it like a slash across the width of the back, we must be concerned that it injured the spine.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">בית הרחם — אין ריסוק בולד</span><span data-when="en">The womb — no shattering in a newborn</span>
+      <span class="ref">Chullin 51a:13–51b:5</span></h2>
+  <div class="lead"><span data-when="he">רב נחמן: לידה דרך הרחם אינה בכלל ריסוק אברים. הגמרא מנסה להוכיח, ודוחה.</span><span data-when="en">Rav Naḥman: birth through the womb is no cause for shattered-limb concern. The Gemara tries to prove it, and deflects.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב נחמן: בית הרחם אין בו משום ריסוק אברים"]:::statement
+  P1["② ראיה: תינוק בן יום מטמא בזיבה — ׳מבשרו׳ ולא מחמת אונסו"]:::proof
+  A1["③ דחייה: הכא ביצא דרך דופן"]:::answer
+  P2["④ תא שמע: עגל שנולד ביו״ט שוחטין בו ביום"]:::proof
+  A2["④ דחייה: אף כאן דרך דופן"]:::answer
+  P3["⑤ תא שמע: נולד ומומו עמו — ודרך דופן אינו קדוש"]:::proof
+  C1["⑥ מסקנה: הכא שהפריס על גבי קרקע"]:::conclusion
+  S1 -->|ראיה מסייעת| P1
+  P1 -.->|דחייה| A1
+  A1 -->|ועוד ראיה| P2
+  P2 -.->|דחייה| A2
+  A2 -->|ועוד ראיה| P3
+  P3 -->|יישוב| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Naḥman: the womb is no cause for shattered-limb concern"]:::statement
+  P1["② Proof: a one-day infant is impure by ziva — only ׳from his flesh׳, not by mishap"]:::proof
+  A1["③ Deflected: the case is a caesarean birth"]:::answer
+  P2["④ Come and hear: a calf born on a Festival may be slaughtered that day"]:::proof
+  A2["④ Deflected: here too, a caesarean"]:::answer
+  P3["⑤ Come and hear: born with its blemish — and a caesarean firstborn is not sanctified"]:::proof
+  C1["⑥ Resolution: the case is one that spread its legs and stood at once"]:::conclusion
+  S1 -->|supporting proof| P1
+  P1 -.->|deflected| A1
+  A1 -->|another proof| P2
+  P2 -.->|deflected| A2
+  A2 -->|another proof| P3
+  P3 -->|resolved| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בֵּית הָרֶחֶם אֵין בּוֹ מִשּׁוּם רִיסּוּקֵי אֵבָרִים"]:::statement
+  P1["② תִּינוֹק בֶּן יוֹם אֶחָד מְטַמֵּא בְּזִיבָה … ׳מִבְּשָׂרוֹ׳ וְלֹא מֵחֲמַת אוֹנְסוֹ"]:::proof
+  A1["③ הָכָא בְּמַאי עָסְקִינַן, כְּגוֹן שֶׁיָּצָא דֶּרֶךְ דּוֹפֶן"]:::answer
+  P2["④ תָּא שְׁמַע: עֵגֶל שֶׁנּוֹלַד בְּיוֹם טוֹב – שׁוֹחֲטִין אוֹתוֹ בְּיוֹם טוֹב"]:::proof
+  A2["④ הָכָא נָמֵי, כְּגוֹן שֶׁיָּצָא דֶּרֶךְ דּוֹפֶן"]:::answer
+  P3["⑤ תָּא שְׁמַע: נוֹלַד הוּא וּמוּמוֹ עִמּוֹ … דֶּרֶךְ דּוֹפֶן מִי קָדוֹשׁ?"]:::proof
+  C1["⑥ הָכָא בְּמַאי עָסְקִינַן, שֶׁהִפְרִיס עַל גַּבֵּי קַרְקַע"]:::conclusion
+  S1 -->|ראיה מסייעת| P1
+  P1 -.->|דחייה| A1
+  A1 -->|ועוד ראיה| P2
+  P2 -.->|דחייה| A2
+  A2 -->|ועוד ראיה| P3
+  P3 -->|יישוב| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״א א — Chullin 51a:13</span></div>
+    <div class="orig">אָמַר רַב נַחְמָן: בֵּית הָרֶחֶם אֵין בּוֹ מִשּׁוּם רִיסּוּקֵי אֵבָרִים. אֲמַר לֵיהּ רָבָא לְרַב נַחְמָן: תַּנְיָא דִּמְסַיַּיע לָךְ, תִּינוֹק בֶּן יוֹם אֶחָד</div>
+    <div class="trans" data-when="he">רב נחמן: בית הרחם אינו בכלל ריסוק אברים — אין לחשוש שנתרסקו אבריו של ולד מחמת לחץ תעלת הלידה. רבא: יש ברייתא המסייעת לך — ״תינוק בן יום אחד…״</div>
+    <div class="trans" data-when="en">§ Rav Naḥman says: The womb is not subject to concern about possible shattered limbs. In other words, one need not be concerned that the limbs of a newborn calf may have been shattered by the narrow birth canal. Rava said to Rav Naḥman: That which is taught in a baraita supports your opinion: A one-day-old infant</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״א ב — Chullin 51b:1</span></div>
+    <div class="orig">מְטַמֵּא בְּזִיבָה, וְאִי סָלְקָא דַעְתָּךְ יֵשׁ בּוֹ מִשּׁוּם רִיסּוּקֵי אֵבָרִים, אִיקְרִי כָּאן ״מִבְּשָׂרוֹ״ וְלֹא מֵחֲמַת אוֹנְסוֹ.</div>
+    <div class="trans" data-when="he">— מטמא בזיבה. ואם תאמר שיש בולד חשש ריסוק אברים, נאמר עליו ״מבשרו״ — שאין הזב מטמא אלא בזיבה היוצאת מבשרו, ולא מחמת אונס (כמחלה); ואז לידתו עצמה אונס, ולא היה מטמא. מכאן שאין חוששים לריסוק.</div>
+    <div class="trans" data-when="en">becomes ritually impure if he experiences a gonorrhea-like discharge [ziva]. And if it should enter your mind that a newborn is subject to concern about possible shattered limbs, read here the ruling stated with regard to ziva, that one’s discharge renders one impure only when it issues “out of his flesh” (Leviticus 15:2), but not when it issues due to circumstances beyond his control, e.g., due to illness. Therefore, if one must be concerned that a newborn’s limbs may have shattered during birth, his discharge would not render him impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״א ב — Chullin 51b:2</span></div>
+    <div class="orig">הָכָא בְּמַאי עָסְקִינַן, כְּגוֹן שֶׁיָּצָא דֶּרֶךְ דּוֹפֶן.</div>
+    <div class="trans" data-when="he">דחייה: אין מכאן ראיה, כי הברייתא עוסקת בולד שיצא דרך דופן (ניתוח), שלא עבר בתעלת הלידה; אבל בלידה רגילה אכן חוששים לריסוק.</div>
+    <div class="trans" data-when="en">The Gemara responds: One cannot bring a proof from this baraita, since here we are dealing with a case where the infant left the womb by caesarean section and did not exit through the narrow birth canal. By contrast, after normal births, a newborn’s discharge does not render it impure, since one is concerned about the possibility of shattered limbs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״א ב — Chullin 51b:3</span></div>
+    <div class="orig">תָּא שְׁמַע: עֵגֶל שֶׁנּוֹלַד בְּיוֹם טוֹב – שׁוֹחֲטִין אוֹתוֹ בְּיוֹם טוֹב. הָכָא נָמֵי, כְּגוֹן שֶׁיָּצָא דֶּרֶךְ דּוֹפֶן.</div>
+    <div class="trans" data-when="he">תא שמע: עגל שנולד ביום טוב שוחטים אותו ביום טוב — ואין צריך להמתין מעת לעת כבנפולה. משמע שאין חוששים לריסוק בלידה. דחייה: אף כאן ביצא דרך דופן; אבל בלידה רגילה ממתינים.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear proof from a baraita: If a calf was born on a Festival, one may slaughter it and eat it on the Festival. One need not wait twenty-four hours before deeming the animal kosher, as one does for an animal that fell from a roof. Apparently, one need not be concerned that its limbs were shattered during the birth. The Gemara responds: Here, too, the baraita is referring to a case where the calf left the womb by caesarean section. But after normal births, one must wait twenty-four hours before slaughtering the calf.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״א ב — Chullin 51b:4</span></div>
+    <div class="orig">תָּא שְׁמַע: וְשָׁוִין שֶׁאִם נוֹלַד הוּא וּמוּמוֹ עִמּוֹ, שֶׁזֶּה מִן הַמּוּכָן. וְכִי תֵּימָא הָכָא נָמֵי שֶׁיָּצָא דֶּרֶךְ דּוֹפֶן – דֶּרֶךְ דּוֹפֶן מִי קָדוֹשׁ? וְהָא אָמַר רַבִּי יוֹחָנָן: מוֹדֶה הָיָה רַבִּי שִׁמְעוֹן לְעִנְיַן קָדָשִׁים שֶׁאֵינוֹ קָדוֹשׁ!</div>
+    <div class="trans" data-when="he">תא שמע: הכל מודים שבכור שנולד ומומו עמו — מן המוכן הוא ונאכל ביום, ואין ממתינים מעת לעת. ואם תאמר שגם כאן יצא דרך דופן — והרי בכור היוצא דרך דופן אינו קדוש כלל, כדברי ר׳ יוחנן בשם ר׳ שמעון! אם כן מדובר בלידה רגילה, וקשה.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear proof from another baraita: And all agree that if a firstborn animal was born on a Festival and its blemish was born with it, i.e., if it was born with a blemish that removes its sanctity and renders it permitted for consumption, it is considered to be prepared for the Festival and may be eaten. Evidently, one need not wait twenty-four hours before deeming it kosher. And if you would say that here too, the baraita deals with a case where the animal left the womb by caesarean section, one might respond: Is a firstborn animal born by caesarean section sanctified? But doesn’t Rabbi Yoḥanan say: Rabbi Shimon would concede with regard to sacrificial animals, e.g., a firstborn, that an animal born by caesarean section is not sanctified? Therefore, the baraita must be referring to an animal born naturally.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״א ב — Chullin 51b:5</span></div>
+    <div class="orig">הָכָא בְּמַאי עָסְקִינַן, שֶׁהִפְרִיס עַל גַּבֵּי קַרְקַע.</div>
+    <div class="trans" data-when="he">יישוב: מדובר בבכור שפשט רגליו על הקרקע ועמד מיד לאחר לידתו — ובכך הוכיח שלא נתרסק, ואינו טריפה.</div>
+    <div class="trans" data-when="en">The Gemara responds: Here we are dealing with a firstborn that spread out its legs on the ground and stood up immediately after birth. In such a case the animal is certainly not a tereifa on account of shattered limbs.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">בית המטבחיים — אין ריסוק</span><span data-when="en">The slaughterhouse — no shattering</span>
+      <span class="ref">Chullin 51b:6–7</span></h2>
+  <div class="lead"><span data-when="he">בהמה שהוטלה לארץ בבית המטבחיים אינה בכלל חשש ריסוק — שכן היא נועצת טלפיה.</span><span data-when="en">An animal cast down for slaughter is no cause for concern — it digs in its hooves.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב נחמן: בית המטבחיים אין בו משום ריסוק אברים"]:::statement
+  S2["② מעשה: תורא דנפל — רב יצחק נטל מן המובחר; צפרניו נועץ עד שמגיע לארץ"]:::conclusion
+  S1 -->|מעשה לסיוע| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Naḥman: an animal cast down in the slaughterhouse — no shattering concern"]:::statement
+  S2["② Incident: a bull fell — Rav Yitzḥak took the choicest cuts; it digs in its hooves till it reaches the ground"]:::conclusion
+  S1 -->|supporting incident| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בֵּית הַמִּטְבָּחַיִם אֵין בּוֹ מִשּׁוּם רִיסּוּקֵי אֵבָרִים"]:::statement
+  S2["② הָהוּא תּוֹרָא דִּנְפַל … שְׁקַל מִשּׁוּפְרֵי שׁוּפְרֵי … צִפׇּרְנָיו נוֹעֵץ עַד שֶׁמַּגִּיעַ לָאָרֶץ"]:::conclusion
+  S1 -->|מעשה לסיוע| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״א ב — Chullin 51b:6</span></div>
+    <div class="orig">וְאָמַר רַב נַחְמָן: בֵּית הַמִּטְבָּחַיִם אֵין בּוֹ מִשּׁוּם רִיסּוּקֵי אֵבָרִים.</div>
+    <div class="trans" data-when="he">רב נחמן: בהמה שהוטלה לארץ בבית המטבחיים לקראת שחיטה — אין בה חשש ריסוק אברים, שהיא נשמטת בזהירות.</div>
+    <div class="trans" data-when="en">§ And Rav Naḥman says: If an animal was thrown to the ground in the slaughterhouse in preparation for slaughter, it is not subject to concern for shattered limbs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״א ב — Chullin 51b:7</span></div>
+    <div class="orig">הָהוּא תּוֹרָא דִּנְפַל, וְאִישְׁתְּמַע קָל גְּנִיחוֹתֵיהּ, עָל רַב יִצְחָק בַּר שְׁמוּאֵל בַּר מָרְתָא שְׁקַל מִשּׁוּפְרֵי שׁוּפְרֵי. אָמְרִי לֵיהּ רַבָּנַן: מְנָא לָךְ הָא? אֲמַר לְהוּ: הָכִי אָמַר רַב: צִפׇּרְנָיו נוֹעֵץ עַד שֶׁמַּגִּיעַ לָאָרֶץ.</div>
+    <div class="trans" data-when="he">שור שנפל בבית המטבחיים ונשמע קול גניחתו מן המכה; נכנס רב יצחק בר שמואל בר מרתא ונטל מן הנתחים המובחרים, ולא חשש. שאלוהו חכמים: מנין לך? אמר: כך אמר רב — בנפילתו השור נועץ טלפיו עד שמגיע לארץ, ואינו נחבט בעוצמה.</div>
+    <div class="trans" data-when="en">The Gemara relates: A certain bull fell in the slaughterhouse, and its bellowing was audible due to the blow. Still, Rav Yitzḥak bar Shmuel bar Marta entered and took from the very best portions of the bull and was not concerned that it may have been a tereifa. The Sages said to him: From where did you learn this? Rav Yitzḥak bar Shmuel bar Marta said to them: This is what Rav said: When falling, the bull digs in its hooves until it reaches the earth. Therefore, one need not be concerned that it fell roughly.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">עמדה או הלכה — בדיקה ומעת־לעת</span><span data-when="en">Stood or walked — inspection and 24h</span>
+      <span class="ref">Chullin 51b:8–10</span></h2>
+  <div class="lead"><span data-when="he">מה פוטר נפולה מהמתנת מעת־לעת, ומה פוטר אף מבדיקה.</span><span data-when="en">What exempts a fall from the 24-hour wait, and what exempts it even from inspection.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב: עמדה — אין מעת־לעת אך צריכה בדיקה; הלכה — אף בדיקה לא"]:::statement
+  S1b["① רב חייא בר אשי: בין עמדה בין הלכה — צריכה בדיקה"]:::statement
+  S2["② רב: פשטה יד / עקרה רגל — כעמדה/כהלכה; רב חסדא: ננערה — כעמדה"]:::statement
+  C1["③ הלכה: עמדה ולא הלכה — בדיקה בלי מעת־לעת; הלכה — אף בדיקה לא"]:::conclusion
+  S1 -->|מחלוקת| S1b
+  S1 -->|פירוט| S2
+  S2 -->|הלכה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav: stood — no 24h but needs inspection; walked — not even inspection"]:::statement
+  S1b["① Rav Ḥiyya bar Ashi: whether it stood or walked — it needs inspection"]:::statement
+  S2["② Rav: extended a foreleg / lifted a leg counts as standing/walking; Rav Ḥisda: even just struggling counts"]:::statement
+  C1["③ Halakha: stood but did not walk — inspect, no 24h; walked — not even inspection"]:::conclusion
+  S1 -->|dispute| S1b
+  S1 -->|refined| S2
+  S2 -->|halakha| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עָמְדָה – אֵינָהּ צְרִיכָה מֵעֵת לְעֵת, בְּדִיקָה – וַדַּאי בָּעֲיָא, הָלְכָה – אֵינָהּ צְרִיכָה בְּדִיקָה"]:::statement
+  S1b["① רַב חִיָּיא בַּר אָשֵׁי: אַחַת זוֹ וְאַחַת זוֹ צְרִיכָה בְּדִיקָה"]:::statement
+  S2["② פָּשְׁטָה יָדָהּ … עָקְרָה רַגְלָהּ … וְרַב חִסְדָּא: נִנְעֲרָה לַעֲמוֹד, אַף עַל פִּי שֶׁלֹּא עָמְדָה"]:::statement
+  C1["③ וְהִלְכְתָא … עָמְדָה וְלֹא הָלְכָה – צְרִיכָה בְּדִיקָה … וְאִם הָלְכָה – אֲפִילּוּ בְּדִיקָה לָא צְרִיכָה"]:::conclusion
+  S1 -->|מחלוקת| S1b
+  S1 -->|פירוט| S2
+  S2 -->|הלכה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״א ב — Chullin 51b:8</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה אָמַר רַב: עָמְדָה – אֵינָהּ צְרִיכָה מֵעֵת לְעֵת, בְּדִיקָה – וַדַּאי בָּעֲיָא, הָלְכָה – אֵינָהּ צְרִיכָה בְּדִיקָה. רַב חִיָּיא בַּר אָשֵׁי אָמַר: אַחַת זוֹ וְאַחַת זוֹ צְרִיכָה בְּדִיקָה.</div>
+    <div class="trans" data-when="he">רב יהודה בשם רב: נפולה שעמדה — אינה צריכה להמתין מעת לעת, אך ודאי צריכה בדיקה לאחר שחיטה; ואם אף הלכה — אינה צריכה בדיקה כלל. רב חייא בר אשי חולק: בין עמדה ובין הלכה — צריכה בדיקה.</div>
+    <div class="trans" data-when="en">§ Rav Yehuda says that Rav says: If an animal fell and stood up again, it does not require a twenty-four-hour period mentioned in the mishna (56b) to determine if it may be slaughtered. Nevertheless, it certainly requires inspection after slaughter to determine whether it was injured by the fall and rendered a tereifa. But if it both stood up and walked after the fall, it does not even require inspection after slaughter. Rav Ḥiyya bar Ashi says: Both in this case and in that case, i.e., even if it walked after the fall, it requires inspection.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״א ב — Chullin 51b:9</span></div>
+    <div class="orig">אָמַר רַב יִרְמְיָה בַּר אַחָא אָמַר רַב: פָּשְׁטָה יָדָהּ לַעֲמוֹד, אַף עַל פִּי שֶׁלֹּא עָמְדָה. עָקְרָה רַגְלָהּ לְהַלֵּךְ, אַף עַל פִּי שֶׁלֹּא הָלְכָה. וְרַב חִסְדָּא אָמַר: נִנְעֲרָה לַעֲמוֹד, אַף עַל פִּי שֶׁלֹּא עָמְדָה.</div>
+    <div class="trans" data-when="he">רב ירמיה בר אחא בשם רב: פשטה ידהּ כדי לעמוד — נחשב כעמדה, אף שלא עמדה ממש; עקרה רגלהּ כדי ללכת — נחשב כהלכה. רב חסדא מקל יותר: אף אם רק התנערה כדי לעמוד, אף שלא עמדה — נחשב כעמדה.</div>
+    <div class="trans" data-when="en">Rav Yirmeya bar Aḥa says that Rav says: If the animal stretched out its foreleg to stand, even if it did not actually stand, it is considered to have stood and does not require a twenty-four-hour waiting period. If it raised its leg to walk, even if it did not actually walk, it is considered to have walked and does not require inspection according to Rav. And Rav Ḥisda says: Even if it did not stretch out its foreleg, but simply struggled to stand, even if it did not stand, it is considered to have stood and may be slaughtered that day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״א ב — Chullin 51b:10</span></div>
+    <div class="orig">וְהִלְכְתָא: הֵיכָא דְּנָפְלָה מִן הַגָּג בִּדְלָא יָדְעָה, וְעָמְדָה וְלֹא הָלְכָה – צְרִיכָה בְּדִיקָה, וְאֵינָהּ צְרִיכָה מֵעֵת לְעֵת. וְאִם הָלְכָה – אֲפִילּוּ בְּדִיקָה נָמֵי לָא צְרִיכָה.</div>
+    <div class="trans" data-when="he">ההלכה: בהמה שנפלה מן הגג שלא מדעתה, ועמדה אך לא הלכה — צריכה בדיקה לאחר שחיטה, ואינה צריכה להמתין מעת לעת. ואם הלכה — אינה צריכה אף בדיקה.</div>
+    <div class="trans" data-when="en">The Gemara concludes: And the halakha is: In any case where an animal fell from the roof unawares, i.e., unintentionally, and stood but did not walk, it requires inspection after slaughter but does not require a twenty-four-hour period before slaughter. And if it walked, it does not even require an inspection.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">מה בודקים בנפולה</span><span data-when="en">What a fallen animal needs checked</span>
+      <span class="ref">Chullin 51b:11–12</span></h2>
+  <div class="lead"><span data-when="he">היכן עורכים את הבדיקה — סביב בני המעיים בלבד, או כל בית החלל? והסימנים בכלל?</span><span data-when="en">Where the inspection runs — just by the intestines, or the whole cavity? And the simanim?</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רב דימי: נפולה צריכה בדיקה כנגד בני מעיים"]:::statement
+  S1b["① רב פפא: כנגד בית החלל כולו"]:::statement
+  Q1{"② והסימנים — צריכים בדיקה?"}:::question
+  A1["② רב אשי: סימנים קשים הם אצל נפילה — אין צריך"]:::answer
+  S1 -->|מחלוקת בהיקף| S1b
+  S1b -->|שאלה| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Rav Dimi: a fall needs inspection around the intestines"]:::statement
+  S1b["① Rav Pappa: around the entire body cavity"]:::statement
+  Q1{"② And the simanim — do they need checking?"}:::question
+  A1["② Rav Ashi: the simanim are tough against a fall — no need"]:::answer
+  S1 -->|dispute on scope| S1b
+  S1b -->|question| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① נְפוּלָה שֶׁאָמְרוּ – צְרִיכָה בְּדִיקָה כְּנֶגֶד בְּנֵי מֵעַיִים"]:::statement
+  S1b["① מִשְּׁמֵיהּ דְּרַב פָּפָּא: צְרִיכָה בְּדִיקָה כְּנֶגֶד בֵּית הֶחָלָל כּוּלּוֹ"]:::statement
+  Q1{"② סִימָנִין מַאי?"}:::question
+  A1["② סִימָנִין קָשִׁין הֵן אֵצֶל נְפִילָה"]:::answer
+  S1 -->|מחלוקת בהיקף| S1b
+  S1b -->|שאלה| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״א ב — Chullin 51b:11</span></div>
+    <div class="orig">אָמַר אַמֵּימָר מִשְּׁמֵיהּ דְּרַב דִּימִי מִנְּהַרְדְּעָא: נְפוּלָה שֶׁאָמְרוּ – צְרִיכָה בְּדִיקָה כְּנֶגֶד בְּנֵי מֵעַיִים. אֲמַר לֵיהּ מָר זוּטְרָא: הָכִי אָמְרִינַן מִשְּׁמֵיהּ דְּרַב פָּפָּא: צְרִיכָה בְּדִיקָה כְּנֶגֶד בֵּית הֶחָלָל כּוּלּוֹ.</div>
+    <div class="trans" data-when="he">אמימר בשם רב דימי: נפולה שאמרו שצריכה בדיקה — בודקים את הבשר שכנגד בני המעיים, שמא ניקבו. מר זוטרא בשם רב פפא: בודקים כנגד כל בית החלל, שמא נפגעו הצלעות או השדרה.</div>
+    <div class="trans" data-when="en">§ Ameimar said in the name of Rav Dimi of Neharde’a: A fallen animal that the Sages said requires inspection must be inspected around the intestines to see whether the organs there have been perforated or torn, rendering the animal a tereifa. Mar Zutra said to him: This is what we say in the name of Rav Pappa: Such an animal requires inspection around the entire space of the body cavity, in case the ribs or spine have been damaged.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״א ב — Chullin 51b:12</span></div>
+    <div class="orig">אֲמַר לֵיהּ הוּנָא מָר בַּר בְּרֵיהּ דְּרַב נְחֶמְיָה לְרַב אָשֵׁי: סִימָנִין מַאי? אֲמַר לֵיהּ: סִימָנִין קָשִׁין הֵן אֵצֶל נְפִילָה.</div>
+    <div class="trans" data-when="he">הונא מר שאל את רב אשי: והסימנים — הקנה והוושט — האם גם הם טעונים בדיקה בנפולה? השיב: הסימנים קשים ואינם נפגעים בנפילה, ואין צריך לבדקם.</div>
+    <div class="trans" data-when="en">Huna Mar, grandson of Rav Neḥemya, said to Rav Ashi: What about the two organs that must be severed in ritual slaughter [simanim], i.e., the windpipe and the gullet? Do they require inspection as well? Rav Ashi said to him: The simanim are hard and resistant to damage in falling. Therefore, one need not inspect them.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">עוף שנפל — מים ומשטחים</span><span data-when="en">A bird that fell — water and surfaces</span>
+      <span class="ref">Chullin 51b:13–52a:4</span></h2>
+  <div class="lead"><span data-when="he">עוף שנפל: שחייה כנגד הזרם פוטרת, וכלל המשטחים — רך פוטר, קשה מחייב חשש; ועד מלכודת הדבק.</span><span data-when="en">A fallen bird: swimming upstream exempts it; the surface rule — soft exempts, hard raises concern; down to the glue-trap.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב/שמואל: עוף שנחבט על המים — שט מלא קומתו דיו; ודווקא ממטה למעלה"]:::statement
+  S2["② משטחים: רך — אין חשש; קשה — יש חשש; גלימא, רשת, פשתן, קיטמא, חול"]:::statement
+  S3["⑥ כלל: כל המחליק — אין בו ריסוק; שאינו מחליק — יש בו ריסוק"]:::statement
+  D1{"⑦ דבוק — מלכודת דבק: רב אשי שרי, אמימר אסר"}:::question
+  C1["⑧ הלכה: שני אגפיים אסור, אגף אחד מותר"]:::conclusion
+  S1 -->|ועוד| S2
+  S2 -->|כללא| S3
+  S3 -->|מחלוקת| D1
+  D1 -->|הלכה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav/Shmuel: a bird that hit water and swam its full length is fine; only upstream"]:::statement
+  S2["② Surfaces: soft — no concern; hard — concern; cloth, net, flax, ash, sand"]:::statement
+  S3["⑥ Principle: whatever it slides off — no shattering; whatever it does not — shattering"]:::statement
+  D1{"⑦ Davuk — a glue-trap: Rav Ashi permits, Ameimar forbids"}:::question
+  C1["⑧ Halakha: both wings stuck — forbidden; one wing — permitted"]:::conclusion
+  S1 -->|further| S2
+  S2 -->|principle| S3
+  S3 -->|dispute| D1
+  D1 -->|halakha| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עוֹף שֶׁנֶּחְבַּט עַל פְּנֵי הַמַּיִם … שָׁט מְלֹא קוֹמָתוֹ – דַּיּוֹ … מִמַּטָּה לְמַעְלָה"]:::statement
+  S2["② גְּלִימָא מְתִיחַ – חָיְישִׁינַן … כִּיתָּנָא … קִיטְמָא … חוֹל הַגַּס – חָיְישִׁינַן"]:::statement
+  S3["⑥ כְּלָלָא דְּמִלְּתָא: כֹּל מִידֵּי דְּמַשְׁרֵיק – אֵין בּוֹ … לָא מַשְׁרֵיק – יֵשׁ בּוֹ"]:::statement
+  D1{"⑦ דָּבוֹק – רַב אָשֵׁי שָׁרֵי, אַמֵּימָר אָסַר"}:::question
+  C1["⑧ וְהִילְכְתָא: בִּתְרֵי גַּפֵּי אֲסִיר, בְּחַד גַּפָּא שְׁרֵי"]:::conclusion
+  S1 -->|ועוד| S2
+  S2 -->|כללא| S3
+  S3 -->|מחלוקת| D1
+  D1 -->|הלכה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״א ב — Chullin 51b:13</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: עוֹף שֶׁנֶּחְבַּט עַל פְּנֵי הַמַּיִם, כֵּיוָן שֶׁשָּׁט מְלֹא קוֹמָתוֹ – דַּיּוֹ. וְלָא אֲמַרַן אֶלָּא מִמַּטָּה לְמַעְלָה, אֲבָל מִלְּמַעְלָה לְמַטָּה – מַיָּא הוּא דְּאַשְׁפִּלוּ. וְאִי מַיָּא קָיְימִי – לֵית לַן בַּהּ, וְאִי שְׁדָא צִיבֵי וְקַדְמֵיהּ – הָא קַדְמֵיהּ.</div>
+    <div class="trans" data-when="he">רב יהודה בשם שמואל: עוף שנפל ונחבט על פני המים — אם שט באורך כל גופו, די בכך כסימן שלא נתרסקו אבריו. ודווקא כששחה נגד הזרם, ממטה למעלה; אבל ממעלה למטה — שמא המים הם שהשׂיטוהו, וצריך בדיקה. ובמים עומדים — אין חשש. ואם זרק לפניו קיסמים והעוף הקדים אותם — שט בכוח עצמו, ואין חשש.</div>
+    <div class="trans" data-when="en">§ With regard to birds that have fallen, Rav Yehuda says that Shmuel says: If a bird fell and hit the surface of the water, once it swims the full length of its body, this is sufficient to indicate that its limbs have not been shattered, similar to an animal that walks after falling. And we said this only in cases where it swam from below to above, i.e., upstream. But if it swam from above to below, i.e., downstream, it is only the water that carried it down, and it must be inspected. And if the water is standing, e.g., in a pond, we have no problem with it, as it is clear that the bird is swimming on its own strength, and it need not be inspected. And even if the bird swims downstream, if straw was scattered in front of it and the bird overtook it with its swimming, then the bird overtook it on its own strength and need not be inspected.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״א ב — Chullin 51b:14</span></div>
+    <div class="orig">גְּלִימָא מְתִיחַ – חָיְישִׁינַן; דְּלָא מְתִיחַ – לָא חָיְישִׁינַן; עוּף וּמְעוּפָּף – לָא חָיְישִׁינַן; אִיזְלָא וּמְקָרְבִי קִיטְרֵי – חָיְישִׁינַן; לָא מְקָרְבִי קִיטְרֵי – לָא חָיְישִׁינַן.</div>
+    <div class="trans" data-when="he">נפל על בגד מתוח — חוששים; על בגד רפוי — אין חוששים; על בגד מקופל — אין חוששים. על רשת שקשריה צפופים — חוששים; קשרים רחוקים — אין חוששים.</div>
+    <div class="trans" data-when="en">If the bird fell on a garment spread out taut over poles, we must be concerned that its limbs may have been shattered from the impact. If it fell on a garment that was not taut, we need not be concerned. In any event, if the garment was folded, we need not be concerned, since it presumably was not taut enough to injure the bird. If the bird fell on a net whose knots were woven closely together, we must be concerned that its limbs may have been shattered from the impact. If the knots were not close together, we need not be concerned.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״א ב — Chullin 51b:15</span></div>
+    <div class="orig">כִּיתָּנָא דַּעֲבִיד בְּטוּנֵי – חָיְישִׁינַן; דְּהַאי גִּיסָא וּדְהַאי גִּיסָא – לָא חָיְישִׁינַן; אִסּוּרְיָיתָא – חָיְישִׁינַן; כִּיתָּנָא דִּדְיִיק וּנְפִיץ – לָא חָיְישִׁינַן; דְּיִיק וְלָא נְפִיץ – חָיְישִׁינַן; דַּעֲבִיד בִּיזְרֵי כֵּיוָן דְּאִיכָּא בֵּיהּ קִטְרֵי – חָיְישִׁינַן; דַּקְתָּא – חָיְישִׁינַן; דַּקְדַּקְתָּא – לָא חָיְישִׁינַן.</div>
+    <div class="trans" data-when="he">נפל על אגדי פשתן — חוששים; על צידם — אין חוששים; על אגדי קנים — חוששים; על פשתן מנופץ ורך — אין חוששים; דפוק ולא מנופץ — חוששים; פשתן קשור — חוששים מחמת הקשרים; נעורת גסה — חוששים; נעורת דקה — אין חוששים.</div>
+    <div class="trans" data-when="en">If the bird fell directly on to flax arranged into bundles, we must be concerned that its limbs may have been shattered from the impact, because the bundles are hard. If it fell on this side or that side of the bundles, we need not be concerned, because it did not fall directly onto the bundles and the impact was dampened. If it fell on bundles of reeds, we must be concerned. If it fell on beaten and combed flax, with the impurities removed, we need not be concerned, since it is soft. If it fell on flax that was beaten but not combed, we must be concerned due to the residue of flax stalks in the bundles. If it fell on flax that was bundled after it was beaten and combed, since it has knots in it we must be concerned. If the bird fell on flax tow, a coarse bundle of unspun fiber, we must be concerned. If it fell on fine tow, we need not be concerned, because it is soft.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״א ב — Chullin 51b:16</span></div>
+    <div class="orig">נַבְרָא – חָיְישִׁינַן; תִּימַחְתָא – לָא חָיְישִׁינַן; קִיטְמָא נְהִילָא – חָיְישִׁינַן; לָא נְהִילָא – לָא חָיְישִׁינַן.</div>
+    <div class="trans" data-when="he">נפל על סיבי דקל — חוששים; על קליפת דקל — אין חוששים; על אפר מנופה, שמתקשה — חוששים; אפר שאינו מנופה — אין חוששים.</div>
+    <div class="trans" data-when="en">If the bird fell on nevara, the fibers that grow around a palm tree, we must be concerned that its limbs may have been shattered. If it fell on timaḥta, palm bark cut into strips, we need not be concerned. If it fell on sifted ashes, we must be concerned, because the ashes harden. If it fell on unsifted ashes, we need not be concerned, because they are soft and scatter on impact.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ב א — Chullin 52a:1</span></div>
+    <div class="orig">חוֹל הַדַּק – לָא חָיְישִׁינַן; חוֹל הַגַּס – חָיְישִׁינַן; אֲבַק דְּרָכִים – חָיְישִׁינַן; תִּיבְנָא וַעֲבִיד בִּזְגָּא – חָיְישִׁינַן; לָא עָבֵיד בִּזְגָּא – לָא חָיְישִׁינַן.</div>
+    <div class="trans" data-when="he">חול דק — אין חוששים; חול גס — חוששים, מפני אבנים המעורבות בו; אבק דרכים — חוששים, שהוא מהודק וקשה; תבן אגוד — חוששים; תבן שאינו אגוד — אין חוששים.</div>
+    <div class="trans" data-when="en">If the bird fell on fine sand, we need not be concerned, because the sand slides on impact, cushioning the fall. If it fell on coarse sand, we must be concerned, because there are large stones mixed into it. If it fell on dust of the road, we must be concerned, because the dust is compact and hard. If the bird fell on bundled straw, we must be concerned, because it is compact and hard. If the straw was not bundled, we need not be concerned.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ב א — Chullin 52a:2</span></div>
+    <div class="orig">חִיטֵּי וְכֹל דְּמִינַיְיהוּ – חָיְישִׁינַן; שְׂעָרֵי וְכֹל דְּמִינַיְיהוּ – חָיְישִׁינַן; כׇּל מִינֵי קִטְנִיּוֹת – אֵין בָּהֶם מִשּׁוּם רִיסּוּקֵי אֵבָרִים, לְבַר מִן רוּבְּיָא. חִימְצֵי – אֵין בּוֹ מִשּׁוּם רִיסּוּק אֵבָרִים, חִפְצֵי – יֵשׁ בּוֹ מִשּׁוּם רִיסּוּק אֵבָרִים. כְּלָלָא דְּמִלְּתָא: כֹּל מִידֵּי דְּמַשְׁרֵיק – אֵין בּוֹ מִשּׁוּם רִיסּוּק אֵבָרִים, לָא מַשְׁרֵיק – יֵשׁ בּוֹ מִשּׁוּם רִיסּוּק אֵבָרִים.</div>
+    <div class="trans" data-when="he">חיטים וכל הדומה להן — חוששים; שעורים וכל הדומה להן — חוששים; כל מיני קטניות — אין בהם חשש ריסוק, כי העוף מחליק עליהן, חוץ מתלתן; אפונים — אין חשש, חומוס — יש חשש. וזה הכלל: כל דבר שהעוף מחליק עליו — אין בו חשש ריסוק; וכל שאינו מחליק — יש בו חשש.</div>
+    <div class="trans" data-when="en">If the bird fell on wheat and all similar types of grain, such as spelt or rye, whose kernels are hard, we must be concerned. If it fell on barley and all similar types of grain, such as oats, we must be concerned. With regard to all types of beans, there is no concern due to possible shattered limbs if a bird fell on them, since their round shape causes the bird to slide when it hits them, except for fenugreek. With regard to peas, there is no concern due to possible shattered limbs, but with regard to chickpeas, there is a concern due to possible shattered limbs. The principle of the matter is: With regard to anything that slips to the sides on impact, there is no concern due to possible shattered limbs. And with regard to anything that does not slip, there is a concern due to possible shattered limbs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ב א — Chullin 52a:3</span></div>
+    <div class="orig">דָּבוֹק – רַב אָשֵׁי שָׁרֵי, אַמֵּימָר אָסַר. בְּחַד גַּפָּא – דְּכוּלֵּי עָלְמָא לָא פְּלִיגִי דִּשְׁרֵי, כִּי פְּלִיגִי בִּתְרֵי גַּפֵּי. מַאן דְּאָסַר אָמַר לָךְ: הֵיכִי נֵיקוּם? וּמַאן דְּשָׁרֵי אָמַר לָךְ: אֶפְשָׁר דְּנֵיקוּם אַעִיקְבֵי דְּגַפֵּי.</div>
+    <div class="trans" data-when="he">עוף שנדבקו כנפיו ללוח מרוח בדבק (מלכודת) ונפל עמו: רב אשי מתיר, אמימר אוסר. באגף אחד — הכל מתירים, כי מנפנף בשני; נחלקו בשני אגפיים. האוסר: כיצד יעמוד להקל את הנפילה? והמתיר: אפשר שיעמוד על קצות כנפיו.</div>
+    <div class="trans" data-when="en">If the bird’s wings became stuck to a davuk, a board covered with glue set as a trap, and in trying to escape it fell to the ground while stuck to the board, Rav Ashi deemed the bird permitted, while Ameimar deemed it prohibited. The Gemara explains: In a case where only one wing was stuck to the board, everyone agrees that it is permitted, because the bird flaps with the other wing, lessening the impact of the fall. They disagree when both wings are stuck to the board. The one who deemed it prohibited could have said to you: How will it stand itself up so that it might dampen the impact? And the one who deemed it permitted could have said to you: It is possible for it to stand itself up by using the tips of its wings.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין נ״ב א — Chullin 52a:4</span></div>
+    <div class="orig">וְאִיכָּא דְּאָמְרִי: בִּתְרֵי גַּפֵּי כּוּלֵּי עָלְמָא לָא פְּלִיגִי דַּאֲסִיר, כִּי פְּלִיגִי בְּחַד גַּפָּא. מַאן דְּשָׁרֵי אָמַר לָךְ: אֶפְשָׁר דְּפָרַח בְּחַד גַּפָּא, וּמַאן דְּאָסַר: כֵּיוָן דִּבְהַאי לָא מָצֵי פָּרַח, בְּהַאי נָמֵי לָא מָצֵי פָּרַח. וְהִילְכְתָא: בִּתְרֵי גַּפֵּי אֲסִיר, בְּחַד גַּפָּא שְׁרֵי.</div>
+    <div class="trans" data-when="he">לישנא אחרינא: בשני אגפיים הכל אוסרים, ונחלקו באגף אחד. המתיר: אפשר שיעוף בכנף האחת ויקל את הנפילה; האוסר: כיוון שאינו יכול לעוף בכנף הדבוקה, אף בשנייה אינו מצליח. וההלכה: שני אגפיים — אסור, אגף אחד — מותר.</div>
+    <div class="trans" data-when="en">And there are those who say: In a case where two wings were stuck to the board, everyone agrees that it is prohibited, because it cannot dampen the impact. They disagree when only one wing is stuck to the board. The one who deemed it permitted could have said to you: It is possible for it to fly with one wing and dampen the fall. And the one who deemed it prohibited could say: Since it cannot fly with this wing that is stuck to the davuk, it also cannot fly with that untrapped wing. The Gemara concludes: And the halakha is: In a case where two wings were stuck, it is prohibited. In a case where only one wing was stuck, it is permitted.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
