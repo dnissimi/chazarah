@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ע״ד</title>
+<meta name="description" content="מפת הסוגיא של חולין ע״ד: דין אבר המדולדל באכילה; ׳מיתה עושה ניפול ושחיטה אינה עושה ניפול׳ ומקורו; מחלוקת ר׳ מאיר וחכמים בעובר ובבן פקועה — שחיטה, חֵלב, דם, פדיון פטר חמור, וטומאת בן פקועה ודגים.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="74">
+<meta name="gemara-map:sefaria-ref" content="Chullin 74">
+<meta name="gemara-map:topic-he" content="ניפול, בן פקועה, שחיטת אמו מטהרתו">
+<meta name="gemara-map:topic-en" content="Fallen-off limb, ben pekua, the fetus">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ע״ד">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 74">
+<meta name="gemara-map:blurb-he" content="מיתה עושה ניפול ואין שחיטה עושה ניפול; ובבן פקועה — אם ׳שחיטת אמו מטהרתו׳ — תלויים דיני חֵלב, דם, פדיון פטר חמור, וטומאה.">
+<meta name="gemara-map:blurb-en" content="Death renders a limb fallen-off, slaughter does not; and on whether a fetus is permitted by its mother’s slaughter hinge its fat, blood, donkey-redemption, and impurity.">
+<meta name="gemara-map:sugya-count" content="10">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ע״ד</span><span data-when="en">Sugya map — Chullin 74</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ע״ד א — ע״ה א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 74a–75a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשך דיני <b>אבר המדולדל</b> והעובר: אכילתו — לוקה? ומקורו של הכלל <b>״מיתה עושה ניפול, שחיטה אינה עושה ניפול״</b> מן הכתוב. ובמשנת ה<b>שוחט ומצא עובר</b>, מחלוקת ר׳ מאיר וחכמים אם בן תשעה חי טעון שחיטה או ש<b>״שחיטת אמו מטהרתו״</b> — ועליה תלויים דיני חֵלבו, דמו, פדיון בו פטר־חמור, וטומאת <b>בן פקועה</b> והדגים.</span>
+    <span data-when="en"><b>Bottom line:</b> A continuation of the laws of a <b>hanging limb</b> and the fetus: is one flogged for eating it? And the scriptural source for the rule that <b>death renders a limb as fallen-off, while slaughter does not</b>. The Mishna of <b>one who slaughters and finds a fetus</b> drives a dispute between Rabbi Meir and the Rabbis over whether a live full-term fetus needs its own slaughter or whether <b>“its mother’s slaughter renders it permitted”</b> — and on this hinge its fat, its blood, redeeming a firstborn donkey with it, and the impurity of a <b>ben pekua</b> and of fish.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ע״ד</span><span data-when="en">Overview — Chullin 74</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · אכל את האבר המדולדל — לוקה?"]:::statement
+  O2["2 · מקור: מיתה עושה ניפול, שחיטה לא"]:::statement
+  O3["3 · אבר עובר חי או מת — מחלוקת?"]:::statement
+  O4["4 · בן שמונה חי — שחיטה אינה מטהרת"]:::statement
+  O5["5 · שחט בן תשעה חי במעי אמו — מהו?"]:::statement
+  O6["6 · משנה: שוחט ומצא עובר — שחיטה?"]:::mishnah
+  O7["7 · ׳על עסקי אכילה׳ — חֵלב וגיד"]:::statement
+  O8["8 · המתיר בחֵלבו — בדמו?"]:::statement
+  O9["9 · פדיון פטר חמור בבן פקועה"]:::statement
+  O10["10 · טומאת בן פקועה ודגים"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9 --> O10
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+  click O10 "#sugya-10"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Ate the hanging limb — flogged?"]:::statement
+  O2["2 · Source: death renders fallen, slaughter not"]:::statement
+  O3["3 · Fetus limb, alive or dead — disputed?"]:::statement
+  O4["4 · Eight-month live — slaughter not purify"]:::statement
+  O5["5 · Slaughtered a full-term fetus in womb — what?"]:::statement
+  O6["6 · Mishna: slaughtered, found a fetus — slaughter?"]:::mishnah
+  O7["7 · ׳Only consumption׳ — fat and nerve"]:::statement
+  O8["8 · One who permits the fat — the blood?"]:::statement
+  O9["9 · Redeeming a firstborn donkey with a ben pekua"]:::statement
+  O10["10 · Impurity of a ben pekua and of fish"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9 --> O10
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+  click O10 "#sugya-10"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">אכל את האבר המדולדל — לוקה?</span><span data-when="en">Ate the hanging limb — is one flogged?</span>
+      <span class="ref">Chullin 74a:2-3</span></h2>
+  <div class="lead"><span data-when="he">שתי גרסאות בשם רב אם אכילת האבר המדולדל מַלקה; ורב יוסף מיישב — תלוי אם מתה (עושה ניפול) או נשחטה.</span><span data-when="en">Two versions in Rav’s name on whether eating the hanging limb is punishable; Rav Yosef reconciles — it turns on death (renders fallen) versus slaughter.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רב יוסף בשם רב: אכלו לאבר — לוקה"]:::statement
+  S2["① גרסה אחרת בשם רב: אינו לוקה"]:::statement
+  Q1{"② רב הונא: על מאן נסמוך?"}:::question
+  A1["② רב יוסף: אני — במיתה דעושה ניפול; הוא — בשחיטה דאינה עושה ניפול"]:::answer
+  S1 -->|וכנגדו| S2
+  S2 -->|קושיא| Q1
+  Q1 -->|יישוב| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Rav Yosef in Rav’s name: ate the limb — flogged"]:::statement
+  S2["① Another version in Rav’s name: not flogged"]:::statement
+  Q1{"② Rav Huna: on whom shall we rely?"}:::question
+  A1["② Rav Yosef: I spoke of death which renders fallen; he, of slaughter which does not"]:::answer
+  S1 -->|against it| S2
+  S2 -->|objection| Q1
+  Q1 -->|resolution| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אָמַר רַב יְהוּדָה אָמַר רַב: אֲכָלוֹ לָזֶה – לוֹקֶה"]:::statement
+  S2["① הָכִי אָמַר רַב יִצְחָק בַּר שְׁמוּאֵל בַּר מָרְתָא מִשְּׁמֵיהּ דְרַב: אֲכָלוֹ לָזֶה – אֵינוֹ לוֹקֶה"]:::statement
+  Q1{"② אֲמַר לֵיהּ רַב הוּנָא: אֲנַן אַמַּאן נִסְמוֹךְ?"}:::question
+  A1["② כִּי אֲמַרִי אֲנָא – בְּמִיתָה, דְּעוֹשָׂה נִיפּוּל; כִּי אֲמַר אִיהוּ – בִּשְׁחִיטָה, דְּאֵינָהּ עוֹשָׂה נִיפּוּל"]:::answer
+  S1 -->|וכנגדו| S2
+  S2 -->|קושיא| Q1
+  Q1 -->|יישוב| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד א — Chullin 74a:2</span></div>
+    <div class="orig">יָתֵיב רַב יוֹסֵף קַמֵּיהּ דְּרַב הוּנָא, וְיָתֵיב וְקָאָמַר: אָמַר רַב יְהוּדָה אָמַר רַב: אֲכָלוֹ לָזֶה – לוֹקֶה. אֲמַר לֵיהּ הָהוּא מֵרַבָּנַן: לָא תְּצִיתוּ לֵיהּ, הָכִי אָמַר רַב יִצְחָק בַּר שְׁמוּאֵל בַּר מָרְתָא מִשְּׁמֵיהּ דְרַב: אֲכָלוֹ לָזֶה – אֵינוֹ לוֹקֶה.</div>
+    <div class="trans" data-when="he">רב יוסף ישב לפני רב הונא ומסר: רב יהודה אמר בשם רב — מי שאכל את האבר המדולדל (התלוי ומחובר מעט), לוקה משום ׳אבר מן החי׳. אמר אחד החכמים: אל תשמעו לו! כך אמר רב יצחק בר שמואל בר מרתא בשם רב — אכלו, אינו לוקה.</div>
+    <div class="trans" data-when="en">§ Rav Yosef sat before Rav Huna, and he sat and said: Rav Yehuda says that Rav says: If one ate this hanging limb he is flogged for violating the prohibition against eating a limb from a living animal. One of the Sages said to him: Do not listen to his statement in the name of Rav, as this is what Rav Yitzḥak bar Shmuel bar Marta says in the name of Rav: If one ate this hanging limb he is not flogged.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד א — Chullin 74a:3</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב הוּנָא: אֲנַן אַמַּאן נִסְמוֹךְ? אַהְדְּרִינְהוּ רַב יוֹסֵף לְאַפֵּיהּ, אֲמַר לֵיהּ: מַאי קוּשְׁיָא? כִּי אֲמַרִי אֲנָא – בְּמִיתָה, דְּעוֹשָׂה נִיפּוּל; כִּי אֲמַר אִיהוּ – בִּשְׁחִיטָה, דְּאֵינָהּ עוֹשָׂה נִיפּוּל.</div>
+    <div class="trans" data-when="he">אמר לו רב הונא: על איזו גרסה נסמוך? נפנה רב יוסף בכעס ואמר: אין כאן קושיא! דבריי — בבהמה שמתה מאליה, שהמיתה ׳עושה ניפול׳ (כאילו נפל האבר מחיים) ולכן לוקה; דברי השני — בבהמה שנשחטה, שהשחיטה אינה ׳עושה ניפול׳ ולכן האבר הותר ואינו לוקה.</div>
+    <div class="trans" data-when="en">Rav Huna said to Rav Yosef: Upon whose version of Rav’s ruling shall we rely? Rav Yosef turned his face away in anger and said to him: What is the difficulty? When I said in Rav’s name that one is flogged for eating a limb that had been hanging from an animal when it died, I was referring to a case of death by means other than slaughter, which renders the limb as though it had already fallen off prior to the animal’s death. When Rav Yitzḥak bar Shmuel bar Marta said in the name of Rav that one is not flogged, he was referring to the case of a slaughter, which does not render the limb as though it had already fallen off prior to the slaughter and therefore serves to render the limb permitted for consumption.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">מקור הכלל — מיתה עושה ניפול, שחיטה לא</span><span data-when="en">Source of the rule — death renders fallen, slaughter does not</span>
+      <span class="ref">Chullin 74a:4-6</span></h2>
+  <div class="lead"><span data-when="he">רבא דורש מ״במותם״ שהמיתה עושה ניפול ולא השחיטה; רב אדא מקשה שהכתוב בשרצים, ורבא מיישב ב׳אם אינו ענין׳.</span><span data-when="en">Rava derives from “when they are dead” that death — not slaughter — renders a limb fallen; Rav Adda objects that the verse concerns creeping animals, and Rava resolves it.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רבא: מנא הא מילתא? ׳במותם יטמא׳ — למעוטי מאי?"]:::statement
+  C1["① שמע מינה: מיתה עושה ניפול, אין שחיטה עושה ניפול"]:::conclusion
+  Q1{"② רב אדא: והא קרא בשרצים כתיב!"}:::question
+  A1["② אם אינו ענין לשרצים — תנהו ענין לבהמה"]:::answer
+  Q2{"③ ואכתי מיבעי ליה לחין מטמאים יבשים לא!"}:::question
+  A2["③ תרי ׳במותם׳ כתיבי"]:::answer
+  S1 -->|דרשה| C1
+  C1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rava: from where is this rule? ׳when they are dead it is impure׳ — to exclude what?"]:::statement
+  C1["① Learn from it: death renders fallen, slaughter does not"]:::conclusion
+  Q1{"② Rav Adda: but the verse is written of creeping animals!"}:::question
+  A1["② If superfluous for creeping animals — apply it to a domesticated animal"]:::answer
+  Q2{"③ But it is still needed: moist impart impurity, dry do not!"}:::question
+  A2["③ ׳When they are dead׳ is written twice"]:::answer
+  S1 -->|exposition| C1
+  C1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|objection| Q2
+  Q2 -->|answer| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רָבָא: מְנָא הָא מִלְּתָא … ׳וְכֹל אֲשֶׁר יִפֹּל עָלָיו מֵהֶם בְּמֹתָם יִטְמָא׳, לְמַעוֹטֵי מַאי?"]:::statement
+  C1["① אֶלָּא שְׁמַע מִינַּהּ: מִיתָה עוֹשָׂה נִיפּוּל, וְאֵין שְׁחִיטָה עוֹשָׂה נִיפּוּל"]:::conclusion
+  Q1{"② רַב אַדָּא בַּר אַהֲבָה: וְהָא קְרָא בִּשְׁרָצִים כְּתִיב!"}:::question
+  A1["② אִם אֵינוֹ עִנְיָן לִשְׁרָצִים … תְּנֵהוּ עִנְיָן לִבְהֵמָה"]:::answer
+  Q2{"③ וְאַכַּתִּי מִבְּעֵי לֵיהּ … לַחִין מְטַמְּאִים, יְבֵשִׁים אֵין מְטַמְּאִים!"}:::question
+  A2["③ תְּרֵי ׳בְּמֹתָם׳ כְּתִיבִי"]:::answer
+  S1 -->|דרשה| C1
+  C1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד א — Chullin 74a:4</span></div>
+    <div class="orig">אָמַר רָבָא: מְנָא הָא מִלְּתָא דַאֲמוּר רַבָּנַן: מִיתָה עוֹשָׂה נִיפּוּל, שְׁחִיטָה אֵינָהּ עוֹשָׂה נִיפּוּל, דִּכְתִיב: ״וְכֹל אֲשֶׁר יִפֹּל עָלָיו מֵהֶם בְּמֹתָם יִטְמָא״, לְמַעוֹטֵי מַאי? אִילֵּימָא לְמַעוֹטֵי בְּחַיֵּיהֶם – מִ״נִּבְלָתָם״ נָפְקָא, אֶלָּא שְׁמַע מִינַּהּ: מִיתָה עוֹשָׂה נִיפּוּל, וְאֵין שְׁחִיטָה עוֹשָׂה נִיפּוּל.</div>
+    <div class="trans" data-when="he">רבא: מניין הכלל שאמרו חכמים — מיתה עושה ניפול, שחיטה אינה עושה ניפול? מן הכתוב בשמונה שרצים ״וכל אשר יפול עליו מהם במותם יטמא״ — מה בא ״במותם״ למעט? אם למעט בחייהם — כבר נלמד מ״נבלתם״; אלא שמע מינה: מיתה עושה ניפול, ואין שחיטה עושה ניפול.</div>
+    <div class="trans" data-when="en">§ Rava said: From where is this matter that the Sages stated derived: The death of an animal by means other than slaughter renders a hanging limb as though it had already fallen off prior to the slaughter, whereas the slaughter of the animal does not render a limb as though it had already fallen off? As it is written with regard to the eight species of impure creeping animals: “And anything that these fall upon, when they are dead, it shall be impure” (Leviticus 11:32). What does the term “when they are dead” serve to exclude? If we say it serves to exclude the time when they are alive, that principle is derived from: “And everything upon which any part of their carcass falls shall be impure” (Leviticus 11:35), which explicitly states that only their carcasses impart impurity. Rather, learn from the verse that death renders a hanging limb as though it had already fallen off, and slaughter does not render a hanging limb as though it had already fallen off.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד א — Chullin 74a:5</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אַדָּא בַּר אַהֲבָה לְרָבָא: וְהָא קְרָא בִּשְׁרָצִים כְּתִיב! אֲמַר לֵיהּ: אִם אֵינוֹ עִנְיָן לִשְׁרָצִים, דְּלָאו בְּנֵי שְׁחִיטָה נִינְהוּ – תְּנֵהוּ עִנְיָן לִבְהֵמָה.</div>
+    <div class="trans" data-when="he">רב אדא בר אהבה הקשה לרבא: הרי הכתוב נאמר בשרצים, ושרצים אינם בני שחיטה — כיצד תלמד מהם דין שחיטה? השיב לו רבא: ב׳אם אינו ענין׳ — אם אין הכתוב צריך לענין שרצים (שאינם בני שחיטה), תנהו ענין לבהמה, שהיא בת שחיטה.</div>
+    <div class="trans" data-when="en">Rav Adda bar Ahava said to Rava: But this verse is written with regard to creeping animals, which do not require slaughter. How then can a halakha with regard to slaughter be derived from here? Rava said to him: If, because it is superfluous, this verse is not referring to the matter of creeping animals, which are not subject to the requirement of slaughter, apply it to the matter of an animal, which is subject to slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ד א — Chullin 74a:6</span></div>
+    <div class="orig">וְאַכַּתִּי מִבְּעֵי לֵיהּ, כְּעֵין מִיתָה: לַחִין – מְטַמְּאִים, יְבֵשִׁים – אֵין מְטַמְּאִים! תְּרֵי ״בְּמֹתָם״ כְּתִיבִי.</div>
+    <div class="trans" data-when="he">קושיא: ועדיין ״במותם״ נצרך ללמד דין אחר — שמטמאים רק בעודם כעין מצב מיתתם: לחים מטמאים, יבשים אינם מטמאים! תירוץ: שתי פעמים ״במותם״ כתובות (בפסוק זה ובקודמו), ואחת מהן פנויה לדרשת הניפול.</div>
+    <div class="trans" data-when="en">The Gemara objects: But the phrase “when they are dead, it shall be impure” is still necessary to teach a different halakha, i.e., that they impart impurity only when they are still in a state similar to their state at the time of their death, i.e., if they are moist they impart impurity, whereas if they are dry they do not impart impurity. The Gemara explains that “when they are dead” is written twice, once in the verse cited, and once in the previous verse, which states: “Whoever touches them when they are dead shall be impure until the evening” (Leviticus 11:31).</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">אבר עובר חי או מת — היכן המחלוקת</span><span data-when="en">Limb of a living or dead fetus — where is the dispute</span>
+      <span class="ref">Chullin 74a:7</span></h2>
+  <div class="lead"><span data-when="he">רב חסדא: המחלוקת רק באבר עובר חי, אך במת — לדברי הכל שחיטה עושה ניפול; ורבה: המחלוקת בשניהם.</span><span data-when="en">Rav Ḥisda: the dispute is only over a limb of a living fetus, but for a dead one all agree slaughter renders it fallen; Rabba: it is disputed in both.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① רב חסדא: מחלוקת באבר עובר חי; במת — דברי הכל שחיטה עושה ניפול"]:::statement
+  S2["① רבה: כמחלוקת בזה כך מחלוקת בזה"]:::statement
+  S1 -->|וכנגדו| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① Rav Ḥisda: dispute over a living fetus’s limb; for a dead one all agree slaughter renders fallen"]:::statement
+  S2["① Rabba: just as they dispute the one, so they dispute the other"]:::statement
+  S1 -->|against it| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① אָמַר רַב חִסְדָּא: מַחְלוֹקֶת בְּאֵבֶר דְּעוּבָּר חַי, אֲבָל בְּאֵבֶר דְּעוּבָּר מֵת – דִּבְרֵי הַכֹּל שְׁחִיטָה עוֹשָׂה נִיפּוּל"]:::statement
+  S2["① וְרַבָּה אָמַר: כְּמַחְלוֹקֶת בָּזֶה כָּךְ מַחְלוֹקֶת בָּזֶה"]:::statement
+  S1 -->|וכנגדו| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד א — Chullin 74a:7</span></div>
+    <div class="orig">אָמַר רַב חִסְדָּא: מַחְלוֹקֶת בְּאֵבֶר דְּעוּבָּר חַי, אֲבָל בְּאֵבֶר דְּעוּבָּר מֵת – דִּבְרֵי הַכֹּל שְׁחִיטָה עוֹשָׂה נִיפּוּל. וְרַבָּה אָמַר: כְּמַחְלוֹקֶת בָּזֶה כָּךְ מַחְלוֹקֶת בָּזֶה.</div>
+    <div class="trans" data-when="he">בחזרה למחלוקת ר׳ מאיר וחכמים במשנה (עובר שהוציא ידו ונשחטה אמו): רב חסדא — נחלקו רק באבר של עובר חי, אבל באבר של עובר שמת, לדברי הכל השחיטה עושה ניפול והאבר מטמא כאבר מן החי. ורבה — כשם שנחלקו בעובר חי כך נחלקו בעובר מת.</div>
+    <div class="trans" data-when="en">§ The Gemara returns to the dispute in the mishna (72a) with regard to a fetus that extended its foreleg and then its mother was slaughtered. Rabbi Meir holds that the foreleg is regarded as a carcass with the associated impurity, while the Rabbis hold that although it is not permitted for consumption, the slaughter prevents it from having the impurity of a carcass. With regard to this dispute, Rav Ḥisda said: The dispute concerns only the limb of a fetus that was alive when the mother was slaughtered; but concerning the case of the limb of a fetus that was dead when the mother was slaughtered, everyone agrees that slaughter renders the fetus’s limb as though it had already fallen off  prior to the slaughter, and it imparts impurity as a limb from a living animal. But Rabba said: Just as there is a dispute between Rabbi Meir and the Rabbis concerning this case, where the fetus was alive, so too, there is a dispute between them concerning that case, where the fetus had died.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">בן שמונה חי — שחיטה אינה מטהרת</span><span data-when="en">A live eight-month fetus — slaughter does not purify</span>
+      <span class="ref">Chullin 74a:8-10</span></h2>
+  <div class="lead"><span data-when="he">ברייתא מוכיחה מבן שמונה חי, ותנא דידן דוחה; ומניין שטריפה ששחטה מטהרתה — מ״וכי ימות מן הבהמה״.</span><span data-when="en">A baraita proves from a live eight-month fetus and our tanna rejects it; and the source that slaughtering a tereifa purifies it — from “and if some animal dies.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① בן שמונה חי — אין שחיטתו מטהרתו; ברייתא: יוכיח"]):::mishnah
+  A1["② רב כהנא: יש במינו שחיטה אגב אמו; ותנא דידן לא פריך"]:::answer
+  Q1{"③ ולהאי תנא דפריך — טריפה ששחטה מנא ליה?"}:::question
+  A2["③ ׳וכי ימות מן הבהמה׳ — מקצת מטמאה, מקצת לא: טריפה ששחטה"]:::answer
+  M1 -->|רב כהנא| A1
+  A1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Live eight-month fetus — slaughter does not purify; baraita: it proves"]):::mishnah
+  A1["② Rav Kahana: its kind has slaughter via its mother; our tanna does not refute"]:::answer
+  Q1{"③ And the tanna who does refute — whence a slaughtered tereifa is purified?"}:::question
+  A2["③ ׳If some animal dies׳ — some impart impurity, some not: a slaughtered tereifa"]:::answer
+  M1 -->|Rav Kahana| A1
+  A1 -->|objection| Q1
+  Q1 -->|answer| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① בֶּן שְׁמֹנֶה חַי … אֵין שְׁחִיטָתוֹ מְטַהַרְתּוֹ … יוֹכִיחַ"]):::mishnah
+  A1["② רַב כָּהֲנָא: יֵשׁ בְּמִינוֹ שְׁחִיטָה אַגַּב אִמּוֹ, וְתַנָּא דִּידַן מִינָא דְּאִמֵּיהּ לָא פָּרֵיךְ"]:::answer
+  Q1{"③ וּלְהַאי תַּנָּא דְּפָרֵיךְ, טְרֵפָה דִּשְׁחִיטָתָהּ מְטַהַרְתָּהּ מְנָא לֵיהּ?"}:::question
+  A2["③ ׳וְכִי יָמוּת מִן הַבְּהֵמָה׳ … מִקְצָת בְּהֵמָה מְטַמְּאָה … זוֹ טְרֵפָה שֶׁשְּׁחָטָהּ"]:::answer
+  M1 -->|רב כהנא| A1
+  A1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד א — Chullin 74a:8</span></div>
+    <div class="orig">בֶּן שְׁמֹנֶה חַי. וְהָתַנְיָא: בֶּן שְׁמֹנֶה חַי יוֹכִיחַ, שֶׁאַף עַל פִּי שֶׁיֵּשׁ בְּמִינוֹ שְׁחִיטָה – אֵין שְׁחִיטָתוֹ מְטַהַרְתּוֹ.</div>
+    <div class="trans" data-when="he">המשנה (לקמן) אומרת שבן שמונה חי שנולד אין שחיטתו מטהרתו, לפי שאין במינו שחיטה. הגמרא מקשה: והרי שנינו בברייתא — בן שמונה חי ׳יוכיח׳, שאף שיש במינו שחיטה (כשאר בהמות), אין שחיטתו מטהרתו! נמצא שהטעם אינו תלוי במין.</div>
+    <div class="trans" data-when="en">§ The mishna states that an eight-month-old fetus that was born alive is not rendered ritually pure by slaughtering it. The reason given is that the concept of permitting an animal through slaughter is never stated with regard to that kind of animal. The Gemara challenges: But isn’t it taught in a baraita in a discussion about whether slaughter renders a tereifa pure from the impurity of a carcass: An eight-month-old fetus that was born alive will prove the point, as even though there are other animals of that kind that are permitted through slaughter, its slaughter does not render it pure from having the impurity of a carcass. This refutes the claim that the issue of slaughter rendering an animal pure from having the impurity of a carcass is a function of whether or not the concept of slaughter applies to that kind of animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד א — Chullin 74a:9</span></div>
+    <div class="orig">אָמַר רַב כָּהֲנָא: יֵשׁ בְּמִינוֹ שְׁחִיטָה אַגַּב אִמּוֹ, וְתַנָּא דִּידַן מִינָא דְּאִמֵּיהּ לָא פָּרֵיךְ.</div>
+    <div class="trans" data-when="he">רב כהנא מיישב: תנא הברייתא סובר שאף בבן שמונה ׳יש במינו שחיטה׳ — אגב שחיטת אמו, ולכן מביאו לראיה. אך תנא משנתנו סובר שהיתר אגב האם אינו נחשב ׳מין שיש בו שחיטה׳, ולכן אינו מקשה משם.</div>
+    <div class="trans" data-when="en">Rav Kahana said: The tanna of the baraita holds that even with regard to an eight-month-old fetus it can be said that there are animals of that kind that are permitted through slaughter, i.e., when they are still inside the womb and the mother is slaughtered; such an animal is permitted by virtue of the slaughter of its mother. Therefore, he cites the case of an eight-month-old fetus as a refutation. But the tanna of our mishna holds that the fact that this kind of animal is permitted by virtue of the slaughter of its mother does not define it as a kind of animal concerning which there is a concept of slaughter, and therefore he holds that this case cannot be used as a refutation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ד א — Chullin 74a:10</span></div>
+    <div class="orig">וּלְהַאי תַּנָּא דְּפָרֵיךְ, טְרֵפָה דִּשְׁחִיטָתָהּ מְטַהַרְתָּהּ מְנָא לֵיהּ? נָפְקָא לֵיהּ מִדְּרַב יְהוּדָה אָמַר רַב, דְּאָמַר רַב יְהוּדָה אָמַר רַב, וְאָמְרִי לַהּ בְּמַתְנִיתָא תָּנָא: אָמַר קְרָא ״וְכִי יָמוּת מִן הַבְּהֵמָה״, מִקְצָת בְּהֵמָה מְטַמְּאָה וּמִקְצָת בְּהֵמָה אֵינָהּ מְטַמְּאָה, וְאֵיזוֹ זוֹ? זוֹ טְרֵפָה שֶׁשְּׁחָטָהּ.</div>
+    <div class="trans" data-when="he">ולתנא המקשה — מניין לו עצם הדין שטריפה ששחטה שחיטתה מטהרתה מטומאת נבלה? נלמד מדרב יהודה בשם רב (ויש אומרים ברייתא): ״וכי ימות מן הבהמה״ — ׳מן׳ ממעט, שמקצת בהמות מטמאות (כנבלה) ומקצתן אינן מטמאות; ואיזו זו שאינה מטמאה? טריפה ששחטה.</div>
+    <div class="trans" data-when="en">The Gemara asks: And according to that tanna of the baraita, who does use it as a refutation, from where does he derive that the slaughter of a tereifa renders it pure from having the impurity of a carcass? The Gemara answers that he derives it from that which Rav Yehuda says that Rav says, as Rav Yehuda says that Rav says, and some say it was taught in a baraita: The verse states: “And if some domesticated animal, of which you may eat, dies, one who touches its carcass shall be impure until the evening” (Leviticus 11:39). The word “some” teaches that only some dead animals impart impurity as a carcass, but some dead animals do not impart impurity as a carcass. And what is it that does not impart impurity? That is a tereifa that one slaughtered.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">שחט בן תשעה חי במעי אמו — מהו?</span><span data-when="en">Slaughtered a live full-term fetus in the womb — what is the law?</span>
+      <span class="ref">Chullin 74a:11-15</span></h2>
+  <div class="lead"><span data-when="he">בעיית רב הושעיא: השוחט עובר חי במעי אמו — לר׳ מאיר ולרבנן; רב חנניא מנסה ראיה מטריפה מן הבטן, ורבא דוחה.</span><span data-when="en">Rav Hoshaya’s dilemma: slaughtering a live fetus in the womb — for both views; Rav Ḥananya attempts a proof from a tereifa from the womb, which Rava rejects.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① רב הושעיא: שחט בן תשעה חי במעי אמו — מהו?"}:::question
+  S1["② לר׳ מאיר: שמא רק היוצא לאויר טעון שחיטה, אך במעי אמו לא"]:::statement
+  S2["③ או אף לרבנן: ארבעה סימנין אכשר ביה רחמנא"]:::statement
+  P1["④ רב חנניא: ת״ש — שנולדה טריפה מן הבטן; הרי הייתה לה שעת הכושר!"]:::proof
+  A1["⑤ רבא: תני ׳שנוצרה טריפה׳ — כבעלת חמש רגלים, שלא הייתה שעת הכושר"]:::answer
+  Q1 -->|לר׳ מאיר| S1
+  Q1 -->|או לרבנן| S2
+  S2 -->|ת״ש| P1
+  P1 -.->|דחייה| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① Rav Hoshaya: slaughtered a live full-term fetus in the womb — what?"}:::question
+  S1["② Per R. Meir: perhaps only one born into the world needs slaughter, not in the womb"]:::statement
+  S2["③ Or even per the Rabbis: the Torah deemed four simanim fit for it"]:::statement
+  P1["④ Rav Ḥananya: come and hear — one born a tereifa from the womb; it did have a fit moment!"]:::proof
+  A1["⑤ Rava: teach ׳formed a tereifa׳ — like a five-legged one, which had no fit moment"]:::answer
+  Q1 -->|per R. Meir| S1
+  Q1 -->|or per Rabbis| S2
+  S2 -->|come and hear| P1
+  P1 -.->|rejection| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① בָּעֵי רַב הוֹשַׁעְיָא: הוֹשִׁיט אֶת יָדוֹ לִמְעֵי בְּהֵמָה, וְשָׁחַט בֶּן תִּשְׁעָה חַי, מַהוּ?"}:::question
+  S1["② תִּבְּעֵי לְרַבִּי מֵאִיר … הֵיכָא דְּיָצָא לַאֲוִיר הָעוֹלָם, אֲבָל בִּמְעֵי אִמּוֹ – לָא שָׁרְיָא לֵיהּ שְׁחִיטָה"]:::statement
+  S2["③ אוֹ דִילְמָא, אֲפִילּוּ לְרַבָּנַן, אַרְבָּעָה סִימָנִין אַכְשַׁר בֵּיהּ רַחֲמָנָא"]:::statement
+  P1["④ רַב חֲנַנְיָא, תָּא שְׁמַע: שֶׁנּוֹלְדָה טְרֵפָה מִן הַבֶּטֶן … דְּהָיְתָה לָהּ שְׁעַת הַכּוֹשֶׁר … עַיֵּיל יְדֵיהּ וְשַׁחֲטַהּ!"]:::proof
+  A1["⑤ רָבָא: תָּנֵי שֶׁנּוֹצְרָה טְרֵפָה מִן הַבֶּטֶן, וּמַשְׁכַּחַתְּ לַהּ בְּבַעֲלַת חָמֵשׁ רַגְלַיִם"]:::answer
+  Q1 -->|לר׳ מאיר| S1
+  Q1 -->|או לרבנן| S2
+  S2 -->|ת״ש| P1
+  P1 -.->|דחייה| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד א — Chullin 74a:11</span></div>
+    <div class="orig">בָּעֵי רַב הוֹשַׁעְיָא: הוֹשִׁיט אֶת יָדוֹ לִמְעֵי בְּהֵמָה, וְשָׁחַט בֶּן תִּשְׁעָה חַי, מַהוּ? תִּבְּעֵי לְרַבִּי מֵאִיר, וְתִבְּעֵי לְרַבָּנַן.</div>
+    <div class="trans" data-when="he">בעיית רב הושעיא: אדם שהושיט ידו לתוך מעי הבהמה ושחט שם עובר בן תשעה חודשים חי — האם שחיטה זו (במעי האם) מתירתו? בעיה זו נשאלת בין לשיטת ר׳ מאיר ובין לשיטת חכמים.</div>
+    <div class="trans" data-when="en">§ Rav Hoshaya raises a dilemma: If one inserted his hand inside the womb of an animal and slaughtered a nine-month-old fetus that was alive, what is the halakha? Does the slaughter performed inside the mother render the fetus permitted? The Gemara notes: This dilemma may be raised according to the opinion of Rabbi Meir, and it may be raised according to the opinion of the Rabbis.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד א — Chullin 74a:12</span></div>
+    <div class="orig">תִּבְּעֵי לְרַבִּי מֵאִיר: עַד כָּאן לָא קָאָמַר רַבִּי מֵאִיר בֶּן פְּקוּעָה טָעוּן שְׁחִיטָה – הָנֵי מִילֵּי הֵיכָא דְּיָצָא לַאֲוִיר הָעוֹלָם, אֲבָל בִּמְעֵי אִמּוֹ – לָא שָׁרְיָא לֵיהּ שְׁחִיטָה.</div>
+    <div class="trans" data-when="he">צד הבעיה לר׳ מאיר: ייתכן שר׳ מאיר אמר שבן פקועה (עובר שנמצא בשחיטת אמו) טעון שחיטה רק כשיצא לאויר העולם; אבל בעודו במעי אמו — אין שחיטתו מתירתו, ולכן השוחטו במעי אמו לא הועיל.</div>
+    <div class="trans" data-when="en">The Gemara elaborates: It may be raised according to the opinion of Rabbi Meir. It is possible that Rabbi Meir states in the mishna below that a nine-month-old ben pekua requires slaughter, and slaughter renders the animal permitted only in that case, because that statement may apply only in a case where the animal emerged into the airspace of the world, i.e., once it was born alive. But if it is still inside its mother, its slaughter does not render it permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ד א — Chullin 74a:13</span></div>
+    <div class="orig">אוֹ דִילְמָא, אֲפִילּוּ לְרַבָּנַן, אַרְבָּעָה סִימָנִין אַכְשַׁר בֵּיהּ רַחֲמָנָא.</div>
+    <div class="trans" data-when="he">צד שני: או שמא אף לחכמים (הסוברים שעובר ניתר בשחיטת אמו) — השוחט את העובר עצמו במעי אמו מתירו, שהתורה הכשירה בו ארבעה סימנים (קנה וושט של האם, וקנה וושט של העובר), ובחיתוך כל זוג ניתר.</div>
+    <div class="trans" data-when="en">Or perhaps even the Rabbis, who disagree with Rabbi Meir and maintain that a nine-month-old ben pekua is permitted by virtue of its mother’s slaughter, would concede that the slaughter of the fetus itself also permits it. Perhaps with regard to such an animal the Merciful One considers four simanim, i.e., the windpipe and the gullet of the mother and the windpipe and the gullet of the fetus, to be fit for slaughter, and the fetus is permitted by the cutting of either pair.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ד א — Chullin 74a:14</span></div>
+    <div class="orig">אָמַר רַב חֲנַנְיָא, תָּא שְׁמַע: הֲרֵי שֶׁנּוֹלְדָה טְרֵפָה מִן הַבֶּטֶן, וְאִי אִיתָא, מַשְׁכַּחַתְּ לַהּ דְּהָיְתָה לָהּ שְׁעַת הַכּוֹשֶׁר, דְּאִי בָּעֵי עַיֵּיל יְדֵיהּ וְשַׁחֲטַהּ!</div>
+    <div class="trans" data-when="he">רב חנניא מביא ראיה מן המשנה (לקמן) הדנה בבהמה ׳שנולדה טריפה מן הבטן׳ כמי שלא הייתה לה שעת הכושר. ואם אמת שאפשר לשחוט עובר במעי אמו — נמצא שהייתה לה שעת הכושר, שהרי אם רצה היה מכניס ידו ושוחטה קודם שתיעשה טריפה!</div>
+    <div class="trans" data-when="en">Rav Ḥananya said: Come and hear a resolution of this dilemma from the mishna (72b), as it considers an animal that was born as a tereifa from the womb as one that never had a period of potential fitness. But if it is so, that one can slaughter a fetus in its mother’s womb, you find that actually it did have a period of potential fitness, as if one wants to, he can insert his hand into the womb and slaughter it before it develops into a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ד א — Chullin 74a:15</span></div>
+    <div class="orig">אֲמַר לֵיהּ רָבָא: תָּנֵי שֶׁנּוֹצְרָה טְרֵפָה מִן הַבֶּטֶן, וּמַשְׁכַּחַתְּ לַהּ בְּבַעֲלַת חָמֵשׁ רַגְלַיִם.</div>
+    <div class="trans" data-when="he">רבא דוחה: שנֵה במשנה ׳שנוצרה (נברא) טריפה מן הבטן׳ — מום שמתחילת בריאתה, כגון בעלת חמש רגלים. בכזו אכן מעולם לא הייתה שעת הכושר, ואין מכאן ראיה לשחיטה במעי אמו.</div>
+    <div class="trans" data-when="en">Rava said to Rav Ḥananya: Teach that mishna as referring to a case where the fetus was formed as a tereifa from its outset while inside the womb, and you find such a case where a fetus has five legs, which certainly developed from the outset. Consequently, there was never a possibility of slaughtering it.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">משנה: השוחט ומצא בה עובר</span><span data-when="en">Mishna: one who slaughters and finds a fetus within</span>
+      <span class="ref">Chullin 74a:16–74b:1</span></h2>
+  <div class="lead"><span data-when="he">משנה: בן שמונה (חי או מת) ובן תשעה מת — קורעו ומוציא דמו; בבן תשעה חי נחלקו ר׳ מאיר, חכמים ור׳ שמעון שזורי.</span><span data-when="en">Mishna: an eight-month fetus and a dead full-term one — tear and drain the blood; over a live full-term fetus R. Meir, the Rabbis and R. Shimon Shezuri dispute.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: מצא בן שמונה חי או מת, או בן תשעה מת — קורעו ומוציא דמו"]):::mishnah
+  M2(["② בן תשעה חי: ר׳ מאיר — טעון שחיטה וחייב באותו ואת בנו"]):::mishnah
+  S1["② חכמים: שחיטת אמו מטהרתו"]:::statement
+  S2["③ ר׳ שמעון שזורי: אפילו בן חמש שנים וחורש — שחיטת אמו מטהרתו; קרעה — טעון שחיטה"]:::statement
+  M1 -->|בן תשעה חי| M2
+  M2 -->|וחכמים| S1
+  S1 -->|ועוד| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: found an eight-month fetus, alive or dead, or a dead full-term — tear and drain its blood"]):::mishnah
+  M2(["② Live full-term: R. Meir — needs slaughter, liable for ׳it and its offspring׳"]):::mishnah
+  S1["② Rabbis: its mother’s slaughter renders it permitted"]:::statement
+  S2["③ R. Shimon Shezuri: even five years old and plowing — mother’s slaughter permits; if torn — needs slaughter"]:::statement
+  M1 -->|live full-term| M2
+  M2 -->|and the Rabbis| S1
+  S1 -->|further| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① הַשּׁוֹחֵט אֶת הַבְּהֵמָה, וּמָצָא בָּהּ בֶּן שְׁמֹנֶה חַי אוֹ מֵת, אוֹ בֶּן תִּשְׁעָה מֵת – קוֹרְעוֹ וּמוֹצִיא אֶת דָּמוֹ"]):::mishnah
+  M2(["② מָצָא בֶּן תִּשְׁעָה חַי – טָעוּן שְׁחִיטָה, וְחַיָּיב בְּ׳אוֹתוֹ וְאֶת בְּנוֹ׳, דִּבְרֵי רַבִּי מֵאִיר"]):::mishnah
+  S1["② וַחֲכָמִים אוֹמְרִים: שְׁחִיטַת אִמּוֹ מְטַהַרְתּוֹ"]:::statement
+  S2["③ רַבִּי שִׁמְעוֹן שֵׁזוּרִי: אֲפִילּוּ בֶּן חָמֵשׁ שָׁנִים וְחוֹרֵשׁ … שְׁחִיטַת אִמּוֹ מְטַהַרְתּוֹ … קְרָעָהּ – טָעוּן שְׁחִיטָה"]:::statement
+  M1 -->|בן תשעה חי| M2
+  M2 -->|וחכמים| S1
+  S1 -->|ועוד| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד א — Chullin 74a:16</span></div>
+    <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט אֶת הַבְּהֵמָה, וּמָצָא בָּהּ בֶּן שְׁמֹנֶה חַי אוֹ מֵת, אוֹ בֶּן תִּשְׁעָה מֵת – קוֹרְעוֹ וּמוֹצִיא אֶת דָּמוֹ.</div>
+    <div class="trans" data-when="he">משנה: השוחט בהמה ומצא בה עובר — בן שמונה חודשים (בין חי בין מת) או בן תשעה חודשים מת — העובר ניתר בשחיטת אמו כחלק ממנה. אך דמו אסור כדם אמו, ולכן קורעו ומוציא את דמו לפני אכילתו.</div>
+    <div class="trans" data-when="en">MISHNA: In the case of one who slaughtered an animal and found within it an eight-month-old fetus, i.e., one that was not full term, whether it was alive or dead, or a nine-month-old fetus, i.e., one that was full term, that was dead, that fetus is permitted by virtue of the slaughter of its mother, as it is considered part of its mother. Therefore, its blood is considered part of its mother’s blood and is prohibited, so one must tear the fetus and remove its blood before it may be consumed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד א — Chullin 74a:17</span></div>
+    <div class="orig">מָצָא בֶּן תִּשְׁעָה חַי – טָעוּן שְׁחִיטָה, וְחַיָּיב בְּ״אוֹתוֹ וְאֶת בְּנוֹ״, דִּבְרֵי רַבִּי מֵאִיר. וַחֲכָמִים אוֹמְרִים: שְׁחִיטַת אִמּוֹ מְטַהַרְתּוֹ.</div>
+    <div class="trans" data-when="he">מצא בן תשעה חי — לר׳ מאיר הוא בהמה גמורה: טעון שחיטה משלו, והשוחט אותו ואת אמו ביום אחד חייב משום ׳אותו ואת בנו׳. וחכמים אומרים: אף בן תשעה חי נחשב חלק מאמו, ושחיטת אמו מטהרתו ומתירתו.</div>
+    <div class="trans" data-when="en">If he found within it a live nine-month-old fetus, it requires its own slaughter, as it is considered an independent full-fledged animal, and if one slaughters both the mother and fetus on the same day, one is liable for violating the prohibition against slaughtering an animal itself and its offspring on the same day; this is the statement of Rabbi Meir. And the Rabbis say: Even when the fetus is nine months old, it is still considered part of its mother, and the slaughter of its mother renders it permitted for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ד ב — Chullin 74b:1</span></div>
+    <div class="orig">רַבִּי שִׁמְעוֹן שֵׁזוּרִי אוֹמֵר: אֲפִילּוּ בֶּן חָמֵשׁ שָׁנִים וְחוֹרֵשׁ בַּשָּׂדֶה – שְׁחִיטַת אִמּוֹ מְטַהַרְתּוֹ. קְרָעָהּ וּמָצָא בָּהּ בֶּן תִּשְׁעָה חַי – טָעוּן שְׁחִיטָה, לְפִי שֶׁלֹּא נִשְׁחֲטָה אִמּוֹ.</div>
+    <div class="trans" data-when="he">ר׳ שמעון שזורי מרחיב: אפילו יצא העובר חי וגדל עד שהוא בן חמש שנים וחורש בשדה — שחיטת אמו (לשעבר) מטהרתו ואינו טעון שחיטה. אך אם קרע את הבהמה (המיתה שלא בשחיטה) ומצא בה בן תשעה חי — לדברי הכל טעון שחיטה, לפי שלא נשחטה אמו.</div>
+    <div class="trans" data-when="en">Rabbi Shimon Shezuri says: Even if the fetus emerged alive and is now five years old and plowing in the field, the earlier slaughter of its mother rendered it permitted and it does not require slaughter before it is eaten. But if one tore an animal, i.e., he killed it without slaughtering it, and inside he found a live nine-month-old fetus, everyone agrees that the fetus requires its own slaughter because its mother was not slaughtered.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">׳לא הילכו בו אלא על עסקי אכילה׳ — חֵלב וגיד</span><span data-when="en">“They discussed it only as to consumption” — fat and nerve</span>
+      <span class="ref">Chullin 74b:2-5</span></h2>
+  <div class="lead"><span data-when="he">ר׳ אושעיא: המחלוקת רק לענין שחיטה — למעט חֵלבו וגידו; הגמרא דוחה שתי הבנות ומגיהה: ׳על עסקי אכילה בלבד׳.</span><span data-when="en">R. Oshaya: the dispute is only about slaughter — excluding its fat and nerve; the Gemara rejects two readings and emends: “only as to consumption.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ אלעזר בשם ר׳ אושעיא: לא הילכו בו אלא על עסקי שחיטה — למעט חֵלבו וגידו"]:::statement
+  Q1{"② חֵלבו דשליל? הא מפלג פליגי ר׳ מאיר ור׳ יהודה"}:::question
+  Q2{"③ אלא חֵלב דגיד? אף בו פליגי — מחטט או גוממו עם השופי"}:::question
+  A1["④ אלא: לא הילכו בו אלא על עסקי אכילה בלבד — למעט רובעו וחורש בו"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 -.->|קושיא| Q2
+  Q2 -->|תיקון| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Elazar citing R. Oshaya: they discussed it only as to slaughter — to exclude its fat and nerve"]:::statement
+  Q1{"② The fat of the fetus? But R. Meir and R. Yehuda already dispute that"}:::question
+  Q2{"③ Then the fat of the nerve? That too is disputed — scraping vs leveling"}:::question
+  A1["④ Rather: they discussed it only as to consumption — to exclude bestiality and plowing"]:::answer
+  S1 -.->|objection| Q1
+  Q1 -.->|objection| Q2
+  Q2 -->|emendation| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַבִּי אֶלְעָזָר אָמַר רַבִּי אוֹשַׁעְיָא: לֹא הִילְּכוּ בּוֹ אֶלָּא עַל עִסְקֵי שְׁחִיטָה בִּלְבַד … לְמַעוֹטֵי חֶלְבּוֹ וְגִידוֹ"]:::statement
+  Q1{"② חֶלְבּוֹ דְּמַאי? אִילֵּימָא חֶלְבּוֹ דִּשְׁלִיל, מִפְלָג פְּלִיגִי!"}:::question
+  Q2{"③ אֶלָּא, חֶלְבּוֹ דְּגִיד מִפְלָג פְּלִיגִי … מְחַטֵּט … גּוֹמְמוֹ עִם הַשּׁוֹפִי"}:::question
+  A1["④ אֶלָּא … לֹא הִילְּכוּ בּוֹ אֶלָּא עַל עִסְקֵי אֲכִילָה בִּלְבַד, לְמַעוֹטֵי רוֹבְעוֹ, וְחוֹרֵשׁ בּוֹ"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 -.->|קושיא| Q2
+  Q2 -->|תיקון| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד ב — Chullin 74b:2</span></div>
+    <div class="orig">גְּמָ׳ אָמַר רַבִּי אֶלְעָזָר אָמַר רַבִּי אוֹשַׁעְיָא: לֹא הִילְּכוּ בּוֹ אֶלָּא עַל עִסְקֵי שְׁחִיטָה בִּלְבַד. לְמַעוֹטֵי מַאי? לְמַעוֹטֵי חֶלְבּוֹ וְגִידוֹ.</div>
+    <div class="trans" data-when="he">גמרא: ר׳ אלעזר בשם ר׳ אושעיא — חכמים שאמרו ׳שחיטת אמו מטהרתו׳ דנו בבן תשעה חי רק לענין שחיטה (שאינו טעון שחיטה), אך לשאר דברים הכל מודים שהוא כבהמה בפני עצמה. למעט מאי? למעט חֵלבו וגידו, שאסורים בו כבבהמה.</div>
+    <div class="trans" data-when="en">GEMARA: Rabbi Elazar says that Rabbi Oshaya says: The Sages discussed the permissibility of a live nine-month-old fetus found inside a slaughtered animal only with regard to the matter of whether it requires its own slaughter. The Gemara asks: What does Rav Oshaya’s statement serve to exclude? Rav Oshaya’s statement indicates that with regard to other matters all agree that it is considered an independent animal, with the associated prohibitions. The Gemara suggests: It serves to exclude its fat, i.e., the fats that are prohibited in a regular animal, such as the fat of the kidneys and innards, and its sciatic nerve.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד ב — Chullin 74b:3</span></div>
+    <div class="orig">חֶלְבּוֹ דְּמַאי? אִילֵּימָא: חֶלְבּוֹ דִּשְׁלִיל, מִפְלָג פְּלִיגִי! דְּתַנְיָא: גִּיד הַנָּשֶׁה נוֹהֵג בַּשְּׁלִיל וְחֶלְבּוֹ אָסוּר, דִּבְרֵי רַבִּי מֵאִיר. רַבִּי יְהוּדָה אוֹמֵר: אֵינוֹ נוֹהֵג בַּשְּׁלִיל וְחֶלְבּוֹ מוּתָּר. וְאָמַר רַבִּי אֶלְעָזָר אָמַר רַבִּי אוֹשַׁעְיָא: מַחְלוֹקֶת בְּבֶן תִּשְׁעָה חַי, וְהָלַךְ רַבִּי מֵאִיר לְשִׁיטָתוֹ, וְרַבִּי יְהוּדָה לְשִׁיטָתוֹ.</div>
+    <div class="trans" data-when="he">קושיא: חֵלב של מה? אם חֵלב העובר עצמו — הרי בזה מחלוקת מפורשת! ששנינו: גיד הנשה נוהג בשליל (עובר) וחֶלבו אסור — ר׳ מאיר; ר׳ יהודה: אינו נוהג בשליל וחֶלבו מותר. ואמר ר׳ אלעזר בשם ר׳ אושעיא שמחלוקת זו בבן תשעה חי, ר׳ מאיר לשיטתו (בהמה גמורה) ור׳ יהודה לשיטתו (חלק מאמו). אם כן אין כאן ׳הכל מודים׳.</div>
+    <div class="trans" data-when="en">The Gemara asks: The fat of which part? If we say that this is referring to the fat of the fetus, that is difficult because the Sages disagree as to whether or not it is permitted, as it is taught in a baraita: The prohibition of the sciatic nerve applies to a fetus and its fat is prohibited; this is the statement of Rabbi Meir. Rabbi Yehuda says: The prohibition of the sciatic nerve does not apply to a fetus, and its fat is permitted. And Rabbi Elazar says that Rabbi Oshaya says: This dispute concerns a live nine-month-old fetus, and Rabbi Meir follows his standard line of reasoning, which he expressed in the mishna, that such a fetus is considered an independent full-fledged animal; and Rabbi Yehuda follows his standard line of reasoning, as expressed by the Rabbis in the mishna, that such a fetus is considered a part of the mother.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ד ב — Chullin 74b:4</span></div>
+    <div class="orig">אֶלָּא, חֶלְבּוֹ דְּגִיד מִפְלָג פְּלִיגִי, דְּתַנְיָא: גִּיד הַנָּשֶׁה – מְחַטֵּט אַחֲרָיו בְּכׇל מָקוֹם שֶׁהוּא, וְחוֹתֵךְ שַׁמְנוֹ מֵעִיקָּרוֹ, דִּבְרֵי רַבִּי מֵאִיר. רַבִּי יְהוּדָה אוֹמֵר: גּוֹמְמוֹ עִם הַשּׁוֹפִי.</div>
+    <div class="trans" data-when="he">דחיית הבנה שנייה: שמא חֵלב הגיד (שהכל מתירים)? גם בזה נחלקו! ששנינו: גיד הנשה — מחטט אחריו בכל מקום שהוא וחותך שומנו מעיקרו, דברי ר׳ מאיר; ר׳ יהודה: גוממו עם השופי (חותך רק את המשטח העליון). נמצא שגם בחֵלב הגיד אין ׳הכל מודים׳.</div>
+    <div class="trans" data-when="en">Rather, say that Rabbi Elazar is referring to the fat of the sciatic nerve of the fetus, which all agree is permitted. The Gemara rejects this as well: But the Sages also disagree with regard to that, as it is taught in a baraita: With regard to the sciatic nerve, one scrapes around it to remove it entirely in any place that it is found in the thigh, and one cuts out its fat completely, even those fats that are sunk into the flesh; this is the statement of Rabbi Meir. Rabbi Yehuda says: One cuts out the nerve and the fat that is level with the flesh of the thigh, but there is no obligation to remove all traces of the fat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ד ב — Chullin 74b:5</span></div>
+    <div class="orig">אֶלָּא אִי אִתְּמַר – הָכִי אִתְּמַר, אָמַר רַבִּי אֶלְעָזָר אָמַר רַבִּי אוֹשַׁעְיָא: לֹא הִילְּכוּ בּוֹ אֶלָּא עַל עִסְקֵי אֲכִילָה בִּלְבַד, לְמַעוֹטֵי רוֹבְעוֹ, וְחוֹרֵשׁ בּוֹ.</div>
+    <div class="trans" data-when="he">תיקון הגרסה: אם נאמר מאמר ר׳ אושעיא — כך נאמר: לא הילכו בו אלא על עסקי אכילה בלבד (שחיטה, חֵלב וגיד). למעט מה? למעט הרובעו (הבא עליו) והחורש בו עם בהמה ממין אחר — שבאיסורים אלו הכל מודים שהוא כבהמה גמורה.</div>
+    <div class="trans" data-when="en">Rather, if Rabbi Oshaya’s statement was stated, it was stated like this: Rabbi Elazar says that Rabbi Oshaya says: The Sages discussed the permissibility of the fetus only with regard to matters of consumption, i.e., whether or not it must be slaughtered in order to permit its flesh and whether or not the fat and the sciatic nerve are permitted. This statement serves to exclude only one who copulates with the animal, or one who plows with it together with an animal of a different species, as everyone agrees that these prohibitions apply to such a fetus just as they do to any other animal.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-8">
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">המתיר בחֵלבו — מהו בדמו</span><span data-when="en">One who permits its fat — what of its blood</span>
+      <span class="ref">Chullin 74b:6-9</span></h2>
+  <div class="lead"><span data-when="he">ריש לקיש: המתיר בחֵלב מתיר בדם; ר׳ יוחנן מקשה מהמשנה, ור׳ זירא מיישב — אינו ענוש כרת; ודיון בדם התמצית.</span><span data-when="en">Reish Lakish: who permits the fat permits the blood; R. Yoḥanan objects from the Mishna, R. Zeira resolves — not punishable by karet; and a discussion of blood of exudate.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ריש לקיש: המתיר בחֵלבו מתיר בדמו; האוסר בחֵלבו אוסר בדמו"]:::statement
+  S2["① ר׳ יוחנן: אף המתיר בחֵלבו אוסר בדמו"]:::statement
+  Q1{"② ר׳ יוחנן מיתיבי: ׳קורעו ומוציא דמו׳ — אלמא דמו אסור!"}:::question
+  A1["②③ ר׳ זירא: ריש לקיש אמר רק שאין ענוש כרת"]:::answer
+  Q2{"③ למאן? לר׳ יהודה — והרי דם התמצית בכרת לדידיה!"}:::question
+  A2["④ רב יוסף בריה דרב סלא: ׳דם׳ ו׳כל דם׳ — היכא דמיחייב אדם הנפש מיחייב אדם התמצית"]:::answer
+  S1 -->|וכנגדו| S2
+  S2 -->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|קושיא| Q2
+  Q2 -->|תירגמא| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Reish Lakish: who permits the fat permits the blood; who forbids the fat forbids the blood"]:::statement
+  S2["① R. Yoḥanan: even one who permits the fat forbids the blood"]:::statement
+  Q1{"② R. Yoḥanan objects: ׳tear and drain its blood׳ — so its blood is forbidden!"}:::question
+  A1["②③ R. Zeira: Reish Lakish meant only that it is not punishable by karet"]:::answer
+  Q2{"③ According to whom? R. Yehuda — but he holds exudate blood is karet!"}:::question
+  A2["④ Rav Yosef b. Rav Salla: ׳blood׳ and ׳all blood׳ — where karet for soul-blood, also for exudate"]:::answer
+  S1 -->|against it| S2
+  S2 -->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -->|objection| Q2
+  Q2 -->|interpretation| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: לְדִבְרֵי הַמַּתִּיר בְּחֶלְבּוֹ – מַתִּיר בְּדָמוֹ, לְדִבְרֵי הָאוֹסֵר בְּחֶלְבּוֹ – אוֹסֵר בְּדָמוֹ"]:::statement
+  S2["① וְרַבִּי יוֹחָנָן אָמַר: אַף לְדִבְרֵי הַמַּתִּיר בְּחֶלְבּוֹ – אוֹסֵר בְּדָמוֹ"]:::statement
+  Q1{"② אֵיתִיבֵיהּ רַבִּי יוֹחָנָן … קוֹרְעוֹ וּמוֹצִיא אֶת דָּמוֹ"}:::question
+  A1["②③ אָמַר רַבִּי זֵירָא: לוֹמַר שֶׁאֵין עָנוּשׁ כָּרֵת"]:::answer
+  Q2{"③ לְמַאן קָאָמְרִי? לְרַבִּי יְהוּדָה … דַּם הַתַּמְצִית … רַבִּי יְהוּדָה אוֹמֵר: בְּהִכָּרֵת"}:::question
+  A2["④ תַּרְגְּמָא רַב יוֹסֵף … ׳דָּם׳ וְ׳כׇל דָּם׳ … דְּמִיחַיַּיב אַדַּם הַנֶּפֶשׁ – מִיחַיַּיב אַדַּם הַתַּמְצִית"]:::answer
+  S1 -->|וכנגדו| S2
+  S2 -->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|קושיא| Q2
+  Q2 -->|תירגמא| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד ב — Chullin 74b:6</span></div>
+    <div class="orig">אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: לְדִבְרֵי הַמַּתִּיר בְּחֶלְבּוֹ – מַתִּיר בְּדָמוֹ, לְדִבְרֵי הָאוֹסֵר בְּחֶלְבּוֹ – אוֹסֵר בְּדָמוֹ. וְרַבִּי יוֹחָנָן אָמַר: אַף לְדִבְרֵי הַמַּתִּיר בְּחֶלְבּוֹ – אוֹסֵר בְּדָמוֹ.</div>
+    <div class="trans" data-when="he">ריש לקיש: דין הדם תלוי בדין החֵלב — לר׳ יהודה המתיר חֵלב העובר, אף דמו מותר; לר׳ מאיר האוסר חֵלבו, אף דמו אסור. ר׳ יוחנן חולק: אף לר׳ יהודה המתיר חֵלבו — דמו אסור, שכל דם נאסר.</div>
+    <div class="trans" data-when="en">§ A related amoraic dispute is cited concerning a live nine-month-old fetus found inside a slaughtered animal: Rabbi Shimon ben Lakish said: According to the statement of Rabbi Yehuda, who permits the fat, he also permits its blood; according to the statement of Rabbi Meir, who prohibits its fat, he also prohibits its blood. And Rabbi Yoḥanan said: Even according to Rabbi Yehuda, who permits its fat, he prohibits its blood.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד ב — Chullin 74b:7</span></div>
+    <div class="orig">אֵיתִיבֵיהּ רַבִּי יוֹחָנָן לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: קוֹרְעוֹ וּמוֹצִיא אֶת דָּמוֹ. אָמַר רַבִּי זֵירָא: לוֹמַר שֶׁאֵין עָנוּשׁ כָּרֵת.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן הקשה לריש לקיש מהמשנה: ׳קורעו ומוציא את דמו׳ — משמע שדם העובר אסור (אך שאר העובר, וחֵלבו, מותר), נגד ריש לקיש שתלה דם בחֵלב. תירץ ר׳ זירא: ריש לקיש התכוון רק לומר שדם העובר אינו ענוש כרת (אך אסור), ואילו ר׳ יוחנן סובר שאף ענוש כרת.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan raised an objection to Rabbi Shimon ben Lakish from the mishna, which states with regard to an eight-month-old fetus, whether alive or dead, or a dead nine-month-old fetus, found inside a slaughtered animal, that since it is considered part of the mother its blood is prohibited. Therefore, one must tear the fetus and remove its blood before it may be consumed. The mishna prohibits the blood but apparently permits the rest of the fetus, including its fat, which contradicts the opinion of Rabbi Shimon ben Lakish. In resolution of this difficulty, Rabbi Zeira said: Rabbi Shimon ben Lakish meant to say only that the consumption of blood lost as the fetus died is not punishable by excision from the World-to-Come [karet], whereas Rabbi Yoḥanan holds that it is.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ד ב — Chullin 74b:8</span></div>
+    <div class="orig">לְמַאן קָאָמְרִי? לְרַבִּי יְהוּדָה, לֹא יְהֵא אֶלָּא דַּם הַתַּמְצִית, דְּתַנְיָא: דַּם הַתַּמְצִית בְּאַזְהָרָה, רַבִּי יְהוּדָה אוֹמֵר: בְּהִכָּרֵת.</div>
+    <div class="trans" data-when="he">קושיא על תירוץ ר׳ זירא: לדעת מי אמר ריש לקיש שאינו ענוש כרת? לר׳ יהודה המתיר חֵלבו. אך דם זה (היוצא לאחר זינוק הדם הראשון) הוא כדם התמצית, ושנינו: דם התמצית באזהרה (לאו), ר׳ יהודה אומר: בהיכרת! נמצא שלר׳ יהודה אף דם זה ענוש כרת.</div>
+    <div class="trans" data-when="en">The Gemara clarifies: According to whom did Rabbi Shimon ben Lakish state that one who permits the fat of the fetus also holds that the consumption of its blood is not punishable by karet? Ostensibly, it is according to the opinion of Rabbi Yehuda, who permits its fat. But that is difficult, because this blood should be regarded only as blood of exudate, i.e., blood that exudes from the neck of the animal after the initial spurt of its slaughter concludes. This blood did not spurt out during the slaughter of the mother. Rabbi Yehuda holds that consumption of even this blood is punishable by karet, as it is taught in a baraita: The consumption of blood of exudate is prohibited by a regular prohibition and is punishable with lashes, unlike the initial spurt of blood, known as blood of the soul, whose consumption is punishable by karet. Rabbi Yehuda says: Blood of exudate is also punishable by karet.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ד ב — Chullin 74b:9</span></div>
+    <div class="orig">תַּרְגְּמָא רַב יוֹסֵף בְּרֵיהּ דְּרַב סַלָּא חֲסִידָא קַמֵּיהּ דְּרַב פָּפָּא: אִית לֵיהּ לְרַבִּי יְהוּדָה ״דָּם״ וְ״כׇל דָּם״, כֹּל הֵיכָא דְּמִיחַיַּיב אַדַּם הַנֶּפֶשׁ – מִיחַיַּיב אַדַּם הַתַּמְצִית, וְכֹל הֵיכָא דְּלָא מִחַיַּיב אַדַּם הַנֶּפֶשׁ – לָא מִחַיַּיב אַדַּם הַתַּמְצִית.</div>
+    <div class="trans" data-when="he">רב יוסף בריה דרב סלא חסידא תירץ לפני רב פפא: ר׳ יהודה דורש ״דם״ ו״כל דם״ שבכתוב — בכל מקום שחייב כרת על דם הנפש (זינוק השחיטה) חייב כרת אף על דם התמצית; ובכל מקום שאינו חייב על דם הנפש (כעובר, לשיטתו שהוא חלק מאמו) אינו חייב על דם התמצית. ולכן בדם העובר אין כרת.</div>
+    <div class="trans" data-when="en">Rav Yosef, son of Rav Salla the Pious, interpreted this matter before Rav Pappa: One of the verses prohibiting the consumption of blood states: “And whoever…eats any blood, and I will set My face against that soul that eats the blood, and will cut him off from among his people” (Leviticus 17:10). Rabbi Yehuda holds that since it would have been sufficient for the verse to state: Blood, but instead it states: “Any blood,” it is interpreted as teaching that wherever one is liable for karet for the consumption of blood of the soul, i.e., the initial spurt from the slaughter, as is the halakha with regard to a regular animal, one is also liable for karet for the consumption of blood of exudate, i.e., the rest of the blood. But wherever one is not liable for karet for the consumption of blood of the soul, as is the halakha with regard to the blood of a fetus according to Rabbi Yehuda, who holds that the fetus is not considered an independent life, one is also not liable for karet for the consumption of blood of exudate; rather, its blood is subject to a regular prohibition.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-9">
+  <h2><span class="badge"><span data-when="he">סוגיה 9</span><span data-when="en">Sugya 9</span></span>
+      <span data-when="he">פדיון פטר חמור בבן פקועה</span><span data-when="en">Redeeming a firstborn donkey with a ben pekua</span>
+      <span class="ref">Chullin 74b:10-15</span></h2>
+  <div class="lead"><span data-when="he">בעיה: לפדות פטר חמור בבן פקועה? מר זוטרא אוסר ורב אשי מתיר; הדיון סובב גזרה שווה ׳שה שה׳ מפסחים מול ריבוי ׳תפדה׳.</span><span data-when="en">A dilemma: redeem a firstborn donkey with a ben pekua? Mar Zutra forbids, Rav Ashi permits; the give-and-take turns on the analogy “lamb–lamb” versus the amplification “you shall redeem.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① בעיה: מהו לפדות פטר חמור בבן פקועה? אליבא דרבנן — כבשרא בדיקולא או ׳שה׳?"}:::question
+  S1["② מר זוטרא: אין פודין · רב אשי: פודין"]:::statement
+  Q2{"③ רב אשי: מאי דעתך? דגמרת ׳שה שה׳ מפסחים?"}:::question
+  A1["④ אי הכי — זכר תמים ובן שנה! ׳תפדה תפדה׳ ריבה"]:::answer
+  A2["⑤ אי ׳תפדה׳ ריבה — אפילו כל מילי; אלא ׳שה שה׳ ממעט בן פקועה"]:::answer
+  Q1 -->|מחלוקת| S1
+  S1 -->|מאי דעתך| Q2
+  Q2 -->|ריבוי| A1
+  A1 -->|דחייה ויישוב| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① Dilemma: redeem a firstborn donkey with a ben pekua? Per Rabbis — like meat in a pot, or a ׳lamb׳?"}:::question
+  S1["② Mar Zutra: cannot redeem · Rav Ashi: can redeem"]:::statement
+  Q2{"③ Rav Ashi: what is your reasoning? You derive ׳lamb–lamb׳ from the Paschal offering?"}:::question
+  A1["④ If so — male, unblemished, first-year! ׳You shall redeem׳ twice amplifies"]:::answer
+  A2["⑤ If ׳you shall redeem׳ amplifies — even everything; rather ׳lamb–lamb׳ excludes a ben pekua"]:::answer
+  Q1 -->|dispute| S1
+  S1 -->|your reasoning| Q2
+  Q2 -->|amplification| A1
+  A1 -->|rejoinder, resolution| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① אִיבַּעְיָא לְהוּ: מַהוּ לִפְדּוֹת בְּבֶן פְּקוּעָה? … כְּבִשְׂרָא בְּדִיקּוּלָא הוּא, אוֹ … ׳שֶׂה׳ קָרֵינָא בֵּיהּ?"}:::question
+  S1["② מָר זוּטְרָא אָמַר: אֵין פּוֹדִין, וְרַב אָשֵׁי אָמַר: פּוֹדִין"]:::statement
+  Q2{"③ אֲמַר לֵיהּ רַב אָשֵׁי לְמָר זוּטְרָא: מַאי דַּעְתָּךְ? דְּגָמְרַתְּ ׳שֶׂה׳ ׳שֶׂה׳ מִפְּסָחִים?"}:::question
+  A1["④ אִי מָה לְהַלָּן – זָכָר, תָּמִים, וּבֶן שָׁנָה … ׳תִּפְדֶּה׳ ׳תִּפְדֶּה׳ רִיבָּה"]:::answer
+  A2["⑤ אִי ׳תִּפְדֶּה׳ ׳תִּפְדֶּה׳ רִיבָּה, אֲפִילּוּ כֹּל מִילֵּי … אִם כֵּן ׳שֶׂה׳ ׳שֶׂה׳ מַאי אַהֲנִי לָךְ?"]:::answer
+  Q1 -->|מחלוקת| S1
+  S1 -->|מאי דעתך| Q2
+  Q2 -->|ריבוי| A1
+  A1 -->|דחייה ויישוב| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד ב — Chullin 74b:10</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: מַהוּ לִפְדּוֹת בְּבֶן פְּקוּעָה? אַלִּיבָּא דְּרַבִּי מֵאִיר לָא תִּיבְּעֵי לָךְ, דְּכֵיוָן דְּאָמַר טָעוּן שְׁחִיטָה – שֶׂה מְעַלְּיָא הוּא.</div>
+    <div class="trans" data-when="he">בעיה: האם מותר לפדות פטר חמור בבן פקועה (״פטר חמור תפדה בשה״)? אליבא דר׳ מאיר אין מקום לשאלה — שכן הוא אומר שבן פקועה טעון שחיטה, הרי הוא שה גמור, וכשר לפדיון.</div>
+    <div class="trans" data-when="en">§ A dilemma was raised before the Sages: What is the halakha with regard to redeeming a firstborn donkey with a ben pekua? Can one perform the mitzva, as stated in the Torah: “And every firstborn of a donkey you shall redeem with a lamb” (Exodus 13:13), with this animal? The Gemara elaborates: According to the opinion of Rabbi Meir do not raise the dilemma, as, since he says a ben pekua requires slaughter, evidently it is a full-fledged lamb, and therefore it can certainly be used to redeem a donkey.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד ב — Chullin 74b:11</span></div>
+    <div class="orig">כִּי תִּיבְּעֵי לָךְ אַלִּיבָּא דְּרַבָּנַן, דְּאָמְרִי: שְׁחִיטַת אִמּוֹ מְטַהַרְתּוֹ, מַאי? כֵּיוָן דְּאָמְרִי שְׁחִיטַת אִמּוֹ מְטַהַרְתּוֹ – כְּבִשְׂרָא בְּדִיקּוּלָא הוּא, אוֹ דִילְמָא, כֵּיוָן דְּרָהֵיט וְאָזֵיל וְרָהֵיט וְאָתֵי – ״שֶׂה״ קָרֵינָא בֵּיהּ?</div>
+    <div class="trans" data-when="he">עיקר הבעיה אליבא דרבנן הסוברים ׳שחיטת אמו מטהרתו׳: מהו? האם מאחר שנחשב ניתר בשחיטת אמו הריהו ׳כבשר בסל׳ (בשר בעלמא) ואינו ׳שה׳ חי לפדיון; או שמא, מאחר שהוא חי ורץ הלוך ושוב — ׳שה׳ קרינא ביה וכשר לפדיון?</div>
+    <div class="trans" data-when="en">When should you raise the dilemma? Raise it according to the opinion of the Rabbis, as they say that the slaughter of its mother renders it permitted. What is the halakha in this case? Does one say that since the Rabbis say that the slaughter of its mother renders it permitted, it is apparent that despite being physically alive, a ben pekua is halakhically regarded like meat placed in a pot, which cannot be used to redeem a donkey (see Bekhorot 12a)? Or perhaps, since the animal is running back and forth, i.e., it is alive, we call it a lamb and it can be used?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ד ב — Chullin 74b:12</span></div>
+    <div class="orig">מָר זוּטְרָא אָמַר: אֵין פּוֹדִין, וְרַב אָשֵׁי אָמַר: פּוֹדִין.</div>
+    <div class="trans" data-when="he">מחלוקת אמוראים: מר זוטרא — אין פודין פטר חמור בבן פקועה; רב אשי — פודין.</div>
+    <div class="trans" data-when="en">Mar Zutra said: One cannot redeem a donkey with this lamb, and Rav Ashi said: One can redeem it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ד ב — Chullin 74b:13</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אָשֵׁי לְמָר זוּטְרָא: מַאי דַּעְתָּךְ? דְּגָמְרַתְּ ״שֶׂה״ ״שֶׂה״ מִפְּסָחִים?</div>
+    <div class="trans" data-when="he">רב אשי שאל את מר זוטרא: מה טעמך לאסור? וכי אתה לומד גזרה שווה ׳שה׳ (פטר חמור) — ׳שה׳ (פסח), ומאחר שבן פקועה פסול לקרבן פסח, אף לפדיון אינו כשר?</div>
+    <div class="trans" data-when="en">Rav Ashi said to Mar Zutra: What is the reason for your opinion? Is it because you derive the halakhot of redeeming a firstborn donkey from Paschal offerings by means of a verbal analogy between the term “lamb” (Exodus 13:13) written concerning a firstborn donkey and “lamb” (Exodus 12:5) written concerning a Paschal offering, and a ben pekua is unfit for sacrifice as a Paschal offering?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ד ב — Chullin 74b:14</span></div>
+    <div class="orig">אִי מָה לְהַלָּן – זָכָר, תָּמִים, וּבֶן שָׁנָה, אַף כָּאן – זָכָר, תָּמִים, וּבֶן שָׁנָה! ״תִּפְדֶּה״ ״תִּפְדֶּה״ רִיבָּה.</div>
+    <div class="trans" data-when="he">רב אשי מקשה על הגזרה שווה: אם תלמד מפסח — אם כן מה להלן זכר תמים ובן שנה, אף כאן יידרש שה זכר תמים ובן שנה; והרי במשנה (בכורות) פודים אף בנקבה, בעלת מום, ושאינה בת שנה! מר זוטרא משיב: ריבוי ׳תפדה תפדה׳ (שבכתוב) ריבה אף שה כזה.</div>
+    <div class="trans" data-when="en">If so, just as there, with regard to the Paschal offering, it must be male, unblemished, and in its first year, so too here, the lamb must be male, unblemished, and in its first year. Yet the mishna in Bekhorot (9a) states explicitly that one may redeem with a female lamb, and even if it is blemished, and also with one that is past its first year. Mar Zutra responded: The repetition of the words “You shall redeem,” “You shall not redeem” written in the verse: “And every firstborn of a donkey you shall redeem with a lamb, and if you shall not redeem it then you shall break its neck” (Exodus 13:13), included a lamb that does not fulfill these criteria.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ד ב — Chullin 74b:15</span></div>
+    <div class="orig">אִי ״תִּפְדֶּה״ ״תִּפְדֶּה״ רִיבָּה, אֲפִילּוּ כֹּל מִילֵּי נָמֵי, אִם כֵּן ״שֶׂה״ ״שֶׂה״ מַאי אַהֲנִי לָךְ?</div>
+    <div class="trans" data-when="he">רב אשי: אם ׳תפדה תפדה׳ ריבה — יְרַבֶּה אף כל סוגי השה, ואף בן פקועה בכלל הכשרים לפדיון! מר זוטרא משיב: אם כן, מה הועילה לך גזרה שווה ׳שה שה׳? אלא הריבוי מרבה שאר השיות, וגזרה שווה ׳שה שה׳ ממעטת דווקא בן פקועה.</div>
+    <div class="trans" data-when="en">Rav Ashi responds: If the repetition of “You shall redeem,” “You shall not redeem” serves to amplify, then it should even amplify all other types of lambs, including a ben pekua, i.e., they should also be included in the category of those that are fit for redemption. Mar Zutra answers: If that was so, what purpose would the verbal analogy of “lamb,” “lamb” serve? Rather, the repetition of “You shall redeem” serves to include all types of lambs, but the verbal analogy still serves to exclude a ben pekua.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-10">
+  <h2><span class="badge"><span data-when="he">סוגיה 10</span><span data-when="en">Sugya 10</span></span>
+      <span data-when="he">למנות בו ראשון ושני — טומאת בן פקועה ודגים</span><span data-when="en">First and second degree — the impurity of a ben pekua and of fish</span>
+      <span class="ref">Chullin 74b:16–75a:7</span></h2>
+  <div class="lead"><span data-when="he">בעיה: מונין בבן פקועה ראשון ושני? ר׳ יוחנן וריש לקיש נחלקו; שתי איתיבי ויישוב; ושיטת ר׳ יוסי הגלילי כב״ש בדגים, ובעיית רב חסדא בסימני טריפה בדגים — תיקו.</span><span data-when="en">A dilemma: does a ben pekua count first and second degree? R. Yoḥanan and Reish Lakish dispute; two objections and replies; R. Yosei HaGelili likened to Beit Shammai on fish, and Rav Ḥisda’s dilemma on tereifa-signs in fish — left unresolved.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בעיה: מהו למנות בו ראשון ושני?"}:::question
+  S1["② ר׳ יוחנן: מונין · ריש לקיש: אין מונין, כאגוז המתקשקש בקליפתו"]:::statement
+  Q2{"③ ריש לקיש מיתיבי: ׳הבשר מגע נבלה׳ · ר׳ יוחנן: בשחיטה וכר׳ שמעון"}:::question
+  Q3{"⑤ ר׳ יוחנן מיתיבי: עבר בנהר הוכשר; אם חד גופא — הא איתכשר בדם אמו! · בשחיטה יבישתא"}:::question
+  S2["⑦ מאן תנא? ר׳ יוסי הגלילי, ואזדא ר׳ יוחנן לטעמיה — הוא וב״ש דבר אחד"]:::statement
+  S3["⑧ דגים מאימתי מקבלין טומאה — ב״ש, ב״ה, ר׳ עקיבא; מאי בינייהו? דג מקרטע"]:::statement
+  C1["⑨ בעי רב חסדא: נולדו בדגים סימני טריפה — מהו? תיקו"]:::conclusion
+  Q1 -->|מחלוקת| S1
+  S1 -->|מיתיבי| Q2
+  Q2 -->|מיתיבי| Q3
+  Q3 -->|מאן תנא| S2
+  S2 -->|ב״ש בדגים| S3
+  S3 -->|בעיה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Dilemma: does one count it as first and second degree?"}:::question
+  S1["② R. Yoḥanan: one counts · Reish Lakish: one does not, like a nut rattling in its shell"]:::statement
+  Q2{"③ Reish Lakish objects: ׳the flesh, contact with a carcass׳ · R. Yoḥanan: by slaughter, per R. Shimon"}:::question
+  Q3{"⑤ R. Yoḥanan objects: passed a river, made fit; if one body — already fit by mother’s blood! · dry slaughter"}:::question
+  S2["⑦ Whose baraita? R. Yosei HaGelili; R. Yoḥanan to his line — he and Beit Shammai say one thing"]:::statement
+  S3["⑧ Fish — from when impure: Beit Shammai, Beit Hillel, R. Akiva; the difference? a convulsing fish"]:::statement
+  C1["⑨ Rav Ḥisda: tereifa-signs in fish — what? Unresolved (teiku)"]:::conclusion
+  Q1 -->|dispute| S1
+  S1 -->|objection| Q2
+  Q2 -->|objection| Q3
+  Q3 -->|whose baraita| S2
+  S2 -->|Beit Shammai on fish| S3
+  S3 -->|dilemma| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① אִיבַּעְיָא לְהוּ: מַהוּ לִמְנוֹת בּוֹ רִאשׁוֹן וְשֵׁנִי?"}:::question
+  S1["② רַבִּי יוֹחָנָן: מוֹנִין … רֵישׁ לָקִישׁ: אֵין מוֹנִין … נַעֲשָׂה כֶּאֱגוֹז הַמִּתְקַשְׁקֵשׁ בִּקְלִיפָּתוֹ"]:::statement
+  Q2{"③ אֵיתִיבֵיהּ רֵישׁ לָקִישׁ … הַבָּשָׂר מַגַּע נְבֵלָה … אֲמַר לֵיהּ: בִּשְׁחִיטָה, וּכְרַבִּי שִׁמְעוֹן"}:::question
+  Q3{"⑤ אֵיתִיבֵיהּ רַבִּי יוֹחָנָן … עָבַר בְּנָהָר – הוּכְשַׁר … הָא אִיתַּכְשַׁר בִּדְמָא דְּאִמֵּיהּ! בִּשְׁחִיטָה יַבִּישְׁתָּא"}:::question
+  S2["⑦ מַאן תַּנָּא … רַבִּי יוֹסֵי הַגְּלִילִי הִיא … וְאַזְדָּא רַבִּי יוֹחָנָן לְטַעְמֵיהּ … וּבֵית שַׁמַּאי אָמְרוּ דָּבָר אֶחָד"]:::statement
+  S3["⑧ דָּגִים, מֵאֵימָתַי מְקַבְּלִין טוּמְאָה? בֵּית שַׁמַּאי … בֵּית הִלֵּל … רַבִּי עֲקִיבָא … דָּג מְקַרְטֵעַ אִיכָּא בֵּינַיְיהוּ"]:::statement
+  C1["⑨ בָּעֵי רַב חִסְדָּא: נוֹלְדוּ בְּדָגִים סִימָנֵי טְרֵפָה, מַהוּ? … תֵּיקוּ"]:::conclusion
+  Q1 -->|מחלוקת| S1
+  S1 -->|מיתיבי| Q2
+  Q2 -->|מיתיבי| Q3
+  Q3 -->|מאן תנא| S2
+  S2 -->|ב״ש בדגים| S3
+  S3 -->|בעיה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ד ב — Chullin 74b:16</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: מַהוּ לִמְנוֹת בּוֹ רִאשׁוֹן וְשֵׁנִי?</div>
+    <div class="trans" data-when="he">בעיה: לדעת חכמים בן פקועה מותר באכילה ולכן מקבל טומאה. אם נטמאה אמו השחוטה במגע אב הטומאה — האם מונים בו ׳ראשון ושני׳, היינו: האם בן פקועה נטמא רק במגע אמו ונעשה שני, או שהוא כגוף אחד עם אמו ונעשה ראשון כמותה?</div>
+    <div class="trans" data-when="en">§ A dilemma was raised before the Sages: According to the Rabbis, a ben pekua is permitted for consumption and is therefore susceptible to ritual impurity. If the ben pekua was still inside the slaughtered mother and the body of the mother came in contact with a primary source of ritual impurity, what is the halakha with regard to counting the mother as having first-degree ritual impurity and the ben pekua as having second-degree ritual impurity? If the fetus is considered independent of the mother, it is rendered impure only through its contact with the mother and so would have second-degree impurity. But if it is considered part of the mother it would have the same first-degree impurity as the mother.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד ב — Chullin 74b:17</span></div>
+    <div class="orig">רַבִּי יוֹחָנָן אָמַר: מוֹנִין בּוֹ רִאשׁוֹן וְשֵׁנִי. רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אוֹמֵר: אֵין מוֹנִין בּוֹ רִאשׁוֹן וְשֵׁנִי, נַעֲשָׂה כֶּאֱגוֹז הַמִּתְקַשְׁקֵשׁ בִּקְלִיפָּתוֹ.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן: מונין בו ראשון ושני — הוא גוף נפרד, ונטמא במגע אמו לדרגת שני. ריש לקיש: אין מונין בו ראשון ושני, אלא הוא ראשון כאמו — שהוא כאגוז המתקשקש בקליפתו, גוף אחד עם אמו, ואם נטמאה הקליפה נטמא האגוז באותה דרגה.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan says: One counts the mother as having first-degree impurity and the ben pekua as having second-degree impurity. Rabbi Shimon ben Lakish says: One does not count the mother as having first-degree impurity and the ben pekua as having second-degree impurity. Rather, the fetus has first-degree impurity like its mother, as it is considered like a nut rattling in its shell; this is considered a single entity such that if impurity touches the shell, both the nut and the shell are rendered impure with the same degree of impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ד ב — Chullin 74b:18</span></div>
+    <div class="orig">אֵיתִיבֵיהּ רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ לְרַבִּי יוֹחָנָן: הַבָּשָׂר מַגַּע נְבֵלָה – דִּבְרֵי רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">ריש לקיש הקשה לר׳ יוחנן מן המשנה (עובר שהוציא ידו ונשחטה אמו, ואחר נחתכה היד): הבשר (של האם והעובר) נטמא במגע נבלה — שהיד שלא הותרה בשחיטה היא כנבלה, והבשר שנגע בה נטמא — דברי ר׳ מאיר.</div>
+    <div class="trans" data-when="en">Rabbi Shimon ben Lakish raised an objection to Rabbi Yoḥanan from the mishna (72a): If a fetus extended its foreleg outside its mother’s womb and then the mother was slaughtered, and afterward the foreleg was severed, the flesh of both the mother and the fetus are ritually impure due to having been in contact with a carcass. Since the foreleg was not permitted through an act of slaughter it is regarded as a carcass with the associated ritual impurity. The rest of the flesh, which was permitted, was in contact with it and was thereby rendered ritually impure; this is the statement of Rabbi Meir.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ד ב — Chullin 74b:19</span></div>
+    <div class="orig">וַחֲכָמִים אוֹמְרִים: מַגַּע טְרֵפָה שְׁחוּטָה.</div>
+    <div class="trans" data-when="he">וחכמים אומרים: הבשר נטמא במגע טריפה שחוטה — היד נחשבת כטריפה ששחטה, שמדאורייתא אסורה באכילה אך אינה מטמאה; ומדרבנן גזרו שתפסול תרומה וקדשים שנגעו בה.</div>
+    <div class="trans" data-when="en">And the Rabbis say: The flesh has the ritual impurity of having been in contact with a tereifa that was slaughtered. The limb is regarded as a tereifa that was slaughtered, which by Torah law is prohibited for consumption but does not carry ritual impurity. Nevertheless, the Sages decreed that if a tereifa was slaughtered and then came in contact with another item, the other item should be regarded as ritually impure to the extent that it will disqualify sacrificial foods that come in contact with it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ד ב — Chullin 74b:20</span></div>
+    <div class="orig">בִּשְׁלָמָא לְדִידִי, דְּאָמֵינָא חַד גּוּפָא הוּא – הַיְינוּ דְּאִיתַּכְשַׁר בִּדְמָא דְּאִמֵּיהּ, אֶלָּא לְדִידָךְ, בְּמַאי אִיתַּכְשַׁר?</div>
+    <div class="trans" data-when="he">ריש לקיש מבאר קושייתו: לשיטתי שהאם והעובר גוף אחד — מובן כיצד הוכשר בשר העובר לקבל טומאה: בדם אמו שניתז עליה בשחיטה. אבל לשיטתך שהעובר גוף נפרד — במה הוכשר העובר לקבל טומאה ממגע ידו?</div>
+    <div class="trans" data-when="en">Rabbi Shimon ben Lakish explains his objection: Granted, according to my opinion, as I say that the mother and fetus together are one entity; that is why the flesh of the fetus is rendered susceptible to ritual impurity through the blood of its mother that spilled onto the body of the mother. When the blood from the mother’s slaughter renders the mother susceptible to impurity, the fetus is also rendered susceptible to impurity, as it is considered part of the mother. But according to your opinion, that the fetus is an independent entity, through what means is it rendered susceptible to contracting impurity from its foreleg?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ד ב — Chullin 74b:21</span></div>
+    <div class="orig">אֲמַר לֵיהּ: בִּשְׁחִיטָה, וּכְרַבִּי שִׁמְעוֹן.</div>
+    <div class="trans" data-when="he">השיב לו ר׳ יוחנן: הוכשר בעצם שחיטת אמו (המתירתו באכילה), וכשיטת ר׳ שמעון הסובר שבשר הניתר באכילה הוכשר לקבל טומאה אף בלא נגיעת דם או משקה. לפיכך אף לשיטתי שהעובר גוף נפרד — הוכשר.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan said to Rabbi Shimon ben Lakish: It is rendered susceptible through the slaughter of its mother, which also permits the consumption of the fetus, and this is in accordance with the opinion of Rabbi Shimon, who maintains that the flesh of a slaughtered animal is rendered susceptible to ritual impurity by virtue of the fact that it is permitted for consumption, even if it did not come in contact with blood or one of the other six liquids. Accordingly, the fetus will be susceptible to impurity even if it is not considered part of its mother.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ד ב — Chullin 74b:22</span></div>
+    <div class="orig">אֵיתִיבֵיהּ רַבִּי יוֹחָנָן לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: עָבַר בְּנָהָר – הוּכְשַׁר, הָלַךְ לְבֵית הַקְּבָרוֹת – נִטְמָא.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן הקשה לריש לקיש מברייתא: בן פקועה שגדל ועבר בנהר — הוכשר (לקבל טומאה במים), ולכן אם הלך לבית הקברות — נטמא בטומאת מת.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan raised an objection to Rabbi Shimon ben Lakish from a baraita: If a ben pekua grew up and passed through a river, it was thereby rendered susceptible to impurity. Therefore, if it went from there to a cemetery, it is rendered impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ד ב — Chullin 74b:23</span></div>
+    <div class="orig">בִּשְׁלָמָא לְדִידִי דְּאָמֵינָא תְּרֵי גּוּפֵי נִינְהוּ, מִשּׁוּם הָכִי: הוּכְשַׁר – אִין, לֹא הוּכְשַׁר – לָא, אֶלָּא לְדִידָךְ דְּאָמְרַתְּ חַד גּוּפָא הוּא, הָא אִיתַּכְשַׁר בִּדְמָא דְּאִמֵּיהּ!</div>
+    <div class="trans" data-when="he">ר׳ יוחנן מבאר: לשיטתי שהאם והעובר שני גופים — מובן: רק אם הוכשר במים נטמא, ואם לא הוכשר לא. אבל לשיטתך שהם גוף אחד — מדוע צריך לעבור בנהר? הרי כבר הוכשר בדם אמו בשעת השחיטה!</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan explains his objection: Granted, according to my opinion, as I say that the mother and fetus are two entities; it is due to that reason that only if the ben pekua itself has been rendered susceptible to impurity by coming in contact with the water of the river, yes, it can be rendered impure upon entering a cemetery, whereas if it has not been rendered susceptible to impurity through these waters, no, it does not become impure when it enters a cemetery. But according to your opinion, in which you said that the mother and fetus together are one entity, why is it necessary for it to have passed through a river? It was already rendered susceptible to impurity through the blood of its mother that spilled onto the mother’s body when it was slaughtered.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״ה א — Chullin 75a:1</span></div>
+    <div class="orig">בִּשְׁחִיטָה יַבִּישְׁתָּא, וּדְלָא כְּרַבִּי שִׁמְעוֹן.</div>
+    <div class="trans" data-when="he">ריש לקיש משיב: הברייתא בשחיטה ׳יבשה׳ — שלא יצא בה דם, ולכן אף האם לא הוכשרה, וצריך מים. ושלא כר׳ שמעון, שאילו כמותו היה הבשר הוכשר בעצם ההיתר באכילה.</div>
+    <div class="trans" data-when="en">Rabbi Shimon ben Lakish answers: The baraita is referring to a case where the slaughter of the mother was dry, i.e., where no blood was emitted, and therefore, even the mother was not rendered susceptible to ritual impurity. And the baraita is not in accordance with the opinion of Rabbi Shimon, who maintains that the flesh of a slaughtered animal is rendered susceptible to ritual impurity by virtue of the fact that it is permitted for consumption, regardless of whether or not it came into contact with blood or other liquids.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״ה א — Chullin 75a:2</span></div>
+    <div class="orig">מַאן תַּנָּא עָבַר בְּנָהָר הוּכְשַׁר, הָלַךְ לְבֵית הַקְּבָרוֹת נִטְמָא? אָמַר רַבִּי יוֹחָנָן: רַבִּי יוֹסֵי הַגְּלִילִי הִיא, דְּתַנְיָא: רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹמֵר מִשּׁוּם רַבִּי יוֹסֵי הַגְּלִילִי: מְטַמֵּא טוּמְאַת אֳכָלִים, וְצָרִיךְ הֶכְשֵׁר. וַחֲכָמִים אוֹמְרִים: אֵינוֹ מְטַמֵּא טוּמְאַת אֳכָלִין, מִפְּנֵי שֶׁהוּא חַי, וְכׇל שֶׁהוּא חַי אֵינוֹ מְטַמֵּא טוּמְאַת אֳכָלִין.</div>
+    <div class="trans" data-when="he">מי שנה את הברייתא ׳עבר בנהר הוכשר׳? ר׳ יוחנן: ר׳ יוסי הגלילי, ששנינו: ר׳ שמעון בן אלעזר משמו — בן פקועה מטמא טומאת אוכלים וצריך הכשר. וחכמים: אינו מטמא טומאת אוכלין, מפני שהוא חי, וכל שהוא חי אינו מטמא טומאת אוכלין.</div>
+    <div class="trans" data-when="en">The Gemara asks: Who is the tanna who taught this baraita: If a ben pekua grew up and passed through a river, it was thereby rendered susceptible to impurity, and therefore if it went from there to a cemetery, it is rendered impure? Rabbi Yoḥanan said: It is the opinion of Rabbi Yosei HaGelili, as it is taught in a baraita that Rabbi Shimon ben Elazar says in the name of Rabbi Yosei HaGelili: The flesh of a ben pekua can become impure with the ritual impurity of food, but it first needs to be rendered susceptible to ritual impurity by coming in contact with liquid. But the Rabbis say: It cannot become impure with the ritual impurity of food because it is alive, and any live animal cannot become impure with the ritual impurity of food, even if it is permitted for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ע״ה א — Chullin 75a:3</span></div>
+    <div class="orig">וְאַזְדָּא רַבִּי יוֹחָנָן לְטַעְמֵיהּ, דְּאָמַר רַבִּי יוֹחָנָן: רַבִּי יוֹסֵי הַגְּלִילִי וּבֵית שַׁמַּאי אָמְרוּ דָּבָר אֶחָד.</div>
+    <div class="trans" data-when="he">ואזל ר׳ יוחנן לשיטתו — שאמר: ר׳ יוסי הגלילי ובית שמאי אמרו דבר אחד, ששניהם סוברים שאף דבר חי יכול לקבל טומאת אוכלין.</div>
+    <div class="trans" data-when="en">The Gemara notes: And Rabbi Yoḥanan follows his standard line of reasoning, as Rabbi Yoḥanan says that Rabbi Yosei HaGelili and Beit Shammai said the same thing, i.e., they both hold that even a live animal can become impure with the ritual impurity of food.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ע״ה א — Chullin 75a:4</span></div>
+    <div class="orig">רַבִּי יוֹסֵי הַגְּלִילִי – הָא דַּאֲמַרַן. בֵּית שַׁמַּאי, דִּתְנַן: דָּגִים, מֵאֵימָתַי מְקַבְּלִין טוּמְאָה? בֵּית שַׁמַּאי אוֹמְרִים: מִשֶּׁיִּצּוֹדוּ, וּבֵית הִלֵּל אוֹמְרִים: מִשֶּׁיָּמוּתוּ. רַבִּי עֲקִיבָא אוֹמֵר: מִשָּׁעָה שֶׁאֵין יְכוֹלִין לִחְיוֹת.</div>
+    <div class="trans" data-when="he">ר׳ יוסי הגלילי — כפי שאמרנו. ובית שמאי — ששנינו: דגים, מאימתי מקבלין טומאה (כאוכל)? בית שמאי: משייצודו (אף בעודם חיים, שאינם טעונים שחיטה); בית הלל: משימותו; ר׳ עקיבא: משעה שאין יכולין לחיות.</div>
+    <div class="trans" data-when="en">The opinion of Rabbi Yosei HaGelili is that which we stated in the baraita. The opinion of Beit Shammai is as we learned in a mishna (Okatzin 3:8): With regard to fish, from when are they susceptible to impurity as food? Beit Shammai say: From when they are caught in a trap, as at this point they are considered food, since they do not require slaughter. And Beit Hillel say: From when they die. Rabbi Akiva says: From when they are no longer able to live.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ע״ה א — Chullin 75a:5</span></div>
+    <div class="orig">מַאי בֵּינַיְיהוּ? אָמַר רַבִּי יוֹחָנָן: דָּג מְקַרְטֵעַ אִיכָּא בֵּינַיְיהוּ.</div>
+    <div class="trans" data-when="he">מה ההבדל בין ר׳ עקיבא לבית הלל? ר׳ יוחנן: דג מקרטע (מפרכס) ביניהם — לר׳ עקיבא כבר מקבל טומאה (שאינו יכול עוד לחיות), ולבית הלל רק משימות ממש.</div>
+    <div class="trans" data-when="en">The Gemara analyzes that mishna: What is the difference between the opinions of Rabbi Akiva and Beit Hillel? Rabbi Yoḥanan said: The difference between them is the case of a convulsing fish. Rabbi Akiva holds that such a fish can already become ritually impure, while Beit Hillel require it to have actually died.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ע״ה א — Chullin 75a:6</span></div>
+    <div class="orig">בָּעֵי רַב חִסְדָּא: נוֹלְדוּ בְּדָגִים סִימָנֵי טְרֵפָה, מַהוּ? תִּיבְּעֵי לְמַאן דְּאָמַר טְרֵפָה חַיָּה, וְתִיבְּעֵי לְמַאן דְּאָמַר טְרֵפָה אֵינָהּ חַיָּה.</div>
+    <div class="trans" data-when="he">בעיית רב חסדא (לר׳ עקיבא): נולדו בדג סימני טריפה (שסופו למות) — האם כבר מקבל טומאה כמת? בעיה זו לשתי השיטות: בין למאן דאמר טריפה חיה (אינה מתה בהכרח), ובין למאן דאמר טריפה אינה חיה.</div>
+    <div class="trans" data-when="en">Rav Ḥisda raises a dilemma: According to Rabbi Akiva, if symptoms of a tereifa developed in a fish, e.g., a perforation in the intestines, which will certainly result in the animal’s death (see 42a), what is the halakha? Can it already be rendered ritually impure as if it were now dead? The Gemara clarifies: One can raise this dilemma according to the one who says that an animal that is a tereifa can live, i.e., it will not necessarily die within a year, and one can raise this dilemma according to the one who says that a tereifa cannot live, but will die within a year.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ע״ה א — Chullin 75a:7</span></div>
+    <div class="orig">תִּיבְּעֵי לְמַאן דְּאָמַר טְרֵפָה חַיָּה, בְּהֵמָה הוּא דִּנְפִישָׁא חַיּוּתַהּ, אֲבָל דָּגִים דְּלָא נְפִישָׁא חַיּוּתַיְיהוּ – לָא, אוֹ דִילְמָא אֲפִילּוּ לְמַאן דְּאָמַר טְרֵפָה אֵינָהּ חַיָּה, הָנֵי מִילֵּי בְּהֵמָה דְּיֵשׁ בְּמִינָהּ שְׁחִיטָה, אֲבָל דָּגִים דְּאֵין בְּמִינָן שְׁחִיטָה – אֵימָא לָא. תֵּיקוּ.</div>
+    <div class="trans" data-when="he">פירוט הצדדים: למאן דאמר טריפה חיה — אולי דווקא בהמה שחיותה מרובה תחיה, אך דגים שחיותם מועטה לא; ולמאן דאמר טריפה אינה חיה — אולי דווקא בהמה שיש במינה שחיטה נחשבת כמתה, אך דגים שאין במינם שחיטה אימא לא. תיקו — הבעיה לא הוכרעה.</div>
+    <div class="trans" data-when="en">The Gemara elaborates: One can raise this dilemma according to the one who says that a tereifa can live, as perhaps that opinion is limited to an animal, as an animal has a strong life force, and it could live despite such symptoms. But with regard to a fish, whose life force is not strong, all would agree that it will not survive. Or perhaps, even according to the one who says that a tereifa cannot live, it is possible that this matter, that a tereifa is regarded as dead, applies only to an animal, as the requirement to slaughter it in order to permit it for consumption applies to this type of creature, i.e., to animals, and so to invalidate its slaughter, the Torah classifies an animal that is a tereifa as though it is dead. But with regard to fish, where the requirement to slaughter it in order to permit it does not apply to this type of creature, I would say that a fish with symptoms of a tereifa is not considered as though it were dead. The Gemara concludes: The dilemma shall stand unresolved.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
