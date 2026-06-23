@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ס״ח</title>
+<meta name="description" content="מפת הסוגיא של חולין ס״ח: עובר שהוציא אבר או ראש קודם שחיטת אמו; מחלוקת רב (אבר אסור — יש לידה לאברים) ועולא משם ר׳ יוחנן (אבר מותר), תיובתא דעולא, ושתי איבעיות במוציא ומחזיר עד רובו.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="68">
+<meta name="gemara-map:sefaria-ref" content="Chullin 68">
+<meta name="gemara-map:topic-he" content="עובר שהוציא אבר — יש לידה לאברים?">
+<meta name="gemara-map:topic-en" content="A fetus that extended a limb">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ס״ח">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 68">
+<meta name="gemara-map:blurb-he" content="עובר שהוציא אבר חוץ למחיצתו והחזירו — נאסר; רב סובר ׳יש לידה לאברים׳ והאבר אסור, ועולא משם ר׳ יוחנן מתיר; תיובתא דעולא, ושתי איבעיות במוציא ומחזיר עד רובו.">
+<meta name="gemara-map:blurb-en" content="A fetal limb extended beyond its boundary and returned is forbidden; Rav holds ‘limbs have a birth’ and the limb is prohibited, while Ulla in R. Yoḥanan’s name permits it; Ulla is conclusively refuted, and two unresolved dilemmas remain.">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ס״ח</span><span data-when="en">Sugya map — Chullin 68</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ס״ח א — ס״ט א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 68a–69a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שחיטת האם מתירה את העובר שבמעיה — אך <b>אבר שיצא חוץ למחיצתו</b> (כמו ׳ובשר בשדה טריפה׳) נאסר. רב: <b>האבר עצמו אסור</b>, שיש לידה לאברים; עולא משם ר׳ יוחנן: האבר מותר. ניסיונות לסתור את רב מן המשנה ומברייתות נדחים, אך <b>עולא נסתר (תיובתא)</b> מן הברייתא. לבסוף שתי <b>איבעיות</b> — במוציא ומחזיר אבר אחר אבר עד רובו, ובמוציא וחותך עד רובו — נשארות בלא הכרעה.</span>
+    <span data-when="en"><b>Bottom line:</b> Slaughtering the mother permits the fetus inside her womb — but a <b>limb that left its boundary</b> (derived from “flesh in the field, a tereifa”) becomes forbidden. Rav: <b>the limb itself is prohibited</b>, for limbs have a “birth”; Ulla in R. Yoḥanan’s name permits it. Attempts to refute Rav from the Mishna and baraitot are deflected, but <b>Ulla is conclusively refuted</b> by a baraita. Finally two <b>dilemmas</b> — extending-and-returning limb after limb until a majority, and extending-and-cutting until a majority — are left unresolved.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ס״ח</span><span data-when="en">Overview — Chullin 68</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · משנה — עובר שהוציא אבר או ראש"]):::mishnah
+  O2["2 · רב: אבר עצמו אסור — יש לידה לאברים"]:::statement
+  O3["3 · עולא משם ר׳ יוחנן: אבר מותר — תיובתא"]:::statement
+  O4["4 · נוסח מערבא, ושתי איבעיות עד רובו"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · Mishna — a fetus that extended a limb or head"]):::mishnah
+  O2["2 · Rav: the limb itself is prohibited — limbs have a birth"]:::statement
+  O3["3 · Ulla in R. Yoḥanan: the limb is permitted — refuted"]:::statement
+  O4["4 · The Western version, and two dilemmas up to a majority"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">המשנה — עובר שהוציא אבר או ראש</span><span data-when="en">The Mishna — a fetus that extended a limb or head</span>
+      <span class="ref">Chullin 68a:1-2</span></h2>
+  <div class="lead"><span data-when="he">שחיטת האם מתירה את העובר. הוציא העובר ידו והחזירה — מותר; הוציא ראשו — כילוד, וצריך שחיטה לעצמו. ׳זה הכלל׳: דבר שגופה אסור, ושאינה גופה (העובר) מותר.</span><span data-when="en">The mother’s slaughter permits the fetus. If the fetus extended a foreleg and returned it — permitted; if it extended its head — it is like a newborn and needs its own slaughter. The principle: what is part of her body is forbidden, what is not (the fetus) is permitted.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① משנה: הוציא העובר ידו והחזירה — מותר; הוציא ראשו — כילוד"]):::mishnah
+  M2(["② חותך מעובר — מותר, מן הטחול וכליות — אסור; זה הכלל: שגופה אסור, שאינה גופה מותר"]):::mishnah
+  M1 -->|המשך המשנה| M2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Mishna: fetus extended a foreleg and returned it — permitted; extended its head — like a newborn"]):::mishnah
+  M2(["② Cutting from the fetus — permitted, from spleen or kidneys — forbidden; the principle: part of her body forbidden, not her body permitted"]):::mishnah
+  M1 -->|the Mishna continues| M2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① בְּהֵמָה הַמְקַשָּׁה לֵילֵד … הוֹצִיא אֶת רֹאשׁוֹ, אַף עַל פִּי שֶׁהֶחְזִירוֹ – הֲרֵי זֶה כְּיָלוּד"]):::mishnah
+  M2(["② חוֹתֵךְ מֵעוּבָּר … מוּתָּר … זֶה הַכְּלָל: דָּבָר שֶׁגּוּפָהּ – אָסוּר, וְשֶׁאֵינָהּ גּוּפָהּ – מוּתָּר"]):::mishnah
+  M1 -->|המשך המשנה| M2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ח א — Chullin 68a:1</span></div>
+    <div class="orig">מַתְנִי׳ בְּהֵמָה הַמְקַשָּׁה לֵילֵד, וְהוֹצִיא הָעוּבָּר אֶת יָדוֹ וְהֶחְזִירוֹ – מוּתָּר בַּאֲכִילָה. הוֹצִיא אֶת רֹאשׁוֹ, אַף עַל פִּי שֶׁהֶחְזִירוֹ – הֲרֵי זֶה כְּיָלוּד.</div>
+    <div class="trans" data-when="he">משנה: שחיטת אם מעוברת מתירה גם את עוברה. בהמה המקשה לילד, והוציא העובר את ידו (רגלו הקדמית) חוץ לרחם והחזירה, ואחר כך נשחטה האם — מותר העובר באכילה. אבל אם הוציא העובר את ראשו, אף שהחזירו — הרי הוא כילוד, ואין שחיטת האם מתירתו אלא צריך שחיטה לעצמו.</div>
+    <div class="trans" data-when="en">MISHNA: When a pregnant kosher animal is slaughtered, the slaughter also renders the consumption of its fetus permitted. Even if an animal was encountering difficulty giving birth and meanwhile the fetus extended its foreleg outside the mother animal’s womb and then brought it back inside, and then the mother animal was slaughtered, the consumption of the fetus is permitted by virtue of the slaughter of the mother animal. But if the fetus extended its head outside the womb, even if it then brought it back inside, the halakhic status of that fetus is like that of a newborn, and the slaughter of the mother animal does not permit the consumption of the fetus. Rather, it requires its own slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ח א — Chullin 68a:2</span></div>
+    <div class="orig">חוֹתֵךְ מֵעוּבָּר שֶׁבְּמֵעֶיהָ – מוּתָּר בַּאֲכִילָה, מִן הַטְּחוֹל וּמִן הַכְּלָיוֹת – אָסוּר בַּאֲכִילָה. זֶה הַכְּלָל: דָּבָר שֶׁגּוּפָהּ – אָסוּר, וְשֶׁאֵינָהּ גּוּפָהּ – מוּתָּר.</div>
+    <div class="trans" data-when="he">החותך חתיכות מן העובר שבמעיה ומניחן שם, ואחר כך שחטה — מותרות באכילה מכוח שחיטת האם. אבל החותך מן הטחול או מן הכליות של הבהמה עצמה — אסור, שאבר הפורש מן החי אינו ניתר בשחיטה. זה הכלל: דבר שהוא מגוף האם — אסור, ומה שאינו גופה (העובר) — מותר.</div>
+    <div class="trans" data-when="en">If, prior to slaughtering an animal, one severs pieces from a fetus that is in the womb and leaves those pieces in the womb, their consumption is permitted by virtue of the slaughter of the mother animal. By contrast, if one severs pieces of the spleen or of the kidneys of an animal and then slaughters it, then even if those pieces are left inside the animal their consumption is prohibited, because an organ severed from a living being is not permitted by the subsequent slaughter of the animal. This is the principle: An item that is part of an animal’s body that was severed prior to its slaughter is prohibited even after slaughter, and an item that is not part of its body, i.e., its fetus, is permitted by virtue of its slaughter.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">רב: ואבר עצמו אסור — יש לידה לאברים</span><span data-when="en">Rav: the limb itself is prohibited</span>
+      <span class="ref">Chullin 68a:3–68b:9</span></h2>
+  <div class="lead"><span data-when="he">רב יהודה אמר רב: אף שהעובר מותר, האבר שיצא ונאסר (׳ובשר בשדה טריפה׳) — אסור. ניסיונות לסתור מן המשנה ומברייתת ר׳ מאיר וחכמים נדחים; כל ׳החזיר׳ נדרש למקום החתך, ושני הכתובים — אחד למקום חתך ואחד לקלוט.</span><span data-when="en">Rav Yehuda said Rav: though the fetus is permitted, a limb that left and became forbidden (“flesh in the field, a tereifa”) stays prohibited. Challenges from the Mishna and the R. Meir/Rabbis baraita are deflected — each “returned” teaches the location of the cut, and the two verses teach the cut’s location and a non-cloven fetus.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① רב יהודה אמר רב: ואבר עצמו אסור"]:::statement
+  S2["② טעם: ׳ובשר בשדה טריפה׳ — יצא חוץ למחיצתו, נאסר"]:::statement
+  Q1{"③ תנן: הוציא ידו והחזירו — מותר! מאי לאו אאבר? לא, אעובר"}:::question
+  Q2{"④ אי אעובר, מאי איריא החזירו? הוא הדין דלא, ואיידי דסיפא"}:::question
+  Q3{"⑤ וסיפא מאי קמ״ל? יצא ראשו לידה — תנינא בבכור לנחלה"}:::question
+  S3["⑥ טעמא דראשו מת, הא חי — אינו בכור; וכי תימא אדם ובהמה"]:::statement
+  S4["⑦ אדם מבהמה לא יליף — פרוזדור; ובהמה מאדם — פרצוף פנים"]:::statement
+  Q4{"⑧ הא נמי תנינא: שליא שיצתה מקצתה — אסורה (סימן ולד)"}:::question
+  Q5{"⑨ אי רישא דווקא — תנא סיפא אטו רישא; אי לא ולא — למה לתנותו?"}:::question
+  A1["⑩ לעולם אעובר, וכדרנב״י: לא נצרכה אלא למקום חתך"]:::answer
+  P1["⑪ תא שמע ברייתא: החזיר ואח״כ שחט — מותר; שחט ואח״כ החזיר — אסור"]:::proof
+  S5["⑫ חתכו ואח״כ שחט — שבחוץ טמא ואסור, שבפנים טהור ומותר"]:::statement
+  S6["⑬ שחט ואח״כ חתכו — ר׳ מאיר: מגע נבלה · חכמים: מגע טריפה שחוטה"]:::statement
+  Q6{"⑭ קתני רישא: החזיר ואח״כ שחט — מותר; מאי לאו אאבר? לא, אעובר"}:::question
+  A2["⑮ אימא סיפא: שחט ואח״כ החזיר — אסור; וכדרנב״י: למקום חתך"]:::answer
+  Q7{"⑯ איני? אבימי: פרסה החזיר אכול, פרסות החזיר אכול — אאבר?"}:::question
+  A3["⑰ לא, החזיר פרסה — אכול עובר; וכדרנב״י: למקום חתך"]:::answer
+  Q8{"⑱ והא תרי קראי! חד לאבר וחד למקום חתך? לא, חד למקום חתך וחד לקלוט"}:::question
+  A4["⑲ ואליבא דר״ש (קלוט בן פרה אסור) — דווקא יצא לאויר, אבל במעי אמו שרי"]:::answer
+  S1 -->|טעם| S2
+  S2 -.->|תנן| Q1
+  Q1 -->|דיוק| Q2
+  Q2 -->|וסיפא| Q3
+  Q3 -->|דיוק| S3
+  S3 -->|דחייה| S4
+  S4 -.->|הא נמי| Q4
+  Q4 -->|אי בעית| Q5
+  Q5 -->|תירוץ| A1
+  A1 -.->|תא שמע| P1
+  P1 -->|המשך| S5
+  S5 -->|מחלוקת| S6
+  S6 -.->|קתני רישא| Q6
+  Q6 -->|אימא סיפא| A2
+  A2 -.->|איני| Q7
+  Q7 -->|תירוץ| A3
+  A3 -.->|תרי קראי| Q8
+  Q8 -->|יישוב| A4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Rav Yehuda said Rav: and the limb itself is prohibited"]:::statement
+  S2["② Reason: ׳flesh in the field, a tereifa׳ — once it left its boundary, forbidden"]:::statement
+  Q1{"③ We learned: extended and returned — permitted! Not the limb? No, the fetus"}:::question
+  Q2{"④ If the fetus, why specify ׳returned׳? The same holds without it — stylistic"}:::question
+  Q3{"⑤ And the latter clause — what does it teach? Head emerged is birth — already learned"}:::question
+  S3["⑥ Reason head emerged dead — but alive, not firstborn; perhaps person vs animal"]:::statement
+  S4["⑦ Person not from animal — prozdor; animal not from person — facial form"]:::statement
+  Q4{"⑧ This too is learned: a partly-emerged placenta is forbidden (sign of a fetus)"}:::question
+  Q5{"⑨ If the first clause is exact — the latter follows it; if neither — why teach at all?"}:::question
+  A1["⑩ Really the fetus, and per R. Naḥman b. Yitzḥak: needed only for the place of the cut"]:::answer
+  P1["⑪ Come and hear a baraita: returned then slaughtered — permitted; slaughtered then returned — forbidden"]:::proof
+  S5["⑫ Cut it then slaughtered — outside impure and forbidden, inside pure and permitted"]:::statement
+  S6["⑬ Slaughtered then cut — R. Meir: contact with a carcass · Rabbis: contact with a slaughtered tereifa"]:::statement
+  Q6{"⑭ The first clause: returned then slaughtered — permitted; not the limb? No, the fetus"}:::question
+  A2["⑮ Then the latter clause: slaughtered then returned — forbidden; per RNbY: place of the cut"]:::answer
+  Q7{"⑯ Is that so? Avimi: returned a hoof, eat; returned hooves, eat — the limb?"}:::question
+  A3["⑰ No, returned a hoof — eat the fetus; per RNbY: place of the cut"]:::answer
+  Q8{"⑱ But two verses! One for the limb, one for the cut? No — one cut, one a non-cloven fetus"}:::question
+  A4["⑲ Per R. Shimon (a non-cloven calf is forbidden) — only once emerged into the world, but in the womb permitted"]:::answer
+  S1 -->|reason| S2
+  S2 -.->|we learned| Q1
+  Q1 -->|inference| Q2
+  Q2 -->|the latter clause| Q3
+  Q3 -->|inference| S3
+  S3 -->|deflection| S4
+  S4 -.->|this too| Q4
+  Q4 -->|either way| Q5
+  Q5 -->|answer| A1
+  A1 -.->|come and hear| P1
+  P1 -->|continues| S5
+  S5 -->|dispute| S6
+  S6 -.->|the first clause| Q6
+  Q6 -->|then the latter| A2
+  A2 -.->|is that so| Q7
+  Q7 -->|answer| A3
+  A3 -.->|two verses| Q8
+  Q8 -->|resolution| A4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① אָמַר רַב יְהוּדָה אָמַר רַב: וְאֵבֶר עַצְמוֹ אָסוּר"]:::statement
+  S2["② דְּאָמַר קְרָא: ׳וּבָשָׂר בַּשָּׂדֶה טְרֵפָה׳ … כֵּיוָן שֶׁיָּצָא בָּשָׂר חוּץ לִמְחִיצָתוֹ – נֶאֱסָר"]:::statement
+  Q1{"③ תְּנַן … וְהֶחְזִירוֹ – מוּתָּר. מַאי לָאו אַאֵבֶר? לָא, אַעוּבָּר"}:::question
+  Q2{"④ אִי אַעוּבָּר, מַאי אִירְיָא הֶחְזִירוֹ? … הוּא הַדִּין … וְאַיְּידֵי דְּקָא בָּעֵי מִיתְנֵא סֵיפָא"}:::question
+  Q3{"⑤ וְסֵיפָא, מַאי קָמַשְׁמַע לַן? … תְּנֵינָא: אֵיזֶהוּ בְּכוֹר לְנַחֲלָה …"}:::question
+  S3["⑥ טַעְמָא דְּרֹאשׁוֹ מֵת, הָא רֹאשׁוֹ חַי … וְכִי תֵּימָא, אַשְׁמְעִינַן בְּאָדָם … בִּבְהֵמָה"]:::statement
+  S4["⑦ דְּאָדָם מִבְּהֵמָה לָא יָלֵיף, דְּאֵין פְּרוֹזְדוֹר … וּבְהֵמָה מֵאָדָם … דַּחֲשִׁיב פַּרְצוּף פָּנִים"]:::statement
+  Q4{"⑧ הָא נָמֵי תְּנֵינָא: שִׁלְיָא שֶׁיָּצְתָה מִקְצָתָהּ – אֲסוּרָה … סִימָן וָלָד בַּבְּהֵמָה"}:::question
+  Q5{"⑨ אִי אָמְרַתְּ בִּשְׁלָמָא … דַּוְקָא … אֶלָּא … לָא … וְלָא … לְמָה לֵיהּ לְמִתְנְיַיהּ כְּלָל?"}:::question
+  A1["⑩ לְעוֹלָם אַעוּבָּר, וְכִדְאָמַר רַב נַחְמָן בַּר יִצְחָק: לֹא נִצְרְכָה אֶלָּא לִמְקוֹם חֲתָךְ"]:::answer
+  P1["⑪ תָּא שְׁמַע … הֶחְזִירָהּ וְאַחַר כָּךְ שָׁחַט – מוּתָּר. שָׁחַט … הֶחְזִירָהּ – אָסוּר"]:::proof
+  S5["⑫ הוֹצִיא … וַחֲתָכוֹ … שֶׁבַּחוּץ טָמֵא וְאָסוּר, וְשֶׁבִּפְנִים טָהוֹר וּמוּתָּר"]:::statement
+  S6["⑬ הַבָּשָׂר מַגַּע נְבֵלָה, דִּבְרֵי רַבִּי מֵאִיר · וַחֲכָמִים: מַגַּע טְרֵפָה שְׁחוּטָה"]:::statement
+  Q6{"⑭ קָתָנֵי … רֵישָׁא … הֶחְזִירָהּ … שָׁחַט – מוּתָּר; מַאי לָאו אַאֵבֶר? לָא, אַעוּבָּר"}:::question
+  A2["⑮ אֵימָא סֵיפָא: שָׁחַט … הֶחְזִירוֹ – אָסוּר … כִּדְאָמַר רַב נַחְמָן בַּר יִצְחָק: לִמְקוֹם חֲתָךְ"]:::answer
+  Q7{"⑯ אִינִי? … אֲבִימִי … פַּרְסָה הֶחְזִיר – אֱכוֹל … מַאי לָאו … אֲכוּל פַּרְסָה?"}:::question
+  A3["⑰ לֹא, הֶחֱזִיר פַּרְסָה – אֱכוֹל עוּבָּר … אָמַר רַב נַחְמָן בַּר יִצְחָק: לִמְקוֹם חֲתָךְ"]:::answer
+  Q8{"⑱ וְהָא תְּרֵי קְרָאֵי … חַד לְאֵבֶר, וְחַד לִמְקוֹם חֲתָךְ? לָא, … וְחַד לְקָלוּט בִּמְעֵי פָרָה"}:::question
+  A4["⑲ וְאַלִּיבָּא דְּרַבִּי שִׁמְעוֹן … קָלוּט בֶּן פָּרָה אָסוּר … אֲבָל בִּמְעֵי אִמּוֹ – שְׁרֵי"]:::answer
+  S1 -->|טעם| S2
+  S2 -.->|תנן| Q1
+  Q1 -->|דיוק| Q2
+  Q2 -->|וסיפא| Q3
+  Q3 -->|דיוק| S3
+  S3 -->|דחייה| S4
+  S4 -.->|הא נמי| Q4
+  Q4 -->|אי בעית| Q5
+  Q5 -->|תירוץ| A1
+  A1 -.->|תא שמע| P1
+  P1 -->|המשך| S5
+  S5 -->|מחלוקת| S6
+  S6 -.->|קתני רישא| Q6
+  Q6 -->|אימא סיפא| A2
+  A2 -.->|איני| Q7
+  Q7 -->|תירוץ| A3
+  A3 -.->|תרי קראי| Q8
+  Q8 -->|יישוב| A4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ח א — Chullin 68a:3</span></div>
+    <div class="orig">גְּמָ׳ אָמַר רַב יְהוּדָה אָמַר רַב: וְאֵבֶר עַצְמוֹ אָסוּר.</div>
+    <div class="trans" data-when="he">גמרא: הגמרא מסייגת את הרישא. רב יהודה אמר רב: אף שהמשנה התירה את העובר כשהחזיר את ידו, האבר עצמו (היד) — אסור, אף על פי שהחזירו קודם השחיטה.</div>
+    <div class="trans" data-when="en">GEMARA: The Gemara qualifies the first ruling of the mishna: Rav Yehuda says that Rav says: But as for the limb itself, i.e., the foreleg, its consumption is prohibited, even though the fetus brought it back inside prior to the slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ח א — Chullin 68a:4</span></div>
+    <div class="orig">מַאי טַעְמָא? דְּאָמַר קְרָא: ״וּבָשָׂר בַּשָּׂדֶה טְרֵפָה לֹא תֹאכֵלוּ״, כֵּיוָן שֶׁיָּצָא בָּשָׂר חוּץ לִמְחִיצָתוֹ – נֶאֱסָר.</div>
+    <div class="trans" data-when="he">מה הטעם? שאמר הכתוב ״ובשר בשדה טריפה לא תאכלו״. נדרש: כיון שיצא בשר חוץ למחיצתו שבה הוא מותר (כמו בשר קדשים שיצא מן העזרה) — נאסר לעולם, כטריפה. וכן אבר העובר שיצא מן הרחם — נאסר.</div>
+    <div class="trans" data-when="en">What is the reason for this? It is as the verse states: “And flesh, in the field, a tereifa, you shall not eat” (Exodus 22:30). A tereifa is an animal with a wound that will cause it to die within twelve months; its consumption is prohibited even if it is ritually slaughtered. The Gemara interprets the verse as teaching a principle: Once flesh whose permitted status is dependent on being within a certain area, e.g., sacrificial meat within the Temple courtyard, has gone outside of its boundary, i.e., the area in which it is permitted, which the verse describes as being “in the field,” it becomes permanently prohibited, like a tereifa. Likewise, the permitted status of a fetus is dependent on its being within the womb when the mother animal is slaughtered. Accordingly, if any part of the fetus leaves the womb before the slaughter, it is rendered permanently prohibited.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ח א — Chullin 68a:5</span></div>
+    <div class="orig">תְּנַן: בְּהֵמָה הַמְקַשָּׁה לֵילֵד, וְהוֹצִיא הָעוּבָּר אֶת יָדוֹ וְהֶחְזִירוֹ – מוּתָּר בַּאֲכִילָה. מַאי לָאו אַאֵבֶר? לָא, אַעוּבָּר.</div>
+    <div class="trans" data-when="he">קושיא מן המשנה: שנינו ״המקשה לילד… והחזירו — מותר באכילה״. וכי לא מדובר על האבר עצמו שהחזיר, שהוא מותר — נגד רב? תשובה: לא, המשנה מדברת על שאר העובר (חוץ מן היד), שהוא המותר.</div>
+    <div class="trans" data-when="en">The Gemara raises a difficulty: We learned in the mishna: If an animal was encountering difficulty giving birth and as a result the fetus extended its foreleg outside the mother animal’s body but then brought it back, and then the animal was slaughtered, the consumption of the fetus is permitted by virtue of the slaughter of the mother animal. The Gemara assumes: What, is the mishna not referring to the entire fetus, including the limb, i.e., the foreleg, when it states that its consumption is permitted by the slaughter? This would contradict Rav’s ruling. The Gemara answers: No, the mishna is referring to the rest of the fetus, apart from the foreleg.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ח א — Chullin 68a:6</span></div>
+    <div class="orig">אִי אַעוּבָּר, מַאי אִירְיָא הֶחְזִירוֹ? אֲפִילּוּ לֹא הֶחְזִירוֹ נָמֵי! הוּא הַדִּין אַף עַל גַּב דְּלֹא הֶחְזִירוֹ. וְאַיְּידֵי דְּקָא בָּעֵי מִיתְנֵא סֵיפָא: הוֹצִיא אֶת רֹאשׁוֹ אַף עַל פִּי שֶׁהֶחְזִירוֹ – הֲרֵי זֶה כְּיָלוּד, תְּנָא נָמֵי רֵישָׁא הֶחְזִירוֹ.</div>
+    <div class="trans" data-when="he">קושיא: אם המשנה מדברת על העובר, מדוע נקטה דווקא ״החזירו״? אפילו לא החזיר — שאר העובר מותר! תשובה: אכן הוא הדין אף שלא החזיר; ומפני שהתנא רצה לשנות בסיפא ״הוציא ראשו אף על פי שהחזירו — כילוד״, שנה גם ברישא ״החזירו״ לשם אחידות הלשון.</div>
+    <div class="trans" data-when="en">The Gemara asks: If the mishna is referring to the rest of the fetus, why state specifically that the fetus brought back its foreleg? Even if it did not bring it back the rest of the fetus would still be permitted. The Gemara answers: The same is true, that the rest of the fetus is permitted, even if it did not bring back its foreleg. But since the tanna of the mishna wants to teach in the latter clause: If the fetus extended its head, even though it brought it back, the halakhic status of that fetus is like that of a newborn and is permitted only through its own slaughter, therefore he also taught in the first clause that the fetus brought back its foreleg, for stylistic reasons, despite the fact that the ruling is not limited to that case.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ח א — Chullin 68a:7</span></div>
+    <div class="orig">וְסֵיפָא, מַאי קָמַשְׁמַע לַן? דְּכֵיוָן דְּיָצָא רֹאשׁוֹ הָוְיָא לַהּ לֵידָה? תְּנֵינָא: אֵיזֶהוּ בְּכוֹר לְנַחֲלָה וְאֵינוֹ בְּכוֹר לְכֹהֲנִים – הַבָּא אַחַר נְפָלִים, אַף עַל פִּי שֶׁיָּצָא רֹאשׁוֹ חַי, אוֹ בֶּן תִּשְׁעָה שֶׁיָּצָא רֹאשׁוֹ מֵת.</div>
+    <div class="trans" data-when="he">ועל הסיפא: מה משמיעה? שכיון שיצא ראשו הריהו לידה? כבר שנינו זאת (בכורות): איזהו בכור לנחלה ואינו בכור לכהנים (לפדיון)? הבא אחר נפלים — אף על פי שיצא ראש הנפל חי, או בן תשעה שיצא ראשו מת. הרי שיציאת הראש נחשבת לידה.</div>
+    <div class="trans" data-when="en">The Gemara asks: And concerning this latter clause itself, what does it teach us? Does it teach that once the fetus extended its head, that is considered a birth? But we have already learned this in a mishna (Bekhorot 46a): Who is considered a firstborn with regard to inheritance but is not considered a firstborn with regard to the requirement to be redeemed by giving five shekels to the priests? It is a son who came after the miscarriage of an underdeveloped fetus. The mishna adds that the category of stillbirth includes the case of a child who did not reach full term, even if its head emerged alive, or a fully developed, nine-month-old fetus whose head emerged dead.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ח א — Chullin 68a:8</span></div>
+    <div class="orig">טַעְמָא דְּרֹאשׁוֹ מֵת, הָא רֹאשׁוֹ חַי – הַבָּא אַחֲרָיו בְּכוֹר לְנַחֲלָה נָמֵי לָא הָוֵי.</div>
+    <div class="trans" data-when="he">דיוק: הטעם שהבא אחריו בכור לנחלה — לפי שיצא ראש הנפל מת; אבל אם יצא ראשו חי (ואחר כך מת), הבא אחריו אינו בכור אף לנחלה — לפי שיציאת הראש בחיים נחשבת לידה גמורה. אם כן, למה הוצרכה משנתנו לחזור ולשנות שראש הוי לידה?</div>
+    <div class="trans" data-when="en">The Gemara infers from the final clause of the mishna: The reason a son born following the miscarriage is considered a firstborn with regard to inheritance is that the head of the miscarriage emerged only after it was already dead. But if its head had initially emerged alive, even if it then died before being fully delivered, the son born after him would not be considered a firstborn even with regard to inheritance. Apparently, this is because the emergence of the head alive is considered a birth, and therefore any subsequent child cannot be considered the firstborn. Evidently, it is unnecessary for the mishna here to teach this definition of a birth.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״ח א — Chullin 68a:9</span></div>
+    <div class="orig">וְכִי תֵּימָא, אַשְׁמְעִינַן בְּאָדָם, וְקָא מַשְׁמַע לַן בִּבְהֵמָה.</div>
+    <div class="trans" data-when="he">וכי תאמר: המשנה בבכורות השמיעה דין יציאת הראש באדם, ומשנתנו באה להשמיע שאותו דין נוהג אף בבהמה — ולכן אינו חוזר על מה שכבר נשנה.</div>
+    <div class="trans" data-when="en">And if you would say that the mishna there teaches us the definition of birth with regard to a person, and the mishna here teaches us that the same definition applies to an animal, another problem remains, as the Gemara will presently explain.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס״ח א — Chullin 68a:10</span></div>
+    <div class="orig">דְּאָדָם מִבְּהֵמָה לָא יָלֵיף, דְּאֵין פְּרוֹזְדוֹר לִבְהֵמָה, וּבְהֵמָה מֵאָדָם לָא יָלְפָא, דַּחֲשִׁיב פַּרְצוּף פָּנִים דִּידֵיהּ.</div>
+    <div class="trans" data-when="he">שהיה צורך בשניהם: דין האדם אינו נלמד מבהמה, שאין לבהמה פרוזדור (מבוא נסתר לרחם) כבאשה — ושמא באשה דווקא צריך שייצא הראש לגמרי; ודין הבהמה אינו נלמד מאדם, שצורת פני האדם חשובה (שנברא בצלם) — ושמא רק בו יציאת הראש לבד לידה. לפיכך הוצרכו שניהם.</div>
+    <div class="trans" data-when="en">Before explaining the problem with this suggestion, the Gemara explains why it is necessary to teach the definition with regard to both people and animals: Because the definition of birth with regard to a person cannot be derived from that of an animal, as an animal does not have a concealed opening [prozdor] to the womb, unlike women, whose thighs conceal the opening to their womb. Consequently, even if the definition were stated with regard to an animal, one might limit it to animals, as that stage is immediately visible; whereas in women it is not. And conversely, the definition of birth with regard to an animal cannot be derived from that of a person, as the form of a person’s face is significant because people are created in the image of God, and their faces bear the mark of their intelligence, which is not true of animals. Consequently, perhaps the emergence of the head alone is considered a birth only with regard to a person.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס״ח א — Chullin 68a:11</span></div>
+    <div class="orig">הָא נָמֵי תְּנֵינָא: שִׁלְיָא שֶׁיָּצְתָה מִקְצָתָהּ – אֲסוּרָה בַּאֲכִילָה, כְּסִימָן וָלָד בָּאִשָּׁה כָּךְ סִימָן וָלָד בַּבְּהֵמָה!</div>
+    <div class="trans" data-when="he">אף דין הבהמה כבר שנינו (לקמן עז.): שליא (שִׁלְיָה) שיצתה מקצתה — אסור העובר באכילה, שכשם שהשליא סימן ולד באשה כך היא סימן ולד בבהמה (שמא יצא בה ראש העובר ונחשב לידה). אם כן, אין צורך שמשנתנו תלמד שראש הוי לידה אף בבהמה.</div>
+    <div class="trans" data-when="en">The Gemara proceeds to explain why the above suggestion is not a solution: With regard to this halakha also, that the emergence of the head of an animal is considered a birth, we have already learned it in a mishna (77a): If part of a placenta emerged from the womb of an animal before it was slaughtered, its consumption is prohibited even after the mother animal is slaughtered. The reason for this is just as the placenta is an indication of the presence of a fetus in a woman, so too, it is an indication of the presence of a fetus in an animal. Consequently, it is possible that the part of the placenta that emerged contained the head of the fetus, and accordingly it would be considered to have been born. The slaughter of the mother animal would therefore not permit it for consumption. Evidently, it is unnecessary for the mishna here to teach the definition of a birth even with regard to an animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ס״ח א — Chullin 68a:12</span></div>
+    <div class="orig">אִי אָמְרַתְּ בִּשְׁלָמָא הֶחְזִירוֹ דְּרֵישָׁא דַּוְקָא, תְּנָא סֵיפָא אַטּוּ רֵישָׁא.</div>
+    <div class="trans" data-when="he">חזרה לקושיא על רב: בשלמא אם תאמר ש״החזירו״ דרישא נשנה בדווקא — ללמד שהאבר עצמו אסור אלא אם כן החזירו (כנגד רב) — אז מובן שהתנא שנה ״החזירו״ אף בסיפא רק אגב הרישא, ואין בסיפא חידוש.</div>
+    <div class="trans" data-when="en">The Gemara has established that the latter clause does not teach any novelty. Accordingly, it returns to challenging Rav’s ruling: Granted, the mishna is understood if you say that the statement that the fetus brought its foreleg back inside the mother animal, which is mentioned in the first clause of the mishna, is written specifically in order to teach the novelty that the foreleg is permitted if it was brought back before the slaughter, in contrast to Rav’s ruling. If so, then one can claim the mishna taught it in the latter clause due to the first clause, so that they would be parallel stylistically, and no novelty is necessary in the latter clause.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ס״ח א — Chullin 68a:13</span></div>
+    <div class="orig">אֶלָּא אִי אָמְרַתְּ: לָא דְּרֵישָׁא דַּוְקָא, וְלָא דְּסֵיפָא דַּוְקָא, לְמָה לֵיהּ לְמִתְנְיַיהּ כְּלָל?</div>
+    <div class="trans" data-when="he">אבל אם תאמר שלא הרישא בדווקא (אלא מדברת בשאר העובר) ולא הסיפא בדווקא (שכבר נשנה דין הראש) — אם כן למה הוצרך התנא לשנות ״החזירו״ כלל? על כרחך הרישא בדווקא, ללמד שהאבר אסור אלא אם כן החזירו — נגד רב.</div>
+    <div class="trans" data-when="en">But if you say the first clause is not written specifically and does not teach a novelty, but rather the mishna is referring to the permitted status of the rest of the fetus, which is permitted even if it does not bring back its foreleg, and you also say the latter clause is not written specifically to teach a novelty, since the definition of birth is already taught in a mishna elsewhere, then why does it need to teach the halakha that the foreleg or head were brought back at all? Perforce, the first clause must be referring to the permitted status of the foreleg and limiting it specifically to the case where it was brought back inside. This contradicts Rav’s ruling.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ס״ח א — Chullin 68a:14</span></div>
+    <div class="orig">לָא, לְעוֹלָם אַעוּבָּר, וְכִדְאָמַר רַב נַחְמָן בַּר יִצְחָק: לֹא נִצְרְכָה אֶלָּא לִמְקוֹם חֲתָךְ. הָכָא נָמֵי, לֹא נִצְרְכָה אֶלָּא לִמְקוֹם חֲתָךְ.</div>
+    <div class="trans" data-when="he">תירוץ: לעולם המשנה מדברת בשאר העובר, ו״החזירו״ בכל זאת מחדש דבר — כמו שאמר רב נחמן בר יצחק בברייתא: לא נצרכה אלא ללמד על מקום החתך. אף כאן: אם לא החזיר, נאסר גם מקום החתך שבגוף העובר (ולא רק היד עצמה).</div>
+    <div class="trans" data-when="en">The Gemara responds: No; actually, the mishna is referring to the permitted status of the rest of the fetus, but nevertheless, the statement that the fetus brought back its foreleg does teach a novelty. This is similar to that which Rav Naḥman bar Yitzḥak said, in explanation of a ruling in a baraita cited below, that it is necessary only with regard to the location of a cut limb on the fetus’s body. If the foreleg were to be severed at precisely the point that lay on the boundary between the inside and the outside of the womb, then the location of the cut on the fetus’s body would also be prohibited. Here too, one can explain that the ruling is necessary only with regard to the location of the cut, and it teaches that if the fetus did not bring back its foreleg, then not only is the foreleg prohibited but the location of the cut is also prohibited.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ס״ח א — Chullin 68a:15</span></div>
+    <div class="orig">תָּא שְׁמַע: בְּהֵמָה הַמְקַשָּׁה לֵילֵד, הוֹצִיא עוּבָּר אֶת יָדוֹ וְהֶחְזִירָהּ, וְאַחַר כָּךְ שָׁחַט אֶת אִמּוֹ – מוּתָּר בַּאֲכִילָה. שָׁחַט אֶת אִמּוֹ וְאַחַר כָּךְ הֶחְזִירָהּ – אָסוּר בַּאֲכִילָה.</div>
+    <div class="trans" data-when="he">תא שמע מברייתא לסתור את רב: המקשה לילד, הוציא העובר ידו והחזירה ואחר כך שחט את אמו — מותר באכילה; שחט את אמו ורק אחר כך החזירה — אסור באכילה.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a challenge to Rav’s ruling from a baraita: If an animal was encountering difficulty giving birth, and as a result the fetus extended its foreleg outside the mother animal’s body and then brought it back inside and then afterward one slaughtered its mother, its consumption is permitted by virtue of the slaughter of the mother animal. But if one first slaughtered its mother, and only afterward did the fetus return its foreleg back inside, its consumption is prohibited.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ס״ח א — Chullin 68a:16</span></div>
+    <div class="orig">הוֹצִיא אֶת יָדוֹ וַחֲתָכוֹ, וְאַחַר כָּךְ שָׁחַט אֶת אִמּוֹ – שֶׁבַּחוּץ טָמֵא וְאָסוּר, וְשֶׁבִּפְנִים טָהוֹר וּמוּתָּר.</div>
+    <div class="trans" data-when="he">המשך הברייתא: הוציא העובר את ידו וחתכוה, ואחר כך שחט את אמו — מה שהיה בחוץ (היד) טמא ואסור, כאבר מן החי; ומה שבפנים (שאר העובר) טהור ומותר מכוח שחיטת האם.</div>
+    <div class="trans" data-when="en">If the fetus extended its foreleg outside and one cut it off, and then afterward one slaughtered its mother, then the part of the foreleg that was outside and was cut off is ritually impure and its consumption is prohibited, as it has the status of a limb cut from a living animal, which is forbidden. And the rest of the fetus that was inside is ritually pure and its consumption is permitted by virtue the slaughter of the mother animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ס״ח א — Chullin 68a:17</span></div>
+    <div class="orig">שָׁחַט אֶת אִמּוֹ וְאַחַר כָּךְ חֲתָכוֹ –</div>
+    <div class="trans" data-when="he">המשך: שחט את אמו ורק אחר כך חתך את היד שיצאה —</div>
+    <div class="trans" data-when="en">If one slaughtered its mother and only afterward cut off the foreleg that had been extended outside,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ס״ח ב — Chullin 68b:1</span></div>
+    <div class="orig">הַבָּשָׂר מַגַּע נְבֵלָה, דִּבְרֵי רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">— הבשר (של האם ושאר העובר שנגעו ביד) דינו כמגע נבלה, שהיד שלא ניתרה בשחיטה הרי היא כנבלה ומטמאה במגע. דברי ר׳ מאיר.</div>
+    <div class="trans" data-when="en">then the flesh of both the mother animal and the fetus, excluding the foreleg, is impure due to contact with a carcass. Since the foreleg of the now dead fetus was not permitted through an act of slaughtering, it is regarded as a carcass. It therefore imparts impurity to the rest of the flesh, which was in contact with it. This is the statement of Rabbi Meir.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין ס״ח ב — Chullin 68b:2</span></div>
+    <div class="orig">וַחֲכָמִים אוֹמְרִים: מַגַּע טְרֵפָה שְׁחוּטָה.</div>
+    <div class="trans" data-when="he">וחכמים אומרים: דין הבשר כמגע טריפה שחוטה — שאמנם שחיטת האם אינה מתירה את היד באכילה, אבל מועילה למנוע ממנה טומאת נבלה; ולכן אינה מטמאה אלא פוסלת קדשים במגעה.</div>
+    <div class="trans" data-when="en">And the Rabbis say: Although the slaughter of the mother animal does not permit the consumption of the foreleg, it does serve to prevent the foreleg from imparting the ritual impurity of a carcass. Accordingly, the flesh has the status of having been in contact with a slaughtered tereifa. By Torah law, consumption of the animal is prohibited but it does not impart ritual impurity. The Sages decreed it to be impure in that it disqualifies sacrificial flesh with which it comes in contact.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין ס״ח ב — Chullin 68b:3</span></div>
+    <div class="orig">קָתָנֵי מִיהָא רֵישָׁא: הוֹצִיא עוּבָּר אֶת יָדוֹ וְהֶחְזִירָהּ, וְאַחַר כָּךְ שָׁחַט אֶת אִמּוֹ – מוּתָּר בַּאֲכִילָה; מַאי לָאו אַאֵבֶר? לָא, אַעוּבָּר.</div>
+    <div class="trans" data-when="he">על כל פנים שנינו ברישא של הברייתא: הוציא ידו והחזירה ואחר כך שחט — מותר. וכי לא מדובר על האבר עצמו, שמותר — נגד רב? תשובה: לא, מדובר על שאר העובר.</div>
+    <div class="trans" data-when="en">The Gemara explains the challenge to Rav’s ruling: In any event, the first clause of the baraita teaches: If the fetus extended its foreleg outside the mother animal’s body and then brought it back inside and then afterward one slaughtered its mother, its consumption is permitted. What, is it not referring to the limb, i.e., the foreleg, and the baraita rules that it is permitted, in contradiction to Rav’s ruling? The Gemara responds: No, it is referring to the rest of the fetus.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">19</span> <span class="ref">חולין ס״ח ב — Chullin 68b:4</span></div>
+    <div class="orig">אִי אַעוּבָּר, אֵימָא סֵיפָא: שָׁחַט אֶת אִמּוֹ וְאַחַר כָּךְ הֶחְזִירוֹ – אָסוּר בַּאֲכִילָה; וְאִי עוּבָּר, אַמַּאי אָסוּר?</div>
+    <div class="trans" data-when="he">קושיא: אם הברייתא בשאר העובר, אמור את הסיפא: ״שחט את אמו ואחר כך החזירו — אסור״; ואם בעובר מדובר, מדוע יהא אסור? והרי שאר העובר ניתר בשחיטה!</div>
+    <div class="trans" data-when="en">The Gemara questions this: If the baraita is referring to the fetus, say the latter clause: If one first slaughtered its mother, and only afterward the fetus returned its foreleg inside, its consumption is prohibited. The Gemara explains the question: And if it is referring to the fetus, why should it be prohibited in this case?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">20</span> <span class="ref">חולין ס״ח ב — Chullin 68b:5</span></div>
+    <div class="orig">כִּדְאָמַר רַב נַחְמָן בַּר יִצְחָק: לֹא נִצְרְכָה אֶלָּא לִמְקוֹם חֲתָךְ, הָכָא נָמֵי לֹא נִצְרְכָה אֶלָּא לִמְקוֹם חֲתָךְ.</div>
+    <div class="trans" data-when="he">תירוץ: כמו שאמר רב נחמן בר יצחק — לא נצרכה הסיפא אלא למקום החתך. אף כאן הברייתא בשאר העובר, והאיסור הוא על מקום החתך שבגוף העובר כשלא החזיר; אבל היד עצמה אסורה לעולם, אף שהחזירה — כדברי רב.</div>
+    <div class="trans" data-when="en">The Gemara answers: The baraita is referring to the fetus, and should be explained in a manner similar to that which Rav Naḥman bar Yitzḥak said, in explanation of a ruling in a baraita cited below, that it is necessary only with regard to the location of the cut limb on the fetus’s body. If the foreleg was severed at precisely the point that lay on the boundary between the inside and outside when it was extended outside the womb, the location of the cut on the fetus’s body is also prohibited. Here too, one can explain that this ruling is necessary only with regard to the location of the cut, and it teaches that if the fetus did not return its foreleg, then not only is the foreleg prohibited but the location of the cut is prohibited as well. The foreleg itself, though, is prohibited even if it was brought back inside before the slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">21</span> <span class="ref">חולין ס״ח ב — Chullin 68b:6</span></div>
+    <div class="orig">אִינִי? וְהָא כִּי אֲתָא אֲבִימִי מִבֵּי חוֹזָאֵי, אֲתָא וְאַיְיתִי מַתְנִיתָא בִּידֵיהּ: פַּרְסָה הֶחְזִיר – אֱכוֹל, פְּרָסוֹת הֶחְזִיר – אֱכוֹל. מַאי לָאו הֶחְזִיר פַּרְסָה – אֲכוּל פַּרְסָה?</div>
+    <div class="trans" data-when="he">וכי כן? והרי כשבא אבימי מבי חוזאי הביא עמו ברייתא: ״פרסה (פרסת רגל אחת) החזיר — אכול, פרסות החזיר — אכול״. וכי לא משמע: החזיר את הפרסה — אכול את אותה פרסה עצמה — נגד רב?</div>
+    <div class="trans" data-when="en">The Gemara asks: Is that so? But when Avimi came from Bei Ḥozai he came and brought a baraita with him: One of the sources (see 69a) that the slaughter of a pregnant animal also serves to permit the consumption of the fetus is the verse: “And every animal that has a split hoof and is cloven into two hooves, chews the cud, of the animals, it you may eat” (Deuteronomy 14:6). The verse mentions both “hoof” in the singular and “hooves” in the plural to teach that sometimes one may eat two hooves and sometimes only one, as follows: If the fetus extended two of its hooves outside the womb, if it returned one hoof one may eat, if it brought back both hooves one may eat. What, is it not that the baraita means that if it brought back one hoof one may eat that hoof, and likewise if it brought back both hooves one may eat both of them, in contradiction to Rav’s ruling?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">22</span> <span class="ref">חולין ס״ח ב — Chullin 68b:7</span></div>
+    <div class="orig">לֹא, הֶחֱזִיר פַּרְסָה – אֱכוֹל עוּבָּר. אִי עוּבָּר, מַאי אִירְיָא הֶחְזִיר? אֲפִילּוּ לֹא הֶחֱזִיר נָמֵי! אָמַר רַב נַחְמָן בַּר יִצְחָק: לֹא נִצְרְכָה אֶלָּא לִמְקוֹם חֲתָךְ.</div>
+    <div class="trans" data-when="he">תשובה: לא, ״החזיר פרסה — אכול עובר״, שאר העובר. וקשה: אם בעובר, למה נקט ״החזיר״? אפילו לא החזיר מותר! ענה רב נחמן בר יצחק: לא נצרכה הברייתא אלא ללמד על מקום החתך.</div>
+    <div class="trans" data-when="en">The Gemara responds: No, it means that if it brought back one hoof or even both, one may eat the rest of the fetus but not the hooves. The Gemara objects: If it is referring to the permitted status of the fetus, why does it specifically state that it brought back the hoof? Even if it did not bring it back the fetus would be permitted. Rav Naḥman bar Yitzḥak said the ruling of the baraita is necessary only with regard to the location of the cut limb on the body of the fetus. If the limb were to be severed at precisely the point that lay on the boundary between the inside and the outside when it was extended outside the womb, then the location of the cut on the fetus’s body would also be prohibited, but only if the fetus had not brought back that limb before the mother animal was slaughtered.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">23</span> <span class="ref">חולין ס״ח ב — Chullin 68b:8</span></div>
+    <div class="orig">וְהָא תְּרֵי קְרָאֵי קָא נָסֵיב לַהּ! מַאי לָאו חַד לְאֵבֶר, וְחַד לִמְקוֹם חֲתָךְ? לָא, חַד לִמְקוֹם חֲתָךְ, וְחַד לְקָלוּט בִּמְעֵי פָרָה.</div>
+    <div class="trans" data-when="he">קושיא: והרי הברייתא נוקטת שני כתובים (פרסה ופרסות)! וכי לא אחד מהם בא להתיר את האבר עצמו (נגד רב) ואחד למקום החתך? תשובה: לא; אחד למקום החתך, ואחד להתיר קלוט (בעל פרסה סתומה) הנמצא במעי פרה.</div>
+    <div class="trans" data-when="en">The Gemara persists: But even given Rav Naḥman bar Yitzḥak’s claim the baraita adduces two verses, i.e., the mention of hoof and hooves. What, is it not that one serves to permit the limb, in contradiction to Rav’s ruling, and the other one serves to permit the location of the cut, in accordance with Rav Naḥman bar Yitzḥak’s ruling? The Gemara responds: No; one mention does serve to permit the location of the cut, but the other one serves to permit a fetus with non-cloven hooves [kalut] found inside the womb of a cow that was slaughtered. Although the fetus does not bear the distinguishing characteristics of a kosher species, it is nevertheless permitted by virtue of the slaughter of its mother.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">24</span> <span class="ref">חולין ס״ח ב — Chullin 68b:9</span></div>
+    <div class="orig">וְאַלִּיבָּא דְּרַבִּי שִׁמְעוֹן, דְּאָמַר רַבִּי שִׁמְעוֹן: קָלוּט בֶּן פָּרָה אָסוּר. הָנֵי מִילֵּי הֵיכָא דְּיָצָא לַאֲוִיר הָעוֹלָם, אֲבָל בִּמְעֵי אִמּוֹ – שְׁרֵי.</div>
+    <div class="trans" data-when="he">וכתוב זה נצרך אליבא דר׳ שמעון, שאמר: קלוט בן פרה (עגל בעל פרסה סתומה שנולד מפרה כשרה) — אסור, שאין בו סימני טהרה. ולמדנו שדבר זה אמור דווקא כשיצא לאויר העולם (נולד); אבל כשעודנו במעי אמו — מותר בשחיטתה.</div>
+    <div class="trans" data-when="en">And it is necessary to have a specific source to permit this according to the opinion of Rabbi Shimon, as Rabbi Shimon says: A calf with non-cloven hooves born from a kosher cow is forbidden, as the calf does not bear the distinguishing characteristics of a kosher species. The verse teaches that this matter applies only where the fetus emerged into the airspace of the world, i.e., it was born before the mother animal was slaughtered. But if it was still inside its mother’s womb when the mother was slaughtered, it is permitted.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">עולא משם ר׳ יוחנן: אבר עצמו מותר — תיובתא</span><span data-when="en">Ulla in R. Yoḥanan’s name: the limb is permitted — refuted</span>
+      <span class="ref">Chullin 68b:10-16</span></h2>
+  <div class="lead"><span data-when="he">עולא משם ר׳ יוחנן: האבר עצמו מותר. דרשה: הכל היו בכלל ׳בשר בשדה טריפה׳, וכשפרט הכתוב חטאת — דווקא היא נאסרת בחזרה, אך שאר דברים שחזרו מותרים. ברייתא משווה ל׳טריפה׳ שאין לה היתר — ועולא נסתר (תיובתא).</span><span data-when="en">Ulla in R. Yoḥanan’s name: the limb itself is permitted. The exposition: all were included in “flesh in the field, a tereifa,” and since the verse singled out a sin-offering, only it stays forbidden on return, while other items that returned are permitted. A baraita likens it to a tereifa that can never regain permission — and Ulla is conclusively refuted.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עולא אמר ר׳ יוחנן: ואבר עצמו מותר"]:::statement
+  Q1{"② רב יהודה: והא רב ושמואל אמרו אבר אסור!"}:::question
+  S2["③ עולא: כך אמר ר׳ יוחנן — הכל היו בכלל ׳בשר בשדה טריפה׳"]:::statement
+  S3["④ כשפרט הכתוב חטאת שיצתה וחזרה — אסור; אבל כל מילי דהדור — שרי"]:::statement
+  Q2{"⑤ מיתיבי מברייתא: ׳בשר בשדה׳ — מה ת״ל? כמעשר ובכורים שחזרו — מותרין; ת״ל ׳טריפה׳"}:::question
+  C1["⑥ מאי תלמודא? רבה: כטריפה שאין לה היתר — תיובתא דעולא, תיובתא"]:::conclusion
+  S4["⑦ אמר מר: היכן מצינו במעשר ובכורים? · דכתיב ׳לא תוכל לאכל בשעריך׳ — חזרו, מותרין"]:::statement
+  S1 -.->|קושיא| Q1
+  Q1 -->|תשובה| S2
+  S2 -->|דרשה| S3
+  S3 -.->|מיתיבי| Q2
+  Q2 -->|מסקנה| C1
+  C1 -->|ביאור הברייתא| S4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Ulla said R. Yoḥanan: and the limb itself is permitted"]:::statement
+  Q1{"② Rav Yehuda: but Rav and Shmuel both said the limb is forbidden!"}:::question
+  S2["③ Ulla: thus said R. Yoḥanan — all were included in ׳flesh in the field, a tereifa׳"]:::statement
+  S3["④ Since the verse singled out a sin-offering that left and returned — forbidden; but all else that returned — permitted"]:::statement
+  Q2{"⑤ Objection from a baraita: ׳flesh in the field׳ — why? Like tithe and first fruits that returned — permitted; so ׳tereifa׳"}:::question
+  C1["⑥ What is the derivation? Rabba: like a tereifa that can never regain permission — Ulla is refuted, refuted"]:::conclusion
+  S4["⑦ The Master said: where did we find this in tithe and first fruits? · ׳You may not eat within your gates׳ — returned, permitted"]:::statement
+  S1 -.->|objection| Q1
+  Q1 -->|reply| S2
+  S2 -->|exposition| S3
+  S3 -.->|objection| Q2
+  Q2 -->|conclusion| C1
+  C1 -->|clarifying the baraita| S4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עוּלָּא אָמַר רַבִּי יוֹחָנָן: וְאֵבֶר עַצְמוֹ מוּתָּר"]:::statement
+  Q1{"② אֲמַר לֵיהּ רַב יְהוּדָה … וְהָא רַב וּשְׁמוּאֵל … אֵבֶר עַצְמוֹ אָסוּר!"}:::question
+  S2["③ הָכִי אָמַר רַבִּי יוֹחָנָן: הַכֹּל הָיוּ בִּכְלַל ׳בָּשָׂר בַּשָּׂדֶה טְרֵפָה לֹא תֹאכֵלוּ׳"]:::statement
+  S3["④ כְּשֶׁפָּרַט … גַּבֵּי חַטָּאת שֶׁיָּצְתָה … וְחָזְרָה – אָסוּר … אֲבָל כֹּל מִילֵּי – כֵּיוָן דַּהֲדוּר – שְׁרֵי"]:::statement
+  Q2{"⑤ מֵיתִיבִי: ׳בָּשָׂר בַּשָּׂדֶה׳ … כְּמַעֲשֵׂר … וּבִכּוּרִים … וְחָזְרוּ – מוּתָּרִין … תַּלְמוּד לוֹמַר ׳טְרֵפָה׳"}:::question
+  C1["⑥ מַאי תַּלְמוּדָא? אָמַר רַבָּה: כִּטְרֵפָה … שׁוּב אֵין לָהּ הֶיתֵּר … תְּיוּבְתָּא דְעוּלָּא, תְּיוּבְתָּא"]:::conclusion
+  S4["⑦ אָמַר מָר … הֵיכָן מָצִינוּ? דִּכְתִיב ׳לֹא תוּכַל לֶאֱכֹל בִּשְׁעָרֶיךָ׳ … וְחָזְרוּ – מוּתָּרִין"]:::statement
+  S1 -.->|קושיא| Q1
+  Q1 -->|תשובה| S2
+  S2 -->|דרשה| S3
+  S3 -.->|מיתיבי| Q2
+  Q2 -->|מסקנה| C1
+  C1 -->|ביאור הברייתא| S4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ח ב — Chullin 68b:10</span></div>
+    <div class="orig">עוּלָּא אָמַר רַבִּי יוֹחָנָן: וְאֵבֶר עַצְמוֹ מוּתָּר.</div>
+    <div class="trans" data-when="he">עולא אמר בשם ר׳ יוחנן, כנגד רב: ואבר עצמו (היד שיצאה והוחזרה) — מותר באכילה מכוח שחיטת האם.</div>
+    <div class="trans" data-when="en">§ The Gemara attempted to challenge Rav’s ruling that once a limb of a fetus is extended outside the mother animal’s body it becomes prohibited even if it was then brought back, but did not find a conclusive refutation. It now presents a dissenting opinion: Ulla says that Rabbi Yoḥanan says: And even the limb itself is permitted by virtue of the slaughter of the mother animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ח ב — Chullin 68b:11</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב יְהוּדָה לְעוּלָּא: וְהָא רַב וּשְׁמוּאֵל דְּאָמְרִי תַּרְוַיְיהוּ אֵבֶר עַצְמוֹ אָסוּר! אֲמַר לֵיהּ: מַאן יָהֵיב לַן מֵעַפְרָא דְּרַב וּשְׁמוּאֵל וּמָלֵינַן עַיְינִין, אֶלָּא הָכִי אָמַר רַבִּי יוֹחָנָן: הַכֹּל הָיוּ בִּכְלַל ״בָּשָׂר בַּשָּׂדֶה טְרֵפָה לֹא תֹאכֵלוּ״,</div>
+    <div class="trans" data-when="he">אמר לו רב יהודה לעולא: והרי רב ושמואל שניהם אמרו שהאבר עצמו אסור! ענה לו עולא: מי יתן לנו מעפר קבריהם של רב ושמואל ונמלא עינינו (כה גדולים הם), ואף על פי כן אני נוקט כר׳ יוחנן, וכך אמר: הכל היו בכלל ״ובשר בשדה טריפה לא תאכלו״ — כל דבר שיצא חוץ למחיצתו נאסר.</div>
+    <div class="trans" data-when="en">Rav Yehuda said to Ulla: But Rav and Shmuel both say the limb itself is prohibited; how can you say otherwise? Ulla said to him: Who will give us some of the dust of the graves of Rav and Shmuel and we will fill our eyes with it; such is the greatness of those Sages. But I follow the opinion of Rabbi Yoḥanan, and this is what Rabbi Yoḥanan says: Initially one would assume all flesh that is permitted due to being within a certain boundary, e.g., a fetus inside its mother’s womb, the flesh of offerings of the most sacred order within the Temple courtyard, and the flesh of offerings of lesser sanctity within Jerusalem, was included in the verse: “And flesh, in the field, a tereifa, you shall not eat” (Exodus 22:30). The verse is interpreted to teach that if such flesh leaves its boundaries it is rendered forbidden, even should it subsequently return.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ח ב — Chullin 68b:12</span></div>
+    <div class="orig">כְּשֶׁפָּרַט לְךָ הַכָּתוּב גַּבֵּי חַטָּאת שֶׁיָּצְתָה חוּץ לִמְחִיצָתָהּ וְחָזְרָה – אָסוּר, חַטָּאת הוּא דִּפְרַט רַחֲמָנָא בָּהּ, אֲבָל כֹּל מִילֵּי – כֵּיוָן דַּהֲדוּר – שְׁרֵי.</div>
+    <div class="trans" data-when="he">המשך דברי ר׳ יוחנן: כיון שפרט לך הכתוב בנפרד אצל חטאת, שאם יצאה חוץ למחיצתה וחזרה — אסורה, שמע מינה שדווקא בחטאת פרט הכתוב; אבל כל שאר הדברים שיצאו חוץ למחיצתם וחזרו — מותרים, ובכללם אבר העובר שהוחזר.</div>
+    <div class="trans" data-when="en">Once another verse applies the concept for you specifically with regard to a sin offering, teaching that if it went outside of its boundary and returned it is prohibited (see Leviticus 10:18), then it is apparent that the Merciful One specifically applied the concept to a sin offering. But with regard to all other items that left their boundary, once they are brought back they are permitted, including the limb of a fetus that was extended outside the womb and then was brought back.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ח ב — Chullin 68b:13</span></div>
+    <div class="orig">מֵיתִיבִי: ״בָּשָׂר בַּשָּׂדֶה טְרֵפָה לֹא תֹאכֵלוּ״, מָה תַּלְמוּד לוֹמַר? לְפִי שֶׁמָּצִינוּ בְּמַעֲשֵׂר שֵׁנִי וּבִכּוּרִים, שֶׁאַף עַל פִּי שֶׁיָּצְאוּ חוּץ לִמְחִיצָתָן וְחָזְרוּ – מוּתָּרִין, יָכוֹל אַף זֶה כֵּן? תַּלְמוּד לוֹמַר ״טְרֵפָה״.</div>
+    <div class="trans" data-when="he">מיתיבי על עולא ור׳ יוחנן מברייתא: ״בשר בשדה טריפה לא תאכלו״ — מה בא ללמד? לפי שמצינו במעשר שני ובכורים שאף שיצאו חוץ למחיצתם (ירושלים) וחזרו — מותרים, יכול אף בשר שיצא חוץ למחיצתו וחזר יהא מותר? תלמוד לומר ״טריפה״ — שאינו חוזר להיתרו.</div>
+    <div class="trans" data-when="en">The Gemara raises an objection to the opinion of Ulla and Rabbi Yoḥanan from a baraita: It is derived from the verse: “And flesh, in the field, a tereifa, you shall not eat,” that flesh that leaves the boundary in which it is permitted is thereby rendered forbidden like a tereifa. Why must the verse state that it is like a tereifa? The baraita explains: Since we find with regard to second tithe and first fruits that even though they went outside of their boundary, which is the city of Jerusalem and the only place where it is permitted to eat them, nevertheless if they are brought back to there they are once again permitted, one might have thought that also with regard to this prohibition, that of flesh that leaves its boundary, it is so, i.e., if it is brought back it once again becomes permitted for consumption. Therefore, the verse states: “A tereifa.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ח ב — Chullin 68b:14</span></div>
+    <div class="orig">מַאי תַּלְמוּדָא? אָמַר רַבָּה: כִּטְרֵפָה, מָה טְרֵפָה – כֵּיוָן שֶׁנִּטְרְפָה שׁוּב אֵין לָהּ הֶיתֵּר, אַף בָּשָׂר – כֵּיוָן שֶׁיָּצָא חוּץ לִמְחִיצָתוֹ שׁוּב אֵין לוֹ הֶיתֵּר! תְּיוּבְתָּא דְעוּלָּא, תְּיוּבְתָּא.</div>
+    <div class="trans" data-when="he">מהו הלימוד מן ״טריפה״? אמר רבה: הוקש הבשר לטריפה — מה טריפה, כיון שנטרפה שוב אין לה היתר, אף בשר שיצא חוץ למחיצתו שוב אין לו היתר אף אם הוחזר. נמצא שאבר העובר נאסר לעולם — תיובתא דעולא, תיובתא (נדחו דבריו לגמרי).</div>
+    <div class="trans" data-when="en">The Gemara clarifies: What is the biblical derivation from the term “a tereifa”? Rabba said: The verse indicates that the prohibition of flesh that left its boundary is like the prohibition of a tereifa. Just as with regard to a tereifa, once an animal is mortally wounded, rendering it a tereifa, it can no longer regain a permitted status, so too with regard to flesh referred to in the verse: Once it has gone outside of its boundary it can no longer regain permitted status. Accordingly, if the limb of a fetus was extended outside the womb it would thereby become permanently prohibited, contradicting the opinion of Ulla and Rabbi Yoḥanan. The Gemara concludes: The refutation of the statement of Ulla is indeed a conclusive refutation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ח ב — Chullin 68b:15</span></div>
+    <div class="orig">אָמַר מָר: לְפִי שֶׁמָּצִינוּ בְּמַעֲשֵׂר שֵׁנִי וּבִכּוּרִים. הֵיכָן מָצִינוּ?</div>
+    <div class="trans" data-when="he">הגמרא מבארת אגב את הברייתא: ״אמר מר: לפי שמצינו במעשר שני ובכורים שיצאו וחזרו ומותרין״. שואלת הגמרא: היכן מצינו דין זה?</div>
+    <div class="trans" data-when="en">The Gemara analyzes the baraita, which states: The Master said: Since we find with regard to second tithe and first fruits that although they left their boundary, if they are brought back there they are again permitted. The Gemara asks: Where did we find this, i.e., what is the source for this halakha?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״ח ב — Chullin 68b:16</span></div>
+    <div class="orig">דִּכְתִיב: ״לֹא תוּכַל לֶאֱכֹל בִּשְׁעָרֶיךָ מַעְשַׂר דְּגָנֶךָ וְגוֹ׳״, בִּשְׁעָרֶיךָ הוּא דְּלָא תֵּיכוּל, אֲבָל יָצְאוּ חוּץ לִמְחִיצָתָן וְחָזְרוּ – מוּתָּרִין.</div>
+    <div class="trans" data-when="he">שנאמר: ״לא תוכל לאכל בשעריך מעשר דגנך וגו׳״ — דווקא בשעריך (מחוץ לירושלים) אסור לאכלם, ומכלל הן אתה שומע לאו: אבל אם יצאו חוץ למחיצתם (ירושלים) וחזרו — מותרים.</div>
+    <div class="trans" data-when="en">The Gemara explains that it is written: “You may not eat within your gates the tithe of your grain, or of your wine, or of your oil, or the firstborn of your herd or of your flock, nor any of your vows that you have vowed, nor your voluntary offerings, nor the offering of your hand. But you shall eat them before the Lord your God” (Deuteronomy 12:17–18). The phrase “the tithe of your grain, or of your wine, or of your oil” is referring to second tithe, and the phrase “the offering of your hand” is referring to first fruits. The verse states that all the items listed may be eaten only “before the Lord your God,” i.e., within the city of Jerusalem. The prohibition stated in the verse is that within your gates, i.e., outside of Jerusalem, you may not eat these items. But by inference, if these items went outside of their boundary, i.e., outside of Jerusalem, and then were brought back, they are permitted.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">נוסח מערבא, ושתי איבעיות עד רובו</span><span data-when="en">The Western version, and two dilemmas up to a majority</span>
+      <span class="ref">Chullin 68b:17–69a:2</span></h2>
+  <div class="lead"><span data-when="he">בארץ ישראל נחלקו רב ור׳ יוחנן אם ׳יש לידה לאברים׳; נפקא מינה — לאסור מיעוט האבר שבפנים. ושתי איבעיות: מוציא ומחזיר אבר אחר אבר עד רובו, ומוציא וחותך עד רובו — מהו? תא שמע מ׳זה הכלל׳ ודחייה.</span><span data-when="en">In Eretz Yisrael, Rav and R. Yoḥanan dispute whether ‘limbs have a birth’; the difference — forbidding the minority of a limb still inside. Two dilemmas: extending-and-returning limb after limb up to a majority, and extending-and-cutting up to a majority — what is the law? A proof from ‘the principle,’ then deflected.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① במערבא: רב — יש לידה לאברים · ר׳ יוחנן — אין לידה לאברים"]:::statement
+  Q1{"② מאי בינייהו? לאסור מיעוט אבר שבפנים"}:::question
+  Q2{"③ איבעיא: לאומר אין לידה — מוציא ומחזיר עד רובו, מהו? נפק רובא או הדר?"}:::question
+  Q3{"④ אם תמצי לומר הדר — מוציא וחותך עד רובו, מהו? רובא בבת אחת בעינן?"}:::question
+  P1["⑤ תא שמע: זה הכלל — שאינה גופה מותר; לאתויי מאי? לאו כהאי גוונא?"]:::proof
+  A1["⑥ לא, לאתויי קלוט במעי פרה, ואליבא דר׳ שמעון — במעי אמו שרי"]:::answer
+  S1 -->|נפקא מינה| Q1
+  Q1 -->|איבעיא| Q2
+  Q2 -->|את״ל| Q3
+  Q3 -.->|תא שמע| P1
+  P1 -->|דחייה| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① In the West: Rav — limbs have a birth · R. Yoḥanan — limbs have no birth"]:::statement
+  Q1{"② What is between them? Forbidding the minority of a limb still inside"}:::question
+  Q2{"③ Dilemma: per ׳no birth׳ — extend-and-return up to a majority, what? Has a majority left, or returned?"}:::question
+  Q3{"④ If you say returned — extend-and-cut up to a majority, what? Do we need a majority at once?"}:::question
+  P1["⑤ Come and hear: the principle — what is not her body is permitted; to include what? Not such a case?"]:::proof
+  A1["⑥ No, to include a non-cloven fetus in a cow׳s womb, per R. Shimon — in the womb it is permitted"]:::answer
+  S1 -->|difference| Q1
+  Q1 -->|dilemma| Q2
+  Q2 -->|if you say| Q3
+  Q3 -.->|come and hear| P1
+  P1 -->|deflected| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בְּמַעְרְבָא … רַב אָמַר: יֵשׁ לֵידָה לְאֵבָרִים, וְרַבִּי יוֹחָנָן אָמַר: אֵין לֵידָה לְאֵבָרִים"]:::statement
+  Q1{"② מַאי בֵּינַיְיהוּ? אִיכָּא בֵּינַיְיהוּ לְמֵיסַר מִיעוּט אֵבֶר שֶׁבִּפְנִים"}:::question
+  Q2{"③ אִיבַּעְיָא לְהוּ … אֵין לֵידָה … הוֹצִיא … וְהֶחְזִירָהּ … עַד שֶׁהִשְׁלִימוֹ לְרוּבּוֹ, מַהוּ?"}:::question
+  Q3{"④ אִם תִּמְצֵי לוֹמַר … הוֹצִיא … וַחֲתָכָהּ … עַד שֶׁהִשְׁלִימוֹ לְרוּבּוֹ … רוּבָּא בְּבַת אַחַת בָּעֵינַן?"}:::question
+  P1["⑤ תָּא שְׁמַע: זֶה הַכְּלָל … שֶׁאֵין גּוּפָהּ לְאֵתוֹיֵי מַאי? לָאו לְאֵתוֹיֵי כְּהַאי גַּוְנָא?"]:::proof
+  A1["⑥ לָא, לְאֵתוֹיֵי קָלוּט בִּמְעֵי פָּרָה … אֲבָל בִּמְעֵי אִמּוֹ – שְׁרֵי"]:::answer
+  S1 -->|נפקא מינה| Q1
+  Q1 -->|איבעיא| Q2
+  Q2 -->|את״ל| Q3
+  Q3 -.->|תא שמע| P1
+  P1 -->|דחייה| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ח ב — Chullin 68b:17</span></div>
+    <div class="orig">בְּמַעְרְבָא מַתְנוּ הָכִי, רַב אָמַר: יֵשׁ לֵידָה לְאֵבָרִים, וְרַבִּי יוֹחָנָן אָמַר: אֵין לֵידָה לְאֵבָרִים.</div>
+    <div class="trans" data-when="he">בארץ ישראל (מערבא) שנו את המחלוקת כך: רב אמר — יש לידה לאברים: אבר שיצא נחשב כנולד ועומד בפני עצמו, ולעולם אין שחיטת האם מתירתו. ור׳ יוחנן אמר — אין לידה לאברים: כל זמן שהאבר בפנים בשעת השחיטה, הוא ניתר בה.</div>
+    <div class="trans" data-when="en">§ The Gemara explained the dispute between Rav and Rabbi Yoḥanan in the way in which it was taught in Babylonia. The Gemara notes that in the West, Eretz Yisrael, they taught the dispute like this: Rav says there is a concept of birth with regard to limbs. When a limb is extended outside the womb, it is considered born and is independent of the mother animal. Consequently, it can never be permitted by virtue of the slaughter of the mother animal. And Rabbi Yoḥanan says that there is no concept of birth with regard to limbs. Since the limb is never considered to have been born, as long as it is inside the mother animal when the mother animal is slaughtered it will be permitted by virtue of that slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ח ב — Chullin 68b:18</span></div>
+    <div class="orig">מַאי בֵּינַיְיהוּ? אִיכָּא בֵּינַיְיהוּ לְמֵיסַר מִיעוּט אֵבֶר שֶׁבִּפְנִים.</div>
+    <div class="trans" data-when="he">מה ההבדל המעשי בין שתי הגרסאות (טעם רב)? כשיצא רוב האבר בלבד: לגרסת ׳יש לידה׳ — כל האבר נאסר, אף מיעוטו שנשאר בפנים; ולגרסת ׳יצא חוץ למחיצתו׳ — רק החלק שיצא נאסר, ולא המיעוט שבפנים.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the difference between these two versions which explain why Rav deemed the limb forbidden? The Gemara answers: The practical difference between them is in a case in which only the majority of a limb was extended outside the womb. In that case, the issue is whether or not to prohibit the minority of the limb that remained inside. If the limb is forbidden because it is considered to have been born, the entire limb would be forbidden and not just the part that was extended. If the limb is forbidden because it left its boundary, then only the part that extended outside the womb would be forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ח ב — Chullin 68b:19</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: לְדִבְרֵי הָאוֹמֵר אֵין לֵידָה לְאֵבָרִים, הוֹצִיא הָעוּבָּר אֶת יָדוֹ וְהֶחְזִירָהּ, וְחָזַר וְהוֹצִיא אֶת יָדוֹ וְהֶחְזִירָהּ, עַד שֶׁהִשְׁלִימוֹ לְרוּבּוֹ, מַהוּ? מִי אָמְרִינַן הָא נְפַק לֵיהּ רוּבָּא, אוֹ דִלְמָא כֵּיוָן דַּהֲדַר הָדַר?</div>
+    <div class="trans" data-when="he">איבעיא (שאלה): לדעת ר׳ יוחנן ש״אין לידה לאברים״ — הוציא העובר ידו והחזירה, וחזר והוציא ידו האחרת והחזירה, וכן הלאה עד שהשלים את רוב גופו ביציאה (אבל בכל פעם החזיר) — מהו? האם אומרים: הרי בסך הכל יצא רובו ונחשב נולד; או שמא כיון שבכל פעם החזיר — חזר, ואין כאן יציאת רוב.</div>
+    <div class="trans" data-when="en">A dilemma was raised before the Sages: According to the statement of the one who says there is no concept of birth with regard to limbs, if the fetus extended its foreleg outside the womb and brought it back, and again it extended its other foreleg outside and brought it back, and continued to extend parts of its body outside until the total amount that had been outside the womb constituted the majority of the fetus, what is the halakha? Do we say that ultimately the majority of the fetus has left the womb and the entire fetus should be regarded as having been born, and consequently the slaughter of its mother can no longer permit its being consumed? Or perhaps, since it brought each limb back, the limbs are considered to have been brought back; therefore, the majority of the fetus is not considered to have left the womb and it is not regarded as having been born. In that case, the slaughter of its mother would still permit its being consumed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ח ב — Chullin 68b:20</span></div>
+    <div class="orig">אִם תִּמְצֵי לוֹמַר, כֵּיוָן דַּהֲדַר הָדַר, הוֹצִיא עוּבָּר אֶת יָדוֹ וַחֲתָכָהּ, וְחָזַר וְהוֹצִיא אֶת יָדוֹ וַחֲתָכָהּ, עַד שֶׁהִשְׁלִימוֹ לְרוּבּוֹ, מַהוּ? מִי אָמְרִינַן הָא נָפֵיק לֵיהּ רוּבָּא, אוֹ דִלְמָא רוּבָּא בְּבַת אַחַת בָּעֵינַן?</div>
+    <div class="trans" data-when="he">ואם תמצי לומר שכיון שהחזיר — חזר, יש לשאול עוד: הוציא העובר ידו וחתכהּ, וחזר והוציא ידו האחרת וחתכהּ, וכן עד שהשלים את רובו (כאן לא החזיר, אלא חתך) — מהו? האם אומרים: הרי יצא רובו ונחשב נולד; או שמא צריך שיצא הרוב בבת אחת, וכאן לא יצא הרוב בבת אחת.</div>
+    <div class="trans" data-when="en">The Gemara asks: If you want to say that since it brought back each limb, they are considered to have been brought back and the majority of the fetus is not considered to have left the womb, the following dilemma still arises: If the fetus extended its foreleg outside and someone severed it, and again it extended its other foreleg outside and someone severed it, and this continued with its other limbs until the total amount outside the womb constituted the majority of the fetus, what is the halakha? Do we say that since the majority of the fetus has left the womb, the entire fetus should be regarded as having been born and therefore the slaughter of its mother can no longer permit it? Or perhaps, in order for the fetus to be regarded as having been born we require a majority of the fetus to leave simultaneously, which does not exist in this case.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ח ב — Chullin 68b:21</span></div>
+    <div class="orig">תָּא שְׁמַע:</div>
+    <div class="trans" data-when="he">תא שמע — הגמרא מציעה להכריע את האיבעיא ממשנתנו:</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a proof from the mishna:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ט א — Chullin 69a:1</span></div>
+    <div class="orig">זֶה הַכְּלָל: דָּבָר שֶׁגּוּפָהּ – אָסוּר, וְשֶׁאֵינָהּ גּוּפָהּ – מוּתָּר. שֶׁאֵין גּוּפָהּ לְאֵתוֹיֵי מַאי? לָאו לְאֵתוֹיֵי כְּהַאי גַּוְנָא?</div>
+    <div class="trans" data-when="he">״זה הכלל: דבר שגופה אסור, ושאינה גופה מותר״. מאחר שכבר נשנה שהחותך מן העובר מותר, מה בא ״שאינה גופה מותר״ להוסיף? וכי לא בא לרבות כגון זה — שיצא רוב העובר אבר אחר אבר וחזר, ואף על פי כן שאר העובר שבפנים מותר?</div>
+    <div class="trans" data-when="en">This is the principle: An item that is part of an animal’s body that was severed prior to the slaughter is prohibited to be consumed even after slaughter, and an item that is not part of its body, i.e., its fetus, is permitted by virtue of its slaughter. The Gemara asks: Just prior to stating the principle, the mishna states the halakha that even if parts of a fetus are cut from it the slaughter of the mother permits it. If so, when the mishna presents the principle and states that an item that is not part of its body is permitted, what is added? Is it not to include a case like this, where the majority of the fetus has already left the womb, and nevertheless the principle clarifies that the rest of the fetus that remains inside the womb is permitted?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״ט א — Chullin 69a:2</span></div>
+    <div class="orig">לָא, לְאֵתוֹיֵי קָלוּט בִּמְעֵי פָּרָה, וְאַלִּיבָּא דְּרַבִּי שִׁמְעוֹן, דְּאַף עַל גַּב דְּאָמַר רַבִּי שִׁמְעוֹן: קָלוּט בֶּן פָּרָה אָסוּר – הָנֵי מִילֵּי הֵיכָא דְּיָצָא לַאֲוִיר הָעוֹלָם, אֲבָל בִּמְעֵי אִמּוֹ – שְׁרֵי.</div>
+    <div class="trans" data-when="he">דחייה: לא, ״שאינה גופה מותר״ בא לרבות קלוט הנמצא במעי פרה, ואליבא דר׳ שמעון — שאף שאמר ר׳ שמעון קלוט בן פרה אסור, היינו דווקא כשיצא לאויר העולם (נולד); אבל במעי אמו — מותר בשחיטתה. ואין מכאן ראיה לאיבעיא, שנשארת בלא הכרעה.</div>
+    <div class="trans" data-when="en">The Gemara rejects this suggestion: No, it comes to include a fetus with non-cloven hooves found inside the womb of a cow that was slaughtered. Although the fetus does not bear the hallmarks of a kosher animal, which has split hooves and chews its cud, it is nevertheless permitted to be consumed by virtue of the slaughter of its mother. And a specific clause in the mishna permitting this is necessary according to the opinion of Rabbi Shimon, as Rabbi Shimon says: A calf with non-cloven hooves born from a kosher cow is forbidden, as the calf does not bear the hallmarks of a kosher animal. The mishna teaches that this matter applies only where the fetus emerged into the airspace of the world, i.e., it was born before the mother animal was slaughtered. But if it is still inside its mother’s womb when the mother is slaughtered, it is permitted to be consumed.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
