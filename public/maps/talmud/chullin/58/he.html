@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין נ״ח</title>
+<meta name="description" content="מפת הסוגיא של חולין נ״ח: ברייה שאין בה עצם אינה מתקיימת י״ב חודש, אבר יתר כנטול דמי, נוצה כעור הבהמה, ובהמות חולות — הכשרות מול מסוכנות.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="58">
+<meta name="gemara-map:sefaria-ref" content="Chullin 58">
+<meta name="gemara-map:topic-he" content="אבר יתר, נוצה, ובהמה מסוכנת">
+<meta name="gemara-map:topic-en" content="Extra limbs, down, and danger">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין נ״ח">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 58">
+<meta name="gemara-map:blurb-he" content="אין ברייה בלא עצם מתקיימת י״ב חודש; אבר יתר כנטול; נוצה כעור; ובהמה חולה כשרה — אלא אם נסתכנו אוכליה.">
+<meta name="gemara-map:blurb-en" content="No boneless creature lasts twelve months; an extra limb counts as a missing one; down is like hide; a sick animal is kosher unless it endangers those who eat it.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין נ״ח</span><span data-when="en">Sugya map — Chullin 58</span></h1>
+    <div class="subtitle"><span data-when="he">חולין נ״ח א — נ״ט א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 58a–59a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> חמש סוגיות: <b>ברייה שאין בה עצם</b> אינה מתקיימת י״ב חודש — ומכאן לתולעים בפירות וביתושים; <b>אבר יתר כנטול דמי</b> — וכל הדינים התלויים בו (סניא דיבי, גובתא, בני מעיים כפולים); מחלוקת אם <b>נוצה כעור הבהמה</b> לעניין טריפה; משנת <b>הבהמות החולות</b> הכשרות; וגמרא המבחינה בין מאכל שמסכן את הבהמה למאכל שמסכן את האוכל.</span>
+    <span data-when="en"><b>Bottom line:</b> Five sugyot: a <b>boneless creature</b> cannot last twelve months — hence the law of worms in fruit and the lifespan of insects; an <b>extra limb counts as a missing one</b> and all the cases that follow (double ceca, stray tubes, doubled intestines); a dispute whether <b>down is like an animal's hide</b> for tereifa; the Mishna of <b>sick-yet-kosher animals</b>; and a Gemara distinguishing food that endangers the animal from food that endangers the one who eats it.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין נ״ח</span><span data-when="en">Overview — Chullin 58</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · אין ברייה בלא עצם מתקיימת י״ב חודש"]:::statement
+  O2["2 · אבר יתר כנטול דמי"]:::statement
+  O3["3 · נוצה — כעור הבהמה?"]:::statement
+  O4(["4 · משנה: בהמות חולות — כשרות או מסוכנות"]):::mishnah
+  O5["5 · חלתית, תיעה וסם המות"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · No boneless creature lasts twelve months"]:::statement
+  O2["2 · An extra limb counts as a missing one"]:::statement
+  O3["3 · Is down like an animal's hide?"]:::statement
+  O4(["4 · Mishna: sick animals — kosher or dangerous"]):::mishnah
+  O5["5 · Asafoetida, tia, and deadly poison"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">ברייה שאין בה עצם</span><span data-when="en">A creature with no bones</span>
+      <span class="ref">Chullin 58a:15–58b:3</span></h2>
+  <div class="lead"><span data-when="he">רב הונא: כל שאין בו עצם אינו מתקיים י״ב חודש — וממנו נלמד דין תולעים בפירות, ולשון בני אדם אינה מכריעה.</span><span data-when="en">Rav Huna: anything boneless cannot survive twelve months — a rule that decides the law of worms in produce; folk sayings do not refute it.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רב הונא: ברייה שאין בה עצם — אינה מתקיימת י״ב חודש"]:::statement
+  S2["② רב פפא: מכאן לקישות שהתליעה — והתמרים שבכד מותרים אחר י״ב חודש"]:::statement
+  S3["③ רב: לית בקא בר יומא, ולית דידבא בת שתא"]:::statement
+  Q1{"④ קושיא: והרי אומרים — שב שני אימרא הזיקה ליתוש?"}:::question
+  A1["④ אביי: כשם ש׳שיתין מני פרזלא׳ הוא בדינרים שלהם — אף השנים שנים שלהם"]:::answer
+  S1 --> S2 --> S3
+  S3 -.->|קושיא מלשון בני אדם| Q1
+  Q1 -->|דחייה| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Rav Huna: a boneless creature cannot last twelve months"]:::statement
+  S2["② Rav Pappa: hence a worm-infested melon is forbidden — and jarred dates are permitted after a year"]:::statement
+  S3["③ Rav: no one-day-old mosquito, no one-year-old fly"]:::statement
+  Q1{"④ Objection: but the adage — the gnat held a grudge seven years?"}:::question
+  A1["④ Abaye: just as ׳sixty iron weights׳ means their own coins — so the years are their own years"]:::answer
+  S1 --> S2 --> S3
+  S3 -.->|objection from a folk saying| Q1
+  Q1 -->|deflected| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① כֹּל שֶׁאֵין בּוֹ עֶצֶם אֵינוֹ מִתְקַיֵּים שְׁנֵים עָשָׂר חֹדֶשׁ"]:::statement
+  S2["② קִישּׁוּת שֶׁהִתְלִיעָה בְּאִיבֶּיהָ אֲסוּרָה … הָנֵי תַּמְרֵי דְּכַדָּא … שַׁרְיָין"]:::statement
+  S3["③ לֵית בָּקָא בַּר יוֹמָא, וְלֵית דִּידְבָא בַּת שַׁתָּא"]:::statement
+  Q1{"④ וְהָא אָמְרִי אִינָשֵׁי: שַׁב שְׁנֵי אִימְּרַאי בָּקְתָּא מִבָּקָא?"}:::question
+  A1["④ שִׁיתִּין מָנֵי פַּרְזְלָא … בְּמָנֵי דִּידְהוּ, הָכָא נָמֵי בִּשְׁנֵי דִּידְהוּ"]:::answer
+  S1 --> S2 --> S3
+  S3 -.->|קושיא מלשון בני אדם| Q1
+  Q1 -->|דחייה| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ח א — Chullin 58a:15</span></div>
+    <div class="orig">אָמַר רַב הוּנָא: כֹּל (בְּרִיָּה) שֶׁאֵין בּוֹ עֶצֶם אֵינוֹ מִתְקַיֵּים שְׁנֵים עָשָׂר חֹדֶשׁ. אָמַר רַב פָּפָּא: שְׁמַע מִינַּהּ מִדְּרַב הוּנָא, הָא דְּאָמַר שְׁמוּאֵל: קִישּׁוּת (שהתליע) [שֶׁהִתְלִיעָה] בְּאִיבֶּיהָ אֲסוּרָה.</div>
+    <div class="trans" data-when="he">רב הונא: כל בריה שאין בה עצם אינה מתקיימת שנים עשר חודש. רב פפא: שמע מינה הימנו טעם דברי שמואל — קישות (מין מלפפון) שהתליעה בעודה מחוברת לקרקע, התולעת אסורה (שהיא שרץ הארץ); ואילו לאחר שנתלשה, התולעת מותרת.</div>
+    <div class="trans" data-when="en">§ Rav Huna says: Any creature that has no bones cannot last twelve months. Rav Pappa said: One may learn from Rav Huna’s statement about that which Shmuel says: If a serpent melon became infested by worms while attached to the ground [be’ibbeha], the worm is prohibited for consumption, in accordance with the verse: “And every swarming thing that swarms upon the earth is a detestable thing; it shall not be eaten” (Leviticus 11:41).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ח ב — Chullin 58b:1</span></div>
+    <div class="orig">הָנֵי תַּמְרֵי דְּכַדָּא לְבָתַר תְּרֵיסַר יַרְחֵי שַׁתָּא שַׁרְיָין.</div>
+    <div class="trans" data-when="he">לפי כלל זה: תמרים המאוחסנים בכד מותרים לאחר שנים עשר חודש — שכן התולעים שבהם אין להן עצם, ואינן מתקיימות י״ב חודש; משכך, כל תולעת שנמצאת בהם נוצרה לאחר התלישה ומותרת.</div>
+    <div class="trans" data-when="en">These dates stored in a jar are permitted after remaining there for twelve months of the year. Since worms have no bones, they cannot last twelve months. Consequently, any worms found in the dates must have hatched after they were picked and are therefore permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ח ב — Chullin 58b:2</span></div>
+    <div class="orig">אָמַר רַב: לֵית בָּקָא בַּר יוֹמָא, וְלֵית דִּידְבָא בַּת שַׁתָּא.</div>
+    <div class="trans" data-when="he">רב: אין יתוש בן יומו — כלומר היתוש מת קודם שמלאו לו יום; ואין זבוב בן שנה — שהזבוב אינו מאריך ימים שנה תמימה.</div>
+    <div class="trans" data-when="en">Rav says: There is no one-day-old mosquito, since all mosquitoes die before they have lived a day. And there is no one-year-old fly.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ח ב — Chullin 58b:3</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב פָּפָּא לְאַבָּיֵי, וְהָא אָמְרִי אִינָשֵׁי: שַׁב שְׁנֵי אִימְּרַאי בָּקְתָּא מִבָּקָא. דְּאָמְרָה לֵיהּ: חֲזִיתֵיהּ לְבַר מָחוֹזָא דִּסְחָא בְּמַיָּא, וּסְלֵיק וְאִיכְּרֵךְ בִּסְדִינִין, וְאִיתֵּיבְתְּ עֲלֵיהּ וּמְצֵת מִינֵּיהּ, וְלָא הוֹדַעְתְּ לִי. אֲמַר לֵיהּ: וְלִיטַעְמָיךְ, הָא דְּאָמְרִי אִינָשֵׁי ״שִׁיתִּין מָנֵי פַּרְזְלָא תְּלוּ לֵיהּ לְבָקָא בְּקוּרְנָסֵיהּ״, מִי אִיכָּא? אִיהוּ גּוּפֵיהּ כַּמָּה הָוֵי? אֶלָּא בְּמָנֵי דִּידְהוּ, הָכָא נָמֵי בִּשְׁנֵי דִּידְהוּ.</div>
+    <div class="trans" data-when="he">רב פפא הקשה לאביי מלשון הבריות: ״שבע שנים כעסה היתושה על בן זוגה״ — שאמרה לו: ראיתי בן מחוזא רוחץ במים, יצא ונתעטף בסדינים, וישבת עליו ומצצת ממנו, ולא הודעת לי. משמע שיתוש חי שבע שנים! אביי השיב: ולטעמך, הרי אומרים ״שישים מנה ברזל תלויים בקורנס היתוש״ — וכי יש כך? והיתוש עצמו כמה משקלו? אלא הכוונה למנים שלהם הזעירים; אף כאן — לשנים שלהם, לא לשנות אדם.</div>
+    <div class="trans" data-when="en">Rav Pappa said to Abaye: But isn’t there the adage that people say that the female mosquito revolted against the male mosquito seven years, since she said to him: I saw a townsman swimming in the water, and he came out and wrapped himself in sheets, and you sat on him and sucked blood from him, and you did not inform me? Apparently, some boneless creatures can survive at least seven years. Abaye said to him: And according to your reasoning, what about that adage that people say: Six thousand iron dinars hang in a mosquito’s mallet, i.e., its bite is powerful? Is there really such a thing? How much does the mosquito itself weigh? Rather, the saying must be referring to hundreds of their own dinars, i.e., the mosquitoes’ coins. Here, too, the adage is referring to their own years, not human years.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">אבר יתר כנטול דמי</span><span data-when="en">An extra limb is like a missing one</span>
+      <span class="ref">Chullin 58b:4–10</span></h2>
+  <div class="lead"><span data-when="he">רב הונא: יתר ברגל טריפה, ככל יתר שדינו כנטול. מכאן ענפים: סניא דיבי, גובתאות, ובני מעיים כפולים.</span><span data-when="en">Rav Huna: an extra hind limb is a tereifa, since any extra limb is like a missing one. Several cases branch off: double ceca, stray tubes, and doubled intestines.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב הונא: יתר ביד מום, יתר ברגל טריפה — כל יתר כנטול דמי"]:::statement
+  S2["② חיותא בעלת שתי סניא דיבי — רבינא טרפהּ; ואם שפכן זו לזו, כשרה"]:::statement
+  S3["③ גובתא מבי כסי להובלילא — כל חיות הבר כך, כשרה"]:::statement
+  S4["④ גובתא מבי כסי לכרסא — לא בחדא מחיתא; היכא דלא אתמר, טריפה"]:::statement
+  S5["⑤ עדות נתן בר שילא: שני בני מעיים יוצאים כאחד — בבהמה טריפה, בעוף כשרה; יצאו במקום אחד וכלין עד כאצבע — כשרה"]:::statement
+  Q1{"⑥ מחלוקת רב אמי ורב אסי: ׳עד כאצבע׳ — דווקא חזרו וערבו, או אף בלא?"}:::question
+  C1["⑦ למאן דלא בעי עירוב — ׳עד כאצבע מלמטה׳"]:::conclusion
+  S1 --> S2 --> S3 --> S4 --> S5
+  S5 -->|פירוש ׳עד כאצבע׳| Q1
+  Q1 -->|יישוב| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Huna: an extra foreleg is a blemish, an extra hind leg a tereifa — every extra limb is like a missing one"]:::statement
+  S2["② An animal with two ceca — Ravina ruled it a tereifa; but if they empty into each other, kosher"]:::statement
+  S3["③ A tube from reticulum to omasum — all wild animals have it, kosher"]:::statement
+  S4["④ A tube from reticulum to rumen — not all alike; where unstated, a tereifa"]:::statement
+  S5["⑤ Natan bar Sheila's testimony: two intestines exiting as one — in a beast a tereifa, in a bird kosher; exiting at one point and merging within a fingerbreadth — kosher"]:::statement
+  Q1{"⑥ Rav Ami and Rav Asi dispute: ׳within a fingerbreadth׳ — only if they re-merge, or even if not?"}:::question
+  C1["⑦ For the one who needs no merge — ׳within a fingerbreadth below׳"]:::conclusion
+  S1 --> S2 --> S3 --> S4 --> S5
+  S5 -->|reading ׳within a fingerbreadth׳| Q1
+  Q1 -->|resolved| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① לֹא שָׁנוּ אֶלָּא שֶׁחָסֵר וְיָתֵר בַּיָּד, אֲבָל … בָּרֶגֶל – טְרֵפָה … כׇּל יָתֵר כְּנָטוּל דָּמֵי"]:::statement
+  S2["② הָהִיא חֵיוְתָא דַּהֲוָה לַהּ תַּרְתֵּי סַנְיָא דֵּיבֵי … וְטַרְפַהּ … וְאִי שָׁפְכָן לַהֲדָדֵי – כְּשֵׁרָה"]:::statement
+  S3["③ הָהִיא גּוּבְתָּא דַּהֲוָה נָפְקָא מִבֵּי כָסֵי לְהוּבְלִילָא … כֹּל הָנֵי חֵיוֵי בָּרָיָיתָא הָכִי אִית לְהוּ"]:::statement
+  S4["④ הָהוּא גּוּבְתָּא דַּהֲוָה מְעַבְּרָא מִבֵּי כָסֵי לִכְרֵסָא … הֵיכָא דְּלָא אִתְּמַר – לָא אִתְּמַר"]:::statement
+  S5["⑤ הֵעִיד נָתָן בַּר שֵׁילָא … עַל שְׁנֵי בְּנֵי מֵעַיִם הַיּוֹצְאִין … כְּאֶחָד, שֶׁהִיא טְרֵפָה, וּכְנֶגְדָּן בָּעוֹף – כְּשֵׁרָה … וְכָלִין עַד כְּאֶצְבַּע – כְּשֵׁרָה"]:::statement
+  Q1{"⑥ פְּלִיגִי … רַב אַמֵּי וְרַב אַסִּי … הוּא דְּהָדְרִי וְעָרְבִי … אַף עַל גַּב דְּלָא הָדְרִי וְעָרְבִי"}:::question
+  C1["⑦ מַאי ׳עַד כְּאֶצְבַּע׳? עַד כְּאֶצְבַּע מִלְּמַטָּה"]:::conclusion
+  S1 --> S2 --> S3 --> S4 --> S5
+  S5 -->|פירוש ׳עד כאצבע׳| Q1
+  Q1 -->|יישוב| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ח ב — Chullin 58b:4</span></div>
+    <div class="orig">תְּנַן הָתָם: בְּהֵמָה בַּעֲלַת חָמֵשׁ רַגְלַיִם, אוֹ שֶׁאֵין לָהּ אֶלָּא שָׁלֹשׁ – הֲרֵי זֶה מוּם. אָמַר רַב הוּנָא: לֹא שָׁנוּ אֶלָּא שֶׁחָסֵר וְיָתֵר בַּיָּד, אֲבָל חָסֵר וְיָתֵר בָּרֶגֶל – טְרֵפָה נָמֵי הָוְיָא. מַאי טַעְמָא? כׇּל יָתֵר כְּנָטוּל דָּמֵי.</div>
+    <div class="trans" data-when="he">שנינו במשנה (בכורות מ.): בהמה בעלת חמש רגליים, או שאין לה אלא שלוש — הרי זה מום, ופסולה לקרבן. רב הונא: לא נאמר דין המום אלא בחסר או יתר ביד (רגל קדמית), אבל חסר או יתר ברגל (אחורית) — טריפה. מאי טעמא? כל אבר יתר כנטול דמי: בהמה שניטלה רגלהּ האחורית טריפה, אף היתר ברגל טריפה.</div>
+    <div class="trans" data-when="en">§ We learned in a mishna elsewhere (Bekhorot 40a): With regard to an animal with five legs, or one that has only three, this is a blemish, and the animal may not be brought as an offering. Rav Huna said: They taught this halakha only in a case where the animal was missing or had an additional foreleg. But if it was missing or had an additional hind leg, it is also a tereifa. What is the reason? It is that any extra limb is considered like a removed limb. An animal whose foreleg was removed is kosher, but if its hind leg was removed it is a tereifa; the same applies if it had an extra leg.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ח ב — Chullin 58b:5</span></div>
+    <div class="orig">הָהִיא חֵיוְתָא דַּהֲוָה לַהּ תַּרְתֵּי סַנְיָא דֵּיבֵי, אַיְיתוּהָ לְרָבִינָא, וְטַרְפַהּ מִדְּרַב הוּנָא. וְאִי שָׁפְכָן לַהֲדָדֵי – כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">בהמה שהיו לה שני עיוורים (סניא דיבי — שני מבואות סתומים של המעי, ׳ceca׳), הביאוה לרבינא וטרפהּ מדין רב הונא: שכן בהמה שחסר לה אחד מהם טריפה, ואף היתר טריפה. ואם שני העיוורים נפתחים זה לזה ומתערבים, כשרה — שהם נחשבים אבר אחד.</div>
+    <div class="trans" data-when="en">The Gemara recounts the case of a certain animal that had two ceca. They brought it to Ravina, and he deemed it a tereifa based on the statement of Rav Huna that an extra limb is like a missing limb. Since an animal missing a cecum is a tereifa, an animal with an extra cecum is likewise a tereifa. The Gemara adds: But if they empty into each other, such that food can move freely between them, the animal is kosher, because they are considered one organ.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ח ב — Chullin 58b:6</span></div>
+    <div class="orig">הָהִיא גּוּבְתָּא דַּהֲוָה נָפְקָא מִבֵּי כָסֵי לְהוּבְלִילָא, סָבַר רַב אָשֵׁי לְמִיטְרְפַהּ. אֲמַר לֵיהּ רַב הוּנָא מָר בַּר חִיָּיא לְרַב אָשֵׁי: כֹּל הָנֵי חֵיוֵי בָּרָיָיתָא הָכִי אִית לְהוּ.</div>
+    <div class="trans" data-when="he">בהמה שהיה לה צינור (גובתא) יוצא מבית הכוסות אל ההמסס, סבר רב אשי לטרפהּ כיתר אבר. אמר לו רב הונא מר בר חייא: כל חיות הבר כך הן — צינור זה מצוי בהן בטבע, ואין לטרוף.</div>
+    <div class="trans" data-when="en">The Gemara recounts the case of a certain tube that exited from the reticulum into the omasum. Rav Ashi thought to deem the animal a tereifa. Rav Huna Mar bar Ḥiyya said to Rav Ashi: All animals that dwell outside have tubes like this, and one need not be concerned.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ח ב — Chullin 58b:7</span></div>
+    <div class="orig">הָהוּא גּוּבְתָּא דַּהֲוָה מְעַבְּרָא מִבֵּי כָסֵי לִכְרֵסָא, סְבַר מָר בַּר רַב אָשֵׁי לְאַכְשׁוֹרַהּ. אֲמַר לֵיהּ רַב אוֹשַׁעְיָא: אַטּוּ כּוּלְּהוּ בַּחֲדָא מְחִיתָא מַחֵתִינְהוּ? הֵיכָא דְּאִתְּמַר – אִתְּמַר, הֵיכָא דְּלָא אִתְּמַר – לָא אִתְּמַר.</div>
+    <div class="trans" data-when="he">בהמה שהיה לה צינור עובר מבית הכוסות אל הכרס, סבר מר בר רב אשי להכשירהּ כמקרה הקודם. אמר לו רב אושעיא: וכי כל המקרים נארגו במסכת אחת? היכן שנאמר במפורש שהוא טבעי — נאמר; היכן שלא נאמר — לא נאמר, ובהמה זו טריפה.</div>
+    <div class="trans" data-when="en">The Gemara recounts the case of a certain tube that passed from the reticulum to the rumen. Mar bar Rav Ashi thought to deem the animal kosher, as in the above case. Rav Oshaya said to him: Is that to say all such cases are woven in one weave? Where it was stated that such an organ is normal, it was stated; where it was not stated, it was not stated. This animal is a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ח ב — Chullin 58b:8</span></div>
+    <div class="orig">הֵעִיד נָתָן בַּר שֵׁילָא רַב טַבָּחַיָּא דְּצִיפּוֹרִי לִפְנֵי רַבִּי, עַל שְׁנֵי בְּנֵי מֵעַיִם הַיּוֹצְאִין מִן הַבְּהֵמָה כְּאֶחָד, שֶׁהִיא טְרֵפָה, וּכְנֶגְדָּן בָּעוֹף – כְּשֵׁרָה. בַּמֶּה דְּבָרִים אֲמוּרִים? שֶׁיּוֹצְאִין בִּשְׁנֵי מְקוֹמוֹת, אֲבָל יוֹצְאִין בְּמָקוֹם אֶחָד, וְכָלִין עַד כְּאֶצְבַּע – כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">העיד נתן בר שילא, ראש הטבחים של ציפורי, לפני רבי: שני בני מעיים (מעיים) היוצאים מן הבהמה כאחד — טריפה, אבל כיוצא בהם בעוף — כשרה (שכך דרכו). במה דברים אמורים? כשיוצאים בשני מקומות נפרדים; אבל יוצאים במקום אחד וכלין (חוזרים ומתאחדים) בתוך כאצבע — כשרה.</div>
+    <div class="trans" data-when="en">Natan bar Sheila, head of the butchers of Tzippori, testified before Rabbi Yehuda HaNasi about two intestines that exit the abomasum of the animal as one, that this renders the animal a tereifa. But if this phenomenon occurs likewise in a bird, it is kosher, because it is common in birds. In what case is this statement said, i.e., that two intestines render an animal a tereifa? It is said in a case where they exit at two different points. But if they exit at one point, adjacent to each other, and they end, i.e., they merge into one intestine, within a fingerbreadth, the animal is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ח ב — Chullin 58b:9</span></div>
+    <div class="orig">פְּלִיגִי בַּהּ רַב אַמֵּי וְרַב אַסִּי, חַד אָמַר: הוּא דְּהָדְרִי וְעָרְבִי, וְחַד אָמַר: אַף עַל גַּב דְּלָא הָדְרִי וְעָרְבִי.</div>
+    <div class="trans" data-when="he">נחלקו רב אמי ורב אסי בפירוש ׳כלין עד כאצבע׳: חד אמר — דווקא כשחזרו שני המעיים ונתערבו (נתאחדו) למעי אחד; וחד אמר — כשרה אף על פי שלא חזרו ונתערבו.</div>
+    <div class="trans" data-when="en">Rav Ami and Rav Asi disagree with regard to this halakha. One says: It is kosher when the two intestines exit at one point only in a case where they subsequently merge into one intestine; and one says: It is kosher even if they do not subsequently merge.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ח ב — Chullin 58b:10</span></div>
+    <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר הוּא דְּהָדְרִי וְעָרְבִי, הַיְינוּ דְּקָתָנֵי ״עַד כְּאֶצְבַּע״, אֶלָּא לְמַאן דְּאָמַר אַף עַל גַּב דְּלָא הָדְרִי וְעָרְבִי, מַאי ״עַד כְּאֶצְבַּע״? עַד כְּאֶצְבַּע מִלְּמַטָּה.</div>
+    <div class="trans" data-when="he">בשלמא למאן דאמר דווקא חזרו ונתערבו — מובן מה ששנינו ״עד כאצבע״, שבתוך כאצבע צריכים להתאחד. אלא למאן דאמר אף בלא שנתערבו, מהו ״עד כאצבע״? עד כאצבע מלמטה — כל זמן שמתאחדים קודם האצבע התחתונה הסמוכה לפי הטבעת, כשרה.</div>
+    <div class="trans" data-when="en">The Gemara asks: Granted, according to the one who says that it is kosher only in a case where they subsequently merge, this explanation is consistent with that which the baraita teaches: Within a fingerbreadth. That is, the two intestines must merge within a fingerbreadth for the animal to be kosher. But according to the one who says: It is kosher even if they do not subsequently merge, what is the meaning of the phrase: And they end within a fingerbreadth? The Gemara responds: It means within a fingerbreadth below. As long as the intestines merge before the final fingerbreadth near the anus, the animal is kosher.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">נוצה — כעור הבהמה?</span><span data-when="en">Is down like an animal's hide?</span>
+      <span class="ref">Chullin 58b:11–12</span></h2>
+  <div class="lead"><span data-when="he">רבי יוחנן: רבי יהודה ורבי ישמעאל אמרו דבר אחד — שהנוצה כעור. רבא דוחה: שמא נחלקו, וכל אחד דיבר בעניינו.</span><span data-when="en">Rabbi Yoḥanan: R' Yehuda and R' Yishmael said the same thing — down counts as hide. Rava deflects: perhaps they disagree, each speaking to his own context.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רבי יהודה: ניטלה הנוצה — פסולה (כעור הבהמה)"]:::statement
+  P1["① רבי יוחנן: רבי יהודה ורבי ישמעאל אמרו דבר אחד — הנוצה מצטרפת"]:::proof
+  A1["② רבא: דילמא לא היא — רבי יהודה לטריפה, רבי ישמעאל לפיגול; ואין ראיה זה מזה"]:::answer
+  S1 --> P1
+  P1 -.->|דחייה| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① R' Yehuda: if the down was removed, it is unfit (like the hide)"]:::statement
+  P1["① R' Yoḥanan: R' Yehuda and R' Yishmael said one thing — the down joins"]:::proof
+  A1["② Rava: perhaps not — R' Yehuda speaks to tereifa, R' Yishmael to piggul; neither proves the other"]:::answer
+  S1 --> P1
+  P1 -.->|deflected| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רַבִּי יְהוּדָה אוֹמֵר: אִם נִיטְּלָה הַנּוֹצָה – פְּסוּלָה"]:::statement
+  P1["① רַבִּי יְהוּדָה וְרַבִּי יִשְׁמָעֵאל אָמְרוּ דָּבָר אֶחָד … הַנּוֹצָה מִצְטָרֶפֶת"]:::proof
+  A1["② דִּילְמָא לָא הִיא … רַבִּי יְהוּדָה … לְעִנְיַן טְרֵפָה … רַבִּי יִשְׁמָעֵאל … לְעִנְיַן אִיפַּגּוֹלֵי"]:::answer
+  S1 --> P1
+  P1 -.->|דחייה| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ח ב — Chullin 58b:11</span></div>
+    <div class="orig">רַבִּי יְהוּדָה אוֹמֵר: אִם נִיטְּלָה הַנּוֹצָה – פְּסוּלָה. אָמַר רַבִּי יוֹחָנָן: רַבִּי יְהוּדָה וְרַבִּי יִשְׁמָעֵאל אָמְרוּ דָּבָר אֶחָד. רַבִּי יְהוּדָה – הָא דַּאֲמַרַן, רַבִּי יִשְׁמָעֵאל – דִּתְנַן: רַבִּי יִשְׁמָעֵאל אוֹמֵר: הַנּוֹצָה מִצְטָרֶפֶת.</div>
+    <div class="trans" data-when="he">המשנה: רבי יהודה אומר — עוף שניטלה נוצתו (הפלומה המכסה גופו) פסולה וטריפה, כבהמה שהופשט עורה. רבי יוחנן: רבי יהודה ורבי ישמעאל אמרו דבר אחד. רבי יהודה — כדבריו כאן; רבי ישמעאל — ששנינו: הנוצה מצטרפת לבשר לכזית לעניין פיגול. משמע ששניהם סוברים שהנוצה כעור הבהמה.</div>
+    <div class="trans" data-when="en">§ The mishna states: Rabbi Yehuda says: If the down covering its body was removed, it is a tereifa and unfit for consumption, like an animal whose hide was removed. With regard to this, Rabbi Yoḥanan says: Rabbi Yehuda and Rabbi Yishmael said the same thing. Rabbi Yehuda said that which we said here, that the removal of the feathers is like removal of the hide. Rabbi Yishmael agrees, as we learned in a baraita: Rabbi Yishmael says: The down joins the flesh to constitute an olive-bulk for purposes of piggul. If a priest pinches the nape of the neck of a bird with intent to consume a combined olive-bulk of its meat and its down beyond the permitted time, the offering is rendered piggul. Evidently, both Rabbi Yehuda and Rabbi Yishmael agree that the down of a bird is considered like the hide of an animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ח ב — Chullin 58b:12</span></div>
+    <div class="orig">אָמַר רָבָא: דִּילְמָא לָא הִיא, עַד כָּאן לָא קָאָמַר רַבִּי יְהוּדָה הָכָא אֶלָּא לְעִנְיַן טְרֵפָה, דְּלֵיכָּא מִידֵּי דְּמַגֵּין עֲלֵיהּ, אֲבָל לְעִנְיַן אִיפַּגּוֹלֵי – כְּרַבָּנַן סְבִירָא לֵיהּ, וְעַד כָּאן לָא קָאָמַר רַבִּי יִשְׁמָעֵאל הָתָם אֶלָּא לְעִנְיַן אִיפַּגּוֹלֵי, אֲבָל לְעִנְיַן טְרֵפָה – אַגּוֹנֵי לָא מַגֵּין.</div>
+    <div class="trans" data-when="he">רבא: דילמא לא היא, ושמא נחלקו. רבי יהודה אמר שהנוצה כעור רק לעניין טריפה — שכן בלעדיה אין דבר המגן על העוף וחייו בסכנה; אבל לעניין פיגול סובר כחכמים שאינה מצטרפת. ורבי ישמעאל אמר שמצטרפת רק לעניין פיגול — שהיא ראויה לאכילה; אבל לעניין טריפה סובר שאינה מגנה, ונטילתה אינה מסכנת.</div>
+    <div class="trans" data-when="en">Rava said: Perhaps it is not so, and they disagree. Perhaps Rabbi Yehuda says that the down is like the hide of an animal here only with regard to a tereifa, since when the down is removed, there is nothing that protects the bird, and its life is in danger; but with regard to piggul, he holds in accordance with the opinion of the Rabbis that the down is not treated like the hide of an animal, because piggul applies only if one had intent to consume an item that is normally consumed. And perhaps Rabbi Yishmael says so there only with regard to piggul, since he holds that the down is in fact fit for consumption; but with regard to a tereifa, he holds that the down does not protect the bird, and its removal does not endanger it.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">משנה: בהמות חולות — כשרה או מסוכנת</span><span data-when="en">Mishna: sick animals — kosher or dangerous</span>
+      <span class="ref">Chullin 58b:13</span></h2>
+  <div class="lead"><span data-when="he">המשנה מבחינה: בהמה חולה אך לא ניקבה — כשרה; אכלה סם המוות או הוכשה — כשרה מטריפה אך אסורה מחשש סכנה.</span><span data-when="en">The Mishna draws the line: a sick but unperforated animal is kosher; one poisoned or snake-bitten is kosher as far as tereifa, yet forbidden for the danger.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① משנה: אחוזת הדם, מעושנת, מצוננת, אכלה הרדופני / צואת תרנגולים, שתתה מים רעים — כשרה"]):::mishnah
+  M2(["① אכלה סם המוות או הכישה נחש — מותרת משום טריפה, אסורה משום סכנת נפשות"]):::mishnah
+  M1 -->|לעומת זאת| M2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Mishna: congested with blood, smoked, chilled, ate oleander / chicken dung, drank foul water — kosher"]):::mishnah
+  M2(["① Ate deadly poison or bitten by a snake — permitted as tereifa, forbidden for danger to life"]):::mishnah
+  M1 -->|by contrast| M2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① אֲחוּזַת הַדָּם, וְהַמְעוּשֶּׁנֶת, וְהַמְצוּנֶּנֶת, וְשֶׁאָכְלָה הַרְדּוּפְנֵי … אוֹ שֶׁשָּׁתָת מַיִם הָרָעִים – כְּשֵׁרָה"]):::mishnah
+  M2(["① אָכְלָה סַם הַמָּוֶת, אוֹ שֶׁהִכִּישָׁהּ נָחָשׁ – מוּתֶּרֶת מִשּׁוּם טְרֵפָה, וַאֲסוּרָה מִשּׁוּם סַכָּנַת נְפָשׁוֹת"]):::mishnah
+  M1 -->|לעומת זאת| M2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ח ב — Chullin 58b:13</span></div>
+    <div class="orig">מַתְנִי׳ אֲחוּזַת הַדָּם, וְהַמְעוּשֶּׁנֶת, וְהַמְצוּנֶּנֶת, וְשֶׁאָכְלָה הַרְדּוּפְנֵי, וְשֶׁאָכְלָה צוֹאַת תַּרְנְגוֹלִים, אוֹ שֶׁשָּׁתָת מַיִם הָרָעִים – כְּשֵׁרָה. אָכְלָה סַם הַמָּוֶת, אוֹ שֶׁהִכִּישָׁהּ נָחָשׁ – מוּתֶּרֶת מִשּׁוּם טְרֵפָה, וַאֲסוּרָה מִשּׁוּם סַכָּנַת נְפָשׁוֹת.</div>
+    <div class="trans" data-when="he">המשנה: בהמה אחוזת דם (חולה מריבוי דם), מעושנת (שאפה עשן), מצוננת (שחלתה מקור), שאכלה הרדופני (צמח רעיל), שאכלה צואת תרנגולים, או ששתתה מים רעים — אף שהיא חולה, כשרה, שלא ניקב בה דבר. אבל אכלה סם המוות, או שהכישהּ נחש — מותרת מדין טריפה, אך אסורה באכילה מפני סכנת נפשות לאוכל.</div>
+    <div class="trans" data-when="en">MISHNA: With regard to an animal that is congested with excess blood, or that was smoked, i.e., that suffered from smoke inhalation, or that was chilled and subsequently became sick, or that ate oleander, which is poisonous, or that ate the excrement of chickens, or that drank foul water, although in all these cases the animal is in danger, it is kosher. By contrast, if the animal ate deadly poison, or if a snake bit the animal, with regard to the prohibition of tereifa, consumption of the animal would be permitted, but it is prohibited due to the threat to one’s life if he eats it.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">חלתית, תיעה וסם המוות</span><span data-when="en">Asafoetida, tia, and deadly poison</span>
+      <span class="ref">Chullin 58b:14–59a:3</span></h2>
+  <div class="lead"><span data-when="he">שמואל: חלתית מנקבת ומטריפה. ברייתא סותרת, והגמרא מיישבת בעלים/קרטין ובסם דבהמה/דאדם, ואגב מביאה דיני סכנה ורפואה.</span><span data-when="en">Shmuel: asafoetida perforates and makes a tereifa. A baraita contradicts; the Gemara resolves by leaves vs. slivers and animal- vs. human-poison, adding medical asides.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① שמואל: הלעיטה חלתית — טריפה, שמנקבת את מעיה"]:::statement
+  Q1{"② מיתיבי רב שיזבי: ברייתא — חלתית כשרה, וסם המוות כשרה; קשיא אשמואל ואמתניתין"}:::question
+  A1["③ תירוץ: חלתית — כאן בעלין כאן בקרטין; סם המוות — הא דידהּ הא דאדם"]:::answer
+  S2["④ מאי תיעה?"]:::statement
+  S3["⑤ רב יהודה: עיקרא דמרירתא"]:::statement
+  S4["⑥ רב יהודה: אכל ג׳ תקלי חלתית ריקן — מישתלח משכיה; רבי אבהו ניצל במים"]:::statement
+  S5["⑦ רב יוסף: אכל ט״ז ביצים, אגוזים ודבש בתמוז ריקן — מתעקר תליא דליביה"]:::statement
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|אגב: ביאור ׳תיעה׳| S2
+  S2 --> S3
+  S3 -->|מימרות רפואה| S4
+  S4 --> S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Shmuel: if fed asafoetida it is a tereifa, for it perforates the intestines"]:::statement
+  Q1{"② Rav Sheizvi objects: a baraita — asafoetida kosher, deadly poison kosher; a difficulty for Shmuel and the Mishna"}:::question
+  A1["③ Resolution: asafoetida — leaves vs. slivers; poison — deadly to itself vs. to a person"]:::answer
+  S2["④ What is tia?"]:::statement
+  S3["⑤ Rav Yehuda: the root of a bitter herb"]:::statement
+  S4["⑥ Rav Yehuda: three measures of asafoetida on an empty stomach — one's skin sheds; Rabbi Abbahu survived in water"]:::statement
+  S5["⑦ Rav Yosef: 16 eggs, nuts and honey in summer on an empty stomach — the heartstrings are uprooted"]:::statement
+  S1 -.->|objection| Q1
+  Q1 -->|resolved| A1
+  A1 -->|aside: defining ׳tia׳| S2
+  S2 --> S3
+  S3 -->|medical dicta| S4
+  S4 --> S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① הִלְעִיטָהּ חִלְתִּית – טְרֵפָה … דִּמְינַקְּבָה לְהוּ לְמַעְיָינַהּ"]:::statement
+  Q1{"② מֵתִיב רַב שֵׁיזְבִי … חִלְתִּית וּפִלְפְּלִין, אָכְלָה סַם הַמָּוֶת – כְּשֵׁרָה … קַשְׁיָא חִלְתִּית אַחִלְתִּית, קַשְׁיָא סַם הַמָּוֶת אַסַּם הַמָּוֶת"}:::question
+  A1["③ כָּאן בְּעָלִין, כָּאן בִּקְרָטִין … הָא דִּידַהּ, הָא דְּאָדָם"]:::answer
+  S2["④ מַאי תִּיעָה?"]:::statement
+  S3["⑤ עִיקָּרָא דְּמָרִירְתָּא"]:::statement
+  S4["⑥ הַאי מַאן דַּאֲכַל תְּלָתָא תִּקְלֵי חִלְתִּית אַלִּיבָּא רֵיקָנָא – מִישְׁתְּלַח מַשְׁכֵיהּ … וְאִי לָא דִּיתַבִי בְּמַיָּא"]:::statement
+  S5["⑦ הַאי מַאן דְּאָכֵיל שִׁיתַּסְרֵי בֵּיעֵי … בִּתְקוּפַת תַּמּוּז, אַלִּיבָּא רֵיקָנָא – מִתְעֲקַר תַּלְיָא דְּלִיבֵּיהּ"]:::statement
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|אגב: ביאור ׳תיעה׳| S2
+  S2 --> S3
+  S3 -->|מימרות רפואה| S4
+  S4 --> S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ח ב — Chullin 58b:14</span></div>
+    <div class="orig">גְּמָ׳ אָמַר שְׁמוּאֵל: הִלְעִיטָהּ חִלְתִּית – טְרֵפָה, מַאי טַעְמָא? דִּמְינַקְּבָה לְהוּ לְמַעְיָינַהּ.</div>
+    <div class="trans" data-when="he">גמרא. שמואל: אם הלעיטו את הבהמה חלתית (צמח חריף ביותר), טריפה. מאי טעמא? שהחלתית מנקבת את מעיה — ונקב במעיים מטריף.</div>
+    <div class="trans" data-when="en">GEMARA: Shmuel says: If one fed an animal asafoetida, a very sharp plant, it is a tereifa. What is the reason? Since it perforates its intestines.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ח ב — Chullin 58b:15</span></div>
+    <div class="orig">מֵתִיב רַב שֵׁיזְבִי: אֲחוּזַת הַדָּם, וְהַמְעוּשֶּׁנֶת, וְשֶׁאָכְלָה הַרְדּוּפְנֵי, וְשֶׁאָכְלָה צוֹאַת תַּרְנְגוֹלִים, וְשָׁתָת מַיִם הָרָעִים, הִלְעִיטָהּ תִּיעָה, חִלְתִּית וּפִלְפְּלִין, אָכְלָה סַם הַמָּוֶת – כְּשֵׁרָה. הִכִּישָׁהּ נָחָשׁ, אוֹ שֶׁנְּשָׁכָהּ כֶּלֶב שׁוֹטֶה – מוּתֶּרֶת מִשּׁוּם טְרֵפָה, וַאֲסוּרָה מִשּׁוּם סַכָּנַת נְפָשׁוֹת. קַשְׁיָא חִלְתִּית אַחִלְתִּית, קַשְׁיָא סַם הַמָּוֶת אַסַּם הַמָּוֶת!</div>
+    <div class="trans" data-when="he">רב שיזבי הקשה מברייתא: אחוזת הדם… ושהלעיטוה תיעה, חלתית ופלפלין, אכלה סם המוות — כשרה; הכישה נחש או נשכה כלב שוטה — מותרת מטריפה ואסורה מסכנת נפשות. נמצא קשיא: חלתית (כשרה בברייתא) על חלתית (טריפה אצל שמואל); וקשיא סם המוות (כשר בברייתא) על סם המוות (אסור במשנה).</div>
+    <div class="trans" data-when="en">Rav Sheizvi raises an objection from a baraita: An animal that is congested with excess blood, or that suffered from smoke inhalation, or that ate poisonous oleander, or that ate the excrement of roosters, or that drank foul water, or if one fed it tia, asafoetida, or peppers, or if it ate deadly poison, it is kosher. But if a snake bit the animal, or if a mad dog bit it, with regard to the prohibition of tereifa its consumption is permitted, but it is nevertheless prohibited due to the threat to one’s life. The statement of the baraita concerning an animal that was fed asafoetida poses a difficulty to Shmuel’s statement that asafoetida renders the animal a tereifa, and the statement concerning deadly poison poses a difficulty to the mishna’s statement that deadly poison renders the animal prohibited due to the threat to one’s life.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ח ב — Chullin 58b:16</span></div>
+    <div class="orig">חִלְתִּית אַחִלְתִּית לָא קַשְׁיָא: כָּאן בְּעָלִין, כָּאן בִּקְרָטִין. סַם הַמָּוֶת אַסַּם הַמָּוֶת לָא קַשְׁיָא: הָא דִּידַהּ, הָא דְּאָדָם. סַם הַמָּוֶת דִּבְהֵמָה הַיְינוּ הַרְדּוּפְנֵי? תְּרֵי גַּוְונֵי סַם הַמָּוֶת.</div>
+    <div class="trans" data-when="he">תירוץ: חלתית אחלתית לא קשיא — הברייתא בעלין (רכים, פחות חריפים, ולכן כשרה), ושמואל בקרטין (פירורים חדים המנקבים, ולכן טריפה). סם המוות אסם המוות לא קשיא — הברייתא בסם שהוא מוות לבהמה בלבד (וכשרה), והמשנה בסם שהוא מוות לאדם (ואסורה). ושואלת: סם המוות לבהמה היינו הרדופני? ומשיבה: שני גווני סם המוות הם.</div>
+    <div class="trans" data-when="en">The Gemara responds: The apparent contradiction between one statement about asafoetida and the other statement about asafoetida is not difficult. Here, the baraita is referring to a case where the animal ate asafoetida leaves, which are less dangerous. There, Shmuel is referring to a case where the animal ate slivers of asafoetida, which are very sharp. Likewise, the apparent contradiction between one statement about deadly poison and the other statement about deadly poison is not difficult. This statement of the baraita that it is permitted is referring to a case where the animal consumed poison that is deadly only to itself. That statement of the mishna that it is prohibited is referring to a case where it consumed poison deadly to a person. The Gemara asks: Poison deadly to an animal is the same as oleander; why should the baraita mention both? The Gemara responds: The tanna is referring to two types of deadly poison.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ח ב — Chullin 58b:17</span></div>
+    <div class="orig">מַאי תִּיעָה? אָמַר רַב יְהוּדָה:</div>
+    <div class="trans" data-when="he">הברייתא הזכירה ׳תיעה׳. שואלת הגמרא: מהי תיעה? אמר רב יהודה:</div>
+    <div class="trans" data-when="en">The above baraita teaches that if an animal was fed tia, it is kosher. The Gemara asks: What is tia? Rav Yehuda said:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ט א — Chullin 59a:1</span></div>
+    <div class="orig">עִיקָּרָא דְּמָרִירְתָּא.</div>
+    <div class="trans" data-when="he">— עיקר (שורש) של צמח מר. זוהי ׳תיעה׳ שבברייתא.</div>
+    <div class="trans" data-when="en">It is the root of a bitter vegetable.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ט א — Chullin 59a:2</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: הַאי מַאן דַּאֲכַל תְּלָתָא תִּקְלֵי חִלְתִּית אַלִּיבָּא רֵיקָנָא – מִישְׁתְּלַח מַשְׁכֵיהּ. אָמַר רַבִּי אֲבָהוּ: בְּדִידִי הֲוָה עוֹבָדָא, וַאֲכַלִי חַד תִּקְלָא חִלְתִּיתָא, וְאִי לָא דִּיתַבִי בְּמַיָּא – מִישְׁתְּלַח מַשְׁכַאי, וְקִיַּימְתִּי בְּעַצְמִי ״הַחׇכְמָה תְּחַיֶּה בְעָלֶיהָ״.</div>
+    <div class="trans" data-when="he">אגב החלתית: רב יהודה — האוכל שלוש שקלים (משקל) חלתית על קיבה ריקה, עורו נושר מחמת החום. רבי אבהו: מעשה בי שאכלתי שקל אחד של חלתית, ואלמלא ישבתי במים להתקרר היה עורי נושר; וקיימתי בעצמי ״החכמה תחיה בעליה״ (קהלת ז).</div>
+    <div class="trans" data-when="en">Rav Yehuda says: This individual who eats the weight of three shekel of asafoetida on an empty heart, i.e., stomach, his skin sheds due to the fever he contracts. Rabbi Abbahu said: There was an incident in which I was involved, wherein I ate the weight of one shekel of asafoetida, and had I not immediately sat in water to cool off, my skin would have shed. And I thereby fulfilled with regard to myself that which the verse states: “Wisdom preserves the life of him that has it” (Ecclesiastes 7:12).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ט א — Chullin 59a:3</span></div>
+    <div class="orig">אָמַר רַב יוֹסֵף: הַאי מַאן דְּאָכֵיל שִׁיתַּסְרֵי בֵּיעֵי, וְאַרְבְּעֵי אַמְגּוֹזֵי, וְשַׁב בּוּטְיָתָא דְּפִרְחֵי, וְשָׁתֵי רְבִיעֵתָא דְּדוּבְשָׁא בִּתְקוּפַת תַּמּוּז, אַלִּיבָּא רֵיקָנָא – מִתְעֲקַר תַּלְיָא דְּלִיבֵּיהּ.</div>
+    <div class="trans" data-when="he">רב יוסף: האוכל שש עשרה ביצים, וארבעים אגוזים, ושבע פרידות צלף, ושותה רביעית דבש בתקופת תמוז (הקיץ) על קיבה ריקה — נעקרים חוטי לבו (גידי הלב). מימרת רפואה הסוגרת את הסוגיה.</div>
+    <div class="trans" data-when="en">Rav Yosef says: This individual who eats sixteen eggs and forty nuts and seven fruits of the caper bush, and he drinks a quarter-log of honey in the season of Tammuz, i.e., summer, all on an empty heart, i.e., stomach, his heartstrings are uprooted.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
