@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ע״א</title>
+<meta name="description" content="מפת הסוגיא של חולין ע״א: ׳ולרבנן האי קרא למה לי׳ — לכדרבי; משנת האשה שמת ולדה ודברי רבה ׳כשם שטומאה בלועה אינה מטמאה כך טהרה בלועה אינה מיטמאה׳ ושרשרת הקל וחומר; השגת רבא ׳תרווייהו תנינא׳ ושתי טבעות; וגזירת חכמים שמא יוציא ולד ראשו, ומחלוקת ר׳ ישמעאל ור׳ עקיבא.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="71">
+<meta name="gemara-map:sefaria-ref" content="Chullin 71">
+<meta name="gemara-map:topic-he" content="טומאה וטהרה בלועה — בלוע ומציל">
+<meta name="gemara-map:topic-en" content="Swallowed impurity does not transmit">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ע״א">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 71">
+<meta name="gemara-map:blurb-he" content="דבר בלוע בגוף אינו מטמא ואינו מיטמא; נלמד מנבלה ובקל וחומר משרשרת מקרים; רבא משיג שהכל שנוי במשנה ומעמיד בשתי טבעות; והעובר — גזירת חכמים שמא יוציא ראשו.">
+<meta name="gemara-map:blurb-en" content="An item encapsulated in a body neither imparts nor contracts impurity; derived from a carcass and a chain of a fortiori inferences; Rava objects that all is already taught and recasts it as two swallowed rings; and the fetus case rests on a rabbinic decree.">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ע״א</span><span data-when="en">Sugya map — Chullin 71</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ע״א א — ע״ב א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 71a–72a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> ארבע סוגיות סביב טומאה <b>בלועה</b>: סיום הדרשה הקודמת — ׳ולרבנן האי קרא למה לי׳, לכדרבי; <b>רבה</b> מלמד שטומאה בלועה אינה מטמאה וטהרה בלועה אינה מיטמאה, ובונה שרשרת קל וחומר (כלי חרס ← אדם ← למעלה/למטה ← אדם/בהמה); <b>רבא</b> משיג ׳תרווייהו תנינא׳ ומעמיד את חידוש רבה בשתי טבעות בלועות יחד; ולבסוף — דין החיה הנוגעת בעובר מת הוא <b>גזירת חכמים</b> שמא יוציא הולד ראשו, ושורש המחלוקת בין ר׳ ישמעאל לר׳ עקיבא בעובר במעי אישה.</span>
+    <span data-when="en"><b>Bottom line:</b> Four sugyot on <b>encapsulated</b> impurity: the tail of the prior derivation — “and according to the Rabbis, why this verse?”, answered: for Rabbi’s teaching; <b>Rabba</b> rules that a swallowed impure item neither imparts impurity nor (if pure) contracts it, built up through a chain of a fortiori inferences (clay vessel → person → above/below → person/animal); <b>Rava</b> objects that “both are already taught” and recasts Rabba’s novelty as two rings swallowed together; and finally the midwife who touches a dead fetus is impure only by <b>rabbinic decree</b>, lest the fetus extend its head — rooted in the dispute of R. Yishmael and R. Akiva over a fetus in the womb.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ע״א</span><span data-when="en">Overview — Chullin 71</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · ולרבנן האי קרא למה לי — לכדרבי"]:::statement
+  O2(["2 · משנת מת ולדה; רבה: טומאה/טהרה בלועה"]):::mishnah
+  O3["3 · רבא: תרווייהו תנינא — שתי טבעות"]:::statement
+  O4["4 · גזירת חכמים והעובר — ישמעאל ועקיבא"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Why the verse for the Rabbis — for Rabbi"]:::statement
+  O2(["2 · Mishna of dead fetus; Rabba: swallowed impurity/purity"]):::mishnah
+  O3["3 · Rava: both already taught — two rings"]:::statement
+  O4["4 · The rabbinic decree and the fetus — Yishmael and Akiva"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">ולרבנן, האי קרא למה לי — לכדרבי</span><span data-when="en">For the Rabbis, why the verse — for Rabbi</span>
+      <span class="ref">Chullin 71a:14–15</span></h2>
+  <div class="lead"><span data-when="he">סיום הדרשה הקודמת: לדעת חכמים, לשם מה בא הפסוק? כולו בא ללמד את ברייתת רבי — שאין חיוב קרבן עולה ויורד אלא בהעלם טומאה.</span><span data-when="en">The tail of the prior derivation: for the Rabbis, what does the verse teach? It comes entirely for Rabbi’s baraita — that only a lapse of impurity obligates the sliding-scale offering.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ולרבנן, האי קרא למה לי?"}:::question
+  A1["② כולו בא לכדרבי — להעלם טומאה"]:::answer
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① For the Rabbis, why this verse?"}:::question
+  A1["② It all comes for Rabbi — a lapse of impurity"]:::answer
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① וּלְרַבָּנַן, הַאי קְרָא לְמָה לִי?"}:::question
+  A1["② כּוּלֵּיהּ לְכִדְרַבִּי הוּא דַּאֲתָא"]:::answer
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״א א — Chullin 71a:14</span></div>
+    <div class="orig">וּלְרַבָּנַן, הַאי קְרָא לְמָה לִי?</div>
+    <div class="trans" data-when="he">לדעת חכמים — הסוברים שעובר מת אינו מטמא — לשם מה בא הפסוק (״או בנבלת חיה טמאה״) שדרש ממנו ר׳ יוסי הגלילי?</div>
+    <div class="trans" data-when="en">§ The Gemara returns to explaining the opinion of the Rabbis, cited in the mishna, who hold that a dead fetus found inside its mother’s womb does not impart impurity, irrespective of whether it is of a kosher or a non-kosher animal. Rabbi Yosei HaGelili disagrees and holds that a dead fetus inside a non-kosher animal imparts impurity. He derives this from the verse: “A person who touched anything impure, or the carcass of a non-kosher ḥayya, or the carcass of a non-kosher behema, or the carcass of an impure creeping animal, and is guilty” (Leviticus 5:2), which is referring only to non-kosher animals. The Gemara asks: And according to the Rabbis, why do I need this verse?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״א א — Chullin 71a:15</span></div>
+    <div class="orig">כּוּלֵּיהּ לְכִדְרַבִּי הוּא דַּאֲתָא.</div>
+    <div class="trans" data-when="he">כל הפסוק בא ללמד את מה ששנה רבי בברייתא — שאין הפסוק מחייב קרבן עולה ויורד אלא במי שאכל קודש או נכנס למקדש בהעלם טומאה.</div>
+    <div class="trans" data-when="en">The Gemara answers: The entire verse comes to teach that which Rabbi Yehuda HaNasi taught in the baraita cited earlier, that the verse obligates one to bring a sliding-scale offering only in cases where one partook of consecrated foods or entered the Temple while in a state of impurity of which one was unaware.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">משנת מת ולדה; רבה — טומאה וטהרה בלועה, ושרשרת הקל וחומר</span><span data-when="en">The dead-fetus Mishna; Rabba — encapsulated impurity and purity, and the a fortiori chain</span>
+      <span class="ref">Chullin 71a:16–71b:10</span></h2>
+  <div class="lead"><span data-when="he">משנה: חיה (מיילדת) שנגעה בעובר מת — טמאה, והאישה טהורה. רבה לומד: כשם שטומאה בלועה אינה מטמאה, כך טהרה בלועה אינה מיטמאה. מנין? מנבלה (טמאה) ובקל וחומר מכלי חרס (טהרה), וכן בלוע למעלה/למטה ואדם/בהמה.</span><span data-when="en">Mishna: a midwife who touches a dead fetus is impure, the woman pure. Rabba derives: just as a swallowed impure item does not impart impurity, so a swallowed pure item cannot contract it — from a carcass and an a fortiori chain (clay vessel, above/below, person/animal).</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  M1(["① משנה: חיה שנגעה בעובר מת — טמאה; האישה טהורה"]):::mishnah
+  S1["② רבה: טומאה בלועה אינה מטמאה, טהרה בלועה אינה מיטמאה"]:::statement
+  P1["③ טומאה בלועה מנלן? מנבלה — אכל סמוך לשקיעה וטהור"]:::proof
+  Q1{"④ ודלמא שאני התם, דלא חזיא לגר?"}:::question
+  A1["⑤ הניחא לר׳ יוחנן: עד לכלב — שפיר"]:::answer
+  Q2{"⑥ אלא לבר פדא: משום דלא חזיא לגר!"}:::question
+  A2["⑦ שלא בפניו מיחזא חזיא ליה"]:::answer
+  Q3{"⑧ אשכחן טומאה בלועה, טהרה בלועה מנלן?"}:::question
+  P2["⑨ קל וחומר מכלי חרס המוקף צמיד פתיל"]:::proof
+  A3["⑩ אדם המציל על טומאה — אינו דין שמציל על טהרה?"]:::answer
+  Q4{"⑪ מה לכלי חרס שאין מיטמא מגבו!"}:::question
+  A4["⑫ מתוכו קאמרינן, ולא מגבו"]:::answer
+  Q5{"⑬ אדרבה, כלי חרס חמור — מטמא מאוירו!"}:::question
+  P3["⑭ בלוע למעלה מנלן למטה? ק״ו — למטה עושה עיכול"]:::proof
+  P4["⑮ בלוע דאדם מנלן דבהמה? ק״ו — בהמה אינה מטמאה מחיים"]:::proof
+  Q6{"⑯ מה לאדם שצריך שהייה בבית המנוגע!"}:::question
+  A5["⑰ אף אדם לא בעי — דתנן: הנכנס וכליו עליו"]:::answer
+  M1 -->|גמרא| S1
+  S1 -->|מנין| P1
+  P1 -.->|דחייה| Q1
+  Q1 -->|ר׳ יוחנן| A1
+  A1 -.->|בר פדא| Q2
+  Q2 -->|תירוץ| A2
+  A2 -->|טהרה בלועה| Q3
+  Q3 -->|ק״ו| P2
+  P2 -->|מסקנה| A3
+  A3 -.->|פירכא| Q4
+  Q4 -->|תירוץ| A4
+  A4 -.->|פירכא| Q5
+  Q5 -->|המשך ק״ו| P3
+  P3 -->|המשך ק״ו| P4
+  P4 -.->|פירכא| Q6
+  Q6 -->|תירוץ| A5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  M1(["① Mishna: a midwife who touched a dead fetus is impure; the woman pure"]):::mishnah
+  S1["② Rabba: swallowed impurity does not impart, swallowed purity is not contracted"]:::statement
+  P1["③ Whence swallowed impurity? From a carcass — ate near sunset, yet pure"]:::proof
+  Q1{"④ Perhaps it differs — unfit for a gentile resident?"}:::question
+  A1["⑤ Fine for R. Yoḥanan: until unfit for a dog — sound"]:::answer
+  Q2{"⑥ But for bar Padda: only because unfit for a resident!"}:::question
+  A2["⑦ Not in his presence, it is in fact fit for him"]:::answer
+  Q3{"⑧ Found swallowed impurity; whence swallowed purity?"}:::question
+  P2["⑨ A fortiori from a sealed earthenware vessel"]:::proof
+  A3["⑩ A person who shields impurity — surely shields purity?"]:::answer
+  Q4{"⑪ But a clay vessel cannot be made impure from its outside!"}:::question
+  A4["⑫ We speak of its inside, not its outside"]:::answer
+  Q5{"⑬ On the contrary — a clay vessel is stricter, impure through its airspace!"}:::question
+  P3["⑭ Whence swallowed-below from above? A fortiori — below digests"]:::proof
+  P4["⑮ Whence an animal from a person? A fortiori — an animal is not impure while alive"]:::proof
+  Q6{"⑯ But a person needs to remain in the leprous house!"}:::question
+  A5["⑰ A person too needs no remaining — as the mishna teaches"]:::answer
+  M1 -->|gemara| S1
+  S1 -->|whence| P1
+  P1 -.->|objection| Q1
+  Q1 -->|R. Yoḥanan| A1
+  A1 -.->|bar Padda| Q2
+  Q2 -->|answer| A2
+  A2 -->|swallowed purity| Q3
+  Q3 -->|a fortiori| P2
+  P2 -->|conclusion| A3
+  A3 -.->|refutation| Q4
+  Q4 -->|answer| A4
+  A4 -.->|refutation| Q5
+  Q5 -->|chain continues| P3
+  P3 -->|chain continues| P4
+  P4 -.->|refutation| Q6
+  Q6 -->|answer| A5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  M1(["① הָאִשָּׁה שֶׁמֵּת וְלָדָהּ … וְנָגְעָה בּוֹ – הַחַיָּה טְמֵאָה … וְהָאִשָּׁה טְהוֹרָה"]):::mishnah
+  S1["② אָמַר רַבָּה: כְּשֵׁם שֶׁטּוּמְאָה בְּלוּעָה אֵינָהּ מְטַמְּאָה, כָּךְ טׇהֳרָה בְּלוּעָה אֵינָהּ מִיטַּמְּאָה"]:::statement
+  P1["③ טוּמְאָה בְּלוּעָה מְנָלַן? … מִי לָא עָסְקִינַן דַּאֲכַל סָמוּךְ לִשְׁקִיעַת הַחַמָּה, וְקָאָמַר רַחֲמָנָא טָהוֹר"]:::proof
+  Q1{"④ וְדִלְמָא שָׁאנֵי הָתָם, דְּלָא חַזְיָא לְגֵר"}:::question
+  A1["⑤ הָנִיחָא לְרַבִּי יוֹחָנָן … עַד לְכֶלֶב – שַׁפִּיר"]:::answer
+  Q2{"⑥ אֶלָּא לְבַר פְּדָא … מִשּׁוּם דְּלָא חַזְיָא לְגֵר הוּא!"}:::question
+  A2["⑦ נְהִי דְּלָא חַזְיָא בְּפָנָיו, שֶׁלֹּא בְּפָנָיו מִיחַזְיָא חַזְיָא לֵיהּ"]:::answer
+  Q3{"⑧ אַשְׁכְּחַן טוּמְאָה בְּלוּעָה, טׇהֳרָה בְּלוּעָה מְנָלַן?"}:::question
+  P2["⑨ קַל וָחוֹמֶר: וּמָה כְּלִי חֶרֶס הַמּוּקָּף צָמִיד פָּתִיל … מַצִּיל עַל טׇהֳרָה שֶׁבְּתוֹכוֹ"]:::proof
+  A3["⑩ אָדָם שֶׁמַּצִּיל עַל טוּמְאָה … אֵינוֹ דִּין שֶׁמַּצִּיל עַל טׇהֳרָה?"]:::answer
+  Q4{"⑪ מָה לִכְלִי חֶרֶס, שֶׁכֵּן אֵין מִטַּמֵּא מִגַּבּוֹ"}:::question
+  A4["⑫ אַטּוּ אֲנַן מִגַּבּוֹ קָאָמְרִינַן? מִתּוֹכוֹ קָאָמְרִינַן!"]:::answer
+  Q5{"⑬ אַדְּרַבָּה, כְּלִי חֶרֶס חָמוּר, שֶׁכֵּן מְטַמֵּא מֵאֲוִירוֹ"}:::question
+  P3["⑭ אַשְׁכְּחַן בָּלוּעַ דִּלְמַעְלָה … קַל וָחוֹמֶר … לְמַטָּה שֶׁעוֹשֶׂה עִיכּוּל"]:::proof
+  P4["⑮ אַשְׁכְּחַן בָּלוּעַ דְּאָדָם … בְּהֵמָה שֶׁאֵינָהּ מְטַמְּאָה מֵחַיִּים – אֵינוֹ דִּין שֶׁתַּצִּיל?"]:::proof
+  Q6{"⑯ מָה לְאָדָם, שֶׁכֵּן צָרִיךְ שְׁהִיָּיה בְּבַיִת הַמְנוּגָּע"}:::question
+  A5["⑰ אָדָם נָמֵי לָא בָּעֵי! דִּתְנַן: הַנִּכְנָס לְבַיִת הַמְנוּגָּע וְכֵלָיו עַל כְּתֵפָיו"]:::answer
+  M1 -->|גמרא| S1
+  S1 -->|מנין| P1
+  P1 -.->|דחייה| Q1
+  Q1 -->|ר׳ יוחנן| A1
+  A1 -.->|בר פדא| Q2
+  Q2 -->|תירוץ| A2
+  A2 -->|טהרה בלועה| Q3
+  Q3 -->|ק״ו| P2
+  P2 -->|מסקנה| A3
+  A3 -.->|פירכא| Q4
+  Q4 -->|תירוץ| A4
+  A4 -.->|פירכא| Q5
+  Q5 -->|המשך ק״ו| P3
+  P3 -->|המשך ק״ו| P4
+  P4 -.->|פירכא| Q6
+  Q6 -->|תירוץ| A5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״א א — Chullin 71a:16</span></div>
+    <div class="orig">מַתְנִי׳ הָאִשָּׁה שֶׁמֵּת וְלָדָהּ בְּתוֹךְ מֵעֶיהָ, וּפָשְׁטָה חַיָּה אֶת יָדָהּ וְנָגְעָה בּוֹ – הַחַיָּה טְמֵאָה טוּמְאַת שִׁבְעָה, וְהָאִשָּׁה טְהוֹרָה עַד שֶׁיֵּצֵא הַוָּלָד.</div>
+    <div class="trans" data-when="he">משנה: אישה שמת העובר בתוך רחמה, ופשטה המיילדת (״חיה״) את ידה לתוך הרחם ונגעה בעובר — המיילדת טמאה טומאת שבעה (טומאת מת), אך האישה עצמה טהורה עד שייצא הולד.</div>
+    <div class="trans" data-when="en">MISHNA: With regard to a woman whose fetus died in her womb and the midwife extended her hand into the womb and touched the fetus, the midwife is thereby rendered impure with the seven-day impurity imparted by a corpse, and the woman remains ritually pure until the offspring emerges from the womb.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״א א — Chullin 71a:17</span></div>
+    <div class="orig">גְּמָ׳ אָמַר רַבָּה: כְּשֵׁם שֶׁטּוּמְאָה בְּלוּעָה אֵינָהּ מְטַמְּאָה, כָּךְ טׇהֳרָה בְּלוּעָה אֵינָהּ מִיטַּמְּאָה.</div>
+    <div class="trans" data-when="he">גמרא: רבה אמר — כשם שדבר טמא הבלוע בתוך גוף אינו מטמא את הנוגע בו, כך דבר טהור הבלוע בגוף אינו מקבל טומאה אם נגע בו דבר טמא. למשל: בלע טבעת טהורה ונכנס לאוהל המת — אינה נטמאת.</div>
+    <div class="trans" data-when="en">GEMARA: Rabba says: Just as a ritually impure item that is encapsulated within a body does not impart impurity to an item that comes in contact with it, so too, a ritually pure item that is encapsulated within a body cannot be rendered impure if it comes in contact with an impure item. For example, if one swallowed a ring that was ritually pure and then entered a tent containing a corpse, the ring would not be rendered impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״א א — Chullin 71a:18</span></div>
+    <div class="orig">טוּמְאָה בְּלוּעָה מְנָלַן? דִּכְתִיב: ״וְהָאֹכֵל מִנִּבְלָתָהּ יְכַבֵּס בְּגָדָיו״, מִי לָא עָסְקִינַן דַּאֲכַל סָמוּךְ לִשְׁקִיעַת הַחַמָּה, וְקָאָמַר רַחֲמָנָא טָהוֹר.</div>
+    <div class="trans" data-when="he">מנין שטומאה בלועה אינה מטמאה? שנאמר ״והאוכל מנבלתה יכבס בגדיו״ — יטבול ויטהר בשקיעת החמה. וכי לא מדובר אף במי שאכל סמוך לשקיעה? והרי בשעת השקיעה עדיין הנבלה במעיו ולא נתעכלה, ובכל זאת אמרה תורה שטהור — שהבלוע אינו מטמא.</div>
+    <div class="trans" data-when="en">The Gemara asks: From where do we derive that an encapsulated impure item does not impart impurity? As it is written: “And one who eats of its carcass shall wash his clothes, and be impure until the evening” (Leviticus 11:40), i.e., he must immerse his body and garments in a ritual bath, and he then becomes pure at sunset. Are we not dealing even with a case where one ate from the carcass close to sunset and then immersed? And yet the Merciful One states that he is pure once the sun sets, despite the fact that his stomach still contains pieces of the carcass that have not yet been digested. If so, it is apparent that an encapsulated impure item does not impart impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״א א — Chullin 71a:19</span></div>
+    <div class="orig">וְדִלְמָא שָׁאנֵי הָתָם, דְּלָא חַזְיָא לְגֵר.</div>
+    <div class="trans" data-when="he">דחייה: ושמא שונה שם — שהנבלה שאכל כבר אינה ראויה למאכל גר תושב, ולכן אינה מטמאת מצד עצמה (ולא משום שהיא בלועה)?</div>
+    <div class="trans" data-when="en">The Gemara challenges: But perhaps it is different there, as with regard to the prohibition against eating a carcass the Torah states: “You shall not eat any carcass; you may give it to the gentile resident who is in your cities” (Deuteronomy 14:21). The juxtaposition of the two parts of the verse teaches that the prohibition is limited to a carcass that is fit to be given to a gentile resident, i.e., it is fit for human consumption. Accordingly, perhaps the carcass that the person ate does not impart impurity, as it is no longer fit for a gentile resident, i.e., it is now unsuitable for human consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״א א — Chullin 71a:20</span></div>
+    <div class="orig">הָנִיחָא לְרַבִּי יוֹחָנָן, דְּאָמַר: אַחַת זוֹ וְאַחַת זוֹ, עַד לְכֶלֶב – שַׁפִּיר.</div>
+    <div class="trans" data-when="he">תירוץ חלקי: ניחא לר׳ יוחנן הסובר שנבלה מטמאת — בין את האדם בין אוכלין — עד שתיפסל מאכילת כלב; אם כן הנבלה במעיו עדיין ראויה לכלב ומטמאת, ובכל זאת טהור — ראיה שהבלוע אינו מטמא.</div>
+    <div class="trans" data-when="en">The Gemara comments that the effectiveness of the proof depends on whether a carcass can impart impurity to a person despite its not being fit for human consumption: This proof works out well according to the opinion of Rabbi Yoḥanan, who says: A carcass imparts impurity to both this, a person, and that, food, even if it is unfit for human consumption, until it is no longer fit for consumption by a dog. According to this opinion the proof is understood well, as the carcass in the person’s stomach still has the ability to impart impurity to him because it is still fit for consumption by a dog. Therefore, it is apparent that the only reason it does not impart impurity is that it is encapsulated within his body.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״א א — Chullin 71a:21</span></div>
+    <div class="orig">אֶלָּא לְבַר פְּדָא, דְּאָמַר: טוּמְאָה חֲמוּרָה לְגֵר, וְטוּמְאָה קַלָּה עַד לְכֶלֶב – מִשּׁוּם דְּלָא חַזְיָא לְגֵר הוּא!</div>
+    <div class="trans" data-when="he">אבל לבר פדא הסובר שטומאה חמורה (לטמא אדם) רק עד שתיפסל מאכילת גר, וטומאה קלה (לטמא אוכלין) עד אכילת כלב — אפשר לדחות: הנבלה במעיו אינה מטמאת את האדם משום שכבר נפסלה מאכילת גר, ולא משום שהיא בלועה!</div>
+    <div class="trans" data-when="en">But according to the opinion of bar Padda, who says a carcass has the severe form of ritual impurity, which can impart impurity to people only while it is still fit to be eaten by a gentile resident and it has the light form of ritual impurity even until the point that it is no longer fit for consumption by a dog, this proof is flawed. This is because it is possible the carcass in the person’s stomach does not render him impure simply because it is no longer fit for human consumption. Can one claim that the carcass cannot impart impurity because it is no longer fit for a gentile resident?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״א א — Chullin 71a:22</span></div>
+    <div class="orig">נְהִי דְּלָא חַזְיָא בְּפָנָיו, שֶׁלֹּא בְּפָנָיו מִיחַזְיָא חַזְיָא לֵיהּ.</div>
+    <div class="trans" data-when="he">תירוץ: אמנם בפניו (כשיודע שבלעה) אינה ראויה לו, שמתעב לאכול דבר בלוע; אך שלא בפניו (כשאינו יודע) עדיין ראויה לו — כגון שבלע חתיכה קטנה בלא ללעוס — ולכן עדיין מטמאת, והראיה קיימת.</div>
+    <div class="trans" data-when="en">Granted that the carcass is not fit to be eaten by someone when it was eaten in his presence, as he is aware that it was swallowed and considers it disgusting to eat a swallowed item, but it is still sometimes fit for a person to eat when it was eaten not in his presence and he is unaware that it had been previously swallowed. This is possible where one consumed a small piece of food and did not chew it prior to swallowing. The Gemara concedes this point and therefore accepts the proof.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״א א — Chullin 71a:23</span></div>
+    <div class="orig">אַשְׁכְּחַן טוּמְאָה בְּלוּעָה, טׇהֳרָה בְּלוּעָה מְנָלַן?</div>
+    <div class="trans" data-when="he">מצאנו מקור שטומאה בלועה אינה מטמאה; מנין שטהרה בלועה (דבר טהור הבלוע בגוף) אינה מקבלת טומאה כשנוגע בה טמא?</div>
+    <div class="trans" data-when="en">The Gemara asks: We found a source for the halakha that an encapsulated impure item does not impart impurity. From where do we derive that a pure item that is encapsulated within another body cannot be rendered impure if it comes in contact with an impure item?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״א א — Chullin 71a:24</span></div>
+    <div class="orig">קַל וָחוֹמֶר: וּמָה כְּלִי חֶרֶס הַמּוּקָּף צָמִיד פָּתִיל, שֶׁאֵינוֹ מַצִּיל עַל טוּמְאָה שֶׁבְּתוֹכוֹ מִלְּטַמֵּא, דְּאָמַר מָר: טוּמְאָה רְצוּצָה בּוֹקַעַת וְעוֹלָה עַד לָרָקִיעַ – מַצִּיל עַל טׇהֳרָה שֶׁבְּתוֹכוֹ מִלְּטַמֵּא,</div>
+    <div class="trans" data-when="he">קל וחומר: ומה כלי חרס המוקף צמיד פתיל, שאינו מציל על הטומאה שבתוכו מלטמא (שהרי ״טומאה רצוצה בוקעת ועולה עד לרקיע״) — בכל זאת מציל על הטהרה שבתוכו מלהיטמא;</div>
+    <div class="trans" data-when="en">The Gemara explains: It is derived through an a fortiori inference: If an earthenware vessel that is closed with a tightly sealed cover, which does not shield, i.e., prevent, the impure piece of a corpse contained within it from imparting impurity to other items in the same tent as it; the Gemara interrupts the explication of the inference and clarifies: As the Master said: The impure piece of a corpse that is in a tight space; e.g., it is buried in the ground and there is not a handbreadth of hollow space above it, beneath the dirt, breaks through the earth above it and ascends up to the heavens, imparting impurity in that path. The Gemara resumes the explication of the inference: Although the tightly sealed earthenware vessel does not shield the impure item, it does shield a pure item contained within it from being rendered impure (see Numbers 19:15).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״א ב — Chullin 71b:1</span></div>
+    <div class="orig">אָדָם שֶׁמַּצִּיל עַל טוּמְאָה שֶׁבְּתוֹכוֹ מִלְּטַמֵּא – אֵינוֹ דִּין שֶׁמַּצִּיל עַל טׇהֳרָה שֶׁבְּתוֹכוֹ מִלִּיטַּמֵּא?</div>
+    <div class="trans" data-when="he">סיום הקל וחומר: אדם, שכן מציל על הטומאה שבתוכו מלטמא (כפי שלמדנו) — אינו דין שיציל על הטהרה שבתוכו מלהיטמא?</div>
+    <div class="trans" data-when="en">Then with regard to a person, who does shield the impurity of a piece of a corpse contained within him from imparting impurity to other items in the same tent, as the Gemara derived above, is it not logical that he shields a pure item contained within him from being rendered impure?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ע״א ב — Chullin 71b:2</span></div>
+    <div class="orig">מָה לִכְלִי חֶרֶס, שֶׁכֵּן אֵין מִטַּמֵּא מִגַּבּוֹ, תֹּאמַר בָּאָדָם שֶׁמִּטַּמֵּא מִגַּבּוֹ?</div>
+    <div class="trans" data-when="he">פירכא: מה לכלי חרס שכן אינו מיטמא מגבו (מצדו החיצון) — תאמר באדם שמיטמא מגבו? כיון שבאדם דיני הטומאה חמורים, אין ללמוד עליו קולא מכלי חרס.</div>
+    <div class="trans" data-when="en">The Gemara challenges the inference: What is notable about an earthenware vessel? It is notable in that it cannot become impure through a source of impurity coming in contact with its exterior. Can you say, then, that it is comparable to a person, who can become impure through a source of impurity coming in contact with his exterior? Since here the halakhot concerning impurity of a person are more stringent than those concerning an earthenware vessel, one cannot apply to a person a leniency with regard to an earthenware vessel.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ע״א ב — Chullin 71b:3</span></div>
+    <div class="orig">אַטּוּ אֲנַן מִגַּבּוֹ קָאָמְרִינַן? מִתּוֹכוֹ קָאָמְרִינַן!</div>
+    <div class="trans" data-when="he">תירוץ: וכי על טומאה מגבו אנו מדברים? על טומאה מתוכו אנו מדברים! ולעניין זה אפשר להשוות אדם לכלי חרס.</div>
+    <div class="trans" data-when="en">The Gemara responds: Is that to say we are speaking of rendering an item impure through a source of impurity coming in contact with its exterior? We are in fact speaking of where the impurity comes in contact with its interior. For such cases, it is reasonable to compare the case of a person with an earthenware vessel.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ע״א ב — Chullin 71b:4</span></div>
+    <div class="orig">אַדְּרַבָּה, כְּלִי חֶרֶס חָמוּר, שֶׁכֵּן מְטַמֵּא מֵאֲוִירוֹ.</div>
+    <div class="trans" data-when="he">ואדרבה — כלי חרס חמור מאדם, שכן מיטמא מאווירו (מטומאה שבחללו אף בלא נגיעה); ואילו אדם מיטמא מטומאה שבחללו, כגון בפיו, רק במגע — והקל וחומר עומד בעינו.</div>
+    <div class="trans" data-when="en">The Gemara adds: On the contrary, the contraction of impurity by an earthenware vessel is more stringent than that of a person, as it becomes impure through the presence of a source of impurity in its airspace, even if the source does not touch the vessel itself. By contrast, a person is rendered impure from a source of impurity in his airspace, e.g., in his mouth, only if it actually touches him, and the a fortiori inference remains valid.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ע״א ב — Chullin 71b:5</span></div>
+    <div class="orig">אַשְׁכְּחַן בָּלוּעַ דִּלְמַעְלָה, בָּלוּעַ דִּלְמַטָּה מְנָלַן? קַל וָחוֹמֶר: וּמָה לְמַעְלָה, שֶׁאֵינוֹ עוֹשֶׂה עִיכּוּל – מַצִּיל, לְמַטָּה שֶׁעוֹשֶׂה עִיכּוּל – אֵינוֹ דִּין שֶׁמַּצִּיל?</div>
+    <div class="trans" data-when="he">מצאנו בלוע שנכנס מלמעלה (דרך הפה); בלוע שנכנס מלמטה (דרך פי הטבעת) מנין? קל וחומר: ומה למעלה, שאינו מקום עיכול — מציל; למטה, שמקום עיכול — אינו דין שיציל?</div>
+    <div class="trans" data-when="en">The Gemara asks: We found a source for the halakha that an impure item encapsulated in a body that entered it from above, i.e., through the mouth, does not impart impurity. From where do we derive that an impure item encapsulated in a body that entered it from below, i.e., through the rectum, also does not impart impurity? The Gemara answers: It is derived through an a fortiori inference: And if, when the impure item enters from above, through the mouth, which is a place that does not digest the food, the body nevertheless shields the impure item from imparting impurity, then with regard to a case where the impure item enters from below, which is a place that does digest food, is it not logical that the body should shield it from imparting impurity?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ע״א ב — Chullin 71b:6</span></div>
+    <div class="orig">כְּלוּם עוֹשֶׂה עִיכּוּל לְמַטָּה אֶלָּא עַל יְדֵי מַעְלָה? אֲפִילּוּ הָכִי, עִיכּוּל דִּלְמַטָּה רַב.</div>
+    <div class="trans" data-when="he">פירכא ויישוב: וכי העיכול שלמטה נעשה אלא על ידי הלעיסה והעיכול שלמעלה? אף על פי כן, העיכול שלמטה גדול יותר — והקל וחומר עומד.</div>
+    <div class="trans" data-when="en">The Gemara challenges the basis of the inference: Isn’t digestion performed below only by means of the chewing and digestive functions of the body above? The Gemara explains: Even so, the digestion performed below is greater than that performed above.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ע״א ב — Chullin 71b:7</span></div>
+    <div class="orig">אַשְׁכְּחַן בָּלוּעַ דְּאָדָם, בָּלוּעַ דִּבְהֵמָה מְנָלַן? קַל וָחוֹמֶר: וּמָה אָדָם שֶׁמִּטַּמֵּא מֵחַיִּים מַצִּיל בְּבָלוּעַ, בְּהֵמָה שֶׁאֵינָהּ מְטַמְּאָה מֵחַיִּים – אֵינוֹ דִּין שֶׁתַּצִּיל בְּבָלוּעַ?</div>
+    <div class="trans" data-when="he">מצאנו בלוע באדם; בלוע בבהמה מנין? קל וחומר: ומה אדם המיטמא אף מחיים (כגון מצורע או זב) מציל את הבלוע — בהמה שאינה מיטמאת מחיים, אינו דין שתציל את הבלוע?</div>
+    <div class="trans" data-when="en">The Gemara asks: We found a source for the halakha that an impure item encapsulated in the body of a person does not impart impurity; from where do we derive that an impure item encapsulated in the body of an animal does not impart impurity? The Gemara answers: It is derived through an a fortiori inference: If the body of a person, who can impart impurity even while he is still alive, e.g., if he is a leper or a zav, nevertheless shields the impure item encapsulated inside him from imparting impurity, then with regard to an animal, which does not impart impurity while it is alive, is it not logical that it should shield an impure item encapsulated inside it from imparting impurity?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין ע״א ב — Chullin 71b:8</span></div>
+    <div class="orig">מָה לְאָדָם, שֶׁכֵּן צָרִיךְ שְׁהִיָּיה בְּבַיִת הַמְנוּגָּע, תֹּאמַר בִּבְהֵמָה, שֶׁאֵינָהּ צְרִיכָה שְׁהִיָּיה בְּבַיִת הַמְנוּגָּע?</div>
+    <div class="trans" data-when="he">פירכא: מה לאדם שכן צריך שהייה בבית המנוגע (כדי שייטמאו בגדיו) — תאמר בבהמה שאינה צריכה שהייה, אלא כליה נטמאים מיד? כיון שבבהמה הדין חמור, אין ללמוד עליה קולא מאדם.</div>
+    <div class="trans" data-when="en">The Gemara challenges the inference: What is notable about the impurity of a person? It is notable in that if he entered a leprous house, in order for his garment to be rendered impure he needs to remain in the leprous house for a minimal period of time (see Leviticus 14:33–53). Can you say, then, that it is comparable to an animal, which does not need to remain in a leprous house for a minimal period of time? Rather, any utensils placed upon it are rendered impure immediately upon its entry. Since here the halakhot concerning impurity of an animal are more stringent than those concerning a person, one cannot necessarily apply to an animal a leniency with regard to a person.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין ע״א ב — Chullin 71b:9</span></div>
+    <div class="orig">בְּהֵמָה דְּאֵינָהּ צְרִיכָה שְׁהִיָּיה בְּבַיִת הַמְנוּגָּע, לְמַאי הִלְכְתָא? לְכֵלִים שֶׁעַל גַּבָּהּ. אָדָם נָמֵי לָא בָּעֵי!</div>
+    <div class="trans" data-when="he">יישוב: בהמה שאינה צריכה שהייה — לאיזה דין? לעניין כלים שעל גבה, שנטמאים מיד. אבל אף אדם אינו צריך שהייה לעניין כלים שעל כתפו — שאף הם נטמאים מיד; ואין כאן חומרא יתרה בבהמה.</div>
+    <div class="trans" data-when="en">The Gemara responds: When it is stated about an animal that it does not need to remain in a leprous house for a minimal period of time, with regard to what halakha was that said? A living animal itself cannot be impure. Perforce, the statement is referring to utensils that are placed upon its back, and they are rendered impure immediately upon entry. But in this regard there is no difference between animals and people: A person as well does not need to remain in the leprous house for a minimal period of time in order to render impure any utensils placed on his back. Rather, they are rendered impure immediately upon entry.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">19</span> <span class="ref">חולין ע״א ב — Chullin 71b:10</span></div>
+    <div class="orig">דִּתְנַן: הַנִּכְנָס לְבַיִת הַמְנוּגָּע וְכֵלָיו עַל כְּתֵפָיו, וְסַנְדָּלָיו וְטַבְּעוֹתָיו בְּיָדָיו – הוּא וְהֵן טְמֵאִין מִיָּד. הָיָה לָבוּשׁ כֵּלָיו וְסַנְדָּלָיו בְּרַגְלָיו וְטַבְּעוֹתָיו בְּאֶצְבָּעוֹ – הוּא טָמֵא מִיָּד, וְהֵן טְהוֹרִין עַד שֶׁיִּשְׁהֶא בִּכְדֵי אֲכִילַת פְּרָס, פַּת חִטִּים וְלֹא פַּת שְׂעוֹרִים, מֵיסֵב וְאוֹכֵל בְּלִיפְתָּן.</div>
+    <div class="trans" data-when="he">שנינו (נגעים): הנכנס לבית המנוגע וכליו על כתפיו וסנדליו וטבעותיו בידיו — הוא והם טמאים מיד. היה לבוש כליו וסנדליו ברגליו וטבעותיו באצבעו — הוא טמא מיד, והם טהורים עד שישהה כדי אכילת פרס; פת חיטים ולא שעורים, מיסב ואוכל בליפתן (שאז זמן האכילה קצר). הרי שאף באדם הכלים שעליו נטמאים מיד.</div>
+    <div class="trans" data-when="en">This is as we learned in a mishna (Nega’im 13:9): With regard to one who enters a leprous house with his clothes resting on his shoulders but who is not wearing them in the normal manner, and his sandals and his rings are in his hands, both he and they, the clothes, sandals, and rings, are rendered ritually impure immediately. If he was dressed in his clothes, and his sandals were on his feet and his rings were on his fingers, he is rendered impure immediately upon entering the house, but they, the clothes, sandals, and rings, remain pure until he remains in the house for the time it takes to eat a half-loaf of bread. This calculation is made with wheat bread and not with barley bread, which takes more time to eat than wheat bread. In addition, the calculation is made with regard to one who is reclining, and eating the bread together with a relish usually consumed with bread, which hastens the eating.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">רבא: תרווייהו תנינא — והעמדה בשתי טבעות</span><span data-when="en">Rava: both are already taught — and the two-rings case</span>
+      <span class="ref">Chullin 71b:11–72a:2</span></h2>
+  <div class="lead"><span data-when="he">רבא משיג על רבה: שני הדינים כבר שנויים במשניות. רבה משיב שחידושו בשתי טבעות בלועות יחד — שאין הטמאה מטמאת את הטהורה; ומקושיית העובר נדחק לתירוץ ׳סופו לצאת׳, ולבסוף — ׳פומבדיתאי ידעי טעמא׳, רב יוסף.</span><span data-when="en">Rava objects to Rabba: both rulings are already taught in mishnayot. Rabba replies his novelty is two rings swallowed together; the fetus objection forces “it will ultimately emerge,” and finally — “the scholars of Pumbedita know the reason,” Rav Yosef.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① רבא: תרווייהו תנינא — למה לן רבה?"}:::question
+  P1["② טומאה בלועה תנן: בלע טבעת טמאה, טובל ואוכל"]:::proof
+  P2["③ טהרה בלועה תנן: בלע טבעת טהורה ונכנס לאוהל המת"]:::proof
+  A1["④ רבה בשתי טבעות: טמאה אינה מטמאת לטהורה"]:::answer
+  Q2{"⑤ והא עובר וחיה כשתי טבעות, ומטמא העובר!"}:::question
+  A2["⑥ רבה: שאני עובר, סופו לצאת"]:::answer
+  C1["⑥ רבא: טבעת אף סופה לצאת! אלא פומבדיתאי ידעי — רב יוסף"]:::conclusion
+  Q1 -->|ת״ש| P1
+  P1 -->|ת״ש| P2
+  P2 -->|העמדה| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+  A2 -.->|דחייה ומסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Rava: both are taught — why do we need Rabba?"}:::question
+  P1["② Swallowed impurity is taught: swallowed an impure ring, immerses and eats"]:::proof
+  P2["③ Swallowed purity is taught: swallowed a pure ring and entered a corpse-tent"]:::proof
+  A1["④ Rabba means two rings: the impure does not render the pure impure"]:::answer
+  Q2{"⑤ But fetus and midwife are like two rings, and the fetus does impart!"}:::question
+  A2["⑥ Rabba: a fetus differs — it will ultimately emerge"]:::answer
+  C1["⑥ Rava: a ring too will emerge! Rather the Pumbeditans know — Rav Yosef"]:::conclusion
+  Q1 -->|come and hear| P1
+  P1 -->|come and hear| P2
+  P2 -->|recasting| A1
+  A1 -.->|objection| Q2
+  Q2 -->|answer| A2
+  A2 -.->|rejection, conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① אָמַר רָבָא: תַּרְוַיְיהוּ תְּנַנְהִי, טוּמְאָה בְּלוּעָה תְּנֵינָא, טׇהֳרָה בְּלוּעָה תְּנֵינָא!"}:::question
+  P1["② בָּלַע טַבַּעַת טְמֵאָה, טוֹבֵל וְאוֹכֵל בִּתְרוּמָתוֹ; הֱקִיאָהּ – טְמֵאָה, וְטִמְּאַתּוּ"]:::proof
+  P2["③ בָּלַע טַבַּעַת טְהוֹרָה, וְנִכְנַס לְאֹהֶל הַמֵּת … וֶהֱקִיאָהּ – הֲרֵי הִיא כְּמָה שֶׁהָיְתָה"]:::proof
+  A1["④ כִּי קָאָמַר רַבָּה, כְּגוֹן שֶׁבָּלַע שְׁתֵּי טַבָּעוֹת … דְּלָא מְטַמְּיָא לַהּ טְמֵאָה לִטְהוֹרָה"]:::answer
+  Q2{"⑤ וְהָא עוּבָּר וְחַיָּה, דְּכִשְׁתֵּי טַבָּעוֹת דָּמוּ, וְקָא מְטַמֵּא לַהּ עוּבָּר לְחַיָּה?"}:::question
+  A2["⑥ אָמַר רַבָּה: שָׁאנֵי עוּבָּר, הוֹאִיל וְסוֹפוֹ לָצֵאת"]:::answer
+  C1["⑥ אָמַר רָבָא: … אֶלָּא פּוּמְבְּדִיתָאֵי יָדְעִי טַעְמָא … וּמַנּוּ? רַב יוֹסֵף"]:::conclusion
+  Q1 -->|ת״ש| P1
+  P1 -->|ת״ש| P2
+  P2 -->|העמדה| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+  A2 -.->|דחייה ומסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״א ב — Chullin 71b:11</span></div>
+    <div class="orig">אָמַר רָבָא: תַּרְוַיְיהוּ תְּנַנְהִי, טוּמְאָה בְּלוּעָה תְּנֵינָא, טׇהֳרָה בְּלוּעָה תְּנֵינָא!</div>
+    <div class="trans" data-when="he">רבא הקשה על רבה: למה הוצרך לחדש את שני הדינים? שניהם כבר שנויים במשנה — גם טומאה בלועה וגם טהרה בלועה.</div>
+    <div class="trans" data-when="en">§ Rabba stated above that an encapsulated impure item cannot impart impurity and that an item that is ritually pure that is encapsulated within another body cannot be rendered impure. Rava said: Why is this statement necessary? We learn both halakhot in a mishna: We learn about an encapsulated impure item, and we learn about an encapsulated pure item.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״א ב — Chullin 71b:12</span></div>
+    <div class="orig">טוּמְאָה בְּלוּעָה – דִּתְנַן: בָּלַע טַבַּעַת טְמֵאָה, טוֹבֵל וְאוֹכֵל בִּתְרוּמָתוֹ; הֱקִיאָהּ – טְמֵאָה, וְטִמְּאַתּוּ.</div>
+    <div class="trans" data-when="he">טומאה בלועה — שנינו (מקואות): בלע טבעת טמאה (טומאת מת), טובל ואוכל בתרומתו, שכן הטבעת בלועה ואינה מטמאת. הקיאהּ — שבה לטמא, שלא נטהרה בטבילתו, ומטמאת אותו ביציאתה.</div>
+    <div class="trans" data-when="en">Rava elaborates: With regard to an encapsulated impure item, the halakha is as we learned (Mikvaot 10:8): If someone swallowed a ring that was impure due to having been in contact with a corpse, he is thereby rendered impure. To render himself pure he immerses and then he may partake of his teruma, despite the fact that the impure ring is still inside him. The reason this is permitted is that since the ring in encapsulated inside the person’s body it cannot impart impurity. If he vomited out this ring it remains impure, as it was not purified by his immersion, and therefore it renders him impure upon its exit from his body.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״א ב — Chullin 71b:13</span></div>
+    <div class="orig">טׇהֳרָה בְּלוּעָה תְּנֵינָא, דִּתְנַן: בָּלַע טַבַּעַת טְהוֹרָה, וְנִכְנַס לְאֹהֶל הַמֵּת, וְהִזָּה וְשָׁנָה וְטָבַל וֶהֱקִיאָהּ – הֲרֵי הִיא כְּמָה שֶׁהָיְתָה.</div>
+    <div class="trans" data-when="he">טהרה בלועה — אף היא שנויה (מקואות): בלע טבעת טהורה ונכנס לאוהל המת ונטמא הוא; הזה עליו (ביום שלישי ושביעי), שנה וטבל, ואז הקיאהּ — הרי הטבעת כמו שהיתה, טהורה, שלא נטמאה באוהל המת.</div>
+    <div class="trans" data-when="en">Likewise, we learn the halakha that an encapsulated pure item cannot be rendered impure, as we learn in the same mishna (Mikvaot 10:8): If one swallowed a ritually pure ring and then entered a tent containing a corpse, thereby contracting impurity, and then in order to render him pure someone sprinkled upon him the water that is mixed with the ashes of the red heifer, once on the third day and again on the seventh day as required, and then he immersed, thereby completing the purification process; and then he vomited out the ring, the ring is pure as it always was, i.e., it was not rendered impure from the corpse.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״א ב — Chullin 71b:14</span></div>
+    <div class="orig">כִּי קָאָמַר רַבָּה, כְּגוֹן שֶׁבָּלַע שְׁתֵּי טַבָּעוֹת, אַחַת טְמֵאָה וְאַחַת טְהוֹרָה, דְּלָא מְטַמְּיָא לַהּ טְמֵאָה לִטְהוֹרָה.</div>
+    <div class="trans" data-when="he">יישוב: כשאמר רבה את חידושו, התכוון למקרה שבלע שתי טבעות יחד — אחת טמאה ואחת טהורה הנוגעות זו בזו בתוך הגוף — שאף בזה אין הטמאה מטמאת את הטהורה. וזה לא שנינו במשנה.</div>
+    <div class="trans" data-when="en">The Gemara answers: The cases in the mishna concern the possibility of imparting impurity from the ring to the body within which it is contained and vice versa. But when Rabba was speaking he was referring to imparting impurity from one item to another where both are contained together inside a body, such as where a person swallowed two rings, one impure and one pure, and they came in direct contact with one another. Rabba taught that even in this case the impure ring does not render the pure ring impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ב א — Chullin 72a:1</span></div>
+    <div class="orig">וְהָא עוּבָּר וְחַיָּה, דְּכִשְׁתֵּי טַבָּעוֹת דָּמוּ, וְקָא מְטַמֵּא לַהּ עוּבָּר לְחַיָּה?</div>
+    <div class="trans" data-when="he">קושיא: והרי במשנתנו העובר המת והמיילדת דומים לשתי טבעות (העובר טמא והמיילדת ״טהורה בלועה״ בתוך גופה), ובכל זאת מטמא העובר את המיילדת — בניגוד לחידוש רבה!</div>
+    <div class="trans" data-when="en">The Gemara objects: But what about the mishna’s case of a dead fetus in its mother’s womb, and a midwife who touched it there, which is similar to the case of two swallowed rings, and yet the mishna rules that the fetus renders the midwife impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ב א — Chullin 72a:2</span></div>
+    <div class="orig">אָמַר רַבָּה: שָׁאנֵי עוּבָּר, הוֹאִיל וְסוֹפוֹ לָצֵאת. אָמַר רָבָא: עוּבָּר סוֹפוֹ לָצֵאת, טַבַּעַת אֵין סוֹפָהּ לָצֵאת? אֶלָּא אָמַר רָבָא: פּוּמְבְּדִיתָאֵי יָדְעִי טַעְמָא דְּהָא מִילְּתָא, וּמַנּוּ? רַב יוֹסֵף.</div>
+    <div class="trans" data-when="he">רבה תירץ: שונה עובר, הואיל וסופו לצאת (ולכן כבר עתה אינו ״בלוע״ גמור). תמה רבא: וכי עובר סופו לצאת וטבעת אין סופה לצאת? אף הטבעת תצא! אלא אמר רבא: בני פומבדיתא יודעים טעם הדבר — ומיהו? רב יוסף.</div>
+    <div class="trans" data-when="en">Rabba said: A fetus is different from a ring in this regard, since it will ultimately leave the womb. Rava said in puzzlement: Is that to say that a fetus will ultimately leave the womb, but a ring that someone swallowed will not ultimately leave his body? A ring will certainly be expelled eventually as well. Rather, Rava said: The scholars of Pumbedita know the reason for this matter, and who is the Sage referred to as the scholars of Pumbedita? It is Rav Yosef.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">גזירת חכמים שמא יוציא ראשו — ומחלוקת ישמעאל ועקיבא</span><span data-when="en">The decree lest the head emerge — and the dispute of Yishmael and Akiva</span>
+      <span class="ref">Chullin 72a:3–10</span></h2>
+  <div class="lead"><span data-when="he">שמואל: טומאת המיילדת מדרבנן, אף לר׳ ישמעאל. טעם הגזירה — שמא יוציא הולד ראשו ויחזיר; ולמה לא האישה — מרגשת בעצמה. ושורש המחלוקת: דרשת ״על פני השדה״ ו״הנוגע במת בנפש״.</span><span data-when="en">Shmuel: the midwife’s impurity is rabbinic, even for R. Yishmael. The reason — lest the fetus extend its head and withdraw it; why not the woman — she senses her own body. And the root dispute: the exegeses of “in the open field” and “who touches a corpse, of a life.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① שמואל: טומאה זו מדברי סופרים — אף לר׳ ישמעאל"]:::statement
+  Q1{"② מאי טעמא הגזירה?"}:::question
+  A1["③ רב הושעיא: שמא יוציא ולד ראשו חוץ לפרוזדור"]:::answer
+  Q2{"④ אי הכי, אישה נמי? · מרגשת בעצמה; וחיה — טרידא"}:::question
+  Q3{"⑤ מאי ר׳ ישמעאל ומאי ר׳ עקיבא? ׳על פני השדה׳"}:::question
+  S2["⑥ ר׳ ישמעאל: למעט עובר · ר׳ עקיבא: לרבות גולל ודופק"]:::statement
+  P1["⑦ ר׳ עקיבא: ׳הנוגע במת בנפש׳ — עובר במעי אישה"]:::proof
+  S3["⑧ ר׳ ישמעאל: ההוא לרביעית דם הבאה מן המת"]:::statement
+  S4["⑧ ר׳ עקיבא לטעמיה: ׳נפשות מת׳ — שתי נפשות ושיעור אחד"]:::statement
+  S1 -->|טעם| Q1
+  Q1 -->|רב הושעיא| A1
+  A1 -.->|קושיא ויישוב| Q2
+  Q2 -->|שורש המחלוקת| Q3
+  Q3 -->|ברייתא| S2
+  S2 -->|מנא ליה לעקיבא| P1
+  P1 -->|וישמעאל| S3
+  S3 -->|ועקיבא| S4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Shmuel: this impurity is rabbinic — even for R. Yishmael"]:::statement
+  Q1{"② What is the reason for the decree?"}:::question
+  A1["③ Rav Hoshaya: lest the fetus extend its head past the opening"]:::answer
+  Q2{"④ If so, the woman too? · She senses herself; the midwife — distracted"}:::question
+  Q3{"⑤ What is R. Yishmael, what is R. Akiva? ׳in the open field׳"}:::question
+  S2["⑥ R. Yishmael: to exclude a fetus · R. Akiva: to include cover and walls"]:::statement
+  P1["⑦ R. Akiva: ׳who touches a corpse, of a life׳ — a fetus in the womb"]:::proof
+  S3["⑧ R. Yishmael: that verse is for a quarter-log of corpse blood"]:::statement
+  S4["⑧ R. Akiva consistent: ׳corpses, a corpse׳ — two lives, one measure"]:::statement
+  S1 -->|reason| Q1
+  Q1 -->|Rav Hoshaya| A1
+  A1 -.->|objection, resolution| Q2
+  Q2 -->|root dispute| Q3
+  Q3 -->|baraita| S2
+  S2 -->|whence for Akiva| P1
+  P1 -->|and Yishmael| S3
+  S3 -->|and Akiva| S4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① טוּמְאָה זוֹ אֵינָהּ מִדִּבְרֵי תוֹרָה, אֶלָּא מִדִּבְרֵי סוֹפְרִים … אֲפִילּוּ לְרַבִּי יִשְׁמָעֵאל"]:::statement
+  Q1{"② מַאי טַעְמָא?"}:::question
+  A1["③ אָמַר רַב הוֹשַׁעְיָא: גְּזֵירָה שֶׁמָּא יוֹצִיא וָלָד רֹאשׁוֹ חוּץ לַפְּרוֹזְדוֹר"]:::answer
+  Q2{"④ אִי הָכִי, אִשָּׁה נָמֵי? אִשָּׁה מַרְגֶּשֶׁת בְּעַצְמָהּ … חַיָּה טְרִידָא"}:::question
+  Q3{"⑤ מַאי רַבִּי יִשְׁמָעֵאל, וּמַאי רַבִּי עֲקִיבָא? ״וְכֹל אֲשֶׁר יִגַּע עַל פְּנֵי הַשָּׂדֶה״"}:::question
+  S2["⑥ לְהוֹצִיא עוּבָּר – ישמעאל · רַבִּי עֲקִיבָא: לְרַבּוֹת גּוֹלֵל וְדוֹפֵק"]:::statement
+  P1["⑦ ״הַנּוֹגֵעַ בְּמֵת בְּנֶפֶשׁ״ … זֶה עוּבָּר שֶׁבִּמְעֵי אִשָּׁה"]:::proof
+  S3["⑧ וְרַבִּי יִשְׁמָעֵאל, הַאי מִיבְּעֵי לֵיהּ לִרְבִיעִית דָּם הַבָּאָה מִן הַמֵּת"]:::statement
+  S4["⑧ וְרַבִּי עֲקִיבָא לְטַעְמֵיהּ … ״נַפְשֹׁת מֵת״ – שְׁתֵּי נְפָשׁוֹת וְשִׁיעוּר אֶחָד"]:::statement
+  S1 -->|טעם| Q1
+  Q1 -->|רב הושעיא| A1
+  A1 -.->|קושיא ויישוב| Q2
+  Q2 -->|שורש המחלוקת| Q3
+  Q3 -->|ברייתא| S2
+  S2 -->|מנא ליה לעקיבא| P1
+  P1 -->|וישמעאל| S3
+  S3 -->|ועקיבא| S4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ב א — Chullin 72a:3</span></div>
+    <div class="orig">דְּאָמַר רַב יוֹסֵף אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: טוּמְאָה זוֹ אֵינָהּ מִדִּבְרֵי תוֹרָה, אֶלָּא מִדִּבְרֵי סוֹפְרִים. מַאי אֵינָהּ מִדִּבְרֵי תוֹרָה אֶלָּא מִדִּבְרֵי סוֹפְרִים? דְּלָא תֵּימָא אַלִּיבָּא דְּרַבִּי עֲקִיבָא דְּאָמַר: ״עוּבָּר בִּמְעֵי אִשָּׁה טָמֵא״, אֶלָּא אֲפִילּוּ לְרַבִּי יִשְׁמָעֵאל דְּאָמַר: ״עוּבָּר בִּמְעֵי אִשָּׁה טָהוֹר״, גְּזַרוּ בַּהּ טוּמְאָה מִדְּרַבָּנַן.</div>
+    <div class="trans" data-when="he">רב יוסף בשם רב יהודה בשם שמואל: טומאת המיילדת אינה מן התורה אלא מדברי סופרים. ולמה הדגיש זאת? שלא תאמר שדין המשנה רק לר׳ עקיבא הסובר ״עובר במעי אישה טמא״ מן התורה — אלא אף לר׳ ישמעאל הסובר ״עובר במעי אישה טהור״, גזרו חכמים על המיילדת טומאה מדרבנן.</div>
+    <div class="trans" data-when="en">As Rav Yosef says that Rav Yehuda says that Shmuel says: This impurity of the midwife in the mishna’s case is not in effect by Torah law; rather, it was decreed by rabbinic law. The Gemara asks: What was Shmuel’s intention in emphasizing: It is not in effect by Torah law; rather, it was decreed by rabbinic law? It should have sufficed for him to say simply the impurity is decreed by rabbinic law. The Gemara answers: He said this so that you should not say that the ruling of the mishna is only in accordance with the opinion of Rabbi Akiva, who says that one who touches a dead fetus in a woman’s womb is impure by Torah law, and that is why the midwife was rendered impure. Rather, even according to the opinion of Rabbi Yishmael, who says that one who touches a dead fetus in a woman’s womb is pure by Torah law, nevertheless, the Sages decreed that a midwife who touches it is impure by rabbinic law.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ב א — Chullin 72a:4</span></div>
+    <div class="orig">מַאי טַעְמָא? אָמַר רַב הוֹשַׁעְיָא: גְּזֵירָה שֶׁמָּא יוֹצִיא וָלָד רֹאשׁוֹ חוּץ לַפְּרוֹזְדוֹר.</div>
+    <div class="trans" data-when="he">מה טעם הגזירה? אמר רב הושעיא: גזירה שמא יוציא הולד את ראשו אל מחוץ לפרוזדור (פתח הרחם) — שאז ייחשב כנולד ויטמא מן התורה — והמיילדת לא תרגיש שחזר ותסבור בטעות שנשארה טהורה.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the reason for this decree? Rav Hoshaya said: It is a rabbinic decree lest the fetus extend its head out of the concealed opening of its mother’s womb. If it did, it would be regarded as having been born, and it would then be ritually impure by Torah law. The Sages were concerned that the fetus extended its head and then the head returned inside but the midwife did not notice. Consequently, when she touched the fetus she mistakenly assumed she remained ritually pure. To safeguard against this, the Sages decreed that in any case where she touches the dead fetus, she is ritually impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ב א — Chullin 72a:5</span></div>
+    <div class="orig">אִי הָכִי, אִשָּׁה נָמֵי? אִשָּׁה מַרְגֶּשֶׁת בְּעַצְמָהּ. וְתֵימָא לַהּ לְחַיָּה! טְרִידָא.</div>
+    <div class="trans" data-when="he">קושיא ויישוב: אם כן, יגזרו טומאה אף על האישה עצמה, שמא לא תרגיש שיצא הראש? תשובה: אישה מרגשת בגופה אם יצא ראש הולד. ומדוע לא תודיע למיילדת? תשובה: טרודה היא בצער הלידה ואינה נותנת דעתה להזהירהּ.</div>
+    <div class="trans" data-when="en">The Gemara objects: If so, the Sages should also decree that the woman herself, who is carrying the fetus, is impure, since she also might not notice that the fetus’s head emerged. The Gemara explains: A woman accurately senses with regard to her own body whether the head of the fetus had emerged. The Gemara asks: But then she would have said this to the midwife. Why is there a need for a decree? The Gemara answers: Since the mother is distracted by the pain of childbirth, she does not have the presence of mind to warn the midwife.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ב א — Chullin 72a:6</span></div>
+    <div class="orig">מַאי רַבִּי יִשְׁמָעֵאל, וּמַאי רַבִּי עֲקִיבָא? דְּתַנְיָא: ״וְכֹל אֲשֶׁר יִגַּע עַל פְּנֵי הַשָּׂדֶה״ – לְהוֹצִיא עוּבָּר בִּמְעֵי אִשָּׁה, דִּבְרֵי רַבִּי יִשְׁמָעֵאל. רַבִּי עֲקִיבָא אוֹמֵר: לְרַבּוֹת גּוֹלֵל וְדוֹפֵק.</div>
+    <div class="trans" data-when="he">ביאור המחלוקת: שנינו בברייתא — ״וכל אשר יגע על פני השדה״ מלמד שמיטמא רק בנוגע במת גלוי, למעט עובר במעי אישה; דברי ר׳ ישמעאל. ר׳ עקיבא אומר: ״על פני השדה״ בא לרבות גולל ודופק (כיסוי הקבר ודפנותיו) שמטמאים.</div>
+    <div class="trans" data-when="en">The Gemara cited a dispute as to whether one who touches a dead fetus in a woman’s womb is ritually impure. It now elucidates that dispute: What is the opinion of Rabbi Yishmael, and what is the opinion of Rabbi Akiva? As it is taught in a baraita with regard to the verse: “And whoever in the open field touches one who is slain by the sword, or one who dies on his own, or a bone of a man, or a grave, shall be impure seven days” (Numbers 19:16). The phrase “in the open field” indicates that one is rendered impure only in a case where he touches an exposed corpse. This serves to exclude one who touches a dead fetus in a woman’s womb from being rendered impure; this is the statement of Rabbi Yishmael. Rabbi Akiva says: This phrase serves to include the grave cover and the grave walls, upon which the cover rests, as sources of impurity that render impure anyone who touches them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ב א — Chullin 72a:7</span></div>
+    <div class="orig">וְרַבִּי יִשְׁמָעֵאל, גּוֹלֵל וְדוֹפֵק – הִלְכְתָא גְּמִירִי לַהּ. וְרַבִּי עֲקִיבָא, עוּבָּר בִּמְעֵי אִשָּׁה טָמֵא מִדְּאוֹרָיְיתָא – מְנָא לֵיהּ? אָמַר רַבִּי אוֹשַׁעְיָא, אָמַר קְרָא: ״הַנּוֹגֵעַ בְּמֵת בְּנֶפֶשׁ״, אֵיזֶהוּ מֵת שֶׁבְּנֶפֶשׁ שֶׁל אָדָם? הֱוֵי אוֹמֵר זֶה עוּבָּר שֶׁבִּמְעֵי אִשָּׁה.</div>
+    <div class="trans" data-when="he">ולר׳ ישמעאל, גולל ודופק נלמדים מהלכה למשה מסיני, לא מן הפסוק. ולר׳ עקיבא — מנין שעובר במעי אישה טמא מן התורה? אמר ר׳ אושעיא: ״הנוגע במת בנפש״ — איזהו מת הנמצא בתוך נפש (גוף) של אדם? הוי אומר זה עובר שבמעי אישה.</div>
+    <div class="trans" data-when="en">The Gemara asks: And from where does Rabbi Yishmael derive that the grave cover and the grave walls render one who touches them impure? He learned this halakha through tradition, not from a verse. The Gemara asks: And as for Rabbi Akiva, from where does he derive that a dead fetus in a woman’s womb is impure by Torah law? Rabbi Oshaya said he derives it from the verse that states: “Whoever touches of a corpse, of the life of a person that died, he will be impure” (Numbers 19:13). The term “of the life” can also be interpreted as: Inside the life. What is the case of a corpse that is inside the life of a person? You must say that this is a dead fetus inside a woman’s womb.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ב א — Chullin 72a:8</span></div>
+    <div class="orig">וְרַבִּי יִשְׁמָעֵאל, הַאי מִיבְּעֵי לֵיהּ לִרְבִיעִית דָּם הַבָּאָה מִן הַמֵּת, שֶׁמְּטַמְּאָה, שֶׁנֶּאֱמַר: ״הַנֹּגֵעַ בְּמֵת בְּנֶפֶשׁ הָאָדָם״, אֵיזֶהוּ נֶפֶשׁ שֶׁל אָדָם שֶׁמְּטַמֵּא? הֱוֵי אוֹמֵר זוֹ רְבִיעִית דָּם.</div>
+    <div class="trans" data-when="he">ולר׳ ישמעאל פסוק זה נצרך ללמד שרביעית דם הבאה מן המת מטמאת — ״הנוגע במת בנפש האדם״, איזו ״נפש״ של אדם מטמאת? הוי אומר זו רביעית דם, שכן הדם הוא הנפש (ובציר ממנו אין אדם חי).</div>
+    <div class="trans" data-when="en">The Gemara comments: And Rabbi Yishmael requires that verse to teach about a quarter-log of blood that comes from a corpse, meaning that even it imparts impurity like a corpse, as it is stated: “Whoever touches of a corpse, of the life of a person that died” (Numbers 19:13). What is the case of a life of a person that imparts impurity? You must say this is referring to a quarter-log of blood, as blood is regarded as the life force of a person, as the verse states: “For the blood is the life” (Deuteronomy 12:23), and a person requires a minimum of a quarter-log of blood to survive.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ב א — Chullin 72a:9</span></div>
+    <div class="orig">וְרַבִּי עֲקִיבָא לְטַעְמֵיהּ, דְּאָמַר: אַף רְבִיעִית דָּם הַבָּאָה מִשְּׁנֵי מֵתִים מְטַמֵּא בְּאֹהֶל, דְּתַנְיָא: רַבִּי עֲקִיבָא אוֹמֵר: מִנַּיִן לִרְבִיעִית דָּם הַבָּאָה מִשְּׁנֵי מֵתִים שֶׁמְּטַמְּאָה בְּאֹהֶל?</div>
+    <div class="trans" data-when="he">ור׳ עקיבא אינו צריך פסוק זה לרביעית דם, לשיטתו — שאף רביעית דם הבאה משני מתים מטמאת באוהל. כדתניא: ר׳ עקיבא אומר, מנין לרביעית דם הבאה משני מתים שמטמאה באוהל?</div>
+    <div class="trans" data-when="en">The Gemara comments: And Rabbi Akiva does not accept this derivation. He conforms to his line of reasoning, as he says even a quarter-log of blood that comes from two corpses imparts ritual impurity in a tent to people and other items that are under the same roof. As it is taught in a baraita: From where is it derived that a quarter-log of blood that came out of two separate corpses also imparts ritual impurity in a tent?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ב א — Chullin 72a:10</span></div>
+    <div class="orig">שֶׁנֶּאֱמַר: ״וְעַל כׇּל נַפְשֹׁת מֵת לֹא יָבֹא״, שְׁתֵּי נְפָשׁוֹת וְשִׁיעוּר אֶחָד.</div>
+    <div class="trans" data-when="he">שנאמר (בכהן גדול): ״ועל כל נפשֹת מת לא יבא״ — לשון רבים ״נפשֹת״ מלמד שאף דם משני מתים מצטרף, ולשון יחיד ״מת״ מלמד ששיעור אחד (רביעית) לכולם; שתי נפשות ושיעור אחד.</div>
+    <div class="trans" data-when="en">It is derived from a verse, as it is stated with regard to the prohibition against priests coming in contact with a dead body: “He shall not come upon any people that are a corpse [nafshot met]” (Leviticus 21:11). The use of the plural form “people [nafshot]” indicates that the blood imparts impurity even if it comes from two people, as blood is referred to as “nefesh” (see Deuteronomy 12:23), and the use of the singular form “corpse [met]” indicates that this blood combines to complete one measure, i.e., the minimum amount of a quarter-log required to impart impurity.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
