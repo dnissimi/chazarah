@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין פ״א</title>
+<meta name="description" content="מפת הסוגיא של חולין פ״א: האם איסור ׳אותו ואת בנו׳ נוהג בקדשים לשיטת ר׳ שמעון (שחיטה שאינה ראויה אינה שחיטה); משנת ׳השוחט ונמצא טריפה׳; מחלוקת ריש לקיש ור׳ יוחנן בהתראה לעבודה זרה; ופרת חטאת ועגלה ערופה — שחיטה ראויה או ׳אינה משנה׳.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="81">
+<meta name="gemara-map:sefaria-ref" content="Chullin 81">
+<meta name="gemara-map:topic-he" content="אותו ואת בנו בקדשים, ושחיטה שאינה ראויה">
+<meta name="gemara-map:topic-en" content="Itself and its offspring in sacrifices, unfit slaughter">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין פ״א">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 81">
+<meta name="gemara-map:blurb-he" content="לר׳ שמעון שחיטה שאינה ראויה אינה שחיטה — ומכאן מי פטור מ׳אותו ואת בנו׳: בקדשים אין מלקות, ובמשנת ׳השוחט ונמצא טריפה׳ הוא פוטר; ופרת חטאת ועגלה ערופה ׳אינן משנה׳.">
+<meta name="gemara-map:blurb-en" content="For R. Shimon, unfit slaughter is not slaughter — so who is exempt from ‘itself and its offspring’: in sacrifices there are no lashes, and in the Mishna ‘slaughtered and found a tereifa’ he exempts; the red heifer and broken-necked heifer ‘are not part of the Mishna.’">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין פ״א</span><span data-when="en">Sugya map — Chullin 81</span></h1>
+    <div class="subtitle"><span data-when="he">חולין פ״א א — פ״ב א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 81a–82a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> ארבעה דיונים סביב כלל ר׳ שמעון <b>״שחיטה שאינה ראויה אינה שחיטה״</b>: האם <b>״אותו ואת בנו״ נוהג בקדשים</b> — ומסקנת רבא שאין בו <b>מלקות</b> (התראת ספק); משנת <b>״השוחט ונמצא טריפה״</b> שבה ר׳ שמעון פוטר וחכמים מחייבים; <b>התראה לעבודה זרה</b> — מחלוקת ריש לקיש ור׳ יוחנן (חייבי מיתות שוגגין); והאם <b>פרת חטאת ועגלה ערופה</b> שחיטה ראויה הן, או ש״אינן משנה״.</span>
+    <span data-when="en"><b>Bottom line:</b> Four discussions around R. Shimon’s rule <b>“unfit slaughter is not slaughter”</b>: whether <b>“itself and its offspring” applies to sacrifices</b> — Rava’s conclusion that there are no <b>lashes</b> (an uncertain forewarning); the Mishna <b>“slaughtered and found a tereifa”</b> where R. Shimon exempts and the Rabbis hold liable; <b>forewarning for idol worship</b> — the dispute of Reish Lakish and R. Yoḥanan; and whether the <b>red heifer and broken-necked heifer</b> are fit slaughter, or “not part of the Mishna.”</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין פ״א</span><span data-when="en">Overview — Chullin 81</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · אותו ואת בנו בקדשים — אין מלקות"]:::statement
+  O2["2 · משנה: השוחט ונמצא טריפה — ר׳ שמעון פוטר"]:::mishnah
+  O3["3 · התראה לעבודה זרה — ריש לקיש ור׳ יוחנן"]:::statement
+  O4["4 · פרת חטאת ועגלה ערופה — אינן משנה"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Itself and offspring in sacrifices — no lashes"]:::statement
+  O2["2 · Mishna: slaughtered and found a tereifa — R. Shimon exempts"]:::mishnah
+  O3["3 · Forewarning for idol worship — Reish Lakish vs R. Yoḥanan"]:::statement
+  O4["4 · Red heifer and broken-necked heifer — not part of the Mishna"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">״אותו ואת בנו״ בקדשים — מלקות והתראת ספק</span><span data-when="en">“Itself and its offspring” in sacrifices — lashes and an uncertain forewarning</span>
+      <span class="ref">Chullin 81a:4–81b:3</span></h2>
+  <div class="lead"><span data-when="he">רב המנונא: לר׳ שמעון אין ״אותו ואת בנו״ נוהג בקדשים. רבא מקשה ממשנת קדשים בחוץ, מיישב, ולבסוף מעמיד: אין בו <b>מלקות</b> משום התראת ספק.</span><span data-when="en">Rav Hamnuna: for R. Shimon, “itself and its offspring” does not apply to sacrifices. Rava objects from the baraita of offerings slaughtered outside, then concludes: there are no <b>lashes</b>, since the forewarning is uncertain.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב המנונא: לר׳ שמעון אין ׳אותו ואת בנו׳ בקדשים — שחיטה שאינה ראויה"]:::statement
+  Q1{"② מתיב רבא: קדשים בחוץ — שני בלא תעשה"}:::question
+  Q2{"③ וקשיא לן: קמא מיקטל קטל, שני מתקבל בפנים — כרת נמי ליחייב!"}:::question
+  A1["④ רבא: חסורי מיחסרא — לרבנן ראשון כרת, שני פסול ופטור"]:::answer
+  A2["⑤ לר׳ שמעון — שניהם ענושים כרת"]:::answer
+  A3["⑥ אחד בחוץ ואחד בפנים — לר׳ שמעון שני כשר"]:::answer
+  A4["⑦ אחד בפנים ואחד בחוץ — לר׳ שמעון שני בלא תעשה"]:::answer
+  Q3{"⑧ ואי אין נוהג בקדשים — שני אמאי בלא תעשה? כרת נמי ליחייב!"}:::question
+  A5["⑨ אלא רבא: אין מלקות ׳אותו ואת בנו׳ נוהג בקדשים"]:::answer
+  S2["⑩ כל זמן שלא זרק דם אין הבשר מותר — התראת ספק, ולא שמה התראה"]:::statement
+  S3["⑪ ואזדא רבא לטעמיה: חולין ובנה שלמים — שחט חולין ואז שלמים, פטור"]:::statement
+  S4["⑫ שלמים ואז חולין — חייב; חולין ובנה עולה — אף עולה ואז חולין, פטור"]:::statement
+  Q4{"⑬ ר׳ יעקב אמר ר׳ יוחנן: אכילת מזבח שמה אכילה — ׳האכל יאכל׳"}:::question
+  C1["⑭ בשתי אכילות הכתוב מדבר: אכילת אדם ואכילת מזבח"]:::conclusion
+  S1 -.->|מתיב| Q1
+  Q1 -->|וקשיא לן| Q2
+  Q2 -->|יישוב| A1
+  A1 --> A2
+  A2 --> A3
+  A3 --> A4
+  A4 -->|קושיית רבא| Q3
+  Q3 -->|מסקנה| A5
+  A5 -->|טעם| S2
+  S2 -->|ואזדא לטעמיה| S3
+  S3 --> S4
+  S4 -.->|דעה אחרת| Q4
+  Q4 -->|דרשה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Hamnuna: per R. Shimon ׳itself and offspring׳ does not apply to sacrifices — unfit slaughter"]:::statement
+  Q1{"② Rava objects: sacrifices outside — for the second, a prohibition"}:::question
+  Q2{"③ Difficulty: the first is as if killed, the second fit inside — let karet apply too!"}:::question
+  A1["④ Rava: the baraita is incomplete — per Rabbis, first karet, second unfit and exempt"]:::answer
+  A2["⑤ Per R. Shimon — both are liable to karet"]:::answer
+  A3["⑥ One outside, one inside — per R. Shimon the second is fit"]:::answer
+  A4["⑦ One inside, one outside — per R. Shimon the second, a prohibition"]:::answer
+  Q3{"⑧ If it did not apply to sacrifices — why only a prohibition? Let karet apply too!"}:::question
+  A5["⑨ Rather Rava: no lashes for ׳itself and offspring׳ apply to sacrifices"]:::answer
+  S2["⑩ Until the blood is sprinkled the flesh is not permitted — an uncertain forewarning, not a forewarning"]:::statement
+  S3["⑪ Rava follows his reasoning: non-sacred mother, peace-offering offspring — non-sacred then peace-offering, exempt"]:::statement
+  S4["⑫ Peace-offering then non-sacred — liable; burnt-offering case — even burnt then non-sacred, exempt"]:::statement
+  Q4{"⑬ R. Ya׳akov said R. Yoḥanan: altar-consumption is consumption — ׳he׳akhol ye׳akhel׳"}:::question
+  C1["⑭ The verse speaks of two consumptions: human and altar"]:::conclusion
+  S1 -.->|objects| Q1
+  Q1 -->|difficulty| Q2
+  Q2 -->|resolves| A1
+  A1 --> A2
+  A2 --> A3
+  A3 --> A4
+  A4 -->|Rava׳s objection| Q3
+  Q3 -->|conclusion| A5
+  A5 -->|reason| S2
+  S2 -->|follows his reasoning| S3
+  S3 --> S4
+  S4 -.->|other view| Q4
+  Q4 -->|exposition| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב הַמְנוּנָא … אֵין אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בְּקׇדָשִׁים … שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה לֹא שְׁמָהּ שְׁחִיטָה"]:::statement
+  Q1{"② מֵתִיב רָבָא: אוֹתוֹ וְאֶת בְּנוֹ קָדָשִׁים בַּחוּץ … שֵׁנִי בְּלֹא תַעֲשֶׂה"}:::question
+  Q2{"③ וְקַשְׁיָא לַן … קַמָּא מִיקְטָל קְטַל, שֵׁנִי מִתְקַבֵּל בִּפְנִים הוּא, כָּרֵת נָמֵי לִיחַיַּיב!"}:::question
+  A1["④ חַסּוֹרֵי מִיחַסְּרָא … לְרַבָּנַן – רִאשׁוֹן עָנוּשׁ כָּרֵת, שֵׁנִי פָּסוּל וּפָטוּר"]:::answer
+  A2["⑤ לְרַבִּי שִׁמְעוֹן – שְׁנֵיהֶם עֲנוּשִׁים כָּרֵת"]:::answer
+  A3["⑥ אֶחָד בַּחוּץ וְאֶחָד בִּפְנִים … לְרַבִּי שִׁמְעוֹן – שֵׁנִי כָּשֵׁר"]:::answer
+  A4["⑦ אֶחָד בִּפְנִים וְאֶחָד בַּחוּץ … לְרַבִּי שִׁמְעוֹן – שֵׁנִי בְּלֹא תַעֲשֶׂה"]:::answer
+  Q3{"⑧ וְאִי … אֵין אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בְּקָדָשִׁים, שֵׁנִי אַמַּאי בְּלֹא תַעֲשֶׂה … כָּרֵת נָמֵי לִיחַיַּיב!"}:::question
+  A5["⑨ אֶלָּא אָמַר רָבָא … אֵין מַלְקוֹת אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בְּקָדָשִׁים"]:::answer
+  S2["⑩ כַּמָּה דְּלָא זָרֵיק דָּם … הָוֵאי הַתְרָאַת סָפֵק, וְהַתְרָאַת סָפֵק לֹא שְׁמָהּ הַתְרָאָה"]:::statement
+  S3["⑪ וְאַזְדָּא רָבָא לְטַעְמֵיהּ … הִיא חוּלִּין וּבְנָהּ שְׁלָמִים … פָּטוּר"]:::statement
+  S4["⑫ שְׁלָמִים וְאַחַר כָּךְ חוּלִּין – חַיָּיב … אֲפִילּוּ שָׁחַט עוֹלָה וְאַחַר כָּךְ … חוּלִּין – פָּטוּר"]:::statement
+  Q4{"⑬ וְרַבִּי יַעֲקֹב אָמַר רַבִּי יוֹחָנָן: אֲכִילַת מִזְבֵּחַ שְׁמָהּ אֲכִילָה … וְאִם הֵאָכֹל יֵאָכֵל"}:::question
+  C1["⑭ בִּשְׁתֵּי אֲכִילוֹת הַכָּתוּב מְדַבֵּר, אֶחָד אֲכִילַת אָדָם וְאֶחָד אֲכִילַת מִזְבֵּחַ"]:::conclusion
+  S1 -.->|מתיב| Q1
+  Q1 -->|וקשיא לן| Q2
+  Q2 -->|יישוב| A1
+  A1 --> A2
+  A2 --> A3
+  A3 --> A4
+  A4 -->|קושיית רבא| Q3
+  Q3 -->|מסקנה| A5
+  A5 -->|טעם| S2
+  S2 -->|ואזדא לטעמיה| S3
+  S3 --> S4
+  S4 -.->|דעה אחרת| Q4
+  Q4 -->|דרשה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״א א — Chullin 81a:4</span></div>
+    <div class="orig">אָמַר רַב הַמְנוּנָא: אוֹמֵר הָיָה רַבִּי שִׁמְעוֹן: אֵין אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בְּקׇדָשִׁים, מַאי טַעְמָא? כֵּיוָן דְּאָמַר רַבִּי שִׁמְעוֹן: שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה לֹא שְׁמָהּ שְׁחִיטָה, שְׁחִיטַת קֳדָשִׁים נָמֵי שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה הִיא.</div>
+    <div class="trans" data-when="he">רב המנונא: ר׳ שמעון היה אומר שאיסור ״אותו ואת בנו״ אינו נוהג בקדשים. הטעם: כיוון שלר׳ שמעון שחיטה שאינה ראויה (להתיר אכילה) אינה נחשבת שחיטה, אף שחיטת קדשים אינה ראויה — שהבשר אסור עד זריקת הדם.</div>
+    <div class="trans" data-when="en">§ The Gemara returns to discussing Rabbi Shimon’s opinion with regard to slaughtering an animal and its offspring on the same day. Rav Hamnuna says that Rabbi Shimon would say: The prohibition against slaughtering an animal itself and its offspring does not apply to sacrificial animals. What is the reason? The reason is that since Rabbi Shimon says that an act of slaughter that is unfit to permit consumption is not considered to have the halakhic status of an act of slaughter, the prohibition will not apply here. This case of slaughtering sacrificial animals is also considered slaughter that is unfit, in that the flesh may not be burned upon the altar or eaten until the blood has been presented.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״א א — Chullin 81a:5</span></div>
+    <div class="orig">מֵתִיב רָבָא: אוֹתוֹ וְאֶת בְּנוֹ קָדָשִׁים בַּחוּץ, רַבִּי שִׁמְעוֹן אוֹמֵר: שֵׁנִי בְּלֹא תַעֲשֶׂה, שֶׁהָיָה רַבִּי שִׁמְעוֹן אוֹמֵר: כׇּל הָרָאוּי לָבֹא לְאַחַר זְמַן – הֲרֵי הוּא בְּלֹא תַעֲשֶׂה וְאֵין בּוֹ כָּרֵת, וַחֲכָמִים אוֹמְרִים: כֹּל שֶׁאֵין בּוֹ כָּרֵת – אֵינוֹ בְּלֹא תַעֲשֶׂה.</div>
+    <div class="trans" data-when="he">רבא מקשה מברייתא: ״אותו ואת בנו״ של קדשים שנשחטו בחוץ (מחוץ לעזרה) — ר׳ שמעון אומר שעל השני יש לאו, שהיה אומר: כל הראוי לקרב לאחר זמן ושחטו בחוץ קודם זמנו — יש בו לאו ואין בו כרת; וחכמים אומרים: כל שאין בו כרת — אין בו אף לאו.</div>
+    <div class="trans" data-when="en">Rava raises an objection from a baraita: If one slaughtered an animal itself and its offspring and both animals were sacrificial animals slaughtered outside the Temple courtyard, Rabbi Shimon says: For slaughtering the second animal he transgresses a prohibition in slaughtering it outside the Temple, as Rabbi Shimon would say: With regard to any offering that is fit to come to the altar after a certain amount of time and is offered outside the Temple before that time, he who slaughters it transgresses a prohibition, but there is no liability to receive karet. And the Rabbis say: With regard to any offering slaughtered outside of the Temple for which there is no liability to receive karet because it is unfit to be an offering at that time, he who sacrifices it also does not transgress a prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ״א א — Chullin 81a:6</span></div>
+    <div class="orig">וְקַשְׁיָא לַן: קָדָשִׁים בַּחוּץ, שֵׁנִי בְּלֹא תַעֲשֶׂה? קַמָּא מִיקְטָל קְטַל, שֵׁנִי מִתְקַבֵּל בִּפְנִים הוּא, כָּרֵת נָמֵי לִיחַיַּיב!</div>
+    <div class="trans" data-when="he">וקשה לנו: קדשים בחוץ — מדוע על השני רק לאו? הרי לר׳ שמעון שחיטת הראשון (שאינה ראויה) כמי שהרגו בלא שחיטה, ונמצא שהשני ראוי להתקבל בפנים על המזבח — אם כן יתחייב אף כרת על שחיטתו בחוץ!</div>
+    <div class="trans" data-when="en">And this statement in the baraita is difficult for us: If both animals were sacrificial animals slaughtered outside the Temple courtyard, Rabbi Shimon says: For slaughtering the second animal he transgresses a prohibition for slaughtering outside the Temple. According to Rabbi Shimon, slaughter that is unfit for consumption is not considered slaughter. Therefore, with regard to the first animal, it is as if he has killed it without ritual slaughter, since its slaughter was unfit, and the second animal would be accepted inside the Temple upon the altar. Therefore, let one who slaughters it outside of the Temple be liable to receive karet as well.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ״א א — Chullin 81a:7</span></div>
+    <div class="orig">וְאָמַר רָבָא, וְאָמְרִי לַהּ כְּדִי: חַסּוֹרֵי מִיחַסְּרָא וְהָכִי קָתָנֵי: קָדָשִׁים שְׁנֵיהֶם בַּחוּץ, לְרַבָּנַן – רִאשׁוֹן עָנוּשׁ כָּרֵת, שֵׁנִי פָּסוּל וּפָטוּר מִלָּאו דִּשְׁחוּטֵי חוּץ.</div>
+    <div class="trans" data-when="he">רבא (ויש אומרים בלא שם): הברייתא חסרה וכך יש לקרוא — קדשים ששניהם נשחטו בחוץ: לדעת חכמים, הראשון ענוש כרת, והשני פסול (שעדיין לא הגיע זמנו) ולכן פטור מלאו של שחוטי חוץ.</div>
+    <div class="trans" data-when="en">And Rava said, and some say it unattributed: The baraita is incomplete and this is what it is teaching: If one slaughters an animal and its offspring that are both sacrificial animals, and both of them are slaughtered outside the Temple courtyard, according to the opinion of the Rabbis, the slaughter of the first animal is punishable by karet, while the second animal is disqualified as its time has not yet arrived, and therefore, for its slaughter one is exempt from punishment for violating the prohibition of offerings slaughtered outside the Temple.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ״א א — Chullin 81a:8</span></div>
+    <div class="orig">לְרַבִּי שִׁמְעוֹן – שְׁנֵיהֶם עֲנוּשִׁים כָּרֵת.</div>
+    <div class="trans" data-when="he">ולדעת ר׳ שמעון — שניהם ענושים כרת, שהרי לדידו שחיטת הראשון אינה שחיטה ואינה פוסלת את השני משום ״אותו ואת בנו״, ונמצא השני ראוי ושחיטתו בחוץ בכרת.</div>
+    <div class="trans" data-when="en">According to the opinion of Rabbi Shimon, the slaughter of both of them, including the second one alone, is punishable by karet. This is because the slaughter of the first is not considered slaughter, and therefore it does not disqualify the second through the prohibition of: Itself and its offspring.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ״א א — Chullin 81a:9</span></div>
+    <div class="orig">אֶחָד בַּחוּץ וְאֶחָד בִּפְנִים: לְרַבָּנַן – רִאשׁוֹן עָנוּשׁ כָּרֵת, שֵׁנִי פָּסוּל וּפָטוּר; לְרַבִּי שִׁמְעוֹן – שֵׁנִי כָּשֵׁר.</div>
+    <div class="trans" data-when="he">שחט אחד בחוץ ואחד בפנים: לחכמים — הראשון (שבחוץ) ענוש כרת, והשני פסול ופטור; לר׳ שמעון — השני כשר וקרב, שהרי שחיטת הראשון אינה שחיטה ואינה פוסלת את השני.</div>
+    <div class="trans" data-when="en">If an animal and its offspring that are sacrificial animals are slaughtered, the first one outside the Temple courtyard, and the second one inside the Temple courtyard, according to the opinion of the Rabbis, the slaughter of the first is punishable by karet, while the second animal is disqualified as its time has not yet arrived, and its slaughterer is exempt from punishment for its slaughter outside the Temple, because he slaughtered it inside the Temple. According to the opinion of Rabbi Shimon, the second animal is fit for the altar, and it is sacrificed, as the slaughter of the first animal is not considered slaughter, and therefore the slaughter of the second does not violate the prohibition of a mother and its offspring.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין פ״א א — Chullin 81a:10</span></div>
+    <div class="orig">אֶחָד בִּפְנִים וְאֶחָד בַּחוּץ: לְרַבָּנַן – רִאשׁוֹן כָּשֵׁר וּפָטוּר, שֵׁנִי פָּסוּל וּפָטוּר, לְרַבִּי שִׁמְעוֹן – שֵׁנִי בְּלֹא תַעֲשֶׂה.</div>
+    <div class="trans" data-when="he">שחט אחד בפנים ואחד בחוץ: לחכמים — הראשון כשר ופטור, והשני פסול ופטור; לר׳ שמעון — על השני יש לאו, שדבר הראוי לבוא לאחר זמן ושחטו בחוץ — בלא תעשה.</div>
+    <div class="trans" data-when="en">If an animal and its offspring that are sacrificial animals are slaughtered, the first one inside the Temple courtyard and the second one outside the Temple courtyard, according to the opinion of the Rabbis, the first animal is fit for the altar, and one who slaughters it is exempt from any punishment, as its slaughter is perfectly legitimate. The second is unfit for the altar, as it was slaughtered outside the Temple, but its slaughterer is exempt from punishment for its slaughter outside the Temple because it is unfit for the altar, as its time has not yet arrived. According to the opinion of Rabbi Shimon, for slaughtering the second animal outside the Temple one transgresses a prohibition, as he holds that an offering whose time has not yet arrived that was slaughtered outside the Temple violates a prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין פ״א א — Chullin 81a:11</span></div>
+    <div class="orig">וְאִי סָלְקָא דַעְתָּךְ אֵין ״אוֹתוֹ וְאֶת בְּנוֹ״ נוֹהֵג בְּקָדָשִׁים, שֵׁנִי אַמַּאי בְּלֹא תַעֲשֶׂה וְתוּ לָא? כָּרֵת נָמֵי לִיחַיַּיב!</div>
+    <div class="trans" data-when="he">כאן מתבררת קושיית רבא: ואם תעלה בדעתך ש״אותו ואת בנו״ אינו נוהג בקדשים — מדוע על השני (בחוץ) רק לאו ותו לא? יתחייב אף כרת, שהרי אם אין פסול של ״אותו ואת בנו״, השני ראוי לפנים! מכאן שהאיסור כן נוהג בקדשים.</div>
+    <div class="trans" data-when="en">Rava now explains his objection: And if it enters your mind that the prohibition of: Itself and its offspring, does not apply to sacrificial animals, then with regard to slaughtering the second animal outside the Temple, why does one transgress only a prohibition and nothing more? Let him be liable to receive karet as well, as since its slaughter does not violate the prohibition of: Itself and its offspring, it would fit to be sacrificed inside the Temple. Therefore, it is clear that the prohibition of: Itself and its offspring, does apply to sacrificial animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין פ״א א — Chullin 81a:12</span></div>
+    <div class="orig">אֶלָּא אָמַר רָבָא, הָכִי קָא אָמַר רַב הַמְנוּנָא: אֵין מַלְקוֹת ״אוֹתוֹ וְאֶת בְּנוֹ״ נוֹהֵג בְּקָדָשִׁים,</div>
+    <div class="trans" data-when="he">אלא אמר רבא: כך כוונת רב המנונא — האיסור כן נוהג, אבל אין <b>מלקות</b> של ״אותו ואת בנו״ נוהגות בקדשים.</div>
+    <div class="trans" data-when="en">Rather, Rava said: This is what Rav Hamnuna is saying: Though the prohibition of: Itself and its offspring, does apply to sacrificial animals, the administering of lashes for violating the prohibition of: Itself and its offspring, does not apply to sacrificial animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין פ״א א — Chullin 81a:13</span></div>
+    <div class="orig">כֵּיוָן דְּכַמָּה דְּלָא זָרֵיק דָּם – לָא מִישְׁתְּרֵי בָּשָׂר, מֵעִידָּנָא דְּקָא שָׁחֵיט הָוֵאי הַתְרָאַת סָפֵק, וְהַתְרָאַת סָפֵק – לֹא שְׁמָהּ הַתְרָאָה.</div>
+    <div class="trans" data-when="he">הטעם שאין מלקות: כיוון שכל עוד לא נזרק הדם אין הבשר מותר, הרי בשעת השחיטה ההתראה היא ספק (שמא לא ייזרק הדם והשחיטה לא תתיר) — והתראת ספק אינה נחשבת התראה לעניין מלקות.</div>
+    <div class="trans" data-when="en">The reason is that since as long as one has not sprinkled the blood, the flesh is not permitted to be burned on the altar or eaten, at the time that one slaughters the second animal, when he receives a forewarning that his action violates the prohibition of: Itself and its offspring, it is an uncertain forewarning, because if the blood will not be sprinkled, the flesh will not be permitted, sparing him from violating the prohibition of: Itself and its offspring. And an uncertain forewarning is not considered a valid forewarning that renders one liable to receive lashes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין פ״א א — Chullin 81a:14</span></div>
+    <div class="orig">וְאַזְדָּא רָבָא לְטַעְמֵיהּ, דְּאָמַר רָבָא: הִיא חוּלִּין וּבְנָהּ שְׁלָמִים, שָׁחַט חוּלִּין וְאַחַר כָּךְ שָׁחַט שְׁלָמִים – פָּטוּר.</div>
+    <div class="trans" data-when="he">ורבא הולך לשיטתו, שאמר: היא (האם) חולין ובנה שלמים — שחט תחילה את החולין ואחר כך את השלמים: פטור, שהתראת השני ספק (שמא לא ייזרק דם השלמים).</div>
+    <div class="trans" data-when="en">And Rava follows his line of reasoning, as Rava says: According to Rabbi Shimon, who holds that one does not incur punishment for the prohibition of: Itself and its offspring, for a slaughtering that is unfit, if she, the mother, is non-sacred, and her offspring is a peace offering, and one slaughtered the non-sacred mother, and afterward one slaughtered her offspring that is a peace offering on the same day, he is exempt for slaughtering the offspring. This is because the forewarning for slaughtering the offspring is uncertain as its blood might not be sprinkled, rendering the slaughter unfit.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין פ״א א — Chullin 81a:15</span></div>
+    <div class="orig">שְׁלָמִים וְאַחַר כָּךְ חוּלִּין – חַיָּיב, וְאָמַר רָבָא: הִיא חוּלִּין וּבְנָהּ עוֹלָה, לָא מִיבַּעְיָא שָׁחַט חוּלִּין וְאַחַר כָּךְ שָׁחַט עוֹלָה דְּפָטוּר,</div>
+    <div class="trans" data-when="he">שחט תחילה את השלמים (וזרק דמם) ואחר כך את החולין — חייב, שכבר הותר הבשר וההתראה ודאית. ועוד אמר רבא: היא חולין ובנה עולה — לא רק ששחט חולין ואז עולה פטור,</div>
+    <div class="trans" data-when="en">But if one slaughtered the offspring that is a peace offering first and sprinkled its blood, and afterward he slaughtered the non-sacred mother, he is liable to receive lashes for slaughtering the mother. Once the non-sacred mother is slaughtered, the meat is fit; therefore, the forewarning is definite. And Rava says: If she, the mother, is non-sacred, and her offspring is sacrificed as a burnt offering, and both are slaughtered on the same day, it is not necessary to state that if one slaughtered the non-sacred mother, and afterward he slaughtered her offspring as a burnt offering, that he is exempt.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין פ״א ב — Chullin 81b:1</span></div>
+    <div class="orig">אֶלָּא אֲפִילּוּ שָׁחַט עוֹלָה וְאַחַר כָּךְ שָׁחַט חוּלִּין – פָּטוּר, שְׁחִיטָה קַמַּיְיתָא לָאו שְׁחִיטָה בַּת אֲכִילָה הִיא.</div>
+    <div class="trans" data-when="he">אלא אפילו שחט את העולה תחילה (וזרק דמה) ואחר כך את החולין — פטור, שהרי שחיטת העולה אינה שחיטה הראויה לאכילה (העולה כולה נשרפת), ולר׳ שמעון שחיטה שאינה ראויה אינה שחיטה.</div>
+    <div class="trans" data-when="en">But even if one slaughtered the offspring as a burnt offering and sprinkled its blood, and afterward slaughtered the non-sacred mother, he is exempt. The reason is that the slaughter of the first animal is not an act of slaughter subject to consumption, as a burnt offering is entirely burned upon the altar, and according to Rabbi Shimon, it is an act of slaughter that is improper, in that it does not render the meat fit to be eaten, is not considered slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין פ״א ב — Chullin 81b:2</span></div>
+    <div class="orig">וְרַבִּי יַעֲקֹב אָמַר רַבִּי יוֹחָנָן: אֲכִילַת מִזְבֵּחַ שְׁמָהּ אֲכִילָה. מַאי טַעְמָא? דְּאָמַר קְרָא: ״וְאִם הֵאָכֹל יֵאָכֵל מִבְּשַׂר זֶבַח שְׁלָמָיו״.</div>
+    <div class="trans" data-when="he">דעה חולקת: ר׳ יעקב בשם ר׳ יוחנן — אכילת מזבח (הקרבת קרבן) נחשבת אכילה. הטעם: הכתוב כפל ״האכל יאכל מבשר זבח שלמיו״ — לרבות אכילת מזבח.</div>
+    <div class="trans" data-when="en">And Rabbi Ya’akov says that Rabbi Yoḥanan says: Consumption by the altar is considered consumption. What is the reason? The reason is that the verse states with regard to an offering that was sacrificed with the intent to consume it after its designated time [piggul]: “And if any of the flesh of the sacrifice of his peace offerings be at all eaten [he’akhol ye’akhel] on the third day, it shall not be accepted” (Leviticus 7:18).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין פ״א ב — Chullin 81b:3</span></div>
+    <div class="orig">בִּשְׁתֵּי אֲכִילוֹת הַכָּתוּב מְדַבֵּר, אֶחָד אֲכִילַת אָדָם וְאֶחָד אֲכִילַת מִזְבֵּחַ.</div>
+    <div class="trans" data-when="he">כפל הלשון ״האכל יאכל״ מלמד שהכתוב מדבר בשתי אכילות: אחת אכילת אדם ואחת אכילת מזבח — ושתיהן ״אכילה״. לפיכך שחיטת עולה ראויה היא, ואף לר׳ שמעון לוקה על ״אותו ואת בנו״.</div>
+    <div class="trans" data-when="en">The repetitive expression “he’akhol ye’akhel” teaches that the verse is speaking of two types of consumption: One is human consumption, and the other one is consumption by the altar, and both are considered consumption with regard to piggul and other matters. Therefore, the slaughter of a burnt offering is considered slaughter that is fit for consumption, and the slaughter of a mother animal and its offspring, one of which is sacrificed as a burnt offering on the same day as the slaughter of the other, renders one liable to receive lashes even according to the opinion of Rabbi Shimon.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">משנה: השוחט ונמצא טריפה — שחיטה שאינה מתירה</span><span data-when="en">Mishna: slaughtered and found a tereifa — slaughter that does not permit</span>
+      <span class="ref">Chullin 81b:4–5</span></h2>
+  <div class="lead"><span data-when="he">משנה: השוחט ונמצא טריפה, או לעבודה זרה, או פרת חטאת, שור הנסקל ועגלה ערופה — ר׳ שמעון פוטר וחכמים מחייבים; ובנחירה ועיקור — הכל פוטרים.</span><span data-when="en">Mishna: one who slaughters and finds a tereifa, or for idol worship, or a red heifer, a stoned ox or a broken-necked heifer — R. Shimon exempts, the Rabbis hold liable; for stabbing or uprooting — all exempt.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: השוחט ונמצא טריפה, לע״ז, פרת חטאת, שור הנסקל, עגלה ערופה — ר׳ שמעון פוטר, חכמים מחייבים"]):::mishnah
+  S1["② השוחט ונתנבלה בידו, הנוחר והמעקר — פטור משום ׳אותו ואת בנו׳"]:::statement
+  M1 -->|המשך| S1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: slaughtered and found a tereifa, for idol worship, red heifer, stoned ox, broken-necked heifer — R. Shimon exempts, Rabbis hold liable"]):::mishnah
+  S1["② Slaughtered and it became a carcass, the stabber and the uprooter — exempt from ׳itself and offspring׳"]:::statement
+  M1 -->|continues| S1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① הַשּׁוֹחֵט וְנִמְצָא טְרֵפָה, הַשּׁוֹחֵט לַעֲבוֹדָה זָרָה … פָּרַת חַטָּאת, וְשׁוֹר הַנִּסְקָל, וְעֶגְלָה עֲרוּפָה – רַבִּי שִׁמְעוֹן פּוֹטֵר, וַחֲכָמִים מְחַיְּיבִין"]):::mishnah
+  S1["② הַשּׁוֹחֵט וְנִתְנַבְּלָה בְּיָדוֹ, וְהַנּוֹחֵר, וְהַמְעַקֵּר – פָּטוּר מִשּׁוּם אוֹתוֹ וְאֶת בְּנוֹ"]:::statement
+  M1 -->|המשך| S1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״א ב — Chullin 81b:4</span></div>
+    <div class="orig">מַתְנִי׳ הַשּׁוֹחֵט וְנִמְצָא טְרֵפָה, הַשּׁוֹחֵט לַעֲבוֹדָה זָרָה, וְהַשּׁוֹחֵט פָּרַת חַטָּאת, וְשׁוֹר הַנִּסְקָל, וְעֶגְלָה עֲרוּפָה – רַבִּי שִׁמְעוֹן פּוֹטֵר, וַחֲכָמִים מְחַיְּיבִין.</div>
+    <div class="trans" data-when="he">משנה: השוחט בהמה (וחברתה) ונמצאת אחת מהן טריפה, או השוחט לשם עבודה זרה, או השוחט פרת חטאת (פרה אדומה), שור הנסקל ועגלה ערופה — שכולן אסורות בהנאה — ר׳ שמעון פוטר מ״אותו ואת בנו״ (שאין זו שחיטה המתירה), וחכמים מחייבים.</div>
+    <div class="trans" data-when="en">MISHNA: With regard to one who slaughters an animal and its offspring and one of them is discovered to be an animal with a wound that would have caused it to die within twelve months [tereifa] and may not be eaten, or one who slaughters one of the animals for the sake of idol worship, from which deriving benefit is prohibited, or one who slaughters the red heifer of purification, or an ox that was to have been stoned, or a heifer whose neck was to have been broken, all of which are animals from which deriving benefit is prohibited, Rabbi Shimon deems one who slaughters them exempt from lashes for the slaughter of a mother and its offspring, as in his opinion, slaughter that does not render the animal fit for consumption is not considered slaughter and does not violate the prohibition. And the Rabbis deem him liable, as the slaughter need not render the animal fit for consumption in order to violate the prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״א ב — Chullin 81b:5</span></div>
+    <div class="orig">הַשּׁוֹחֵט וְנִתְנַבְּלָה בְּיָדוֹ, וְהַנּוֹחֵר, וְהַמְעַקֵּר – פָּטוּר מִשּׁוּם ״אוֹתוֹ וְאֶת בְּנוֹ״.</div>
+    <div class="trans" data-when="he">אבל השוחט ונתנבלה בידו (שקלקל בשחיטה), והנוחר (ההורג בנקיבת הסכין שלא במקום שחיטה), והמעקר (העוקר את הסימנים) — לדברי הכל פטור משום ״אותו ואת בנו״, שאין כאן מעשה שחיטה כלל.</div>
+    <div class="trans" data-when="en">All agree that one who slaughters an animal and it becomes a carcass by his hand because the slaughter was invalid, or one who stabs an animal, or one who uproots the windpipe and the gullet, is exempt with regard to the prohibition against slaughtering a mother and its offspring, as it is written: “You shall not slaughter it and its offspring both in one day” (Leviticus 22:28), and in these cases, no ritual slaughter was performed.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">התראה לעבודה זרה — ריש לקיש ור׳ יוחנן</span><span data-when="en">Forewarning for idol worship — Reish Lakish and R. Yoḥanan</span>
+      <span class="ref">Chullin 81b:6–12</span></h2>
+  <div class="lead"><span data-when="he">ריש לקיש מגביל את חיוב המשנה בשוחט לע״ז; ר׳ יוחנן דוחה ומעמיד בהתראה ל״אותו ואת בנו״ ולא לע״ז — ומכאן מחלוקתם הכללית (קם ליה בדרבה מיניה) ודין רב דימי.</span><span data-when="en">Reish Lakish limits the Mishna’s liability for slaughtering to idol worship; R. Yoḥanan rejects this and sets it where one is forewarned for “itself and offspring” but not for idol worship — leading to their general dispute and Rav Dimi’s ruling.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ריש לקיש: לא שנו אלא ראשון לע״ז ושני לשולחנו; אבל ראשון לשולחנו ושני לע״ז — פטור, קם ליה בדרבה מיניה"]:::statement
+  Q1{"② ר׳ יוחנן: זו אפילו תינוקות יודעין! אלא פעמים ששני לע״ז — חייב"}:::question
+  A1["③ כגון דאתרו ביה משום ׳אותו ואת בנו׳ ולא משום ע״ז; וריש לקיש: כי לא אתרו נמי פטור"]:::answer
+  S2["④ ואזדו לטעמייהו — רב דימי: חייבי מיתות/מלקות שוגגין ודבר אחר; ר׳ יוחנן חייב, ריש לקיש פטור"]:::statement
+  S3["⑤ ר׳ יוחנן חייב, דהא לא אתרו ביה; ריש לקיש פטור, דכי אתרו פטור — לא אתרו נמי פטור"]:::statement
+  C1["⑥ וצריכא — לאשמועינן מחלוקתם בשני המקרים"]:::conclusion
+  S1 -.->|דחייה| Q1
+  Q1 -->|העמדה| A1
+  A1 -->|ואזדו לטעמייהו| S2
+  S2 --> S3
+  S3 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Reish Lakish: liable only if the first was for idol worship and second for his table; reverse — exempt, the greater penalty subsumes"]:::statement
+  Q1{"② R. Yoḥanan: even schoolchildren know this! Rather sometimes the second for idol worship — liable"}:::question
+  A1["③ Where forewarned for ׳itself and offspring׳ but not for idol worship; Reish Lakish: even unforewarned, exempt"]:::answer
+  S2["④ They follow their reasoning — Rav Dimi: death/lashes unwitting plus a monetary matter; R. Yoḥanan liable, Reish Lakish exempt"]:::statement
+  S3["⑤ R. Yoḥanan liable, for he was not forewarned; Reish Lakish exempt, for if forewarned exempt, unforewarned too"]:::statement
+  C1["⑥ And it is necessary — to teach their dispute in both cases"]:::conclusion
+  S1 -.->|rejects| Q1
+  Q1 -->|sets the case| A1
+  A1 -->|follow their reasoning| S2
+  S2 --> S3
+  S3 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① לֹא שָׁנוּ אֶלָּא שֶׁשָּׁחַט רִאשׁוֹן לַעֲבוֹדָה זָרָה וְשֵׁנִי לְשֻׁלְחָנוֹ … רִאשׁוֹן לְשֻׁלְחָנוֹ וְשֵׁנִי לַעֲבוֹדָה זָרָה – פָּטוּר, דְּקָם לֵיהּ בִּדְרַבָּה מִינֵּיהּ"]:::statement
+  Q1{"② זוֹ, אֲפִילּוּ תִּינוֹקוֹת … יוֹדְעִין אוֹתָהּ! אֶלָּא, פְּעָמִים … שֵׁנִי לַעֲבוֹדָה זָרָה – חַיָּיב"}:::question
+  A1["③ כְּגוֹן דְּאַתְרוֹ בֵּיהּ מִשּׁוּם אוֹתוֹ וְאֶת בְּנוֹ … וְרֵישׁ לָקִישׁ … כִּי לָא אַתְרוֹ בֵּיהּ נָמֵי – פָּטוּר"]:::answer
+  S2["④ וְאָזְדוּ לְטַעְמַיְיהוּ … רַב דִּימִי … חַיָּיבֵי מִיתוֹת שׁוֹגְגִין … וְדָבָר אַחֵר – רַבִּי יוֹחָנָן … חַיָּיב, וְרֵישׁ לָקִישׁ … פָּטוּר"]:::statement
+  S3["⑤ רַבִּי יוֹחָנָן … חַיָּיב, דְּהָא לָא אַתְרוֹ בֵּיהּ; וְרֵישׁ לָקִישׁ … דְּכִי אַתְרוֹ בֵּיהּ פָּטוּר – כִּי לָא אַתְרוֹ בֵּיהּ נָמֵי פָּטוּר"]:::statement
+  C1["⑥ וּצְרִיכָא … וְאִי אִיתְּמַר בְּהָא … מוֹדֵי לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, צְרִיכָא"]:::conclusion
+  S1 -.->|דחייה| Q1
+  Q1 -->|העמדה| A1
+  A1 -->|ואזדו לטעמייהו| S2
+  S2 --> S3
+  S3 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״א ב — Chullin 81b:6</span></div>
+    <div class="orig">גְּמָ׳ אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: לֹא שָׁנוּ אֶלָּא שֶׁשָּׁחַט רִאשׁוֹן לַעֲבוֹדָה זָרָה וְשֵׁנִי לְשֻׁלְחָנוֹ, אֲבָל רִאשׁוֹן לְשֻׁלְחָנוֹ וְשֵׁנִי לַעֲבוֹדָה זָרָה – פָּטוּר, דְּקָם לֵיהּ בִּדְרַבָּה מִינֵּיהּ.</div>
+    <div class="trans" data-when="he">גמרא: ריש לקיש: חכמים מחייבים בשוחט לע״ז רק כשהראשון נשחט לעבודה זרה והשני לשולחנו (לאכילה); אבל אם הראשון לשולחנו והשני לעבודה זרה — פטור ממלקות על השני, שקם ליה בדרבה מיניה (נענש בעונש החמור — מיתה — ולא במלקות).</div>
+    <div class="trans" data-when="en">GEMARA: Rabbi Shimon ben Lakish says: The Rabbis in the mishna taught that one is liable when one of the animals is slaughtered for the sake of idol worship only when he slaughtered the first animal for the sake of idol worship and the second animal for his own table. But if he slaughtered the first animal for his own table and the second animal for the sake of idol worship, he is exempt from lashes for the second act of slaughter, as he receives only the greater punishment, that for idol worship, which is death.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״א ב — Chullin 81b:7</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַבִּי יוֹחָנָן: זוֹ, אֲפִילּוּ תִּינוֹקוֹת שֶׁל בֵּית רַבָּן יוֹדְעִין אוֹתָהּ! אֶלָּא, פְּעָמִים שֶׁאֲפִילּוּ שָׁחַט רִאשׁוֹן לְשֻׁלְחָנוֹ וְשֵׁנִי לַעֲבוֹדָה זָרָה – חַיָּיב.</div>
+    <div class="trans" data-when="he">ר׳ יוֹחָנָן דחה: הלכה זו (שקם ליה בדרבה מיניה) אפילו תינוקות של בית רבן יודעים אותה — ואין צורך לאומרה! אלא יש לפרש: פעמים שאף ששחט הראשון לשולחנו והשני לעבודה זרה — חייב מלקות על השני.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan said to him: Even schoolchildren know this halakha, that one who is liable to receive two punishments receives only the greater punishment. Rather, sometimes, even if he slaughtered the first for his own table and the second for the sake of idol worship, he is liable to receive lashes for the second act of slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ״א ב — Chullin 81b:8</span></div>
+    <div class="orig">כְּגוֹן דְּאַתְרוֹ בֵּיהּ מִשּׁוּם ״אוֹתוֹ וְאֶת בְּנוֹ״, וְלֹא אַתְרוֹ בֵּיהּ מִשּׁוּם עֲבוֹדָה זָרָה. וְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אָמַר: כֵּיוָן דְּכִי אַתְרוֹ בֵּיהּ – פָּטוּר, כִּי לָא אַתְרוֹ בֵּיהּ נָמֵי – פָּטוּר.</div>
+    <div class="trans" data-when="he">כגון שהתרו בו משום ״אותו ואת בנו״ אך לא התרו בו משום עבודה זרה — ולכן אינו נהרג ולוקה על הקל. וריש לקיש משיב: כיוון שאילו התרו בו (גם לע״ז) היה פטור ממלקות, אף כשלא התרו בו לע״ז — פטור.</div>
+    <div class="trans" data-when="en">This occurs, for example, where the witnesses forewarned him before the second act of slaughter with regard to the prohibition of: Itself and its offspring, but they did not forewarn him with regard to idol worship. Since he is not punished for performing idol worship, he receives lashes for the less severe transgression. And Rabbi Shimon ben Lakish says: Since, had they forewarned him with regard to idol worship he would have been exempt from lashes; therefore, even if they did not forewarn him with regard to idol worship, he is also exempt from lashes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ״א ב — Chullin 81b:9</span></div>
+    <div class="orig">וְאָזְדוּ לְטַעְמַיְיהוּ, דְּכִי אֲתָא רַב דִּימִי אָמַר: חַיָּיבֵי מִיתוֹת שׁוֹגְגִין, וְחַיָּיבֵי מַלְקוֹת שׁוֹגְגִין, וְדָבָר אַחֵר – רַבִּי יוֹחָנָן אוֹמֵר: חַיָּיב, וְרֵישׁ לָקִישׁ אוֹמֵר: פָּטוּר.</div>
+    <div class="trans" data-when="he">ומכאן ששניהם הולכים לשיטתם הכללית: כשבא רב דימי מארץ ישראל אמר — חייבי מיתות שוגגין, או חייבי מלקות שוגגין, ועמהם דבר אחר (חיוב ממון), והתרו בו לממון בלבד: ר׳ יוחנן אומר חייב (לשלם), וריש לקיש אומר פטור.</div>
+    <div class="trans" data-when="en">The Gemara notes: And they each follow their known lines of reasoning in this matter. As when Rav Dimi came to Babylonia from Eretz Yisrael he said: With regard to those who unwittingly performed a transgression for which one is liable to receive the death penalty if one performed it intentionally, or those who unwittingly performed a transgression for which one is liable to receive lashes, and that transgression also involved another matter, monetary payment, and they were forewarned with regard to the monetary penalty but not with regard to the lashes or the death penalty, Rabbi Yoḥanan says: He is liable to pay; and Reish Lakish says: He is exempt.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ״א ב — Chullin 81b:10</span></div>
+    <div class="orig">רַבִּי יוֹחָנָן אוֹמֵר: חַיָּיב, דְּהָא לָא אַתְרוֹ בֵּיהּ; וְרֵישׁ לָקִישׁ אוֹמֵר: פָּטוּר, דְּכֵיוָן דְּכִי אַתְרוֹ בֵּיהּ פָּטוּר – כִּי לָא אַתְרוֹ בֵּיהּ נָמֵי פָּטוּר.</div>
+    <div class="trans" data-when="he">ביאור טעמיהם: ר׳ יוחנן — חייב לשלם, שהרי לא התרו בו לעונש החמור ונמצא ששגג בו ונשאר רק חיוב הממון. וריש לקיש — פטור, שכיוון שאילו התרו בו לחמור היה פטור מן הממון, אף כשלא התרו בו פטור.</div>
+    <div class="trans" data-when="en">The Gemara clarifies the rationales for their statements. Rabbi Yoḥanan says that he is liable; since they did not forewarn him with regard to the severe transgression, he sinned unwittingly, and he remains liable only to pay the monetary payment. And Reish Lakish says that he is exempt; since had they forewarned him with regard to the severe transgression, he would have been exempt from the monetary payment, when they did not forewarn him, he is also exempt.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ״א ב — Chullin 81b:11</span></div>
+    <div class="orig">וּצְרִיכָא, דְּאִי אַשְׁמוֹעִינַן בְּהָא – בְּהָא קָאָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, אֲבָל בְּהָא – אֵימָא מוֹדֵי לֵיהּ לְרַבִּי יוֹחָנָן.</div>
+    <div class="trans" data-when="he">וצריך להשמיע את מחלוקתם בשני המקרים: שאילו אמרו רק בעניין השוחט (מיתה ומלקות יחד) — היינו אומרים שדווקא שם ריש לקיש פוטר, אבל במקרה של ממון אֵימא שמודה לר׳ יוחנן שחייב.</div>
+    <div class="trans" data-when="en">The Gemara notes: And it is necessary to state their disagreement with regard to both of these cases. As, if it were taught to us only about this case where one slaughters the mother for his private use and afterward slaughters its offspring for idol worship, perhaps only in this case involving the death penalty and lashes does Rabbi Shimon ben Lakish say that even if they did not forewarn the transgressor with regard to idol worship, he is still exempt from lashes for the prohibition of: Itself and its offspring, because the death penalty and lashes are similar in that they are both corporal punishments, and so the obligation of lashes does not take effect at all when the death penalty is potentially applicable. But in that case, involving the death penalty or lashes together with a monetary payment, say that he agrees with Rabbi Yoḥanan that the transgressor is liable to pay the monetary payment.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין פ״א ב — Chullin 81b:12</span></div>
+    <div class="orig">וְאִי אִיתְּמַר בְּהָא, בְּהָא קָאָמַר רַבִּי יוֹחָנָן, אֲבָל בְּהָא אֵימָא מוֹדֵי לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, צְרִיכָא.</div>
+    <div class="trans" data-when="he">ואילו אמרו רק בעניין הממון — היינו אומרים שדווקא שם ר׳ יוחנן מחייב, אבל במקרה השוחט (מיתה ומלקות) אֵימא שמודה לריש לקיש שפטור. לפיכך צריך להשמיע את מחלוקתם בשני המקרים.</div>
+    <div class="trans" data-when="en">And if the disagreement was stated only with regard to that case, where one unwittingly performed a transgression involving the death penalty or lashes together with a transgression bearing a monetary payment, perhaps only in that case does Rabbi Yoḥanan say that he is liable to pay the monetary payment. But in this case, where one slaughtered an animal and its offspring, and the second animal was slaughtered for the sake of idol worship, which involves the death penalty and lashes, but without a forewarning with regard to the death penalty, say that he agrees with Rabbi Shimon ben Lakish that one is exempt from lashes. Therefore, it is necessary to state their disagreement with regard to both cases.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">פרת חטאת ועגלה ערופה — שחיטה ראויה או ״אינה משנה״</span><span data-when="en">Red heifer and broken-necked heifer — fit slaughter, or “not part of the Mishna”</span>
+      <span class="ref">Chullin 81b:13–82a:8</span></h2>
+  <div class="lead"><span data-when="he">קושיה על המשנה: פרת חטאת ועגלה ערופה הרי שחיטתן ראויה — והיישוב ש״אינן משנה״. דיון ארוך אם מימרא זו משם ר׳ ינאי, ראיה מציפורי מצורע, ומסקנה משם ר׳ יוחנן.</span><span data-when="en">An objection to the Mishna: the red heifer and broken-necked heifer have fit slaughter — resolved that they “are not part of the Mishna.” A long discussion of whether this is in R. Yannai’s name, a proof from a leper’s birds, and the conclusion in R. Yoḥanan’s name.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① ופרת חטאת שחיטה שאינה ראויה היא? והתניא: פרה מטמאה טומאת אוכלין, שהיתה לה שעת הכושר"}:::question
+  A1["② ר׳ יוחנן: פרת חטאת אינה משנה"]:::answer
+  Q2{"③ ועגלה ערופה לאו שחיטה ראויה היא? והתנן: נמצא ההורג — תצא ותרעה. ריש לקיש משום ר׳ ינאי: אינה משנה"}:::question
+  Q3{"④ ומי אמר ר׳ ינאי הכי? והאמר ר׳ ינאי: גבול שמעתי בה ושכחתי — ירידתה לנחל איתן אוסרתה"}:::question
+  A2["⑤ ואם איתא, לישני: כאן קודם ירידה, כאן לאחר ירידה"]:::answer
+  S1["⑥ רב פנחס: אנן משמיה דריש לקיש מתנינן; רב אשי: קשיא לן, מי אמר ריש לקיש הכי?"]:::statement
+  P1["⑦ והא איתמר: ציפורי מצורע מאימתי נאסרין? ר׳ יוחנן משעת שחיטה, ריש לקיש משעת לקיחה"]:::proof
+  P2["⑧ גמר ׳קיחה׳ ׳קיחה׳ מעגלה ערופה — נאסרת מחיים, שחיטתה אינה ראויה"]:::proof
+  C1["⑨ אלא ר׳ חייא בר אבא אמר ר׳ יוחנן: עגלה ערופה אינה משנה"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 -->|וכן בעגלה| Q2
+  Q2 -.->|קושיא| Q3
+  Q3 -->|דחייה| A2
+  A2 -->|גרסה אחרת| S1
+  S1 -->|ראיה| P1
+  P1 --> P2
+  P2 -.->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Is the red heifer unfit slaughter? But a baraita: a heifer is susceptible to food-impurity, since it had a fit time"}:::question
+  A1["② R. Yoḥanan: the red heifer clause is not part of the Mishna"]:::answer
+  Q2{"③ Is the broken-necked heifer not fit slaughter? Mishna: if the killer is found — it grazes. Reish Lakish in R. Yannai׳s name: not part of the Mishna"}:::question
+  Q3{"④ Did R. Yannai say so? But he said: I heard the boundary and forgot — its descent to the valley forbids it"}:::question
+  A2["⑤ If so, resolve: here before descent, there after descent"]:::answer
+  S1["⑥ Rav Pineḥas: we taught it in Reish Lakish׳s own name; Rav Ashi: it was difficult — did Reish Lakish say so?"]:::statement
+  P1["⑦ It was stated: from when are a leper׳s birds forbidden? R. Yoḥanan from slaughter, Reish Lakish from taking"]:::proof
+  P2["⑧ He derives ׳taking׳-׳taking׳ from the broken-necked heifer — forbidden while alive, slaughter unfit"]:::proof
+  C1["⑨ Rather R. Ḥiyya bar Abba said R. Yoḥanan: the broken-necked heifer clause is not part of the Mishna"]:::conclusion
+  Q1 -->|resolves| A1
+  A1 -->|likewise heifer| Q2
+  Q2 -.->|objection| Q3
+  Q3 -->|rejected| A2
+  A2 -->|other version| S1
+  S1 -->|proof| P1
+  P1 --> P2
+  P2 -.->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① וּפָרַת חַטָּאת שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה הִיא? וְהָתַנְיָא … פָּרָה מְטַמְּאָה … הוֹאִיל וְהָיְתָה לָהּ שְׁעַת הַכּוֹשֶׁר"}:::question
+  A1["② אָמַר רַב שֶׁמֶן בַּר אַבָּא אָמַר רַבִּי יוֹחָנָן: פָּרַת חַטָּאת אֵינָהּ מִשְׁנָה"]:::answer
+  Q2{"③ וְעֶגְלָה עֲרוּפָה, לָאו שְׁחִיטָה רְאוּיָה הִיא? … תֵּצֵא וְתִרְעֶה … מִשּׁוּם רַבִּי יַנַּאי: עֶגְלָה עֲרוּפָה אֵינָהּ מִשְׁנָה"}:::question
+  Q3{"④ וּמִי אָמַר רַבִּי יַנַּאי הָכִי? וְהָאָמַר … גְּבוּל שָׁמַעְתִּי בָּהּ, וְשָׁכַחְתִּי … יְרִידָתָהּ לְנַחַל אֵיתָן אוֹסַרְתָּהּ"}:::question
+  A2["⑤ וְאִם אִיתָא, לִישַׁנֵּי: כָּאן קוֹדֶם יְרִידָה, כָּאן לְאַחַר יְרִידָה"]:::answer
+  S1["⑥ אֲנַן מִשְּׁמֵיהּ דְּרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ מַתְנֵינַן לַהּ … אָמַר רַב אָשֵׁי … קַשְׁיָא לַן, מִי אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ הָכִי?"]:::statement
+  P1["⑦ צִפּוֹרֵי מְצוֹרָע מֵאֵימָתַי נֶאֱסָרִין? רַבִּי יוֹחָנָן … מִשְּׁעַת שְׁחִיטָה, וְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ … מִשְּׁעַת לְקִיחָה"]:::proof
+  P2["⑧ גָּמַר קִיחָה קִיחָה מֵעֶגְלָה עֲרוּפָה"]:::proof
+  C1["⑨ אֶלָּא אָמַר רַבִּי חִיָּיא בַּר אַבָּא אָמַר רַבִּי יוֹחָנָן: עֶגְלָה עֲרוּפָה אֵינָהּ מִשְׁנָה"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 -->|וכן בעגלה| Q2
+  Q2 -.->|קושיא| Q3
+  Q3 -->|דחייה| A2
+  A2 -->|גרסה אחרת| S1
+  S1 -->|ראיה| P1
+  P1 --> P2
+  P2 -.->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״א ב — Chullin 81b:13</span></div>
+    <div class="orig">וּפָרַת חַטָּאת שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה הִיא? וְהָתַנְיָא: רַבִּי שִׁמְעוֹן אוֹמֵר: פָּרָה מְטַמְּאָה טוּמְאַת אֳכָלִין, הוֹאִיל וְהָיְתָה לָהּ שְׁעַת הַכּוֹשֶׁר.</div>
+    <div class="trans" data-when="he">קושיה על המשנה: וכי שחיטת פרת חטאת (פרה אדומה) אינה ראויה, שר׳ שמעון פוטר בה? והרי שנינו בברייתא: ר׳ שמעון אומר שהפרה (אף לאחר שחיטה ואיסור הנאה) מקבלת טומאת אוכלין, הואיל והיתה לה שעת הכושר (שעה שהיתה ראויה לאכילה) — משמע שיש בה שחיטה ראויה.</div>
+    <div class="trans" data-when="en">§ The mishna teaches that Rabbi Shimon deems one who slaughters the red heifer of purification exempt from punishment for the prohibition of: Itself and its offspring, as that act of slaughter does not render the animal fit for consumption. The Gemara asks: And is the slaughter of the red heifer of purification considered an act of slaughter that is unfit for consumption? But isn’t it taught in a baraita: Rabbi Shimon says: A red heifer, even if it has been slaughtered and it is therefore prohibited to derive benefit from it, is susceptible to the ritual impurity of food, since it had a time in which it was fit for consumption?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״ב א — Chullin 82a:1</span></div>
+    <div class="orig">וְאָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: אוֹמֵר הָיָה רַבִּי שִׁמְעוֹן, פָּרָה נִפְדֵּית עַל גַּבֵּי מַעֲרַכְתָּהּ. אָמַר רַב שֶׁמֶן בַּר אַבָּא אָמַר רַבִּי יוֹחָנָן: פָּרַת חַטָּאת אֵינָהּ מִשְׁנָה.</div>
+    <div class="trans" data-when="he">וריש לקיש ביאר: ר׳ שמעון היה אומר שהפרה נפדית אף לאחר ששחטוה ונתנוה על מערכת העצים — אם כן יש לה שעת כושר (אילו תיפדה), ומדוע פוטרה? תירוץ — רב שמן בר אבא בשם ר׳ יוחנן: דין ״פרת חטאת״ אינו חלק מן המשנה (משבשתא היא), ולמעשה ר׳ שמעון מחייב בה.</div>
+    <div class="trans" data-when="en">And Rabbi Shimon ben Lakish says in explanation of Rabbi Shimon’s statement: Rabbi Shimon would say that the red heifer can be redeemed with money even once it has been slaughtered and placed upon its pyre in preparation for being burned. Therefore, Rabbi Shimon states that there could be a time when the heifer was fit for consumption, i.e., if it was redeemed. Why, then, does he deem one who slaughters it exempt from liability for transgressing the prohibition of: Itself and its offspring? Rav Shemen bar Abba said that Rabbi Yoḥanan says: The statement with regard to the red heifer of purification is not considered part of the mishna, and Rabbi Shimon agrees that its slaughterer is liable for transgressing the prohibition of: Itself and its offspring.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ״ב א — Chullin 82a:2</span></div>
+    <div class="orig">וְעֶגְלָה עֲרוּפָה, לָאו שְׁחִיטָה רְאוּיָה הִיא? וְהָתְנַן: נִמְצָא הַהוֹרֵג עַד שֶׁלֹּא תֵּעָרֵף הָעֲגָלָה – תֵּצֵא וְתִרְעֶה בָּעֵדֶר. אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ מִשּׁוּם רַבִּי יַנַּאי: עֶגְלָה עֲרוּפָה אֵינָהּ מִשְׁנָה.</div>
+    <div class="trans" data-when="he">וכן בעגלה ערופה: וכי שחיטתה אינה ראויה? והרי שנינו (סוטה): נמצא ההורג קודם שנערפה העגלה — תצא ותרעה בעדר (שאינה אסורה בהנאה עד עריפתה), ומשמע ששחיטתה קודם לכן ראויה. תירוץ — ריש לקיש משום ר׳ ינאי: דין ״עגלה ערופה״ אינו חלק מן המשנה.</div>
+    <div class="trans" data-when="en">The Gemara asks: And is the slaughter of the heifer whose neck was to have been broken not considered an act of slaughter that is fit? But didn’t we learn in a mishna (Sota 47a): If a heifer was set aside to have its neck broken to atone for the murder of an individual whose murderer was not known, and then the murderer was found before the heifer’s neck was broken, the heifer shall go out and graze among the flock, as it is not consecrated. Evidently, before its neck is broken, deriving benefit from it is not prohibited, and its slaughter would be one that is fit. Rabbi Shimon ben Lakish said in the name of Rabbi Yannai: The statement with regard to the heifer whose neck was to have been broken is not considered part of the mishna, and Rabbi Shimon agrees that its slaughterer is liable for violating the prohibition of: Itself and its offspring.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ״ב א — Chullin 82a:3</span></div>
+    <div class="orig">וּמִי אָמַר רַבִּי יַנַּאי הָכִי? וְהָאָמַר רַבִּי יַנַּאי: גְּבוּל שָׁמַעְתִּי בָּהּ, וְשָׁכַחְתִּי, וְנָסְבִין חַבְרַיָּא לוֹמַר: יְרִידָתָהּ לְנַחַל אֵיתָן אוֹסַרְתָּהּ.</div>
+    <div class="trans" data-when="he">קושיה: וכי ר׳ ינאי אמר ש״עגלה ערופה אינה משנה״? והרי ר׳ ינאי עצמו אמר: גבול (שלב) שממנו נאסרת העגלה בהנאה שמעתי, ושכחתי מהו; והחברים נטו לומר שירידתה לנחל איתן (מקום העריפה) היא האוסרתה — ומשמע שקודם לכן מותרת, ושחיטתה ראויה.</div>
+    <div class="trans" data-when="en">The Gemara asks: And does Rabbi Yannai actually say so? But doesn’t Rabbi Yannai say: I heard the boundary, i.e., stage, beyond which the heifer is forbidden, but I have forgotten what it is; but the group of scholars were inclined to say that the heifer’s descent to a hard valley, where its neck is broken, is the action that renders it forbidden?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ״ב א — Chullin 82a:4</span></div>
+    <div class="orig">וְאִם אִיתָא, לִישַׁנֵּי: כָּאן קוֹדֶם יְרִידָה, כָּאן לְאַחַר יְרִידָה.</div>
+    <div class="trans" data-when="he">ואם נכון שר׳ ינאי סובר כך — היה לו ליישב את הסתירה בלא לומר ״אינה משנה״: כאן (במשנת סוטה, מותרת) קודם ירידתה לנחל, וכאן (במשנתנו, אסורה ושחיטתה אינה ראויה) לאחר ירידתה. מדוע אמר ״אינה משנה״?</div>
+    <div class="trans" data-when="en">And if it is so, let him resolve the contradiction by saying: Here, where deriving benefit from the heifer is permitted, and its slaughterer is liable for transgressing the prohibition of: Itself and its offspring, it is referring to an act of slaughtering that is fit and is performed before the heifer’s descent, while there, in the mishna, where Rabbi Shimon holds that there is no liability for transgressing: Itself and its offspring, it is referring to slaughtering performed after its descent. At that time, deriving benefit from the heifer is already prohibited, and the slaughter is therefore not considered fit.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ״ב א — Chullin 82a:5</span></div>
+    <div class="orig">אָמַר רַב פִּנְחָס בְּרֵיהּ דְּרַב אַמֵּי: אֲנַן מִשְּׁמֵיהּ דְּרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ מַתְנֵינַן לַהּ, עֶגְלָה עֲרוּפָה אֵינָהּ מִשְׁנָה. אָמַר רַב אָשֵׁי: כִּי הֲוֵינַן בֵּי רַב פַּפֵּי קַשְׁיָא לַן, מִי אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ הָכִי?</div>
+    <div class="trans" data-when="he">רב פנחס בריה דרב אמי: אנו שונים את המימרא בשם ריש לקיש עצמו (לא משם ר׳ ינאי): ״עגלה ערופה אינה משנה״. רב אשי: כשהיינו בבית מדרשו של רב פפי הוקשה לנו — וכי באמת אמר ריש לקיש כן?</div>
+    <div class="trans" data-when="en">Rav Pineḥas, son of Rav Ami, said: We taught the statement in the name of Rabbi Shimon ben Lakish himself, not as a quote from Rabbi Yannai: The statement with regard to the heifer whose neck is broken is not considered part of the mishna. Rav Ashi said: When we were studying in the study hall of Rav Pappi, that statement was difficult for us: Did Rabbi Shimon ben Lakish actually say that it is not considered part of the mishna?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין פ״ב א — Chullin 82a:6</span></div>
+    <div class="orig">וְהָא אִיתְּמַר, צִפּוֹרֵי מְצוֹרָע מֵאֵימָתַי נֶאֱסָרִין? רַבִּי יוֹחָנָן אָמַר: מִשְּׁעַת שְׁחִיטָה, וְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אָמַר: מִשְּׁעַת לְקִיחָה, וְאָמְרִינַן: מַאי טַעְמָא דְּרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ?</div>
+    <div class="trans" data-when="he">והרי נאמר במחלוקת: ציפורי מצורע מאימתי נאסרות בהנאה? ר׳ יוחנן — משעת שחיטה, וריש לקיש — משעת לקיחה (מעת שנלקחו לשם המצוה). ושאלנו: מהו טעמו של ריש לקיש שאוסר כבר משעת לקיחה?</div>
+    <div class="trans" data-when="en">But it was stated that amora’im engaged in a dispute concerning the following issue: From when is one prohibited from deriving benefit from the leper’s birds? Rabbi Yoḥanan says: One is prohibited from the moment of their slaughter; and Reish Lakish says: One is prohibited from the moment they are taken and designated to be a leper’s birds. And we say: What is the reasoning of Rabbi Shimon ben Lakish?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין פ״ב א — Chullin 82a:7</span></div>
+    <div class="orig">גָּמַר ״קִיחָה״ ״קִיחָה״ מֵעֶגְלָה עֲרוּפָה.</div>
+    <div class="trans" data-when="he">טעמו: גזירה שווה ״קיחה״ ״קיחה״ מעגלה ערופה — מה עגלה ערופה נאסרת משעת לקיחתה, אף ציפורי מצורע כן. מכאן שריש לקיש סובר שהעגלה נאסרת מחיים, ושחיטתה אינה ראויה — ולשיטתו ראוי שר׳ שמעון יפטור בה. אם כן כיצד אמר ש״אינה משנה״?</div>
+    <div class="trans" data-when="en">His reasoning is that he derives it via verbal analogy from the terms: “Taking [kiḥa]” (Leviticus 14:4), with regard to the birds, and: “Taking [kiḥa]” (Deuteronomy 21:3), with regard to the heifer whose neck is broken. Consequently, just as deriving benefit from the heifer whose neck is broken is prohibited from the time of its selection, so too must deriving benefit from these birds be prohibited from the time of their selection. Clearly, then, Rabbi Shimon ben Lakish holds that deriving benefit from the heifer whose neck is broken is prohibited while it is still alive. Therefore, its slaughter is one that does not render the animal fit for consumption. Accordingly, Rabbi Shimon would exempt its slaughterer from the prohibition of: Itself and its offspring, as is taught in the mishna.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין פ״ב א — Chullin 82a:8</span></div>
+    <div class="orig">אֶלָּא אָמַר רַבִּי חִיָּיא בַּר אַבָּא אָמַר רַבִּי יוֹחָנָן: עֶגְלָה עֲרוּפָה אֵינָהּ מִשְׁנָה.</div>
+    <div class="trans" data-when="he">אלא — חוזרת הגמרא בה: לא ריש לקיש אמר ״אינה משנה״, כי אם ר׳ חייא בר אבא בשם ר׳ יוחנן: ״עגלה ערופה אינה משנה״ — דין זה נדחה מן המשנה, ולמעשה ר׳ שמעון מחייב אף בה.</div>
+    <div class="trans" data-when="en">Rather, Rabbi Ḥiyya bar Abba said that Rabbi Yoḥanan said: The statement with regard to the heifer whose neck is broken is not considered part of the mishna, and this resolution of the difficulty was articulated by Rabbi Yoḥanan rather than Reish Lakish.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
