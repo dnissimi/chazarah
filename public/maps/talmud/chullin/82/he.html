@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין פ״ב</title>
+<meta name="description" content="מפת הסוגיא של חולין פ״ב: סדר שחיטה בשניים שלקחו פרה ובנה; חיוב מלקות על ׳אותו ואת בנו׳ בכל סדר; דרשת ׳לא תשחטו׳; וטעם סומכוס שאכל שני זיתי חלב בהעלם אחד חייב שתי חטאות.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="82">
+<meta name="gemara-map:sefaria-ref" content="Chullin 82">
+<meta name="gemara-map:topic-he" content="אותו ואת בנו — סדר שחיטה ומלקות">
+<meta name="gemara-map:topic-en" content="It and its offspring — order and lashes">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין פ״ב">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 82">
+<meta name="gemara-map:blurb-he" content="הקודם בקנייה קודם בשחיטה — אך אם קדם השני, זריז ונשכר; ׳לא תשחטו׳ אוסר שני הסדרים; ומחלוקת סומכוס וחכמים אם פגיעה כפולה בהעלם אחד מחייבת כפול.">
+<meta name="gemara-map:blurb-en" content="The earlier buyer slaughters first—but if the second preceded, he is diligent and rewarded; ‘you shall not slaughter’ forbids both orders; and Sumakhos vs. the Rabbis on a doubled violation in one lapse.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין פ״ב</span><span data-when="en">Sugya map — Chullin 82</span></h1>
+    <div class="subtitle"><span data-when="he">חולין פ״ב א — פ״ג א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 82a–83a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשך דיני <b>״אותו ואת בנו״</b>: שניים שקנו פרה ובנה — הקודם בקנייה קודם בשחיטה, אך זו הוראת בית־דין בלבד, ואם קדם השני <b>זריז ונשכר</b>; חיוב מלקות נמדד לפי מספר השחיטות, ו<b>״לא תשחטו״</b> מלמד שהאיסור חל בשני הסדרים ואף בשני אנשים; ולבסוף שורש מחלוקת <b>סומכוס וחכמים</b> — האם עבירה כפולה ב<b>העלם אחד</b> מחייבת כפול.</span>
+    <span data-when="en"><b>Bottom line:</b> A continuation of <b>“it and its offspring”</b>: two who bought a cow and its offspring—the earlier buyer slaughters first, yet that is only a court ruling, and if the second preceded he is <b>diligent and rewarded</b>; lashes are counted by the number of acts of slaughter, and <b>“you shall not slaughter”</b> teaches the ban holds in either order and even for two people; finally the root of the <b>Sumakhos–Rabbis</b> dispute—whether a doubled violation in <b>one lapse of awareness</b> carries a doubled penalty.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין פ״ב</span><span data-when="en">Overview — Chullin 82</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · שניים שלקחו פרה ובנה — סדר שחיטה"]):::mishnah
+  O2(["2 · משנה: מלקות לפי סדר השחיטה"]):::mishnah
+  O3["3 · ׳לא תשחטו׳ — שני הסדרים ושני אנשים"]:::statement
+  O4["4 · טעם סומכוס — שתי חטאות בהעלם אחד"]:::statement
+  O5["5 · ראיות לסומכוס — גידי הנשה והתראת ספק"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · Two who bought a cow and offspring — order"]):::mishnah
+  O2(["2 · Mishna: lashes by order of slaughter"]):::mishnah
+  O3["3 · ׳You shall not slaughter׳ — both orders, two people"]:::statement
+  O4["4 · Sumakhos׳s reason — two sin-offerings, one lapse"]:::statement
+  O5["5 · Proofs for Sumakhos — sciatic nerves, uncertain warning"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">שניים שלקחו פרה ובנה — סדר שחיטה</span><span data-when="en">Two who bought a cow and its offspring — order of slaughter</span>
+      <span class="ref">Chullin 82a:9–10</span></h2>
+  <div class="lead"><span data-when="he">הקודם בקנייה שוחט ראשון; אך זו הוראת בית־דין בלבד — ואם קדם השני ושחט, זריז ונשכר: לא עבר איסור ואכל בשר.</span><span data-when="en">The earlier buyer slaughters first; but that is only a court ruling — and if the second preceded, he is diligent and rewarded: he broke no prohibition and ate meat.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: הקודם בקנייה שוחט ראשון, ואם קדם השני — זכה"]):::mishnah
+  S1["② רב יוסף: לעניין דינא תנן — הוראת בית־דין בלבד"]:::statement
+  A1["② ברייתא: קדם השני — זריז ונשכר; לא עבר איסור, ואכל בשר"]:::answer
+  M1 -->|גמרא| S1
+  S1 -->|תניא נמי הכי| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: earlier buyer slaughters first; if the second preceded — he benefitted"]):::mishnah
+  S1["② Rav Yosef: it is taught only for a court judgment"]:::statement
+  A1["② Baraita: the second who preceded — diligent and rewarded; no sin, and ate meat"]:::answer
+  M1 -->|gemara| S1
+  S1 -->|so too taught| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① שְׁנַיִם שֶׁלָּקְחוּ פָּרָה וּבְנָהּ … אֵיזֶה שֶׁלָּקַח רִאשׁוֹן יִשְׁחוֹט רִאשׁוֹן, וְאִם קָדַם הַשֵּׁנִי – זָכָה"]):::mishnah
+  S1["② אָמַר רַב יוֹסֵף: לְעִנְיַן דִּינָא תְּנַן"]:::statement
+  A1["② אִם קָדַם הַשֵּׁנִי – הֲרֵי זֶה זָרִיז וְנִשְׂכָּר … דְּלָא עֲבַד אִיסּוּרָא … דְּקָאָכֵיל בִּשְׂרָא"]:::answer
+  M1 -->|גמרא| S1
+  S1 -->|תניא נמי הכי| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״ב א — Chullin 82a:9</span></div>
+    <div class="orig">מַתְנִי׳ שְׁנַיִם שֶׁלָּקְחוּ פָּרָה וּבְנָהּ, אֵיזֶה שֶׁלָּקַח רִאשׁוֹן יִשְׁחוֹט רִאשׁוֹן, וְאִם קָדַם הַשֵּׁנִי – זָכָה.</div>
+    <div class="trans" data-when="he">משנה: שני בני אדם שקנו פרה ובנה (כל אחד חיה אחת). מי שקנה ראשון — שוחט ראשון, והשני ימתין למחר כדי לא לעבור על ״אותו ואת בנו״. אך אם קדם השני ושחט — זכה, ועתה הראשון הוא שימתין למחר.</div>
+    <div class="trans" data-when="en">MISHNA: With regard to two people who purchased a cow and its offspring, where each purchased one of the animals, whoever purchased his animal first shall slaughter it first, and the second one must wait until the next day to slaughter his animal, so as not to violate the prohibition of: It and its offspring. But if the second one preceded him and slaughtered his animal first, he benefitted, and the one who purchased the animal first may not slaughter it until the next day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״ב א — Chullin 82a:10</span></div>
+    <div class="orig">גְּמָ׳ אָמַר רַב יוֹסֵף: לְעִנְיַן דִּינָא תְּנַן, תְּנָא: אִם קָדַם הַשֵּׁנִי – הֲרֵי זֶה זָרִיז וְנִשְׂכָּר, זָרִיז – דְּלָא עֲבַד אִיסּוּרָא, וְנִשְׂכָּר – דְּקָאָכֵיל בִּשְׂרָא.</div>
+    <div class="trans" data-when="he">גמרא: רב יוסף — המשנה ש״הראשון קודם״ נאמרה רק לעניין דין (אם באו לבית־דין), אך אין איסור על השני להקדים. וכן שנו בברייתא: אם קדם השני — הרי זה זריז ונשכר; זריז — שלא עבר איסור, ונשכר — שאוכל בשר כבר היום.</div>
+    <div class="trans" data-when="en">GEMARA: Rav Yosef said: We learn in the mishna that the first purchaser is granted precedence only with regard to the matter of a court judgment, in case the two purchasers go to court each demanding to slaughter his animal first. But there is no prohibition against the second one slaughtering his animal first if no claim is brought to court. Likewise, a Sage taught in a baraita: If the second one preceded him and slaughtered his animal first, he is diligent and rewarded; he is diligent because he did not violate a prohibition, and he is rewarded because he eats meat already that day.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">משנה: מלקות לפי סדר השחיטה</span><span data-when="en">Mishna: lashes by order of slaughter</span>
+      <span class="ref">Chullin 82a:11–12</span></h2>
+  <div class="lead"><span data-when="he">שחט אם ואחר־כך שני בניה — שמונים; שני בנים ואחר־כך האם — ארבעים; ובמחלוקת סומכוס: שחט אם ובת־בתה ואחר־כך הבת.</span><span data-when="en">Slaughter mother then two offspring — eighty; two offspring then mother — forty; and Sumakhos disputes the case of mother, granddaughter, then daughter.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: אם ואחר־כך שני בניה — שמונים; שני בנים ואחר־כך האם — ארבעים; אם, בת, בת־בת — שמונים"]):::mishnah
+  M2(["② אם ובת־בתה ואחר־כך בתה — ארבעים; סומכוס משום ר׳ מאיר: שמונים"]):::mishnah
+  M1 --> M2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: mother then two offspring — eighty; two offspring then mother — forty; mother, daughter, granddaughter — eighty"]):::mishnah
+  M2(["② Mother and granddaughter then daughter — forty; Sumakhos in R. Meir׳s name: eighty"]):::mishnah
+  M1 --> M2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① שָׁחַט פָּרָה וְאַחַר כָּךְ שְׁנֵי בָּנֶיהָ – סוֹפֵג שְׁמוֹנִים … שְׁחָטָהּ וְאֶת בִּתָּהּ וְאֶת בַּת בִּתָּהּ – סוֹפֵג שְׁמוֹנִים"]):::mishnah
+  M2(["② שְׁחָטָהּ וְאֶת בַּת בִּתָּהּ, וְאַחַר כָּךְ שָׁחַט בִּתָּהּ – סוֹפֵג אֶת הָאַרְבָּעִים. סוֹמְכוֹס אוֹמֵר מִשּׁוּם רַבִּי מֵאִיר: סוֹפֵג שְׁמוֹנִים"]):::mishnah
+  M1 --> M2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״ב א — Chullin 82a:11</span></div>
+    <div class="orig">מַתְנִי׳ שָׁחַט פָּרָה וְאַחַר כָּךְ שְׁנֵי בָּנֶיהָ – סוֹפֵג שְׁמוֹנִים, שָׁחַט שְׁנֵי בָּנֶיהָ וְאַחַר כָּךְ שְׁחָטָהּ – סוֹפֵג אֶת הָאַרְבָּעִים, שְׁחָטָהּ וְאֶת בִּתָּהּ וְאֶת בַּת בִּתָּהּ – סוֹפֵג שְׁמוֹנִים.</div>
+    <div class="trans" data-when="he">משנה: שחט אם ואחר־כך שני בניה — סופג שמונים (שתי עבירות נפרדות). שחט שני בנים ואחר־כך את אמם — סופג ארבעים בלבד (מעשה אחד). שחט אם ואת בתה ואת בת־בתה (בזו אחר זו) — סופג שמונים, שעשה את שחיטת ״אם ובן״ פעמיים.</div>
+    <div class="trans" data-when="en">MISHNA: If one slaughtered a cow and thereafter slaughtered its two offspring on the same day, he incurs eighty lashes for two separate actions violating the prohibition against slaughtering the mother and the offspring on the same day. If one slaughtered its two offspring and thereafter slaughtered the mother cow, he incurs the forty lashes, as he performed a single prohibited act. If one slaughtered the mother and its daughter, and, later that day, slaughtered its daughter’s daughter, he incurs eighty lashes, as he has performed the act of slaughtering a mother and its offspring twice.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״ב א — Chullin 82a:12</span></div>
+    <div class="orig">שְׁחָטָהּ וְאֶת בַּת בִּתָּהּ, וְאַחַר כָּךְ שָׁחַט בִּתָּהּ – סוֹפֵג אֶת הָאַרְבָּעִים. סוֹמְכוֹס אוֹמֵר מִשּׁוּם רַבִּי מֵאִיר: סוֹפֵג שְׁמוֹנִים.</div>
+    <div class="trans" data-when="he">המשך המשנה: שחט אם ואת בת־בתה, ואחר־כך שחט את בתה (האמצעית) — סופג ארבעים בלבד, שכן זו עבירה אחת. סומכוס בשם ר׳ מאיר חולק: סופג שמונים, שבשחיטת הבת עבר פעמיים — היא בת לאם, ואם לבת־בת.</div>
+    <div class="trans" data-when="en">But if one slaughtered the mother and its daughter’s daughter and thereafter slaughtered its daughter, he incurs the forty lashes, as he performed a single prohibited act. Sumakhos says in the name of Rabbi Meir: He incurs eighty lashes for slaughtering the daughter on the same day as its calf and its mother, as that act comprises two separate violations of the prohibition.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">׳לא תשחטו׳ — שני הסדרים ושני אנשים</span><span data-when="en">‘You shall not slaughter’ — both orders, two people</span>
+      <span class="ref">Chullin 82a:13–82b:4</span></h2>
+  <div class="lead"><span data-when="he">מדוע לוקים אף ב״בנו ואותו״? ברייתא דורשת ״לא תשחטו״ בלשון רבים — האיסור בשני הסדרים ואף בשני שוחטים; וליבון מדוקדק של הצורך בלשון.</span><span data-when="en">Why lashes even for “offspring then it”? A baraita derives from the plural “you shall not slaughter” that the ban covers both orders and even two slaughterers; with a careful sifting of why the plural is needed.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① אמאי לוקה? ׳אותו ואת בנו׳ — ולא בנו ואותו!"}:::question
+  P1["① ברייתא: ׳אותו ואת בנו׳ — אותו ואת אמו מניין?"]:::proof
+  A1["② ׳לא תשחטו׳ — הרי כאן שניים: שני האחרונים חייבים"]:::answer
+  Q2{"③ והאי מיבעי ליה לגופיה? אם כן ליכתוב ׳לא תשחוט׳"}:::question
+  Q3{"④ ואכתי מיבעי ליה: חד אין, תרי לא"}:::question
+  A2["⑤ כתב ׳לא תשחטו׳ — ואפילו תרי; אם כן ליכתוב ׳לא ישחטו׳"]:::answer
+  C1["⑥ מאי ׳לא תשחטו׳? שמע מינה תרתי"]:::conclusion
+  Q1 -->|תירוץ| P1
+  P1 -->|דרשה| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|דחייה| Q3
+  Q3 -->|יישוב| A2
+  A2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Why lashes? Torah says ׳it and its offspring׳ — not offspring then it!"}:::question
+  P1["① Baraita: ׳it and its offspring׳ — whence ׳it and its mother׳?"]:::proof
+  A1["② ׳You shall not slaughter׳ (plural) — here are two: the two latter are liable"]:::answer
+  Q2{"③ But that verse is needed for itself? If so, write ׳you (sing.) shall not׳"}:::question
+  Q3{"④ Still needed: for one — yes, for two — no"}:::question
+  A2["⑤ Wrote plural — even two; if so, let it write ׳they shall not be slaughtered׳"]:::answer
+  C1["⑥ What is the plural ׳you shall not slaughter׳? Derive two from it"]:::conclusion
+  Q1 -->|answer| P1
+  P1 -->|derivation| A1
+  A1 -.->|objection| Q2
+  Q2 -->|rejoinder| Q3
+  Q3 -->|resolution| A2
+  A2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① אַמַּאי? ׳אוֹתוֹ וְאֶת בְּנוֹ׳ אָמַר רַחֲמָנָא, וְלֹא בְּנוֹ וְאוֹתוֹ!"}:::question
+  P1["① ׳אוֹתוֹ וְאֶת בְּנוֹ׳ – אֵין לִי אֶלָּא … אוֹתוֹ וְאֶת אִמּוֹ מִנַּיִן?"]:::proof
+  A1["② ׳לֹא תִשְׁחֲטוּ׳ – הֲרֵי כָּאן שְׁנַיִם … שְׁנַיִם הָאַחֲרוֹנִים חַיָּיבִין"]:::answer
+  Q2{"③ הַאי מִיבְּעֵי לֵיהּ לְגוּפֵיהּ? אִם כֵּן, לִיכְתּוֹב ׳לֹא תִשְׁחוֹט׳"}:::question
+  Q3{"④ וְאַכַּתִּי מִיבְּעֵי לֵיהּ … חַד – אִין, תְּרֵי – לָא"}:::question
+  A2["⑤ כְּתַב … ׳לֹא תִשְׁחֲטוּ׳, וַאֲפִילּוּ תְּרֵי! אִם כֵּן, לִכְתּוֹב ׳לֹא יִשְׁחֲטוּ׳"]:::answer
+  C1["⑥ מַאי ׳לֹא תִשְׁחֲטוּ׳? שְׁמַע מִינַּהּ תַּרְתֵּי"]:::conclusion
+  Q1 -->|תירוץ| P1
+  P1 -->|דרשה| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|דחייה| Q3
+  Q3 -->|יישוב| A2
+  A2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״ב א — Chullin 82a:13</span></div>
+    <div class="orig">גְּמָ׳ אַמַּאי? ״אוֹתוֹ וְאֶת בְּנוֹ״ אָמַר רַחֲמָנָא, וְלֹא בְּנוֹ וְאוֹתוֹ! לָא סָלְקָא דַּעְתָּךְ, דְּתַנְיָא: ״אוֹתוֹ וְאֶת בְּנוֹ״ – אֵין לִי אֶלָּא אוֹתוֹ וְאֶת בְּנוֹ, אוֹתוֹ וְאֶת אִמּוֹ מִנַּיִן?</div>
+    <div class="trans" data-when="he">גמרא: על המשנה שהשוחט שני בנים ואחר־כך אמם לוקה — שואלת: מדוע לוקה? הרי התורה אמרה ״אותו ואת בנו״ (האם ואחריו הבן), ולא ״בנו ואותו״! תשובה: לא תעלה על דעתך, שהרי שנינו: מ״אותו ואת בנו״ אין לי אלא אותו ואחריו בנו; אותו (הבן) ואחריו אמו — מניין?</div>
+    <div class="trans" data-when="en">GEMARA: With regard to the statement in the mishna that if one slaughters two calves and thereafter slaughters their mother he incurs the forty lashes, the Gemara asks: Why does he receive lashes? After all, the phrase: “It and its offspring” (Leviticus 22:28), is what the Merciful One states in the Torah, and not: Its offspring and it. The Gemara answers: That thought should not enter your mind, as it is taught in a baraita: From the phrase “it and its offspring” I have derived only that the prohibition includes slaughtering the animal itself first and its offspring afterward. From where do I derive that the prohibition also includes the case of slaughtering the offspring itself first and its mother afterward?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״ב א — Chullin 82a:14</span></div>
+    <div class="orig">כְּשֶׁהוּא אוֹמֵר ״לֹא תִשְׁחֲטוּ״ – הֲרֵי כָּאן שְׁנַיִם, הָא כֵּיצַד? אֶחָד הַשּׁוֹחֵט אֶת הַפָּרָה, וְאֶחָד הַשּׁוֹחֵט אֶת אִמָּהּ, וְאֶחָד הַשּׁוֹחֵט אֶת בְּנָהּ – שְׁנַיִם הָאַחֲרוֹנִים חַיָּיבִין.</div>
+    <div class="trans" data-when="he">המשך הברייתא: כשאומר הכתוב ״לא תשחטו״ (לשון רבים) — הרי כאן שני איסורים. כיצד? אחד שוחט את הפרה, ואחד את אמה, ואחד את בנה (כולם ביום אחד) — שני האחרונים חייבים: זה ששחט את האם אחרי הבת, וזה ששחט את הבן אחרי האם.</div>
+    <div class="trans" data-when="en">It is derived in the following manner: When the verse states: “You shall not slaughter [tishḥatu] both in one day” (Leviticus 22:28), this is referring to two people who are prohibited from slaughtering on the same day, as the word “slaughter” is phrased in the plural. How so? If, during the course of a single day, there is one person who slaughters the cow and then another who slaughters that cow’s mother, and then there is another person who slaughters that cow’s offspring, the two latter people are liable, the first of them for slaughtering the mother after its offspring was slaughtered, and the second person for slaughtering the offspring after its mother was slaughtered.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ״ב ב — Chullin 82b:1</span></div>
+    <div class="orig">הַאי מִיבְּעֵי לֵיהּ לְגוּפֵיהּ? אִם כֵּן, לִיכְתּוֹב ״לֹא תִשְׁחוֹט״, מַאי ״לֹא תִשְׁחֲטוּ״?</div>
+    <div class="trans" data-when="he">קושיא: הרי לשון ״תשחטו״ נצרכת לעצם האיסור (שלא לשחוט אם ובן ביום אחד), ואי אפשר לדרוש ממנה דין נוסף! תירוץ: אם כך, היה הכתוב צריך לכתוב ״לא תשחוט״ (יחיד); מדוע נכתב ״לא תשחטו״ (רבים)? — ללמד על שני שוחטים.</div>
+    <div class="trans" data-when="en">The Gemara challenges: That verse is necessary for the prohibition itself, and it cannot be used to teach this additional halakha. The Gemara explains: If so, that the verse teaches only the prohibition against slaughtering an animal and its offspring in one day, let the Torah write: You shall not slaughter [tishḥot], in the singular. For what reason did the Torah write: “You shall not slaughter [tishḥatu]” (Leviticus 22:28), in the plural? It is to teach that two different people are prohibited from slaughtering, as explained earlier.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ״ב ב — Chullin 82b:2</span></div>
+    <div class="orig">וְאַכַּתִּי מִיבְּעֵי לֵיהּ, דְּאִי כְּתַב רַחֲמָנָא ״לֹא תִשְׁחוֹט״ הֲוָה אָמֵינָא: חַד – אִין, תְּרֵי – לָא.</div>
+    <div class="trans" data-when="he">דחייה: ועדיין לשון הרבים נצרכת! שאילו כתב ״לא תשחוט״ (יחיד), הייתי אומר: אדם אחד — כן אסור לשחוט אם ובן, אבל שניים (זה את האם וזה את הבן) — לא אסור.</div>
+    <div class="trans" data-when="en">The Gemara challenges: But, nevertheless, the plural is necessary, as had the Merciful One written in the Torah: You shall not slaughter [tishḥot] in the singular, I would say: With regard to one person, yes, it is prohibited to slaughter an animal and its offspring in a single day, but with regard to two, it is not prohibited for one of them to slaughter the mother and the other to then slaughter the offspring on the same day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ״ב ב — Chullin 82b:3</span></div>
+    <div class="orig">כְּתַב רַחֲמָנָא ״לֹא תִשְׁחֲטוּ״, וַאֲפִילּוּ תְּרֵי! אִם כֵּן, לִכְתּוֹב ״לֹא יִשְׁחֲטוּ״!</div>
+    <div class="trans" data-when="he">יישוב: לכן כתבה התורה ״לא תשחטו״ (רבים) — ללמד שאף שניים אסורים. קושיא נוספת: אם רק זאת באה ללמד, היה לה לכתוב ״לא יִשׁחֲטוּ״ (נסתר), המלמד שהאיסור חל בין ביחיד בין בשניים — ורק שוחט הבן עובר.</div>
+    <div class="trans" data-when="en">Therefore, the Merciful One writes in the Torah: “You shall not slaughter [tishḥatu],” in the plural, indicating that even two individuals may not slaughter an animal and its offspring in a single day. The Gemara answers: If so, that only this is derived from the verse, let the Torah write: They shall not be slaughtered, indicating that whether by one individual or two, the slaughter of an animal and its offspring in a single day is prohibited, but only the one who slaughters the offspring has violated the prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ״ב ב — Chullin 82b:4</span></div>
+    <div class="orig">מַאי ״לֹא תִשְׁחֲטוּ״? שְׁמַע מִינַּהּ תַּרְתֵּי.</div>
+    <div class="trans" data-when="he">מסקנה: ומדכתבה ״לא תשחטו״ דווקא — שמע מינה תרתי: שהאיסור חל אף בשני שוחטים, ושחייבים בשני הסדרים — בין שחט אם אחרי הבן, בין בן אחרי האם.</div>
+    <div class="trans" data-when="en">What is meant by: “You shall not slaughter,” which indicates that two different people are prohibited from slaughtering? Conclude two conclusions from it: Conclude that the prohibition applies even if two people perform the two acts of slaughter, and that two cases are prohibited: Slaughtering the offspring after the mother, and slaughtering the mother after the offspring.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">טעם סומכוס — שתי חטאות בהעלם אחד</span><span data-when="en">Sumakhos’s reason — two sin-offerings in one lapse</span>
+      <span class="ref">Chullin 82b:5–13</span></h2>
+  <div class="lead"><span data-when="he">אביי שואל את טעם סומכוס; רב יוסף: סומכוס סובר שאכל שני זיתי חלב בהעלם אחד חייב שתיים, ומביא ראיה ממשנת כלאים — ונדחית.</span><span data-when="en">Abaye asks Sumakhos’s reason; Rav Yosef: Sumakhos holds two olive-bulks of fat in one lapse incur two offerings, proving it from the kilayim mishna — which is rebutted.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① אביי לרב יוסף: מאי טעמא דסומכוס?"}:::question
+  S1["② צד א: סומכוס — שני זיתי חלב בהעלם אחד, שתי חטאות"]:::statement
+  S2["③ ובדין הוא דלישמעינן בעלמא — להודיעך כוח דרבנן"]:::statement
+  Q2{"④ או דלמא: אינו חייב אלא אחת, והכא משום גופין מוחלקין?"}:::question
+  A1["④ רב יוסף: אין — חייב שתי חטאות"]:::answer
+  P1["⑤ ממאי? הזורע כלאים כלאים לוקה — פשיטא שתי מלקויות"]:::proof
+  Q3{"⑥ במאי עסקינן? לא בזה אחר זה (נזיר), אלא בבת אחת והתראה אחת"}:::question
+  Q4{"⑦ מני? אי רבנן — קל וחומר שייפטר; אלא לאו סומכוס?"}:::question
+  A2["⑧ לא, רבנן; ואגב אורחיה: תרי גווני כלאים"]:::answer
+  A3["⑨ ולאפוקי מדר׳ יאשיה — דאף חיטה וחרצן לבד מחייב"]:::answer
+  Q1 -->|תשובה| S1
+  S1 -->|המשך| S2
+  S1 -.->|צד שני| Q2
+  Q2 -->|הכרעה| A1
+  A1 -->|ראיה| P1
+  P1 -->|בירור| Q3
+  Q3 -->|של מי?| Q4
+  Q4 -->|דחייה| A2
+  A2 -->|תכלית| A3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① Abaye to Rav Yosef: what is Sumakhos׳s reason?"}:::question
+  S1["② Option A: Sumakhos — two olive-bulks of fat, one lapse, two offerings"]:::statement
+  S2["③ By right teach it generally — to show the Rabbis׳ far reach"]:::statement
+  Q2{"④ Or: liable only once, and here only because the bodies are distinct?"}:::question
+  A1["④ Rav Yosef: yes — two sin-offerings"]:::answer
+  P1["⑤ Whence? ׳Sows kilayim, kilayim — is flogged׳ — obviously two floggings"]:::proof
+  Q3{"⑥ What case? Not one-after-another (nazirite), but at once, one warning"}:::question
+  Q4{"⑦ Whose view? If Rabbis — all the more exempt; so is it not Sumakhos?"}:::question
+  A2["⑧ No, Rabbis; and in passing: two kinds of kilayim"]:::answer
+  A3["⑨ And to exclude R. Yoshiya — even wheat and grape-seed alone are liable"]:::answer
+  Q1 -->|answer| S1
+  S1 -->|continued| S2
+  S1 -.->|other side| Q2
+  Q2 -->|decision| A1
+  A1 -->|proof| P1
+  P1 -->|clarify| Q3
+  Q3 -->|whose?| Q4
+  Q4 -->|rebuttal| A2
+  A2 -->|purpose| A3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① אֲמַר לֵיהּ אַבָּיֵי לְרַב יוֹסֵף: מַאי טַעְמָא דְּסוֹמְכוֹס?"}:::question
+  S1["② קָא סָבַר סוֹמְכוֹס: אָכַל שְׁנֵי זֵיתֵי חֵלֶב בְּהֶעְלֵם אֶחָד – חַיָּיב שְׁתֵּי חַטָּאוֹת"]:::statement
+  S2["③ וּבְדִין הוּא דְּלַישְׁמְעִינַן בְּעָלְמָא … לְהוֹדִיעֲךָ כֹּחָן דְּרַבָּנַן"]:::statement
+  Q2{"④ אוֹ דִלְמָא … אֵינוֹ חַיָּיב אֶלָּא אַחַת, וְהָכָא … הוֹאִיל וְגוּפִין מוּחְלָקִין?"}:::question
+  A1["④ אֲמַר לֵיהּ: אִין … חַיָּיב שְׁתֵּי חַטָּאוֹת"]:::answer
+  P1["⑤ מִדִּתְנַן: הַזּוֹרֵעַ כִּלְאַיִם כִּלְאַיִם לוֹקֶה … פְּשִׁיטָא שְׁתֵּי מַלְקִיּוֹת"]:::proof
+  Q3{"⑥ בְּמַאי עָסְקִינַן? … נָזִיר … אֶלָּא פְּשִׁיטָא בְּבַת אַחַת וּבְהַתְרָאָה אַחַת"}:::question
+  Q4{"⑦ מַנִּי? אִילֵּימָא רַבָּנַן … הָכָא לֹא כׇּל שֶׁכֵּן? אֶלָּא לָאו סוֹמְכוֹס הִיא?"}:::question
+  A2["⑧ לָא, לְעוֹלָם רַבָּנַן … דְּאִיכָּא תְּרֵי גַּוְונֵי כִּלְאַיִם"]:::answer
+  A3["⑨ וּלְאַפּוֹקֵי מִדְּרַבִּי יֹאשִׁיָּה … חִטָּה וְחַרְצָן … נָמֵי מִחַיַּיב"]:::answer
+  Q1 -->|תשובה| S1
+  S1 -->|המשך| S2
+  S1 -.->|צד שני| Q2
+  Q2 -->|הכרעה| A1
+  A1 -->|ראיה| P1
+  P1 -->|בירור| Q3
+  Q3 -->|של מי?| Q4
+  Q4 -->|דחייה| A2
+  A2 -->|תכלית| A3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״ב ב — Chullin 82b:5</span></div>
+    <div class="orig">שְׁחָטָהּ וְאֶת בַּת בִּתָּהּ, אֲמַר לֵיהּ אַבָּיֵי לְרַב יוֹסֵף: מַאי טַעְמָא דְּסוֹמְכוֹס?</div>
+    <div class="trans" data-when="he">על דברי המשנה ״שחטה ואת בת־בתה ואחר־כך בתה — ארבעים, וסומכוס: שמונים״, שאל אביי את רב יוסף: מהו טעמו של סומכוס המחייב שמונים, אף שלכאורה זו עבירה אחת?</div>
+    <div class="trans" data-when="en">§ The mishna teaches: If one slaughtered the mother and its daughter’s daughter and thereafter slaughtered its daughter, he incurs the forty lashes. Sumakhos says in the name of Rabbi Meir: He incurs eighty lashes, because by slaughtering the daughter, he transgresses twice the prohibition of: Itself and its offspring. Abaye said to Rav Yosef: What is the reasoning for the opinion of Sumakhos that the transgressor incurs eighty lashes?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״ב ב — Chullin 82b:6</span></div>
+    <div class="orig">קָא סָבַר סוֹמְכוֹס: אָכַל שְׁנֵי זֵיתֵי חֵלֶב בְּהֶעְלֵם אֶחָד – חַיָּיב שְׁתֵּי חַטָּאוֹת.</div>
+    <div class="trans" data-when="he">צד אחד בשאלה: שמא סומכוס סובר באופן כללי שמי שאכל שני זיתי חֵלב בהעלם אחד חייב שתי חטאות (כל זית עבירה בפני עצמה); ולפי זה, בהתראה והעבירה כפולה — לוקה כפול.</div>
+    <div class="trans" data-when="en">Does Sumakhos hold, in general, that if one unwittingly ate two olive-bulks of forbidden fat during one lapse of awareness he is liable to bring two sin offerings, since he transgressed the prohibition twice? If so, then in a case where one is forewarned that if he transgresses intentionally he will receive lashes and he then violates the same prohibition twice, as is the case in the mishna, he receives two sets of lashes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ״ב ב — Chullin 82b:7</span></div>
+    <div class="orig">וּבְדִין הוּא דְּלַישְׁמְעִינַן בְּעָלְמָא, וְהַאי דְּקָא מַשְׁמַע לַן בְּהָא, לְהוֹדִיעֲךָ כֹּחָן דְּרַבָּנַן, דְּאַף עַל גַּב דְּגוּפִין מוּחְלָקִין – פָּטְרִי רַבָּנַן.</div>
+    <div class="trans" data-when="he">המשך הצד הזה: ולפי כך, ראוי היה ללמדנו את דעת סומכוס במקרה כללי (כשני זיתי חלב); ומה שנשנה דווקא כאן — להודיעך כוחם של חכמים החולקים: אף שכאן הבהמות הן גופים מוחלקים (נפרדים), עדיין חכמים פוטרים מן הכפל.</div>
+    <div class="trans" data-when="en">And by right the mishna should have informed us of Sumakhos’s opinion in a general case, such as that of eating two olive-bulks of forbidden fat during a single lapse of awareness, but the reason that it teaches us this dispute in this situation, where one slaughters an animal and its daughter’s offspring and, later that day, slaughters its daughter, is to convey to you the far-reaching nature of the opinion of the Rabbis, that even though the two animals that caused the daughter to be forbidden are separate entities, the Rabbis still exempt the transgressor from a second set of lashes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ״ב ב — Chullin 82b:8</span></div>
+    <div class="orig">אוֹ דִלְמָא קָסָבַר סוֹמְכוֹס: אָכַל שְׁנֵי זֵיתֵי חֵלֶב בְּהֶעְלֵם אֶחָד אֵינוֹ חַיָּיב אֶלָּא אַחַת, וְהָכָא הַיְינוּ טַעְמָא – הוֹאִיל וְגוּפִין מוּחְלָקִין? אֲמַר לֵיהּ: אִין, קָסָבַר אָכַל שְׁנֵי זֵיתֵי חֵלֶב בְּהֶעְלֵם אֶחָד חַיָּיב שְׁתֵּי חַטָּאוֹת.</div>
+    <div class="trans" data-when="he">צד שני: או שמא סומכוס סובר באופן כללי ששני זיתי חלב בהעלם אחד אינו חייב אלא אחת, וכאן מחייב שמונים רק מפני שהבהמות גופים מוחלקים (נפרדים)? השיב רב יוסף: אכן — סומכוס סובר ששני זיתי חלב בהעלם אחד חייב שתי חטאות.</div>
+    <div class="trans" data-when="en">Or perhaps, Sumakhos holds in general that if one ate two olive-bulks of forbidden fat during one lapse of awareness, he is liable to bring only one sin offering. If so, one who transgresses intentionally after being forewarned receives only one set of lashes even if he transgresses the same prohibition twice. But here, in the mishna, this is the reason that the transgressor receives two sets of lashes: It is that the two animals that caused the daughter to be prohibited are separate entities. Rav Yosef said to Abaye: Yes, Sumakhos holds in general that if one ate two olive-bulks of forbidden fat during one lapse of awareness he is liable to bring two sin offerings.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ״ב ב — Chullin 82b:9</span></div>
+    <div class="orig">מִמַּאי? מִדִּתְנַן: הַזּוֹרֵעַ כִּלְאַיִם כִּלְאַיִם לוֹקֶה. מַאי לוֹקֶה? אִילֵּימָא לוֹקֶה אַחַת – פְּשִׁיטָא! וְעוֹד, מַאי כִּלְאַיִם כִּלְאַיִם? אֶלָּא פְּשִׁיטָא שְׁתֵּי מַלְקִיּוֹת.</div>
+    <div class="trans" data-when="he">ראיה לרב יוסף: מניין? ממשנה — הזורע כלאים כלאים (פעמיים) לוקה. מאי ״לוקה״? אם מלקות אחת — פשיטא (שהרי כבר בפעם אחת לוקה), ועוד, למה כפל ״כלאים כלאים״? אלא פשיטא — שתי מלקויות; הרי שעבירה כפולה מחייבת כפול.</div>
+    <div class="trans" data-when="en">The Gemara asks: From where does Rav Yosef derive this? He derives it from that which we learn in a baraita: One who sows diverse kinds, diverse kinds, i.e., he twice sows grain together with grape seeds, is flogged for violating the prohibition of diverse kinds. The Gemara asks: What is meant by: Is flogged? If we say it means that he is flogged one set of lashes, this is obvious. And additionally, if he receives only one set of lashes, what is the reason that the case of: Sowing diverse kinds twice, is mentioned, where he transgressed twice? Even if he transgressed only once, he receives lashes. Rather, it is obvious that he receives two sets of lashes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ״ב ב — Chullin 82b:10</span></div>
+    <div class="orig">בְּמַאי עָסְקִינַן? אִילֵימָא בְּזֶה אַחַר זֶה וּבִשְׁתֵּי הַתְרָאוֹת – תְּנֵינָא: נָזִיר שֶׁהָיָה שׁוֹתֶה יַיִן כׇּל הַיּוֹם אֵינוֹ חַיָּיב אֶלָּא אַחַת, אָמְרוּ לוֹ: ׳אַל תִּשְׁתֶּה!׳ וְהוּא שׁוֹתֶה, ׳אַל תִּשְׁתֶּה!׳ וְהוּא שׁוֹתֶה – חַיָּיב עַל כׇּל אַחַת וְאַחַת. אֶלָּא פְּשִׁיטָא בְּבַת אַחַת וּבְהַתְרָאָה אַחַת.</div>
+    <div class="trans" data-when="he">בירור: באיזה אופן מדובר? אם בזה אחר זה ובשתי התראות — כבר שנינו זאת (נזיר): נזיר ששתה יין כל היום אינו חייב אלא אחת; אך אם אמרו לו ׳אל תשתה!׳ והוא שותה, ושוב התרו ושתה — חייב על כל אחת. אלא פשיטא שמדובר בבת אחת ובהתראה אחת — וזרע חיטה וחרצן ביד אחת, שעורה וחרצן בשנייה.</div>
+    <div class="trans" data-when="en">The Gemara asks: What are we dealing with? If we say that we are dealing with a case where one violates the prohibition twice, one time after the other and with two separate forewarnings, it is unnecessary for the baraita to teach this, as we already learn it in a mishna (Nazir 42a): A nazirite who was drinking wine all day is liable to receive only one set of lashes. If onlookers said to him: Do not drink, do not drink, forewarning him several times, and he drinks after each forewarning, he is liable to receive lashes for each and every drink. Rather, it is obvious that he violated the prohibition twice at the same time and with a single forewarning, i.e., after he was forewarned he sowed wheat together with a grape seed with one hand, and barley together with a grape seed with the other hand, and he receives two sets of lashes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין פ״ב ב — Chullin 82b:11</span></div>
+    <div class="orig">מַנִּי? אִילֵּימָא רַבָּנַן דִּפְלִיגִי עֲלֵיהּ דְּסוֹמְכוֹס – הַשְׁתָּא, וּמָה הָתָם דְּגוּפִין מוּחְלָקִין פָּטְרִי רַבָּנַן, הָכָא לֹא כׇּל שֶׁכֵּן?</div>
+    <div class="trans" data-when="he">קושיא: כדעת מי הברייתא? אם כרבנן החולקים על סומכוס (שפוטרים מן הכפל) — קל וחומר: ומה שם, שהבהמות גופים מוחלקים (נפרדים), בכל זאת פטרו רבנן; כאן בכלאים, שהזרעים אינם גופים נפרדים, לא כל שכן שיפטרו!</div>
+    <div class="trans" data-when="en">The Gemara asks: In accordance with whose opinion is this baraita? If we say it is in accordance with the opinion of the Rabbis who disagree with Sumakhos in the mishna, who hold that one who slaughters an animal and its daughter’s offspring and, later that day, slaughters its daughter receives only one set of lashes, that would not be reasonable: Now, if there, in the mishna, where there are animals that are separate entities, the Rabbis exempt him from a second set of lashes, since he violated a single prohibition with a single forewarning; here, in the baraita with regard to diverse kinds, where, unlike animals, seeds are not considered separate entities (see 83a), if one sows diverse kinds twice at the same time, should they not all the more so exempt him from a second set of lashes?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין פ״ב ב — Chullin 82b:12</span></div>
+    <div class="orig">אֶלָּא לָאו סוֹמְכוֹס הִיא? לָא, לְעוֹלָם רַבָּנַן, וּמִילְּתָא אַגַּב אוֹרְחֵיהּ קָא מַשְׁמַע לַן דְּאִיכָּא תְּרֵי גַּוְונֵי כִּלְאַיִם.</div>
+    <div class="trans" data-when="he">המשך: אלא, האם לא הברייתא היא כסומכוס (המחייב כפל אף בגוף אחד)? דחייה: לא — לעולם כרבנן, והכפל ״כלאים כלאים״ נשנה משום שהתרו בו לפני כל זריעה; ואגב אורחא משמיע שיש שני סוגי כלאים (חיטה־חרצן ושעורה־חרצן).</div>
+    <div class="trans" data-when="en">Rather, is it not that the ruling of the baraita with regard to diverse kinds is in accordance with the opinion of Sumakhos and teaches that, even with a single entity, one who violates the same prohibition twice receives two sets of lashes? The Gemara responds: No, actually the baraita with regard to diverse kinds is in accordance with the opinion of the Rabbis, and he was forewarned before each act of sowing, which is why he receives two sets of lashes. And although this statement is redundant, by repeating the phrase: Diverse kinds, it teaches us a matter in passing: That there are two categories of the prohibition of diverse kinds: Sowing wheat together with grape seed and sowing barley together with grape seed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין פ״ב ב — Chullin 82b:13</span></div>
+    <div class="orig">וּלְאַפּוֹקֵי מִדְּרַבִּי יֹאשִׁיָּה, דְּאָמַר רַבִּי יֹאשִׁיָּה: עַד שֶׁיִּזְרַע חִטָּה וּשְׂעוֹרָה וְחַרְצָן בְּמַפּוֹלֶת יָד, קָא מַשְׁמַע לַן דְּכִי זָרַע חִטָּה וְחַרְצָן וּשְׂעוֹרָה וְחַרְצָן נָמֵי מִחַיַּיב.</div>
+    <div class="trans" data-when="he">ותכלית נוספת: להוציא מדעת ר׳ יאשיה, שאמר שאינו חייב על כלאי הכרם עד שיזרע חיטה ושעורה וחרצן יחד במפולת אחת; משמיענו שאף הזורע חיטה־חרצן לבד, או שעורה־חרצן לבד, חייב. ולפי זה לא נמצא מקור ברור לסומכוס.</div>
+    <div class="trans" data-when="en">And the baraita serves to exclude the opinion of Rabbi Yoshiya, as Rabbi Yoshiya says: One who sows diverse kinds is not liable by Torah law until he sows wheat, and barley, and grape seed with a single hand motion, i.e., by sowing in the vineyard he violates the prohibition of diverse kinds that applies to seeds and to the vineyard simultaneously. Therefore, it teaches us that when one sows only wheat and grape seed, or only barley and grape seed, he is liable as well. Consequently, a source clarifying Sumakhos’s opinion in a case where one violates the same prohibition twice during a single lapse of awareness, or with only a single forewarning when one violated the prohibition intentionally, has not been found.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">ראיות לסומכוס — גידי הנשה והתראת ספק</span><span data-when="en">Proofs for Sumakhos — sciatic nerves and uncertain forewarning</span>
+      <span class="ref">Chullin 82b:14–83a:5</span></h2>
+  <div class="lead"><span data-when="he">שתי ברייתות גיד הנשה — ׳סופג שמונים׳ ור׳ יהודה ׳ארבעים׳; מנסים להוכיח מהן את סומכוס, ושתיהן נדחות בהעמדת ר׳ יהודה בהתראת ספק או בחֶסְרון כזית.</span><span data-when="en">Two sciatic-nerve baraitot — ‘eighty’ vs. R. Yehuda’s ‘forty’; attempts to prove Sumakhos from them, both rebutted by placing R. Yehuda in uncertain forewarning or lacking an olive-bulk.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  P1["① ת״ש: אכל מזה כזית ומזה כזית — שמונים; ר׳ יהודה: ארבעים"]:::proof
+  S1["② ר׳ יהודה — התראת ספק לא שמה התראה (ברייתת מכה ומקלל)"]:::statement
+  Q1{"③ מאן ת״ק? אי רבנן — קל וחומר; אלא לאו סומכוס?"}:::question
+  A1["④ לא, בזה אחר זה ורבנן; ות״ק כאידך תנא דר׳ יהודה"]:::answer
+  S2["⑤ דאמר: התראת ספק שמה התראה (׳לא תותירו׳ — לאו הניתק לעשה)"]:::statement
+  P2["⑥ ת״ש: אכל שני גידין משתי ירכות משתי בהמות — שמונים; ר׳ יהודה: ארבעים"]:::proof
+  Q2{"⑦ מאן ת״ק? אי רבנן — קל וחומר; אלא לאו סומכוס?"}:::question
+  A2["⑧ לעולם בזה אחר זה; וטעם ר׳ יהודה — דלית ביה כזית"]:::answer
+  P1 -->|הוכחה| S1
+  S1 -->|של מי?| Q1
+  Q1 -->|דחייה| A1
+  A1 -->|מקור| S2
+  S2 -->|ראיה נוספת| P2
+  P2 -->|של מי?| Q2
+  Q2 -->|דחייה| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  P1["① Come and hear: olive-bulk of each nerve — eighty; R. Yehuda: forty"]:::proof
+  S1["② R. Yehuda — uncertain forewarning is no forewarning (striking/cursing baraita)"]:::statement
+  Q1{"③ Who is the first tanna? If Rabbis — a fortiori; so is it not Sumakhos?"}:::question
+  A1["④ No, one-after-another and Rabbis; first tanna like the other R. Yehuda view"]:::answer
+  S2["⑤ Who says: uncertain forewarning is a forewarning (׳do not leave over׳ — fixable by a mitzva)"]:::statement
+  P2["⑥ Come and hear: two nerves, two thighs, two animals — eighty; R. Yehuda: forty"]:::proof
+  Q2{"⑦ Who is the first tanna? If Rabbis — a fortiori; so is it not Sumakhos?"}:::question
+  A2["⑧ Actually one-after-another; R. Yehuda׳s reason — it lacks an olive-bulk"]:::answer
+  P1 -->|proof| S1
+  S1 -->|whose?| Q1
+  Q1 -->|rebuttal| A1
+  A1 -->|source| S2
+  S2 -->|further proof| P2
+  P2 -->|whose?| Q2
+  Q2 -->|rebuttal| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  P1["① תָּא שְׁמַע: אָכַל מִזֶּה כְּזַיִת וּמִזֶּה כְּזַיִת – סוֹפֵג שְׁמוֹנִים. רַבִּי יְהוּדָה אוֹמֵר: … אַרְבָּעִים"]:::proof
+  S1["② הַתְרָאַת סָפֵק … לֹא שְׁמָהּ הַתְרָאָה … הִכָּה אֶת זֶה … אוֹ שֶׁקִּלֵּל שְׁנֵיהֶם בְּבַת אַחַת – חַיָּיב"]:::statement
+  Q1{"③ וּמַאן תַּנָּא קַמָּא? אִילֵימָא רַבָּנַן … אֶלָּא לָאו סוֹמְכוֹס הִיא!"}:::question
+  A1["④ לָא, לְעוֹלָם בְּזֶה אַחַר זֶה, וְרַבָּנַן … כְּאִידַּךְ תַּנָּא דְּרַבִּי יְהוּדָה"]:::answer
+  S2["⑤ דְּאָמַר: הַתְרָאַת סָפֵק שְׁמָהּ הַתְרָאָה … ׳לֹא תוֹתִירוּ׳ … לָאו שֶׁאֵין בּוֹ מַעֲשֶׂה"]:::statement
+  P2["⑥ תָּא שְׁמַע: אָכַל שְׁנֵי גִידִין מִשְּׁתֵּי יְרֵכוֹת מִשְּׁתֵּי בְהֵמוֹת – סוֹפֵג שְׁמוֹנִים … אַרְבָּעִים"]:::proof
+  Q2{"⑦ מַאן תַּנָּא קַמָּא? אִילֵימָא רַבָּנַן … אֶלָּא לָאו סוֹמְכוֹס הִיא!"}:::question
+  A2["⑧ לְעוֹלָם בְּזֶה אַחַר זֶה … כְּגוֹן דְּלֵית בֵּיהּ כְּזַיִת … עַד שֶׁיְּהֵא בּוֹ כְּזַיִת"]:::answer
+  P1 -->|הוכחה| S1
+  S1 -->|של מי?| Q1
+  Q1 -->|דחייה| A1
+  A1 -->|מקור| S2
+  S2 -->|ראיה נוספת| P2
+  P2 -->|של מי?| Q2
+  Q2 -->|דחייה| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ״ב ב — Chullin 82b:14</span></div>
+    <div class="orig">תָּא שְׁמַע: אָכַל מִזֶּה כְּזַיִת וּמִזֶּה כְּזַיִת – סוֹפֵג שְׁמוֹנִים. רַבִּי יְהוּדָה אוֹמֵר: אֵינוֹ סוֹפֵג אֶלָּא אַרְבָּעִים. הֵיכִי דָמֵי? אִילֵּימָא בְּזֶה אַחַר זֶה וּבִשְׁתֵּי הַתְרָאוֹת – מַאי טַעְמָא דְּרַבִּי יְהוּדָה? הַתְרָאַת סָפֵק הִיא, וְשָׁמְעִינַן לֵיהּ לְרַבִּי יְהוּדָה דְּאָמַר: הַתְרָאַת סָפֵק לֹא שְׁמָהּ הַתְרָאָה.</div>
+    <div class="trans" data-when="he">ניסיון להוכיח מסומכוס: תא שמע ממשנת גיד הנשה — אכל מן הגיד שבירך הימין כזית, ומן הגיד שבירך השמאל כזית — סופג שמונים; ר׳ יהודה: אינו סופג אלא ארבעים. במה מדובר? אם בזה אחר זה ובשתי התראות — מהו טעם ר׳ יהודה? משום שזו התראת ספק (ספק אם הגיד האסור בימין או בשמאל), ושמענו לר׳ יהודה שהתראת ספק אינה שמה התראה.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a resolution from a mishna with regard to the prohibition against eating from the sciatic nerve (96a): If one ate an olive-bulk from this sciatic nerve in the right leg of an animal, and an olive-bulk from that sciatic nerve in the left leg of the same animal, he incurs eighty lashes. Rabbi Yehuda says: He incurs only forty lashes. The Gemara analyzes the mishna: What are the circumstances? If we say that he ate them one after the other and with two separate forewarnings, what is the reason for the opinion of Rabbi Yehuda? According to Rabbi Yehuda, it is an uncertain forewarning, as Rabbi Yehuda is uncertain whether the prohibition against eating from the sciatic nerve applies to the sciatic nerve of the right thigh or that of the left thigh (see 90b). And we have heard that Rabbi Yehuda says: An uncertain forewarning is not considered a forewarning.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ״ב ב — Chullin 82b:15</span></div>
+    <div class="orig">דְּתַנְיָא: הִכָּה אֶת זֶה וְחָזַר וְהִכָּה אֶת זֶה, קִלֵּל אֶת זֶה וְחָזַר וְקִלֵּל אֶת זֶה, אוֹ שֶׁהִכָּה שְׁנֵיהֶם בְּבַת אַחַת, אוֹ שֶׁקִּלֵּל שְׁנֵיהֶם בְּבַת אַחַת – חַיָּיב.</div>
+    <div class="trans" data-when="he">מקור לכך שר׳ יהודה פוטר בהתראת ספק (ברייתא): מי שמסופק מי משני אנשים אביו, והכה את זה וחזר והכה את זה, או קילל זה וחזר וקילל זה, או שהכה (או קילל) את שניהם בבת אחת — חייב, שהרי אחד מהם ודאי אביו (לתנא קמא).</div>
+    <div class="trans" data-when="en">As it is taught in a baraita: If one is uncertain which of two men is his father, and he struck this man and then struck that man, or cursed this man and then cursed that man, or struck both of them simultaneously, or cursed both of them simultaneously, in all these cases he is liable for violating the prohibition of: “And he that strikes his father, or his mother, shall be put to death” (Exodus 21:15), or that of: “And he that curses his father, or his mother, shall be put to death” (Exodus 21:17), as one of them is certainly his father.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ״ב ב — Chullin 82b:16</span></div>
+    <div class="orig">רַבִּי יְהוּדָה אוֹמֵר: בְּבַת אַחַת – חַיָּיב, בְּזֶה אַחַר זֶה – פָּטוּר. אֶלָּא פְּשִׁיטָא בְּבַת אַחַת וּבְהַתְרָאָה אַחַת.</div>
+    <div class="trans" data-when="he">המשך הברייתא: ר׳ יהודה אומר — בבת אחת חייב, אך בזה אחר זה פטור (כל התראה היא ספק). הרי שלר׳ יהודה התראת ספק אינה התראה. ומכאן שבמשנת גיד הנשה אי אפשר להעמיד בזה אחר זה; אלא פשיטא — בבת אחת ובהתראה אחת, ולכן ר׳ יהודה מחייב ארבעים בלבד.</div>
+    <div class="trans" data-when="en">Rabbi Yehuda says: Although if he struck or cursed both of them simultaneously he is liable, if he struck or cursed them one after the other, he is exempt, as each time he strikes or curses one of them he receives an uncertain forewarning, as perhaps this man is not his father, and one is liable only after receiving a definite forewarning. Consequently, if one was forewarned before eating from the sciatic nerve from the right leg, and afterward he was forewarned before eating from the sciatic nerve from the left leg, he would similarly be exempt as each of the forewarnings was uncertain. Rather, it is obvious that the case in the mishna is one where he partook of the two sciatic nerves simultaneously and with a single forewarning, and therefore, he incurs only forty lashes according to Rabbi Yehuda.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ״ב ב — Chullin 82b:17</span></div>
+    <div class="orig">וּמַאן תַּנָּא קַמָּא? אִילֵימָא רַבָּנַן דִּפְלִיגִי עֲלֵיהּ דְּסוֹמְכוֹס – הַשְׁתָּא, וּמָה הָתָם דְּגוּפִין מוּחְלָקִין פָּטְרִי רַבָּנַן, הָכָא לֹא כׇּל שֶׁכֵּן? אֶלָּא לָאו סוֹמְכוֹס הִיא!</div>
+    <div class="trans" data-when="he">קושיא: ומיהו התנא קמא של המשנה (המחייב שמונים בבת אחת והתראה אחת)? אם רבנן החולקים על סומכוס — קל וחומר: ומה שם, שהבהמות גופים נפרדים, פטרו רבנן מן הכפל; כאן בגיד הנשה, שאין כאן גופים נפרדים, לא כל שכן! אלא, האם לא סומכוס הוא — שמחייב כפל אף בעבירה אחת בהעלם אחד?</div>
+    <div class="trans" data-when="en">And who is the first tanna who holds that in such a case one receives eighty lashes? If we say that it is the Rabbis who disagree with Sumakhos in the mishna about the prohibition of: Itself and its offspring, that would conflict with their opinion: Now, if there, in the case of the mishna that discusses various animals that are separate entities, the Rabbis deem him exempt from a second set of lashes, here, in the mishna that discusses the sciatic nerve, where there are no separate animals, should they not all the more so exempt him from a second set of lashes? Rather, is the mishna not in accordance with the opinion of Sumakhos? Consequently, in his opinion one who eats the same prohibited item, such as an olive-bulk of forbidden fat, twice after a single forewarning receives two sets of lashes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ״ב ב — Chullin 82b:18</span></div>
+    <div class="orig">לָא, לְעוֹלָם בְּזֶה אַחַר זֶה, וְרַבָּנַן, וְהַאי תַּנָּא סָבַר לַהּ כְּאִידַּךְ תַּנָּא דְּרַבִּי יְהוּדָה.</div>
+    <div class="trans" data-when="he">דחייה: לא — לעולם המשנה מדברת בזה אחר זה (בשתי התראות), והתנא קמא הוא רבנן החולקים על סומכוס; ואשר לקושיא שר׳ יהודה פוטר בהתראת ספק — תנא זה סובר בדעת ר׳ יהודה כתנא אחר (החולק).</div>
+    <div class="trans" data-when="en">The Gemara responds: No, actually the case is one where he ate from the two sciatic nerves one after the other and received separate forewarnings, and the first opinion in that mishna is that of the Rabbis who disagree with Sumakhos with regard to: Itself and its offspring. And as for the difficulty that Rabbi Yehuda does not render one liable if the forewarning is an uncertain one, this tanna holds in accordance with the opinion of another tanna with regard to the opinion of Rabbi Yehuda.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ״ב ב — Chullin 82b:19</span></div>
+    <div class="orig">דְּאָמַר: הַתְרָאַת סָפֵק שְׁמָהּ הַתְרָאָה, דְּתַנְיָא: ״לֹא תוֹתִירוּ מִמֶּנּוּ עַד בֹּקֶר וְהַנֹּתָר מִמֶּנּוּ עַד בֹּקֶר בָּאֵשׁ תִּשְׂרֹפוּ״ –</div>
+    <div class="trans" data-when="he">— תנא אחר זה סובר שלדעת ר׳ יהודה התראת ספק שמה התראה. כראיה לכך שנינו בברייתא על הפסוק בקרבן פסח: ״לא תותירו ממנו עד בוקר, והנותר ממנו עד בוקר באש תשרופו״ —</div>
+    <div class="trans" data-when="en">As that other tanna says that Rabbi Yehuda holds: An uncertain forewarning is considered a forewarning, as it is taught in a baraita: The verse states with regard to the Paschal offering: “And you shall not leave any of it until morning; but that which remains of it until morning you shall burn with fire” (Exodus 12:10).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין פ״ג א — Chullin 83a:1</span></div>
+    <div class="orig">בָּא הַכָּתוּב לִיתֵּן עֲשֵׂה אַחַר לֹא תַּעֲשֶׂה, לוֹמַר שֶׁאֵין לוֹקִין עָלָיו, דִּבְרֵי רַבִּי יְהוּדָה.</div>
+    <div class="trans" data-when="he">המשך הברייתא: בא הכתוב ליתן מצוות עשה (״תשרופו״) אחר לא־תעשה (״לא תותירו״), לומר שאין לוקין עליו — שכל לאו הניתק לעשה אין לוקין עליו; דברי ר׳ יהודה. ומשמע שאלמלא טעם זה היה לוקה — אף שההתראה (לפני בוקר) היא התראת ספק; הרי שהתראת ספק שמה התראה.</div>
+    <div class="trans" data-when="en">The verse comes to provide a positive mitzva to burn the leftovers, in the second part of the verse that states: “But that which remains of it until morning you shall burn with fire.” This positive mitzva is stated after the prohibition against leaving it over was stated in the first part of the verse, to say that one is not flogged for transgressing the prohibition. This is because any prohibition that can be rectified by the performance of a positive mitzva does not carry a punishment of lashes. This is the statement of Rabbi Yehuda. If not for this reason, Rabbi Yehuda evidently would hold that he receives lashes. The forewarning given in this case is uncertain, as he must be forewarned before morning, and at that time he might still consume it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין פ״ג א — Chullin 83a:2</span></div>
+    <div class="orig">רַבִּי יַעֲקֹב אוֹמֵר: לֹא מִן הַשֵּׁם הוּא זֶה, אֶלָּא מִשּׁוּם דְּהָוֵה לֵיהּ לָאו שֶׁאֵין בּוֹ מַעֲשֶׂה, וְכׇל לָאו שֶׁאֵין בּוֹ מַעֲשֶׂה – אֵין לוֹקִין עָלָיו.</div>
+    <div class="trans" data-when="he">ר׳ יעקב חולק: אין הטעם משום ניתק לעשה, אלא משום שזהו לאו שאין בו מעשה (העבירה היא ההותרה, שהיא מחדל ולא מעשה), וכל לאו שאין בו מעשה אין לוקין עליו. (לפי ר׳ יעקב אין ראיה להתראת ספק.)</div>
+    <div class="trans" data-when="en">Rabbi Ya’akov says: This is not for that reason [hashem]. Rather, it is because it is a prohibition that does not involve an action. The transgression is simply the failure to consume all the meat during the allotted time rather than the performance of an action. And one is not flogged for the violation of any prohibition that does not involve an action.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין פ״ג א — Chullin 83a:3</span></div>
+    <div class="orig">תָּא שְׁמַע: אָכַל שְׁנֵי גִידִין מִשְּׁתֵּי יְרֵכוֹת מִשְּׁתֵּי בְהֵמוֹת – סוֹפֵג שְׁמוֹנִים; רַבִּי יְהוּדָה אוֹמֵר: אֵינוֹ סוֹפֵג אֶלָּא אַרְבָּעִים. הֵיכִי דָמֵי? אִילֵּימָא בְּזֶה אַחַר זֶה וּבִשְׁתֵּי הַתְרָאוֹת – מַאי טַעְמָא דְּרַבִּי יְהוּדָה דְּאָמַר: אַרְבָּעִים וְתוּ לָא? אֶלָּא פְּשִׁיטָא בְּבַת אַחַת וּבַחֲדָא הַתְרָאָה.</div>
+    <div class="trans" data-when="he">ראיה נוספת לסומכוס: תא שמע מברייתא — אכל שני גידי הנשה משתי ירכות של שתי בהמות — סופג שמונים; ר׳ יהודה: ארבעים. במה מדובר? אם בזה אחר זה ובשתי התראות — מהו טעם ר׳ יהודה שאומר ארבעים ותו לא (והרי שתי בהמות נפרדות ושתי התראות)? אלא פשיטא — בבת אחת ובהתראה אחת.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a resolution with regard to the opinion of Sumakhos from a baraita discussing the sciatic nerve: If one ate two sciatic nerves from two thighs of two different animals, he incurs the penalty of eighty lashes; Rabbi Yehuda says: He incurs only forty lashes. The Gemara asks: What are the circumstances in this case? If we say that he ate them one after the other and with two separate forewarnings, what is the reasoning of the opinion of Rabbi Yehuda, who says: The violator receives forty lashes and nothing more? After all, he violates two separate prohibitions with two separate forewarnings. Rather, it is obvious that he ate them at the same time and with a single forewarning.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין פ״ג א — Chullin 83a:4</span></div>
+    <div class="orig">מַאן תַּנָּא קַמָּא? אִילֵימָא רַבָּנַן דִּפְלִיגִי עֲלֵיהּ דְּסוֹמְכוֹס – וּמָה הָתָם, דְּגוּפִין מוּחְלָקִין, פָּטְרִי רַבָּנַן, הָכָא לֹא כׇּל שֶׁכֵּן? אֶלָּא לָאו סוֹמְכוֹס הִיא!</div>
+    <div class="trans" data-when="he">קושיא כקודמת: מיהו התנא קמא? אם רבנן החולקים על סומכוס — קל וחומר: ומה שם, שהבהמות גופים נפרדים, פטרו רבנן; כאן בשני גידים, שאינם גופים נפרדים כל כך, לא כל שכן! אלא, האם לא סומכוס הוא?</div>
+    <div class="trans" data-when="en">Who is the first tanna, who holds that in such a case one receives eighty lashes? If we say that it is the Rabbis who disagree with Sumakhos in the mishna about: Itself and its offspring, that would contradict their opinion: Now, if there, in that mishna in a case where there are various animals that are separate entities, the Rabbis deem him exempt from a second set of lashes, here, in the baraita about two sciatic nerves, which are not separate entities, should they not all the more so deem him exempt from a second set of lashes? Rather, is it not Sumakhos who is the first tanna? Consequently, in his opinion one who eats the same prohibited item, such as an olive-bulk of forbidden fat, twice after a single forewarning receives two sets of lashes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין פ״ג א — Chullin 83a:5</span></div>
+    <div class="orig">לְעוֹלָם בְּזֶה אַחַר זֶה, וּדְקָאָמְרַתְּ: מַאי טַעְמָא דְּרַבִּי יְהוּדָה? כְּגוֹן דְּלֵית בֵּיהּ כְּזַיִת, דְּתַנְיָא: אֲכָלוֹ וְאֵין בּוֹ כְּזַיִת – חַיָּיב, רַבִּי יְהוּדָה אוֹמֵר: עַד שֶׁיְּהֵא בּוֹ כְּזַיִת.</div>
+    <div class="trans" data-when="he">דחייה: לעולם המשנה מדברת בזה אחר זה (וחייב שמונים אף לרבנן); ואשר לקושיא מהו טעם ר׳ יהודה המחייב ארבעים בלבד — כגון שאין באחד הגידים כזית, ור׳ יהודה לשיטתו, כברייתא: אכלו (את הגיד) ואין בו כזית — חייב; ר׳ יהודה אומר: אינו חייב עד שיהא בו כזית.</div>
+    <div class="trans" data-when="en">The Gemara responds: Actually, he ate the two sciatic nerves one after the other with separate forewarnings, incurring two sets of lashes even according to the Rabbis who disagree with Sumakhos in the mishna about: Itself and its offspring. And as for that which you say: What is the reason of Rabbi Yehuda who holds that the transgressor incurs only a single set of lashes? This is a case where the volume of one of the sciatic nerves is not even an olive-bulk, and Rabbi Yehuda follows his line of reasoning, as it is taught in a baraita: If one ate the entire sciatic nerve, and its volume is not even an olive-bulk, he is liable to incur forty lashes; Rabbi Yehuda says: He is not liable unless it has a volume of at least an olive-bulk.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
