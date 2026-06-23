@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ע׳</title>
+<meta name="description" content="מפת הסוגיא של חולין ע׳: בעיות רבא והאמוראים בדיני יציאת העובר ופטירת רחם לבכורה — הלכו באיברין אחר הרוב, כרכו בסיב או בשליא אחרת, חולדה ורחמים מודבקים, ופתיחת/עקירת/גמימת כותלי בית הרחם; ומשנת ׳בהמה שמת עוברה׳ — טומאת עובר מת, ודרשות חיה ובהמה זו בכלל זו.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="70">
+<meta name="gemara-map:sefaria-ref" content="Chullin 70">
+<meta name="gemara-map:topic-he" content="בכורה, פטירת רחם, וטומאת עובר">
+<meta name="gemara-map:topic-en" content="Firstborn, opening the womb, fetus impurity">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ע׳">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 70">
+<meta name="gemara-map:blurb-he" content="בעיות רבא ביציאת העובר ובמה ׳פוטר את הרחם׳ לבכורה — רובן בתיקו; ומשנת ׳שמת עוברה׳ — שעובר מת שבמעי אמו טהור, ומחלוקת ר׳ יוסי הגלילי וחכמים בבהמה טמאה.">
+<meta name="gemara-map:blurb-en" content="Rava’s dilemmas on the fetus’s emergence and what counts as ‘opening the womb’ for firstborn status — mostly left unresolved; and the Mishna that a dead fetus in the womb is pure, with R. Yosei HaGelili dissenting for a non-kosher animal.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ע׳</span><span data-when="en">Sugya map — Chullin 70</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ע׳ א — ע״א א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 70a–71a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> חמש סוגיות סביב <b>יציאת העובר</b>: בעיית רבא אם הולכים באיברים אחר הרוב (נפתרת מן המשנה); שרשרת בעיות רבא ואמוראים על מה ש<b>״פוטר את הרחם״</b> לבכורה — כרכו בסיב או בשליא אחרת, חולדה, רחמים מודבקים, ופתיחת/עקירת/גמימת כותלי בית הרחם — שרובן עומדות ב<b>תיקו</b>; ומשנת <b>״בהמה שמת עוברה״</b> ודרשותיה — שעובר מת שבמעי אמו טהור, ומחלוקת ר׳ יוסי הגלילי בבהמה טמאה, עד דרשות ״חיה בכלל בהמה ובהמה בכלל חיה״.</span>
+    <span data-when="en"><b>Bottom line:</b> Five sugyot on the <b>fetus’s emergence</b>: Rava’s dilemma whether we follow the majority of limbs (resolved from the Mishna); a chain of dilemmas by Rava and others on what counts as <b>“opening the womb”</b> for firstborn status — wrapped in palm-bast or another’s afterbirth, a weasel, joined wombs, and womb walls that opened, were uprooted, or thinned — most left as <b>teiku</b>; and the Mishna <b>“whose fetus died in its womb”</b> with its derivations — that a dead fetus inside its mother is pure, R. Yosei HaGelili dissenting for a non-kosher animal, down to “a ḥayya is included in behema and vice versa.”</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ע׳</span><span data-when="en">Overview — Chullin 70</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · הולכים באיברין אחר הרוב?"]:::statement
+  O2["2 · מה ׳פוטר את הרחם׳ לבכורה — תיקו"]:::statement
+  O3(["3 · משנה: בהמה שמת עוברה"]):::mishnah
+  O4["4 · עובר מת — טהור; ר׳ יוסי הגלילי"]:::statement
+  O5["5 · חיה בכלל בהמה, ובהמה בכלל חיה"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Do we follow the majority of limbs?"]:::statement
+  O2["2 · What ׳opens the womb׳ for firstborn — teiku"]:::statement
+  O3(["3 · Mishna: an animal whose fetus died"]):::mishnah
+  O4["4 · A dead fetus is pure; R. Yosei HaGelili"]:::statement
+  O5["5 · Ḥayya in behema, behema in ḥayya"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">הולכים באיברין אחר הרוב?</span><span data-when="en">Do we follow the majority of limbs?</span>
+      <span class="ref">Chullin 70a:6-12</span></h2>
+  <div class="lead"><span data-when="he">בעיית רבא: כשרוב אבר בפנים ומיעוטו בחוץ (או להיפך) — האם מצרפים את המיעוט אל רוב האבר או אל רוב העובר? נפתרת מן המשנה ׳יצא רובו יקבר׳.</span><span data-when="en">Rava’s dilemma: when most of a limb is inside and part out (or vice versa), do we count the part with the limb or with the whole fetus? Resolved from the Mishna “if its majority emerged, it must be buried.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בעיית רבא: הולכים באיברין אחר הרוב?"}:::question
+  Q2{"② צד א: יצא רוב במיעוט אבר — להיכן המיעוט?"}:::question
+  S1["③ פשיטא: לא עוזבים רוב עובר אחר רוב אבר"]:::statement
+  Q3{"④ אלא: יצא חציו ברוב אבר — מצרפים המיעוט?"}:::question
+  P1["⑤ תא שמע: יצא רובו יקבר — מאי רובו? רובו ממש פשיטא"]:::proof
+  A1["⑥ אלא לאו: חציו ברוב אבר — פותר את הבעיה"]:::answer
+  C1["⑦ דחייה ומסקנה: רובו במיעוט אבר, אחר רוב העובר"]:::conclusion
+  Q1 -->|הבהרה| Q2
+  Q2 -->|פשיטא| S1
+  S1 -->|אלא| Q3
+  Q3 -->|ת״ש| P1
+  P1 -->|אלא לאו| A1
+  A1 -.->|דחייה ומסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Rava: do we follow the majority of limbs?"}:::question
+  Q2{"② Option A: majority out with part of a limb — where does the part go?"}:::question
+  S1["③ Obvious: we don׳t abandon the fetus׳s majority for the limb׳s"]:::statement
+  Q3{"④ Rather: half out with most of a limb — do we add the part?"}:::question
+  P1["⑤ Come and hear: majority emerged, buried — what is majority? Literal is obvious"]:::proof
+  A1["⑥ Rather: half out with most of a limb — resolves the dilemma"]:::answer
+  C1["⑦ Rejection, conclusion: majority out with part of a limb — follow the fetus"]:::conclusion
+  Q1 -->|clarify| Q2
+  Q2 -->|obvious| S1
+  S1 -->|rather| Q3
+  Q3 -->|come and hear| P1
+  P1 -->|rather| A1
+  A1 -.->|rejection, conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בָּעֵי רָבָא: הָלְכוּ בְּאֵיבָרִין אַחַר הָרוֹב, אוֹ לֹא?"}:::question
+  Q2{"② אִילֵּימָא … יָצָא רוֹב בְּמִיעוּט אֵבֶר … בָּתַר רוֹב אֵבֶר אוֹ בָּתַר רוּבָּא דְּעוּבָּר?"}:::question
+  S1["③ פְּשִׁיטָא דְּלָא שָׁבְקִינַן רוּבָּא דְּעוּבָּר, וְאָזְלִינַן בָּתַר רוֹב אֵבֶר"]:::statement
+  Q3{"④ אֶלָּא … יָצָא חֶצְיוֹ בְּרוֹב אֵבֶר … מַהוּ לְמִישְׁדְּיֵיהּ בָּתַר רוֹב אֵבֶר?"}:::question
+  P1["⑤ תָּא שָׁמַע: יָצָא רוּבּוֹ יִקָּבֵר … מַאי רוּבּוֹ? אִילֵּימָא רוּבּוֹ מַמָּשׁ"]:::proof
+  A1["⑥ אֶלָּא לָאו, כְּגוֹן שֶׁיָּצָא חֶצְיוֹ בְּרוֹב אֵבֶר"]:::answer
+  C1["⑦ לָא … יָצָא רוּבּוֹ בְּמִיעוּט אֵבֶר … לָא שָׁבְקִינַן רוּבּוֹ דְּעוּבָּר"]:::conclusion
+  Q1 -->|הבהרה| Q2
+  Q2 -->|פשיטא| S1
+  S1 -->|אלא| Q3
+  Q3 -->|ת״ש| P1
+  P1 -->|אלא לאו| A1
+  A1 -.->|דחייה ומסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע׳ א — Chullin 70a:6</span></div>
+    <div class="orig">בָּעֵי רָבָא: הָלְכוּ בְּאֵיבָרִין אַחַר הָרוֹב, אוֹ לֹא הָלְכוּ בְּאֵיבָרִין אַחַר הָרוֹב?</div>
+    <div class="trans" data-when="he">רבא שואל: לעניין יציאת העובר (להחשיבו כְּנולד), כשרק חלק מאבר בחוץ — האם ׳הולכים באיברים אחר הרוב׳, היינו דנים את כל האבר לפי רוֹבּוֹ, או לא?</div>
+    <div class="trans" data-when="en">§ Rava raises a dilemma: Does one follow the majority with regard to limbs or does one not follow the majority with regard to limbs?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע׳ א — Chullin 70a:7</span></div>
+    <div class="orig">הֵיכִי דָּמֵי: אִילֵּימָא, כְּגוֹן שֶׁיָּצָא רוֹב בְּמִיעוּט אֵבֶר, וְקָא מִיבַּעְיָא לֵיהּ: הַאי מִיעוּט דְּבָרַאי, בָּתַר רוֹב דְּאֵבֶר שָׁדֵינַן לֵיהּ, אוֹ בָּתַר רוּבָּא דְּעוּבָּר שָׁדֵינַן לֵיהּ?</div>
+    <div class="trans" data-when="he">היכי דמי? צד ראשון: יצא רוב העובר, ובכלל יציאה זו גם מיעוט של אבר אחד (שרוֹבּוֹ בפנים). האם את אותו מיעוט-אבר שבחוץ מצרפים אל רוב האבר שבפנים (וייחשב כמי שלא יצא רוב), או אל רוב העובר שכבר יצא?</div>
+    <div class="trans" data-when="en">The Gemara asks: What are the circumstances of this dilemma; what exactly is Rava’s question? If we say it is referring to a case where the majority of the fetus emerged, but that majority includes the emergence of the minority part of one of its limbs, then Rava is raising the following dilemma: With regard to this minority part of a limb that is outside the womb, do we cast it, i.e., count it, together with the majority of that limb, which is still inside the womb, as if the entire limb was still inside the womb? If so, it would be regarded as though a majority of the fetus has not yet emerged. Or perhaps we cast it and count it together with the majority of the fetus that has already emerged, and so it is regarded as though a majority of the fetus has emerged and it is duly consecrated.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע׳ א — Chullin 70a:8</span></div>
+    <div class="orig">פְּשִׁיטָא דְּלָא שָׁבְקִינַן רוּבָּא דְּעוּבָּר, וְאָזְלִינַן בָּתַר רוֹב אֵבֶר!</div>
+    <div class="trans" data-when="he">דחיית הצד הזה: פשיטא! ודאי שאין מניחים את רוב העובר שכבר יצא והולכים אחר רוב האבר; אין כאן ספק, ולא על זה שאל רבא.</div>
+    <div class="trans" data-when="en">The Gemara rejects this possibility: In that case it is obvious that we do not disregard the majority of the fetus and go after the majority of the limb. Consequently, Rava would not have raised a dilemma about this.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע׳ א — Chullin 70a:9</span></div>
+    <div class="orig">אֶלָּא, כְּגוֹן שֶׁיָּצָא חֶצְיוֹ בְּרוֹב אֵבֶר, וְקָא מִיבַּעְיָא לֵיהּ: הָהוּא מִיעוּט דִּבְגַוַּאי, מַהוּ לְמִישְׁדְּיֵיהּ בָּתַר רוֹב אֵבֶר?</div>
+    <div class="trans" data-when="he">אלא הספק הוא להיפך: יצא חצי העובר, ובכלל החצי הזה רוב של אבר אחד (שמיעוטו עדיין בפנים). האם את אותו מיעוט-אבר שבפנים מצרפים אל רוב האבר שיצא — ויֵחשב כאילו יצא רוב העובר?</div>
+    <div class="trans" data-when="en">Rather, the dilemma is referring to a case where half of the fetus emerged, but that half includes the majority of a certain limb, and Rava raises the following dilemma: With regard to this minority part of a limb that is inside the womb, what is the halakha as to whether one casts it and counts it together with the majority of that limb and considers it as if that entire limb has emerged? If it is counted, it would be regarded as though a majority of the fetus has emerged, and it is duly consecrated.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע׳ א — Chullin 70a:10</span></div>
+    <div class="orig">תָּא שָׁמַע: יָצָא רוּבּוֹ – הֲרֵי זֶה יִקָּבֵר. מַאי רוּבּוֹ? אִילֵּימָא רוּבּוֹ מַמָּשׁ, עַד הַשְׁתָּא לָא אַשְׁמְעִינַן דְּרוּבּוֹ כְּכוּלּוֹ?</div>
+    <div class="trans" data-when="he">תא שמע מן המשנה (לעיל): ׳יצא רובו — הרי זה יקבר׳ (נחשב כנולד). ומדייקים: מהו ׳רובו׳? אם רובו ממש — מה חידש? והרי כבר למדנו בכל מקום שרובו ככולו.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a resolution from a statement of the mishna: If a majority of the fetus had already emerged, it is considered to have been born and duly consecrated, and so if one cut it up it must be buried. The Gemara clarifies: What is meant by a majority of the fetus? If we say it means literally the majority of the fetus, then the following difficulty arises: Until now had we not learned the principle that the majority of an item is considered like all of it? This is a well-established principle and it is not necessary to teach it again in this context.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע׳ א — Chullin 70a:11</span></div>
+    <div class="orig">אֶלָּא לָאו, כְּגוֹן שֶׁיָּצָא חֶצְיוֹ בְּרוֹב אֵבֶר!</div>
+    <div class="trans" data-when="he">אלא לאו — על כרחך המשנה מדברת בחצי העובר שיצא עם רוב אבר, ומלמדת שמצרפים את מיעוט-האבר שבפנים, ונחשב כיוצא רובו; ובכך פותרת את בעיית רבא.</div>
+    <div class="trans" data-when="en">Rather, is the mishna not referring to a case where half of the fetus emerged, but that half includes the majority of a limb? If so, the mishna directly resolves Rava’s dilemma and teaches that the minority part of the limb inside the womb is regarded as though it had emerged.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע׳ א — Chullin 70a:12</span></div>
+    <div class="orig">לָא, כְּגוֹן שֶׁיָּצָא רוּבּוֹ בְּמִיעוּט אֵבֶר, וְקָא מַשְׁמַע לַן דְּלָא שָׁבְקִינַן רוּבּוֹ דְּעוּבָּר דִּבְהֵמָה וְאָזְלִינַן בָּתַר אֵבֶר.</div>
+    <div class="trans" data-when="he">דחייה ומסקנה: לא — אפשר שהמשנה מדברת ביצא רובו עם מיעוט אבר, ומחדשת שאין עוזבים את רוב העובר שכבר יצא והולכים אחר האבר. נמצא שהבעיה (חצי ברוב אבר) לא הוכרעה מכאן.</div>
+    <div class="trans" data-when="en">The Gemara responds: No, the mishna could be referring to a case where the majority of the fetus emerged, but that majority includes the emergence of the minority of a limb, and it teaches us that we do not disregard the majority of the fetus and go after the majority of the limb.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">מה ׳פוטר את הרחם׳ לבכורה — שרשרת בעיות</span><span data-when="en">What ‘opens the womb’ for firstborn — a chain of dilemmas</span>
+      <span class="ref">Chullin 70a:13-21</span></h2>
+  <div class="lead"><span data-when="he">בכור מתקדש כשהוא ׳פוטר רחם׳. רבא והאמוראים שואלים שורת ספקות: כרכו בסיב/בטלית/בשליא אחרת, חולדה שבלעה והקיאה, רחמים מודבקים, ופתיחת/עקירת/גמימת כותלי בית הרחם — ורובן בתיקו.</span><span data-when="en">A firstborn is consecrated by ‘opening the womb.’ Rava and others raise a string of dilemmas: wrapped in bast, a robe, or another’s afterbirth; a weasel that swallowed and disgorged it; joined wombs; and womb walls opened, uprooted, or thinned — most left unresolved.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① רבא: כרכו בסיב או בטליתו — מהו?"}:::question
+  Q2{"② בשליא אחרת, או כרכתו חולדה והוציאתו — מהו?"}:::question
+  Q3{"③ בלעתהו חולדה, החזירתו והקיאתו, ויצא מאליו — מהו?"}:::question
+  Q4{"④ הדביק שני רחמים, יצא מזה ונכנס לזה — תיקו"}:::question
+  Q5{"⑤ רב אחא: נפתחו כותלי בית הרחם — אויר רחם מקדיש?"}:::question
+  Q6{"⑥ מר בר רב אשי: נעקרו ותלו בצוארו — מקדשי שלא במקומן?"}:::question
+  Q7{"⑦ ר׳ ירמיה: נגממו כותלי בית הרחם — מהו?"}:::question
+  A1["⑧ ר׳ זירא: זו בעיה שנשאלה — פרוץ מרובה על העומד"]:::answer
+  C1["⑨ גמימה לא הסתפקו, שאין עומד בעולם"]:::conclusion
+  Q1 -->|וכן| Q2
+  Q2 -->|וכן| Q3
+  Q3 -->|וכן| Q4
+  Q4 -->|בעיה חדשה| Q5
+  Q5 -->|וכן| Q6
+  Q6 -->|וכן| Q7
+  Q7 -->|תשובה| A1
+  A1 -->|הבחנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Rava: wrapped in bast or his robe — what is the law?"}:::question
+  Q2{"② In another׳s afterbirth, or a weasel wrapped and brought it out — what is the law?"}:::question
+  Q3{"③ Weasel swallowed, returned and disgorged it, and it emerged on its own — what is the law?"}:::question
+  Q4{"④ Joined two wombs, out of one into the other — teiku"}:::question
+  Q5{"⑤ R. Aḥa: womb walls opened — does the airspace consecrate?"}:::question
+  Q6{"⑥ Mar bar Rav Ashi: uprooted and hung on its neck — consecrate out of place?"}:::question
+  Q7{"⑦ R. Yirmeya: womb walls thinned — what is the law?"}:::question
+  A1["⑧ R. Zeira: this was already asked — breach greater than the standing part"]:::answer
+  C1["⑨ Thinning was not asked, as nothing at all remains standing"]:::conclusion
+  Q1 -->|likewise| Q2
+  Q2 -->|likewise| Q3
+  Q3 -->|likewise| Q4
+  Q4 -->|new dilemma| Q5
+  Q5 -->|likewise| Q6
+  Q6 -->|likewise| Q7
+  Q7 -->|answer| A1
+  A1 -->|distinction| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בָּעֵי רָבָא: כְּרָכוֹ בְּסִיב, מַהוּ? בְּטַלִּיתוֹ, מַהוּ?"}:::question
+  Q2{"② אֶלָּא בְּשִׁלְיָא אַחֶרֶת, מַהוּ? … כְּרָכַתּוּ וַאֲחָזַתּוּ וְהוֹצִיאַתּוּ, מַהוּ?"}:::question
+  Q3{"③ בְּלָעַתּוּ וְהוֹצִיאַתּוּ, וְהִכְנִיסַתּוּ וֶהֱקִיאַתּוּ, וְיָצָא מֵאֵלָיו, מַהוּ?"}:::question
+  Q4{"④ הִדְבִּיק שְׁנֵי רְחָמִים, וְיָצָא מִזֶּה וְנִכְנַס לָזֶה … תֵּיקוּ"}:::question
+  Q5{"⑤ בָּעֵי רַב אַחָא: נִפְתְּחוּ כּוֹתְלֵי בֵּית הָרֶחֶם … אֲוִיר רֶחֶם מַקְדִּישׁ?"}:::question
+  Q6{"⑥ בָּעֵי מָר בַּר רַב אָשֵׁי: נֶעְקְרוּ וְתָלוּ לֵיהּ בְּצַוְּארֵיהּ … שֶׁלֹּא בִּמְקוֹמָן מְקַדְּשִׁי?"}:::question
+  Q7{"⑦ בָּעֵי רַבִּי יִרְמְיָה: נִגְמְמוּ כּוֹתְלֵי בֵּית הָרֶחֶם, מַהוּ?"}:::question
+  A1["⑧ אֲמַר לֵיהּ רַבִּי זֵירָא: קָא נָגְעַתְּ בְּבַעְיָא … עוֹמֵד וּפָרוּץ"]:::answer
+  C1["⑨ עַד כָּאן לָא אִיבַּעְיָא … אֲבָל נִגְמְמוּ – לָא קָא מִיבַּעְיָא לֵיהּ"]:::conclusion
+  Q1 -->|וכן| Q2
+  Q2 -->|וכן| Q3
+  Q3 -->|וכן| Q4
+  Q4 -->|בעיה חדשה| Q5
+  Q5 -->|וכן| Q6
+  Q6 -->|וכן| Q7
+  Q7 -->|תשובה| A1
+  A1 -->|הבחנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע׳ א — Chullin 70a:13</span></div>
+    <div class="orig">בָּעֵי רָבָא: כְּרָכוֹ בְּסִיב, מַהוּ? בְּטַלִּיתוֹ, מַהוּ?</div>
+    <div class="trans" data-when="he">בכור מתקדש כשהוא ׳פוטר רחם׳ — נוגע בפתח הרחם ביציאתו. רבא שואל: אם כרכוהו בסיב (קליפת הדקל) או בטליתו עם יציאתו, כך שלא נגע ממש בפתח הרחם — האם נחשב פוטר רחם ומתקדש, או לא?</div>
+    <div class="trans" data-when="en">§ A firstborn animal is consecrated by virtue of the fact that its birth is the first in which the womb of the mother opens, as indicated by the verse: “Consecrate to Me every firstborn, that which opens the womb” (Exodus 13:2). Concerning this condition, Rava raises a dilemma: If one wrapped the fetus in the bast of a palm tree while it was still in the womb, and it therefore did not come in contact with the opening of the womb directly when it emerged, what is the halakha with regard to whether it is consecrated? Likewise, if one wrapped it in his robe when it emerged, what is the halakha?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע׳ א — Chullin 70a:14</span></div>
+    <div class="orig">בְּשִׁלְיָתוֹ, מַהוּ? בְּשִׁלְיָתוֹ? אוֹרְחֵיהּ הוּא! אֶלָּא בְּשִׁלְיָא אַחֶרֶת, מַהוּ?</div>
+    <div class="trans" data-when="he">ועוד: כרכוהו בשִׁליה (השליה שלו) — מהו? הגמרא דוחה: בשלייתו? הרי זו דרכו הטבעית ואינה חציצה! אלא הספק הוא בשִׁליה של בהמה אחרת — שאינה דרכו — מהו?</div>
+    <div class="trans" data-when="en">Rava adds: If it emerged wrapped in its afterbirth, what is the halakha? The Gemara interjects: How could one suggest that being wrapped in its afterbirth would pose a problem? That is its natural manner of birth, and the afterbirth is consequently not considered an interposition. Accordingly, it is considered as though it was in direct contact with the opening of the womb. Rather, Rava’s dilemma must be as follows: If it emerged wrapped in the afterbirth of a different animal, what is the halakha?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע׳ א — Chullin 70a:15</span></div>
+    <div class="orig">כְּרָכַתּוּ וַאֲחָזַתּוּ וְהוֹצִיאַתּוּ, מַהוּ? הֵיכִי דָמֵי? אִי דִּנְפַק דֶּרֶךְ רֵישֵׁיהּ – פְּטַרְתֵּיהּ! אֶלָּא דִּנְפַק דֶּרֶךְ מַרְגְּלוֹתָיו.</div>
+    <div class="trans" data-when="he">ועוד: חולדה כרכתו, אחזתו והוציאתו — מהו? הגמרא מבררת: באיזה אופן? אם יצא דרך ראשו — כבר נפטר הרחם (נחשב פוטר), ואין ספק. אלא הספק כשיצא דרך רגליו (מרגלותיו) ורובו עדיין בפנים.</div>
+    <div class="trans" data-when="en">Another dilemma: If one wrapped it in one’s hands and held it and brought it out in that fashion, such that the fetus did not come in direct contact with the opening of the womb, what is the halakha? With regard to all these dilemmas the Gemara asks: What are the circumstances? If the fetus had already partially emerged headfirst and then one wrapped up the body, which was still inside the womb, the halakha in such a case is clear: Since its head emerged, it is already considered to have been born and to have opened up the womb, and it is duly consecrated. Rather, the dilemma is in a case where it partially emerged hind legs first, and the majority of the body, which was still in the womb, was wrapped before it emerged.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע׳ א — Chullin 70a:16</span></div>
+    <div class="orig">בְּלָעַתְהוּ חוּלְדָּה וְהוֹצִיאַתּוּ, מַהוּ? הוֹצִיאַתּוּ? הָא אַפֵּיקְתֵּיהּ! אֶלָּא, בְּלָעַתּוּ וְהוֹצִיאַתּוּ, וְהִכְנִיסַתּוּ וֶהֱקִיאַתּוּ, וְיָצָא מֵאֵלָיו, מַהוּ?</div>
+    <div class="trans" data-when="he">ועוד: בלעתו חולדה והוציאתו — מהו? הגמרא דוחה: הוציאתו? הרי החולדה היא שהוציאתו, וודאי אין זה ׳פוטר רחם׳! אלא הספק: בלעתו והוציאתו, ואז החזירתו לרחם והקיאתו בתוכו, ואחר כך יצא מאליו — מהו?</div>
+    <div class="trans" data-when="en">Rava raises additional dilemmas: If a weasel entered the womb and swallowed the fetus there, and then exited the womb, bringing the fetus out in its stomach, what is the halakha? The Gemara interjects: Is there any doubt about a case where the weasel brought the fetus out in its stomach? In such a case it is the weasel that brought it out, and it is certainly not regarded as though the fetus opened the womb. Rather, the dilemma concerns a case where the weasel swallowed the fetus and brought it out, and then brought it back into the womb and vomited it out while inside the womb, and the fetus subsequently emerged of its own accord. What is the halakha in this case?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע׳ א — Chullin 70a:17</span></div>
+    <div class="orig">הִדְבִּיק שְׁנֵי רְחָמִים, וְיָצָא מִזֶּה וְנִכְנַס לָזֶה, מַהוּ? דִּידֵיהּ פָּטַר, דְּלָאו דִּידֵיהּ לָא פָּטַר, אוֹ דִלְמָא דְּלָאו דִּידֵיהּ נָמֵי פָּטַר? תֵּיקוּ.</div>
+    <div class="trans" data-when="he">ועוד: הדביק פתחי שני רחמים, ועובר יצא מרחם זה ונכנס לרחם השני (ואחר כך יצא ממנו) — האם פוטר את הרחם השני לבכורה? אולי רק עוברה־שלו פוטר, ולא של אחרת; או שגם של אחרת פוטר? תיקו — לא נפשט.</div>
+    <div class="trans" data-when="en">Another dilemma: If one pressed together the openings of two wombs of two animals giving birth to firstborns, and a fetus exited from the womb of this animal and entered the womb of that animal, and then emerged from the womb of the second animal, after which the second animal gave birth to its fetus, what is the halakha with regard to whether the fetus of the second animal is consecrated as a firstborn? Is the womb considered to have opened only when its own fetus emerges from inside, but a fetus that is not its own is not halakhically considered to have opened the womb? Or perhaps even a fetus that is not its own is also considered to have opened the womb? The Gemara does not provide a resolution for these dilemmas and concludes: The dilemma shall stand unresolved.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע׳ א — Chullin 70a:18</span></div>
+    <div class="orig">בָּעֵי רַב אַחָא: נִפְתְּחוּ כּוֹתְלֵי בֵּית הָרֶחֶם, מַהוּ? אֲוִיר רֶחֶם מַקְדִּישׁ, וְהָאִיכָּא, אוֹ דִלְמָא נְגִיעַת רֶחֶם מְקַדְּשָׁה, וְהָא לֵיכָּא?</div>
+    <div class="trans" data-when="he">רב אחא שואל: נפתחו (התרחבו) כותלי בית הרחם עד שהעובר יצא בלי לגעת בהם — מהו? האם אויר הרחם הוא המקדש את הבכור, וזה קיים כאן; או שדווקא נגיעת פתח הרחם מקדשת, וזו חסרה כאן?</div>
+    <div class="trans" data-when="en">Rav Aḥa raises a dilemma: If the walls of the opening of the womb opened and widened to such an extent that when the fetus emerged it did not touch them, what is the halakha? Does the airspace of the opening of the womb consecrate the fetus as it is born, and this situation exists here in this case; or perhaps it is the contact with the opening of the womb that consecrates it, and this situation does not exist here in this case?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע׳ א — Chullin 70a:19</span></div>
+    <div class="orig">בָּעֵי מָר בַּר רַב אָשֵׁי: נֶעְקְרוּ כּוֹתְלֵי בֵּית הָרֶחֶם, מַהוּ? נֶעְקְרוּ – לֵיתַנְהוּ! אֶלָּא נֶעְקְרוּ וְתָלוּ לֵיהּ בְּצַוְּארֵיהּ, מַאי? בִּמְקוֹמָן מְקַדְּשִׁי, שֶׁלֹּא בִּמְקוֹמָן לֹא מְקַדְּשִׁי, אוֹ דִלְמָא שֶׁלֹּא בִּמְקוֹמָן נָמֵי מְקַדְּשִׁי?</div>
+    <div class="trans" data-when="he">מר בר רב אשי שואל: נעקרו כותלי בית הרחם — מהו? הגמרא דוחה: נעקרו לגמרי — הרי אינם, ואין מה שיקדש! אלא: נעקרו ונתלו על צוארו של העובר ביציאתו. האם הם מקדשים רק במקומם, ושלא במקומם אינם מקדשים; או שגם שלא במקומם מקדשים?</div>
+    <div class="trans" data-when="en">Mar bar Rav Ashi raises a dilemma: If the walls of the opening of the womb were removed, what is the halakha? The Gemara interjects: The halakha in this case is clear, since if they were removed they are not there to consecrate the fetus. Rather, the dilemma is in a case where they were removed from their original place, recessed inside the womb, and as the fetus emerged, the walls lay on its neck. In such a case, what is the halakha? Do the walls of the opening of the womb consecrate a fetus only when they are in their natural place, but when they are not in their natural place they cannot consecrate a fetus? Or perhaps when they are not in their natural place they also consecrate the fetus.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע׳ א — Chullin 70a:20</span></div>
+    <div class="orig">בָּעֵי מִינֵּיהּ רַבִּי יִרְמְיָה מֵרַבִּי זֵירָא: נִגְמְמוּ כּוֹתְלֵי בֵּית הָרֶחֶם, מַהוּ? אֲמַר לֵיהּ: קָא נָגְעַתְּ בְּבַעְיָא דְּאִיבַּעְיָא לַן, דְּבָעֵי רַבִּי זֵירָא, וְאָמְרִי לַהּ בְּעָא מִינֵּיהּ רַבִּי זֵירָא מֵרַבִּי אַסִּי: עוֹמֵד מְרוּבֶּה עַל הַפָּרוּץ וְיָצָא דֶּרֶךְ פָּרוּץ, פָּרוּץ מְרוּבֶּה עַל הָעוֹמֵד וְיָצָא דֶּרֶךְ עוֹמֵד, מַאי?</div>
+    <div class="trans" data-when="he">ר׳ ירמיה שאל את ר׳ זירא: נגממו (נחתכו) כותלי בית הרחם — מהו? השיב לו: נגעת בבעיה שכבר נשאלה לפנינו, שבעי ר׳ זירא (ויש אומרים שאל ר׳ זירא את ר׳ אסי): עומד (הנשאר) מרובה על הפרוץ והעובר יצא דרך הפרוץ, או פרוץ מרובה על העומד והעובר יצא דרך העומד — מהו?</div>
+    <div class="trans" data-when="en">Rabbi Yirmeya raises a dilemma before Rabbi Zeira: If the walls of the opening of the womb were thinned [nigmemu] by removing the inner layer, what is the halakha? If the fetus then emerges through them is it consecrated? Rabbi Zeira said to him: You have touched upon a dilemma that was already raised before us, and that discussion provides the answer to your dilemma. As Rabbi Zeira raised a dilemma, and some say Rabbi Zeira raised that dilemma before Rabbi Asi: If a section of the opening of the womb was cut away, but the standing section, i.e., the part remaining, is greater in size than the breached, removed, section, and the offspring emerged through the breached section; or if the breached section is greater in size than the standing section and the offspring emerged through the standing section, what is the halakha?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע׳ א — Chullin 70a:21</span></div>
+    <div class="orig">עַד כָּאן לָא אִיבַּעְיָא לֵיהּ אֶלָּא פָּרוּץ מְרוּבֶּה עַל הָעוֹמֵד, דְּאִיכָּא עוֹמֵד בְּעוֹלָם, אֲבָל נִגְמְמוּ – לָא קָא מִיבַּעְיָא לֵיהּ.</div>
+    <div class="trans" data-when="he">ר׳ זירא מבחין: הבעיה ההיא נשאלה רק בפרוץ מרובה על העומד — שעדיין יש עומד (כותל) כלשהו בעולם שאפשר לדון בו; אבל נגממו לגמרי, שאין שום עומד — בזה לא הסתפקו כלל, שפשיטא שאינו מתקדש.</div>
+    <div class="trans" data-when="en">Rabbi Zeira explains how this dilemma can resolve Rabbi Yirmeya’s dilemma: That dilemma was raised only with regard to a case where the breached section is greater than the standing section, as there is at least some part of the womb still standing and therefore one can consider the possibility that it could consecrate the fetus. But a dilemma was not raised with regard to case where the walls were thinned, because in that case it is obvious that the fetus is not consecrated, as there is nothing left to consecrate it.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">משנה: בהמה שמת עוברה</span><span data-when="en">Mishna: an animal whose fetus died</span>
+      <span class="ref">Chullin 70b:1</span></h2>
+  <div class="lead"><span data-when="he">המשנה: בהמה שמת עוברה במעיה, והרועה הושיט ידו ונגע בו — טהור (אין העובר מטמא כנבלה). ר׳ יוסי הגלילי: בבהמה טמאה — טמא.</span><span data-when="en">The Mishna: if an animal’s fetus died in its womb and the shepherd reached in and touched it, he is pure. R. Yosei HaGelili: in a non-kosher animal, impure.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: שמת עוברה והושיט הרועה ידו — טהור"]):::mishnah
+  S1["① ר׳ יוסי הגלילי: בטמאה טמא, בטהורה טהור"]:::statement
+  M1 -->|חולק| S1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: fetus died, shepherd reached in — pure"]):::mishnah
+  S1["① R. Yosei HaGelili: non-kosher impure, kosher pure"]:::statement
+  M1 -->|disputes| S1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① מַתְנִי׳ בְּהֵמָה שֶׁמֵּת עוּבָּרָהּ … וְהוֹשִׁיט הָרוֹעֶה אֶת יָדוֹ וְנָגַע בּוֹ … טָהוֹר"]):::mishnah
+  S1["① רַבִּי יוֹסֵי הַגְּלִילִי: בִּטְמֵאָה – טָמֵא, וּבִטְהוֹרָה – טָהוֹר"]:::statement
+  M1 -->|חולק| S1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע׳ ב — Chullin 70b:1</span></div>
+    <div class="orig">מַתְנִי׳ בְּהֵמָה שֶׁמֵּת עוּבָּרָהּ בְּתוֹךְ מֵעֶיהָ וְהוֹשִׁיט הָרוֹעֶה אֶת יָדוֹ וְנָגַע בּוֹ, בֵּין בִּבְהֵמָה טְמֵאָה בֵּין בִּבְהֵמָה טְהוֹרָה – טָהוֹר. רַבִּי יוֹסֵי הַגְּלִילִי אוֹמֵר: בִּטְמֵאָה – טָמֵא, וּבִטְהוֹרָה – טָהוֹר.</div>
+    <div class="trans" data-when="he">משנה: בהמה שמת עוברה בתוך מעיה, והרועה הושיט ידו לרחם ונגע בעובר המת — בין בבהמה טמאה ובין בטהורה, הרי הוא טהור (אין העובר שבמעי אמו מטמא כנבלה). ר׳ יוסי הגלילי חולק: בבהמה טמאה — טמא, ובטהורה — טהור.</div>
+    <div class="trans" data-when="en">MISHNA: With regard to an animal whose fetus died in its womb and the shepherd reached his hand into the womb and touched the fetus, both in the case of a non-kosher animal and in the case of a kosher animal the fetus does not have the status of an animal carcass that imparts ritual impurity, and the shepherd remains ritually pure. Rabbi Yosei HaGelili says: In the case of a non-kosher animal it is impure, and in the case of a kosher animal it is pure.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">עובר מת טהור — טעמי תנא־קמא ור׳ יוסי הגלילי</span><span data-when="en">Why a dead fetus is pure — the two opinions’ sources</span>
+      <span class="ref">Chullin 70b:2-11</span></h2>
+  <div class="lead"><span data-when="he">קל וחומר של רב חסדא לתנא־קמא, והיקש להרחיב לבהמה טמאה; ולעומתו דרשת ר׳ יוסי הגלילי ׳מהלכי כפיים בחיה׳, שנדחית בשרשרת קושיות עד שרב נחמן בר יצחק לומדו מפסוק אחר.</span><span data-when="en">Rav Ḥisda’s a fortiori for the first tanna, extended to a non-kosher animal by analogy; against it R. Yosei HaGelili’s ‘paw-walkers in a ḥayya,’ pushed back by a chain of objections until Rav Naḥman bar Yitzḥak derives it from another verse.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב חסדא: ק״ו — אם הותר באכילה, יטהר מנבלה"]:::statement
+  P1["② מנין לבהמה טמאה? היקש מ׳וכי ימות מן הבהמה׳"]:::proof
+  S2["③ ר׳ יוסי הגלילי: ׳מהלכי כפיים בחיה׳ — טימאתי לך"]:::statement
+  Q1{"④ אלא מעתה, קלוט במעי פרה ליטמא?"}:::question
+  A1["⑤ פרה במעי גמל — ׳וכל הולך׳ לרבות"]:::answer
+  Q2{"⑥ קלוט במעי קלוטה ליטמא? — אהני ק״ו דרב חסדא"}:::question
+  Q3{"⑦ מתקיף רב אחדבוי: חזיר במעי חזירתא לא ליטמא!"}:::question
+  S3["⑧ רב נחמן בר יצחק: מ׳נפש כי תגע׳ — זה עובר"]:::statement
+  C1["⑨ דרבי יצחק למה לי? לולא כן, הוה אמינא לכדרבי"]:::conclusion
+  S1 -->|הרחבה| P1
+  P1 -.->|ולר׳ יוסי| S2
+  S2 -.->|קושיא| Q1
+  Q1 -->|יישוב| A1
+  A1 -.->|קושיא| Q2
+  Q2 -.->|מתקיף| Q3
+  Q3 -->|אלא| S3
+  S3 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Ḥisda: a fortiori — if permitted to eat, surely pure of carcass"]:::statement
+  P1["② Whence a non-kosher animal? Analogy from ׳when an animal dies׳"]:::proof
+  S2["③ R. Yosei HaGelili: ׳paw-walkers in a ḥayya׳ — I rendered impure"]:::statement
+  Q1{"④ If so, a closed-hoof fetus in a cow should be impure?"}:::question
+  A1["⑤ A cow-fetus in a camel — ׳and whatever walks׳ includes it"]:::answer
+  Q2{"⑥ A closed-hoof fetus in a closed-hoof animal? — Rav Ḥisda׳s a fortiori"}:::question
+  Q3{"⑦ Rav Aḥadvoi objects: a pig in a sow should not be impure!"}:::question
+  S3["⑧ Rav Naḥman bar Yitzḥak: from ׳a person who touches׳ — this is a fetus"]:::statement
+  C1["⑨ Why R. Yitzḥak too? Else I׳d say the verse is only for Rabbi׳s teaching"]:::conclusion
+  S1 -->|extend| P1
+  P1 -.->|and per R. Yosei| S2
+  S2 -.->|objection| Q1
+  Q1 -->|resolution| A1
+  A1 -.->|objection| Q2
+  Q2 -.->|objects| Q3
+  Q3 -->|rather| S3
+  S3 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב חִסְדָּא: קַל וָחוֹמֶר, אִם הוֹעִילָה אִמּוֹ … לֹא תּוֹעִיל … מִידֵי נְבֵלָה?"]:::statement
+  P1["② ׳וְכִי יָמוּת מִן הַבְּהֵמָה׳ – זוֹ טְמֵאָה … אִיתַּקַּשׁ … עוּבָּרָהּ טָהוֹר"]:::proof
+  S2["③ אָמַר רַבִּי יִצְחָק … מְהַלְּכֵי כַּפַּיִם בְּחַיָּה טִמֵּאתִי לָךְ"]:::statement
+  Q1{"④ אֶלָּא מֵעַתָּה, קָלוּט בִּמְעֵי פָרָה לִיטַמֵּא?"}:::question
+  A1["⑤ ׳הוֹלֵךְ׳, ׳וְכׇל הוֹלֵךְ׳ – לְרַבּוֹת פָּרָה בִּמְעֵי גָמָל"]:::answer
+  Q2{"⑥ קָלוּט בִּמְעֵי קְלוּטָה לִיטַמֵּא? לְהָכִי אַהֲנִי קַל וָחוֹמֶר דְּרַב חִסְדָּא"}:::question
+  Q3{"⑦ מַתְקֵיף … רַב אַחָדְבוּי: חֲזִיר בִּמְעֵי חֲזִירְתָּא לָא לִיטַמֵּא!"}:::question
+  S3["⑧ אֶלָּא אָמַר רַב נַחְמָן בַּר יִצְחָק … ׳נֶפֶשׁ כִּי תִגַּע׳ … זֶה עוּבָּר"]:::statement
+  C1["⑨ דְּרַבִּי יִצְחָק לְמָה לִי? … הֲוָה אָמֵינָא: כּוּלֵּיהּ לְכִדְרַבִּי"]:::conclusion
+  S1 -->|הרחבה| P1
+  P1 -.->|ולר׳ יוסי| S2
+  S2 -.->|קושיא| Q1
+  Q1 -->|יישוב| A1
+  A1 -.->|קושיא| Q2
+  Q2 -.->|מתקיף| Q3
+  Q3 -->|אלא| S3
+  S3 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע׳ ב — Chullin 70b:2</span></div>
+    <div class="orig">גְּמָ׳ מַאי טַעְמָא דְּתַנָּא קַמָּא? אָמַר רַב חִסְדָּא: קַל וָחוֹמֶר, אִם הוֹעִילָה אִמּוֹ לְהַתִּירוֹ בַּאֲכִילָה, לֹא תּוֹעִיל לוֹ לְטַהוֹרֵיהּ מִידֵי נְבֵלָה?</div>
+    <div class="trans" data-when="he">גמרא: מהו טעמו של תנא־קמא (שעובר מת טהור)? רב חסדא: קל וחומר — אם היות העובר במעי אמו מועיל להתירו באכילה (בשחיטת אמו, אף שנמצא מת), כל שכן שיועיל לטהרו מטומאת נבלה.</div>
+    <div class="trans" data-when="en">GEMARA: The Gemara asks: What is the reason for the ruling of the first tanna? Rav Ḥisda said: It is apparent through an a fortiori inference: If being inside its mother is effective to permit it for consumption through the slaughter of its mother even if the fetus was found dead inside the womb, then should being inside its mother not also be effective to render it pure from the impurity of an animal carcass?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע׳ ב — Chullin 70b:3</span></div>
+    <div class="orig">אַשְׁכְּחַן בְּהֵמָה טְהוֹרָה, בְּהֵמָה טְמֵאָה מְנָלַן? אָמַר קְרָא: ״וְכִי יָמוּת מִן הַבְּהֵמָה״ – זוֹ בְּהֵמָה טְמֵאָה, ״אֲשֶׁר הִיא לָכֶם לְאׇכְלָה״ – זוֹ בְּהֵמָה טְהוֹרָה, אִיתַּקַּשׁ בְּהֵמָה טְמֵאָה לִבְהֵמָה טְהוֹרָה: מָה בְּהֵמָה טְהוֹרָה – עוּבָּרָהּ טָהוֹר, אַף בְּהֵמָה טְמֵאָה – עוּבָּרָהּ טָהוֹר.</div>
+    <div class="trans" data-when="he">הק״ו לימד על בהמה טהורה (הראויה לאכילה); מנין שגם בטמאה העובר טהור? אמר הכתוב ׳וכי ימות מן הבהמה׳ — זו טמאה, ׳אשר היא לכם לאכלה׳ — זו טהורה. הוקשה טמאה לטהורה: מה בטהורה עוברה טהור, אף בטמאה עוברה טהור.</div>
+    <div class="trans" data-when="en">The Gemara asks: We found a rationale for this halakha with regard to a kosher animal; from where do we derive that the same applies to a non-kosher animal? The Gemara answers that the verse states: “And when a domesticated animal dies, of those that you eat, one who touches its carcass shall be impure until the evening” (Leviticus 11:39). The Gemara interprets the verse as follows: “And when a domesticated animal dies,” this is referring to a non-kosher animal; “of those that you eat,” this is referring to a kosher animal. The verse thereby juxtaposes a non-kosher animal to a kosher animal with regard to imparting impurity of a carcass, and teaches that just as with regard to a kosher animal, its fetus that died in its womb is pure, as derived above through an a fortiori inference, so too, with regard to a non-kosher animal, its dead fetus is pure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע׳ ב — Chullin 70b:4</span></div>
+    <div class="orig">וְרַבִּי יוֹסֵי הַגְּלִילִי, מַאי טַעְמָא? אָמַר רַבִּי יִצְחָק: דְּאָמַר קְרָא ״וְכׇל הוֹלֵךְ עַל כַּפָּיו בְּכׇל הַחַיָּה הַהֹלֶכֶת וְגוֹ׳״ – מְהַלְּכֵי כַּפַּיִם בְּחַיָּה טִמֵּאתִי לָךְ.</div>
+    <div class="trans" data-when="he">ומהו טעמו של ר׳ יוסי הגלילי (שבטמאה העובר טמא)? ר׳ יצחק: הכתוב אומר ׳וכל הולך על כפיו בכל החיה ההֹלכת׳ — ׳מהלכי כפיים׳ (בעלי טלפים שאינם סדוקים) שהם ׳בְּחַיָּה׳ (בתוך בהמה חיה), טימאתי לך; היינו עובר מת שבמעי בהמה חיה.</div>
+    <div class="trans" data-when="en">The Gemara asks: And as for Rabbi Yosei HaGelili, what is the reason for his ruling? Rabbi Yitzḥak said that the verse states with regard to non-kosher animals that do not have cloven hooves: “And whatever walks on its paws, among any [bekhol] undomesticated animal [ḥayya] that walks on all fours, they are impure for you; whoever touches their carcass shall be impure until the evening” (Leviticus 11:27). Rabbi Yosei HaGelili expounds this verse as follows: Those animals that walk on their paws, i.e., that do not have cloven hooves, which are inside the body of an animal, I rendered impure for you. Rabbi Yitzḥak interprets the term bekhol as meaning: Inside the body of, and the word ḥayya as meaning: A live animal. Accordingly, he understands the verse to be referring to a dead fetus found inside a living animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע׳ ב — Chullin 70b:5</span></div>
+    <div class="orig">אֶלָּא מֵעַתָּה, קָלוּט בִּמְעֵי פָרָה לִיטַמֵּא, דִּמְהַלְּכֵי כַפַּיִם בְּחַיָּה הוּא? מְהַלְּכֵי כַפַּיִם בִּמְהַלְּכֵי אַרְבַּע, וְהַאי מְהַלְּכֵי אַרְבַּע בִּמְהַלְּכֵי שְׁמֹנֶה הוּא.</div>
+    <div class="trans" data-when="he">קושיא: אם כן, עובר קלוט (שטלפיו אינם סדוקים) שבמעי פרה יְטמא, שהרי הוא ׳מהלכי כפיים בחיה׳? תירוץ: הכתוב מדבר ב׳מהלכי כפיים׳ שבתוך ׳מהלכי ארבע׳, וקלוט זה הוא ׳מהלכי ארבע׳ בתוך פרה שהיא ׳מהלכי שמונה׳ (טלפיה סדוקים לשניים).</div>
+    <div class="trans" data-when="en">The Gemara objects: If that is so, then a dead fetus with non-cloven hooves found inside a cow should be impure, despite the fact that it is from a kosher species, as it is an animal that walks on its paws that is inside the body of a kosher animal. The Gemara explains: The verse renders impure an animal that walks upon its four paws that is inside an animal that walks on four paws. But this is a case of an animal that walks on four inside an animal that walks on eight. Since the mother cow’s hooves are entirely split into two parts, it actually walks on eight parts and is not the animal referred to by the verse.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע׳ ב — Chullin 70b:6</span></div>
+    <div class="orig">פָּרָה בִּמְעֵי גָמָל לֹא תְּטַמֵּא, דִּמְהַלְּכֵי שְׁמֹנֶה בִּמְהַלְּכֵי אַרְבַּע הוּא, ״הוֹלֵךְ״, ״וְכׇל הוֹלֵךְ״ – לְרַבּוֹת פָּרָה בִּמְעֵי גָמָל.</div>
+    <div class="trans" data-when="he">המשך הקושיא והיישוב: אם כן, עובר פרה (׳מהלכי שמונה׳) שבמעי גמל (׳מהלכי ארבע׳) לא יְטמא? הכתוב יכול היה לומר ׳הולך׳, וכתב ׳וכל הולך׳ — לרבות אף פרה במעי גמל, שמטמא.</div>
+    <div class="trans" data-when="en">The Gemara raises another objection: If that is so, then a dead fetus in the form of a cow, which has eight parts to its legs, inside the womb of a camel, a non-kosher animal with non-cloven hooves, should not be impure, as it is an animal that walks on eight inside an animal that walks on four, and the verse is not referring to it. The Gemara responds that the verse could have stated: Walks upon, but instead states: “And whatever walks upon,” i.e., the addition of the word “whatever” serves to include a dead cow fetus in the womb of a camel, teaching that it is impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע׳ ב — Chullin 70b:7</span></div>
+    <div class="orig">קָלוּט בִּמְעֵי קְלוּטָה לִיטַמֵּא, דִּמְהַלְּכֵי אַרְבַּע בִּמְהַלְּכֵי אַרְבַּע הוּא! לְהָכִי אַהֲנִי קַל וָחוֹמֶר דְּרַב חִסְדָּא.</div>
+    <div class="trans" data-when="he">קושיא נוספת: אם כן, קלוט (׳מהלכי ארבע׳) שבמעי בהמה כשרה קלוטה (׳מהלכי ארבע׳) יְטמא, שהרי הוא מהלכי ארבע בתוך מהלכי ארבע — אך הדין שטהור, מאחר שהאם ממין כשר! לכך מועיל הק״ו של רב חסדא, שמטהר עוברי כל הכשרות.</div>
+    <div class="trans" data-when="en">The Gemara objects: If that is so, then a dead fetus with non-cloven hooves inside the womb of a cow with non-cloven hooves should be impure, as it is an animal that walks on four inside an animal that walks on four, but the halakha is that since the mother is a kosher species, it is pure. The Gemara explains: It is to that end that the a fortiori inference of Rav Ḥisda is effective, as it renders pure the fetuses of all kosher animals, even if their hooves are not fully cloven.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע׳ ב — Chullin 70b:8</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב אַחָדְבוּי בַּר אַמֵּי: חֲזִיר בִּמְעֵי חֲזִירְתָּא לָא לִיטַמֵּא, דִּמְהַלְּכֵי שְׁמֹנֶה בִּמְהַלְּכֵי שְׁמֹנֶה הוּא!</div>
+    <div class="trans" data-when="he">רב אחדבוי בר אמי מקשה: לפי ההסבר שהכתוב מטמא רק ׳מהלכי ארבע בתוך מהלכי ארבע׳ — חזיר (שטלפיו סדוקים, ׳מהלכי שמונה׳) שבמעי חזירה (אף היא ׳מהלכי שמונה׳) לא יְטמא, שאינו בכלל הכתוב!</div>
+    <div class="trans" data-when="en">Rav Aḥadvoi bar Ami objects to this explanation that the verse renders impure only animals that walk on four inside animals that walk on four: If that is so, a dead pig fetus inside the womb of a female pig should not be impure, as a pig has cloven hooves, and so it is an animal that walks on eight inside an animal that walks on eight, and so the verse is not referring to it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע׳ ב — Chullin 70b:9</span></div>
+    <div class="orig">אֶלָּא אָמַר רַב נַחְמָן בַּר יִצְחָק, מֵהָכָא: ״נֶפֶשׁ כִּי תִגַּע בְּכׇל טָמֵא אוֹ בְנִבְלַת חַיָּה טְמֵאָה אוֹ בְּנִבְלַת בְּהֵמָה טְמֵאָה אוֹ בְּנִבְלַת שֶׁרֶץ טָמֵא״.</div>
+    <div class="trans" data-when="he">אלא — מאחר שנדחתה דרשת ר׳ יצחק — אמר רב נחמן בר יצחק שדין ר׳ יוסי הגלילי נלמד מכאן: ׳נפש כי תגע בכל טמא או בנבלת חיה טמאה או בנבלת בהמה טמאה או בנבלת שרץ טמא׳.</div>
+    <div class="trans" data-when="en">Rather, Rav Naḥman bar Yitzḥak said that Rabbi Yosei HaGelili’s opinion is derived from here: The verse states with regard to the sliding-scale offering brought by one who was unaware that he was impure when he ate consecrated food or entered the Temple: “A person who touched anything impure, or the carcass of a non-kosher undomesticated animal, or the carcass of a non-kosher domesticated animal, or the carcass of an impure creeping animal, and is guilty, it having being hidden from him that he is impure” (Leviticus 5:2).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע׳ ב — Chullin 70b:10</span></div>
+    <div class="orig">וְכִי נִבְלַת בְּהֵמָה טְמֵאָה מְטַמְּאָה, וּבִטְהוֹרָה לֹא מְטַמְּאָה? אֶלָּא אֵיזֶה זֶה? זֶה עוּבָּר, שֶׁבִּטְמֵאָה טָמֵא, וּבִטְהוֹרָה טָהוֹר.</div>
+    <div class="trans" data-when="he">דיוק הדרשה: וכי רק נבלת בהמה טמאה מטמאה, ושל טהורה לא? והרי שתיהן מטמאות! אלא מהו ה׳נבלת בהמה טמאה׳ המיוחד שבפסוק? זה עובר מת — שבבהמה טמאה טמא, ובטהורה טהור.</div>
+    <div class="trans" data-when="en">The verse presents a difficulty: Does only a carcass of a non-kosher animal impart impurity, and that of a kosher animal not impart impurity? The halakha is that both do. Rather, what is this animal to which the verse is referring? This is a fetus, which if inside a non-kosher animal is impure, and if inside a kosher animal is pure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע׳ ב — Chullin 70b:11</span></div>
+    <div class="orig">וּמֵאַחַר דְּנָפְקָא לֵיהּ מִדְּרַב נַחְמָן בַּר יִצְחָק, דְּרַבִּי יִצְחָק לְמָה לִי? אִי לָאו דְּרַבִּי יִצְחָק, הֲוָה אָמֵינָא: כּוּלֵּיהּ לְכִדְרַבִּי הוּא דַּאֲתָא, קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">ומאחר שדין ר׳ יוסי הגלילי נלמד מדרשת רב נחמן בר יצחק, למה לי גם דרשת ר׳ יצחק? לולא דרשת ר׳ יצחק הייתי אומר שכל הפסוק (׳וכל הולך על כפיו׳) בא רק לדרשת רבי (לקמן); קא משמע לן ר׳ יצחק שנדרש גם כדרכו.</div>
+    <div class="trans" data-when="en">The Gemara asks: And since this halakha is derived from the statement of Rav Naḥman bar Yitzḥak, why do I need the proof of Rabbi Yitzḥak from the verse: “And whatever walks on its paws, among any undomesticated animal that walks on all fours” (Leviticus 11:27)? The Gemara explains: Were it not for the derivation of Rabbi Yitzḥak, I would say that the entire verse expounded by Rav Naḥman bar Yitzḥak comes to teach only that which Rabbi Yehuda HaNasi derived from it, as cited by the Gemara later on. Rabbi Yitzḥak’s statement teaches us that the verse is also to be expounded as Rav Naḥman bar Yitzḥak explained.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">חיה בכלל בהמה ובהמה בכלל חיה — בן עזאי ור׳ ישמעאל</span><span data-when="en">Ḥayya in behema and behema in ḥayya — ben Azzai and R. Yishmael</span>
+      <span class="ref">Chullin 70b:12-71a:13</span></h2>
+  <div class="lead"><span data-when="he">ברייתת ר׳ יונתן: מנין שנבלת חיה טהורה מטמאה? בן עזאי דורש מ׳וכל הולך על כפיו׳; ר׳ ישמעאל לומד את כל הצדדים מהכלל ׳חיה בכלל בהמה ובהמה בכלל חיה׳, ומפרט להיכן כל אחד נצרך.</span><span data-when="en">R. Yonatan’s baraita: whence does a kosher ḥayya’s carcass impart impurity? Ben Azzai derives it from ‘and whatever walks on its paws’; R. Yishmael derives every case from the rule ‘ḥayya is in behema and behema in ḥayya,’ then spells out where each is needed.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא — ר׳ יונתן: למדנו ג׳ נבלות מטמאות"]:::statement
+  Q1{"② נבלת חיה טהורה מנין? בן עזאי: ׳כל הולך על כפיו׳"}:::question
+  A1["③ ר׳ יונתן: והלא נאמר ׳בכל החיה׳ — למהלכי כפיים!"]:::answer
+  S2["④ ר׳ ישמעאל: חיה בכלל בהמה, ובהמה בכלל חיה"]:::statement
+  S3["⑤ חבל על בן עזאי שלא שימש את ר׳ ישמעאל"]:::statement
+  P1["⑥ חיה בכלל בהמה — ׳זאת הבהמה … איל וצבי׳"]:::proof
+  P2["⑦ בהמה בכלל חיה — ׳זאת החיה … מכל הבהמה׳"]:::proof
+  S4["⑧ הצריכותות: לסימנים, להרבעה, לכדרבי, ליצירה"]:::statement
+  C1["⑨ בהמה בכלל חיה לכדרבי — גז״ש ׳בהמה טמאה׳ לטומאת קודש"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|דחייה| A1
+  A1 -->|ר׳ ישמעאל| S2
+  S2 -->|בלשון הזה| S3
+  S3 -->|מנין| P1
+  P1 -->|וכן| P2
+  P2 -->|לְמָה כל אחת| S4
+  S4 -->|כדרבי| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita — R. Yonatan: we learned three carcasses impart impurity"]:::statement
+  Q1{"② Whence a kosher ḥayya׳s carcass? Ben Azzai: ׳all that walks on its paws׳"}:::question
+  A1["③ R. Yonatan: but it says ׳among any ḥayya׳ — for paw-walkers!"]:::answer
+  S2["④ R. Yishmael: ḥayya is in behema, and behema in ḥayya"]:::statement
+  S3["⑤ Woe to ben Azzai, who did not serve R. Yishmael"]:::statement
+  P1["⑥ Ḥayya in behema — ׳these are the behema … deer and gazelle׳"]:::proof
+  P2["⑦ Behema in ḥayya — ׳these are the ḥayya … among all behema׳"]:::proof
+  S4["⑧ Where each is needed: signs, mating, Rabbi׳s teaching, formation"]:::statement
+  C1["⑨ Behema in ḥayya, for Rabbi — verbal analogy ׳non-kosher behema׳, sacred impurity"]:::conclusion
+  S1 -->|objection| Q1
+  Q1 -->|rejection| A1
+  A1 -->|R. Yishmael| S2
+  S2 -->|in these words| S3
+  S3 -->|whence| P1
+  P1 -->|likewise| P2
+  P2 -->|where each| S4
+  S4 -->|for Rabbi| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תַּנְיָא … רַבִּי יוֹנָתָן: נַמְתִּי לוֹ לְבֶן עַזַּאי, לָמַדְנוּ … שֶׁמְּטַמְּאָה"]:::statement
+  Q1{"② נִבְלַת חַיָּה טְהוֹרָה … מִנַּיִן? נָם לִי: ׳כָּל הוֹלֵךְ עַל כַּפָּיו׳"}:::question
+  A1["③ נַמְתִּי לוֹ: … ׳בְּכׇל הַחַיָּה׳ – לִמְהַלְּכֵי כַּפַּיִם בְּחַיָּה הוּא דַּאֲתָא"]:::answer
+  S2["④ נַמְתִּי לוֹ … לָמַדְנוּ חַיָּה בִּכְלַל בְּהֵמָה, וּבְהֵמָה בִּכְלַל חַיָּה"]:::statement
+  S3["⑤ חֲבָל עַל בֶּן עַזַּאי שֶׁלֹּא שִׁימֵּשׁ אֶת רַבִּי יִשְׁמָעֵאל"]:::statement
+  P1["⑥ חַיָּה בִּכְלַל בְּהֵמָה … ׳זֹאת הַבְּהֵמָה … אַיָּל וּצְבִי׳"]:::proof
+  P2["⑦ בְּהֵמָה בִּכְלַל חַיָּה … ׳זֹאת הַחַיָּה … מִכׇּל הַבְּהֵמָה׳"]:::proof
+  S4["⑧ לְסִימָנִים … לְהַרְבָּעָה … לְכִדְרַבִּי … לִיצִירָה"]:::statement
+  C1["⑨ בְּהֵמָה … לְכִדְרַבִּי: גז״ש ׳בְּהֵמָה טְמֵאָה׳ – טוּמְאַת קֹדֶשׁ"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|דחייה| A1
+  A1 -->|ר׳ ישמעאל| S2
+  S2 -->|בלשון הזה| S3
+  S3 -->|מנין| P1
+  P1 -->|וכן| P2
+  P2 -->|לְמָה כל אחת| S4
+  S4 -->|כדרבי| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע׳ ב — Chullin 70b:12</span></div>
+    <div class="orig">תַּנְיָא, אָמַר רַבִּי יוֹנָתָן: נַמְתִּי לוֹ לְבֶן עַזַּאי, לָמַדְנוּ נִבְלַת בְּהֵמָה טְהוֹרָה שֶׁמְּטַמְּאָה, וְנִבְלַת בְּהֵמָה טְמֵאָה שֶׁמְּטַמְּאָה, נִבְלַת חַיָּה טְמֵאָה שֶׁמְּטַמְּאָה.</div>
+    <div class="trans" data-when="he">ברייתא — ר׳ יונתן (תלמיד ר׳ ישמעאל): אמרתי לבן עזאי — למדנו (מן המקראות) שנבלת בהמה טהורה מטמאה, ונבלת בהמה טמאה מטמאה, ונבלת חיה טמאה מטמאה.</div>
+    <div class="trans" data-when="en">§ It is taught in a baraita that Rabbi Yonatan, a student of Rabbi Yishmael, says: I said [namti] to ben Azzai: We learned that a carcass of a kosher domesticated animal imparts impurity from the verse: “And when a domesticated animal dies, of those that you eat, one who touches its carcass shall be impure until the evening” (Leviticus 11:39). And we learned that a carcass of a non-kosher domesticated animal imparts impurity, and that a carcass of a non-kosher undomesticated animal imparts impurity, from the verse: “A person who touched anything impure, or the carcass of a non-kosher undomesticated animal, or the carcass of a non-kosher domesticated animal” (Leviticus 5:2).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע׳ ב — Chullin 70b:13</span></div>
+    <div class="orig">נִבְלַת חַיָּה טְהוֹרָה לֹא לָמַדְנוּ מִנַּיִן? נָם לִי: ״כָּל הוֹלֵךְ עַל כַּפָּיו בְּכׇל הַחַיָּה הַהֹלֶכֶת״.</div>
+    <div class="trans" data-when="he">אבל נבלת חיה טהורה לא למדנו — מנין שמטמאה? אמר לי בן עזאי: מן הכתוב ׳כל הולך על כפיו בכל החיה ההֹלכת׳ — תיבת ׳בכל׳ מרבה אף נבלת חיה טהורה.</div>
+    <div class="trans" data-when="en">But we did not yet learn about a carcass of a kosher undomesticated animal. From where is it derived that it imparts impurity? Ben Azzai said to me that this is derived from the verse: “And whatever walks on its paws, among any undomesticated animal that walks on all fours” (Leviticus 11:27). The inclusive term “among any” serves to include even a carcass of a kosher undomesticated animal among those that impart impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע׳ ב — Chullin 70b:14</span></div>
+    <div class="orig">נַמְתִּי לוֹ: וְכִי נֶאֱמַר ״וְכׇל חַיָּה״? וַהֲלֹא לֹא נֶאֱמַר אֶלָּא ״בְּכׇל הַחַיָּה״, לִמְהַלְּכֵי כַּפַּיִם בְּחַיָּה הוּא דַּאֲתָא. נָם לִי: וּמָה יִשְׁמָעֵאל אוֹמֵר בְּדָבָר הַזֶּה?</div>
+    <div class="trans" data-when="he">השבתי לו (ר׳ יונתן): וכי נאמר ׳וכל חיה׳? והרי לא נאמר אלא ׳בכל החיה׳ — ולשון זו באה לדרשת ׳מהלכי כפיים שבחיה׳ (כדרשת ר׳ יצחק לעיל), ולא לרבות חיה טהורה. אמר לי בן עזאי: ומה אומר ר׳ ישמעאל רבך בדבר הזה?</div>
+    <div class="trans" data-when="en">Rabbi Yonatan continues. I said to ben Azzai: But does it state: And any undomesticated animal? Isn’t it stated only: “Among any undomesticated animal”? And as explained earlier, this comes to teach that a dead fetus in the form of any of the animals that walk on their paws inside an undomesticated animal imparts impurity. He said to me: And what does Rabbi Yishmael, your teacher, say about this matter?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע׳ ב — Chullin 70b:15</span></div>
+    <div class="orig">נַמְתִּי לוֹ: ״וְכִי יָמוּת מִן הַבְּהֵמָה״ – זוֹ בְּהֵמָה טְמֵאָה, ״אֲשֶׁר הִיא לָכֶם לְאׇכְלָה״ – זוֹ בְּהֵמָה טְהוֹרָה, לָמַדְנוּ חַיָּה בִּכְלַל בְּהֵמָה, וּבְהֵמָה בִּכְלַל חַיָּה.</div>
+    <div class="trans" data-when="he">השבתי לו: ר׳ ישמעאל דורש מ׳וכי ימות מן הבהמה׳ — זו טמאה, ׳אשר היא לכם לאכלה׳ — זו טהורה; ולמדנו ממנו את הכלל הגדול: חיה בכלל בהמה, ובהמה בכלל חיה (לשון אחת כוללת את חברתה).</div>
+    <div class="trans" data-when="en">I said to him that Rabbi Yishmael derives all these halakhot from the verse: “And when a domesticated animal dies, of those that you eat, one who touches its carcass shall be impure until the evening” (Leviticus 11:39), as follows: “And when a domesticated animal [habehema] dies,” this is referring to a non-kosher animal; “of those that you eat,” this is referring to a kosher animal. And we learned that a ḥayya is included in the category of a behema, i.e., the term behema can also refer collectively to both domesticated and undomesticated animals. And likewise, a behema is included in the category of a ḥayya.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע׳ ב — Chullin 70b:16</span></div>
+    <div class="orig">חַיָּה טְהוֹרָה בִּכְלַל בְּהֵמָה טְהוֹרָה, חַיָּה טְמֵאָה בִּכְלַל בְּהֵמָה טְמֵאָה,</div>
+    <div class="trans" data-when="he">פירוט הכלל: חיה טהורה בכלל בהמה טהורה, חיה טמאה בכלל בהמה טמאה — כל לשון של בהמה כוללת אף את החיה שכמותה (טהורה או טמאה).</div>
+    <div class="trans" data-when="en">Furthermore, a kosher ḥayya is included when the Torah makes reference to a kosher behema, and a non-kosher ḥayya is included when the Torah makes reference to a non-kosher behema.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״א א — Chullin 71a:1</span></div>
+    <div class="orig">בְּהֵמָה טְמֵאָה בִּכְלַל חַיָּה טְמֵאָה, בְּהֵמָה טְהוֹרָה בִּכְלַל חַיָּה טְהוֹרָה, וּבַלָּשׁוֹן הַזֶּה אָמַר לִי: חֲבָל עַל בֶּן עַזַּאי שֶׁלֹּא שִׁימֵּשׁ אֶת רַבִּי יִשְׁמָעֵאל.</div>
+    <div class="trans" data-when="he">המשך הכלל: בהמה טמאה בכלל חיה טמאה, בהמה טהורה בכלל חיה טהורה. ובלשון הזה אמר לי בן עזאי: ׳חבל על בן עזאי שלא שימש את ר׳ ישמעאל׳ — שהפסיד תורה גדולה.</div>
+    <div class="trans" data-when="en">And likewise, a non-kosher behema is included in the category of a non-kosher ḥayya, and a kosher behema is included in the category of a kosher ḥayya. Accordingly, although the verse here is referring to a behema, it is understood to be referring collectively to both a behema and a ḥayya, and teaches that the carcasses of both types impart impurity. And upon hearing this, ben Azzai said to me in these words: Woe [ḥaval] unto ben Azzai, who did not serve Rabbi Yishmael.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״א א — Chullin 71a:2</span></div>
+    <div class="orig">חַיָּה בִּכְלַל בְּהֵמָה מְנָלַן? דִּכְתִיב: ״זֹאת הַבְּהֵמָה אֲשֶׁר תֹּאכֵלוּ שׁוֹר שֵׂה כְשָׂבִים וְגוֹ׳ אַיָּל וּצְבִי וְיַחְמוּר וְגוֹ׳״, הָא כֵּיצַד? חַיָּה בִּכְלַל בְּהֵמָה.</div>
+    <div class="trans" data-when="he">הגמרא מבררת מקורות לכלל. חיה בכלל בהמה מנין? דכתיב ׳זאת הבהמה אשר תאכלו… איל וצבי ויחמור׳ — ואיל וצבי הם חיות, ובכל זאת נקראו ׳בהמה׳; הא כיצד? אלא חיה בכלל בהמה.</div>
+    <div class="trans" data-when="en">The Gemara analyzes Rabbi Yishmael’s statement: From where do we derive that according to the Torah, a ḥayya is included in the category of a behema? As it is written: “These are the behema that you may eat: An ox, a sheep, and a goat, a deer, and a gazelle, and a fallow deer, and a wild goat, and an oryx, and an aurochs, and a wild sheep” (Deuteronomy 14:4–5). Despite employing the term “behema,” the verse also lists the deer and the gazelle, which are undomesticated animals. How is this possible? From here it is evident that a ḥayya is included by the Torah in the category of a behema.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״א א — Chullin 71a:3</span></div>
+    <div class="orig">בְּהֵמָה בִּכְלַל חַיָּה מְנָלַן? דִּכְתִיב: ״זֹאת הַחַיָּה אֲשֶׁר תֹּאכְלוּ מִכׇּל הַבְּהֵמָה אֲשֶׁר עַל הָאָרֶץ כֹּל מַפְרֶסֶת פַּרְסָה״, הָא כֵּיצַד? בְּהֵמָה בִּכְלַל חַיָּה.</div>
+    <div class="trans" data-when="he">בהמה בכלל חיה מנין? דכתיב ׳זאת החיה אשר תאכלו מכל הבהמה אשר על הארץ כל מפרסת פרסה׳ — קראם ׳חיה׳ ומנה ׳בהמה׳; הא כיצד? אלא בהמה בכלל חיה.</div>
+    <div class="trans" data-when="en">From where do we derive that according to the Torah, a behema is included in the category of a ḥayya? As it is written: “These are the ḥayya that you may eat, among all the behema that are on the earth. Whatever parts the hoof” (Leviticus 11:2–3). How is this possible, that the verse mentions a ḥayya and then refers to a behema? This indicates that a domesticated animal is included in the category of a ḥayya by the Torah.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״א א — Chullin 71a:4</span></div>
+    <div class="orig">חַיָּה טְהוֹרָה בִּכְלַל בְּהֵמָה טְהוֹרָה – לְסִימָנִים.</div>
+    <div class="trans" data-when="he">הצריכותות — להיכן נצרך כל צד: חיה טהורה בכלל בהמה טהורה — לעניין סימני הכשרות (מעלת גרה ומפריסת פרסה שנאמרו בבהמה, נוהגים אף בחיה).</div>
+    <div class="trans" data-when="en">The Gemara further clarifies: The principle that a kosher ḥayya is included by the Torah in the category of a kosher behema is relevant with regard to the distinguishing characteristics of kosher animals. The Torah states with regard to a domesticated animal that only a species that chews its cud and has cloven hooves is kosher. Nevertheless, this requirement is understood as a reference to both domesticated and undomesticated animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״א א — Chullin 71a:5</span></div>
+    <div class="orig">חַיָּה טְמֵאָה בִּכְלַל בְּהֵמָה טְמֵאָה – לְהַרְבָּעָה.</div>
+    <div class="trans" data-when="he">חיה טמאה בכלל בהמה טמאה — לעניין איסור הרבעה (כלאי בהמה); האיסור שנאמר ב׳בהמתך׳ נוהג אף בחיה.</div>
+    <div class="trans" data-when="en">The principle that a non-kosher ḥayya is included by the Torah in the category of a non-kosher behema is relevant with regard to the prohibition against mating one species with another. The Torah states the prohibition with regard to a behema: “You shall not let your animal [behema] mate with a diverse kind” (Leviticus 19:19). Nevertheless, this is understood as referring to both a behema and a ḥayya.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ע״א א — Chullin 71a:6</span></div>
+    <div class="orig">בְּהֵמָה טְמֵאָה בִּכְלַל חַיָּה טְמֵאָה – לְכִדְרַבִּי.</div>
+    <div class="trans" data-when="he">בהמה טמאה בכלל חיה טמאה — לדרשת רבי (כדלהלן), הלומד מן הכפילות שבפסוק קרבן עולה־ויורד גזירה־שווה לטומאת קודש.</div>
+    <div class="trans" data-when="en">The principle that a non-kosher behema is included by the Torah in the category of a non-kosher ḥayya is relevant with regard to that which Rabbi Yehuda HaNasi taught, as it is taught in a baraita: The verse delineates a case in which one is obligated to bring a sliding-scale offering as an atonement: “A person who touched anything impure, or the carcass of a non-kosher undomesticated animal [ḥayya], or the carcass of a non-kosher domesticated animal [behema], or the carcass of an impure creeping animal, and is guilty, it having being hidden from him that he is impure” (Leviticus 5:2). But the nature of the transgression for which the person requires atonement is not apparent from the verse.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ע״א א — Chullin 71a:7</span></div>
+    <div class="orig">דְּתַנְיָא, רַבִּי אוֹמֵר: אֶקְרָא אֲנִי ״חַיָּה״, בְּהֵמָה לָמָּה נֶאֶמְרָה?</div>
+    <div class="trans" data-when="he">דתניא — רבי אומר: הואיל ובהמה בכלל חיה, יכולתי לקרוא ׳חיה׳ בלבד (בפסוק עולה־ויורד) ולדעת שכל נבלת טמאה מחייבת; אם כן, ׳בהמה׳ למה נאמרה בנפרד?</div>
+    <div class="trans" data-when="en">Rabbi Yehuda HaNasi says: Since a domesticated animal is also referred to as a ḥayya, it would be sufficient if I would read, i.e., the verse would write, only the clause about a ḥayya, and I would have known that one who touches a carcass of any non-kosher animal is impure. Why, then, is an explicit clause about a behema stated? It serves as the basis for a verbal analogy.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ע״א א — Chullin 71a:8</span></div>
+    <div class="orig">נֶאֶמְרָה כָּאן ״בְּהֵמָה טְמֵאָה״, וְנֶאֱמַר לְהַלָּן ״בְּהֵמָה טְמֵאָה״, מָה לְהַלָּן טוּמְאַת קֹדֶשׁ – אַף כָּאן טוּמְאַת קֹדֶשׁ.</div>
+    <div class="trans" data-when="he">גזירה־שווה: נאמר כאן (עולה־ויורד) ׳בהמה טמאה׳, ונאמר להלן (פרשת אכילת קודש בטומאה) ׳בהמה טמאה׳; מה להלן מדובר בטומאת קודש, אף כאן הקרבן בא על טומאת קודש.</div>
+    <div class="trans" data-when="en">It is stated here, with regard to one who is unaware that he touched an impure item: “Non-kosher behema,” and it is likewise stated below, with regard to one who was aware that he touched an impure item: “Non-kosher behema,” in the following verse: “And when any one shall touch any impure thing, whether it is the impurity of man, or a non-kosher behema, and then eats of the flesh of a peace offering to the Lord, that soul shall be cut off from its people” (Leviticus 7:21). Just as below, the verse is referring to the defiling of sacrificial foods, so too here, the reference is to the defiling of sacrificial foods, and therefore one must bring a sliding-scale offering as an atonement.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ע״א א — Chullin 71a:9</span></div>
+    <div class="orig">בְּהֵמָה טְהוֹרָה בִּכְלַל חַיָּה טְהוֹרָה, לִיצִירָה, דִּתְנַן: הַמַּפֶּלֶת מִין בְּהֵמָה חַיָּה וָעוֹף, בֵּין טְמֵאִין בֵּין טְהוֹרִין, אִם זָכָר – תֵּשֵׁב לְזָכָר.</div>
+    <div class="trans" data-when="he">בהמה טהורה בכלל חיה טהורה — לעניין יצירה (טומאת לידה), דתנן (נדה): המפלת ולד שצורתו מין בהמה, חיה או עוף, בין טמאים בין טהורים — אם צורת זכר, תשב ימי טומאה וטהרה של זכר.</div>
+    <div class="trans" data-when="en">The Gemara clarifies the final statement: The principle that a kosher behema is included by the Torah in the category of a kosher ḥayya is relevant with regard to the formation of children. As we learned in a mishna (Nidda 21a): With regard to a woman who miscarries a fetus that appears to be in the form of a type of behema, ḥayya, or bird, whether it had the form of a non-kosher species or a kosher species, if the fetus is a male, then she observes the periods of impurity and purity required for giving birth to a male.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ע״א א — Chullin 71a:10</span></div>
+    <div class="orig">אִם נְקֵבָה – תֵּשֵׁב לִנְקֵבָה.</div>
+    <div class="trans" data-when="he">המשך המשנה: ואם צורת נקבה — תשב ימי טומאה וטהרה של נקבה.</div>
+    <div class="trans" data-when="en">The mishna continues: And if the fetus is a female, then she observes the periods required for giving birth to a female. After giving birth to a male, a woman is impure for seven days, during which it is prohibited for her to engage in intercourse. During the next thirty-three days she may immerse in a ritual bath at any time, after which she is permitted to engage in intercourse even should she then experience a discharge of uterine blood. Nevertheless, during the entire forty-day period she may not enter the Temple or be in contact with consecrated foods. After giving birth to a girl, the length of each of these periods is doubled to fourteen days and sixty-six days, respectively (see Leviticus 12:2–5).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ע״א א — Chullin 71a:11</span></div>
+    <div class="orig">אֵינוֹ יָדוּעַ – תֵּשֵׁב לְזָכָר וְלִנְקֵבָה,</div>
+    <div class="trans" data-when="he">ואם אין צורתו ידועה אם זכר אם נקבה — תשב להחמיר כדין זכר וכדין נקבה יחד.</div>
+    <div class="trans" data-when="en">If the sex of the fetus is unknown, she observes the strictures of a woman who gave birth both to a male and to a female. Accordingly, it is prohibited for her to engage in intercourse for the fourteen days after birth, after which she immerses in a ritual bath. After that she is permitted to engage in intercourse despite any discharge of uterine blood until the fortieth day after birth, i.e., for thirty-three days following the seven days she would have been prohibited from engaging in intercourse if the fetus was male. The prohibition against entering the Temple, however, continues until eighty days have passed from the birth.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין ע״א א — Chullin 71a:12</span></div>
+    <div class="orig">דִּבְרֵי רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">— כל זה דברי ר׳ מאיר, הסובר שאף ולד שצורת בהמה/חיה לו נחשב ולד לעניין ימי טומאת וטהרת הלידה.</div>
+    <div class="trans" data-when="en">This is the statement of Rabbi Meir. The Gemara elsewhere (Nidda 22b) explains that Rabbi Meir derives his opinion from the fact that the term “formation” is used to describe both the formation of man: “Then the Lord God formed man” (Genesis 2:7), and the formation of animals and birds: “The Lord God formed every animal [ḥayya] of the field, and every bird of the air” (Genesis 2:19). Furthermore, he holds that the term “ḥayya” is referring to both domesticated and undomesticated animals, and concludes that a woman observes these periods of purity and impurity if the fetus has the form of any of these types of animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין ע״א א — Chullin 71a:13</span></div>
+    <div class="orig">וַחֲכָמִים אוֹמְרִים: כֹּל שֶׁאֵינוֹ מִצּוּרַת אָדָם אֵינוֹ וָלָד.</div>
+    <div class="trans" data-when="he">וחכמים חולקים: כל ולד שאין צורתו צורת אדם — אינו נחשב ולד כלל לעניין טומאת לידה, והאישה אינה יושבת עליו ימי טומאה וטהרה.</div>
+    <div class="trans" data-when="en">And the Rabbis say: Any fetus that is not of human form is not regarded as an offspring with regard to observance of these periods of purity and impurity, and she is permitted to engage in intercourse provided she does not experience a discharge of uterine blood.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
