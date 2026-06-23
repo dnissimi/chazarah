@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ע״ב</title>
+<meta name="description" content="מפת הסוגיא של חולין ע״ב: בהמה המקשה לילד והוציא העובר את ידו — חתכה קודם או אחר שחיטת אמו, וטומאת האבר; ומחלוקת ר׳ מאיר וחכמים אם שחיטת האם מטהרת את האבר; וטעם טומאת שאר העובר — טומאת בית הסתרים, עולא ורבינא.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="72">
+<meta name="gemara-map:sefaria-ref" content="Chullin 72">
+<meta name="gemara-map:topic-he" content="המקשה לילד — חתך האבר וטומאתו">
+<meta name="gemara-map:topic-en" content="The protruding foreleg and its impurity">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ע״ב">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 72">
+<meta name="gemara-map:blurb-he" content="עובר שהוציא ידו וחתכוה — האם שחיטת אמו מטהרת אותה כטריפה ששחיטתה מטהרת; ומדוע נטמא שאר העובר אף שטומאתו בבית הסתרים.">
+<meta name="gemara-map:blurb-en" content="A fetus that extends and loses its foreleg — does the mother’s slaughter purify it like a slaughtered tereifa; and why the rest of the fetus is impure despite concealed-area contact.">
+<meta name="gemara-map:sugya-count" content="2">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ע״ב</span><span data-when="en">Sugya map — Chullin 72</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ע״ב א — ע״ג א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 72a–73a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> בהמה המקשה לילד שהוציא עוברה את ידו: אם <b>חתכוה קודם השחיטה</b> הבשר טהור, ואם <b>אחר השחיטה</b> נטמא — ובמהותו נחלקו ר׳ מאיר וחכמים. חכמים: שחיטת האם מטהרת את האבר כשם ששחיטת טריפה מטהרתה; ר׳ מאיר דוחה — האבר אינו מגוף האם. בגמרא: מדוע נטמא <b>שאר העובר</b> אף שמגעו בבית הסתרים? עולא ורבינא מיישבים — <b>״כל העומד לחתוך כחתוך דמי״</b>.</span>
+    <span data-when="en"><b>Bottom line:</b> When a fetus extends its foreleg: if it is <b>severed before slaughter</b> the flesh is pure, but <b>after slaughter</b> it is impure — and Rabbi Meir and the Rabbis dispute its nature. The Rabbis: the mother’s slaughter purifies the limb just as a tereifa’s slaughter purifies it; Rabbi Meir rejects this — the limb is not part of the mother’s body. The Gemara asks why the <b>rest of the fetus</b> is impure despite concealed-area contact; Ulla and Ravina resolve it — <b>“whatever stands to be cut is regarded as cut.”</b></span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ע״ב</span><span data-when="en">Overview — Chullin 72</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · המקשה לילד — חתך האבר ושחיטת האם"]):::mishnah
+  O2["2 · טומאת שאר העובר — בית הסתרים, עולא ורבינא"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · The protruding foreleg — severed limb and the mother’s slaughter"]):::mishnah
+  O2["2 · Why the rest of the fetus is impure — concealed area, Ulla and Ravina"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">המקשה לילד — חתך האבר, ושחיטת האם מטהרת?</span><span data-when="en">The protruding foreleg — does the mother’s slaughter purify it?</span>
+      <span class="ref">Chullin 72a:11–72b:7</span></h2>
+  <div class="lead"><span data-when="he">עובר שהוציא ידו: חתכוה קודם השחיטה — טהור; אחריה — טמא. חכמים: שחיטת האם מטהרת את האבר כטריפה; ר׳ מאיר דוחה, ובונה ק״ו מבהמה טמאה, והוא נדחה פעמיים.</span><span data-when="en">A fetus extends its foreleg: severed before slaughter — pure; after — impure. The Rabbis: the mother’s slaughter purifies the limb like a tereifa; Rabbi Meir rejects this, builds an a fortiori from a non-kosher animal, twice refuted.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: הוציא העובר ידו — חתכה קודם שחיטה, טהור; אחר שחיטה, מגע נבלה — ר׳ מאיר"]):::mishnah
+  S1["② חכמים: מגע טרפה שחוטה — שחיטת האם תטהר את האבר"]:::statement
+  Q1{"③ ר׳ מאיר: לא! טריפה — גופה; אבר — אינו גופה"}:::question
+  Q2{"④ ומניין שטריפה שחיטתה מטהרתה? קל וחומר מבהמה טמאה"}:::question
+  A1["⑤ דחייה: בהמה טמאה לא היה לה שעת הכושר, תאמר בטריפה שהיה לה?"]:::answer
+  Q3{"⑥ קושיא חוזרת: נולדה טריפה מן הבטן — מניין?"}:::question
+  A2["⑦ נוסח אחר: בהמה טמאה אין במינה שחיטה, תאמר בטריפה שיש במינה"]:::answer
+  C1["⑧ מסקנה: בן שמונה חי — אין שחיטתו מטהרתו, שאין במינו שחיטה"]:::conclusion
+  M1 -->|חכמים| S1
+  S1 -.->|דחיית ר׳ מאיר| Q1
+  M1 -->|דרשת חכמים| Q2
+  Q2 -.->|דחייה| A1
+  A1 -->|טול מה שהבאת| Q3
+  Q3 -->|נוסח אחר| A2
+  A2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: fetus extends its foreleg — severed before slaughter, pure; after, contact with a carcass — R. Meir"]):::mishnah
+  S1["② Rabbis: contact with a slaughtered tereifa — the mother’s slaughter purifies the limb"]:::statement
+  Q1{"③ R. Meir: No! a tereifa is its own body; a limb is not its body"}:::question
+  Q2{"④ Whence that a tereifa’s slaughter purifies? An a fortiori from a non-kosher animal"}:::question
+  A1["⑤ Refuted: a non-kosher animal had no period of fitness, but a tereifa did"]:::answer
+  Q3{"⑥ Renewed objection: one born a tereifa from the womb — whence?"}:::question
+  A2["⑦ Reformulated: a non-kosher animal’s kind has no slaughter, but a tereifa’s kind does"]:::answer
+  C1["⑧ Conclusion: a viable eight-month fetus — its slaughter does not purify, its kind has no slaughter"]:::conclusion
+  M1 -->|Rabbis| S1
+  S1 -.->|R. Meir refutes| Q1
+  M1 -->|Rabbis’ derivation| Q2
+  Q2 -.->|refuted| A1
+  A1 -->|take back your claim| Q3
+  Q3 -->|reformulated| A2
+  A2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① בְּהֵמָה הַמְקַשָּׁה לֵילֵד … וַחֲתָכָהּ … הַבָּשָׂר טָהוֹר … וְאַחַר כָּךְ חֲתָכָהּ – הַבָּשָׂר מַגַּע נְבֵלָה, דִּבְרֵי רַבִּי מֵאִיר"]):::mishnah
+  S1["② וַחֲכָמִים אוֹמְרִים: מַגַּע טְרֵפָה שְׁחוּטָה … אַף שְׁחִיטַת בְּהֵמָה תְּטַהֵר אֶת הָאֵבֶר"]:::statement
+  Q1{"③ אָמַר לָהֶם רַבִּי מֵאִיר: לֹא … דָּבָר שֶׁגּוּפָהּ, תְּטַהֵר אֶת הָאֵבֶר דָּבָר שֶׁאֵינוֹ גּוּפָהּ?"}:::question
+  Q2{"④ מִנַּיִן לִטְרֵפָה שֶׁשְּׁחִיטָתָהּ מְטַהַרְתָּהּ? … אַף טְרֵפָה – לֹא תְּטַהֲרֶנָּה שְׁחִיטָה!"}:::question
+  A1["⑤ לֹא, אִם אָמַרְתָּ בִּבְהֵמָה טְמֵאָה שֶׁלֹּא הָיְתָה לָהּ שְׁעַת הַכּוֹשֶׁר, תֹּאמַר בִּטְרֵפָה שֶׁהָיְתָה לָהּ שְׁעַת הַכּוֹשֶׁר?"]:::answer
+  Q3{"⑥ טוֹל לְךָ מַה שֶּׁהֵבֵאתָ, הֲרֵי שֶׁנּוֹלְדָה טְרֵפָה מִן הַבֶּטֶן, מִנַּיִן?"}:::question
+  A2["⑦ לֹא … בִּבְהֵמָה טְמֵאָה שֶׁכֵּן אֵין בְּמִינָהּ שְׁחִיטָה, תֹּאמַר בִּטְרֵפָה שֶׁיֵּשׁ בְּמִינָהּ שְׁחִיטָה?"]:::answer
+  C1["⑧ בֶּן שְׁמֹנֶה חַי, אֵין שְׁחִיטָתוֹ מְטַהַרְתּוֹ, לְפִי שֶׁאֵין בְּמִינוֹ שְׁחִיטָה"]:::conclusion
+  M1 -->|חכמים| S1
+  S1 -.->|דחיית ר׳ מאיר| Q1
+  M1 -->|דרשת חכמים| Q2
+  Q2 -.->|דחייה| A1
+  A1 -->|טול מה שהבאת| Q3
+  Q3 -->|נוסח אחר| A2
+  A2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ב א — Chullin 72a:11</span></div>
+    <div class="orig">מַתְנִי׳ בְּהֵמָה הַמְקַשָּׁה לֵילֵד, וְהוֹצִיא עוּבָּר אֶת יָדוֹ, וַחֲתָכָהּ, וְאַחַר כָּךְ שָׁחַט אֶת אִמּוֹ – הַבָּשָׂר טָהוֹר. שָׁחַט אֶת אִמּוֹ וְאַחַר כָּךְ חֲתָכָהּ – הַבָּשָׂר מַגַּע נְבֵלָה, דִּבְרֵי רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">משנה: בהמה המתקשה בלידה, והוציא העובר את ידו (רגלו הקדמית) החוצה. אם חתכו את האבר ואחר כך שחטו את האם — בשר האבר טהור. שחטו את האם תחילה ואחר כך חתכו את האבר — הבשר טמא במגע נבלה (האבר חשוב כנבלה, שאינו ניתר בשחיטה), דברי ר׳ מאיר.</div>
+    <div class="trans" data-when="en">MISHNA: If an animal was encountering difficulty giving birth and as a result the fetus extended its foreleg outside the mother’s womb, and someone severed it and afterward slaughtered the mother animal, the flesh of the fetus is ritually pure. If one first slaughtered the mother animal and afterward severed the foreleg, the flesh of both the mother animal and the fetus are ritually impure due to having been in contact with a carcass. Since the foreleg was not permitted to be consumed through the act of slaughtering, it is regarded as a carcass with the associated ritual impurity. The rest of the flesh, which was permitted to be consumed by the slaughter, was in contact with it and so was rendered ritually impure from it; this is the statement of Rabbi Meir.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ב א — Chullin 72a:12</span></div>
+    <div class="orig">וַחֲכָמִים אוֹמְרִים: מַגַּע טְרֵפָה שְׁחוּטָה,</div>
+    <div class="trans" data-when="he">וחכמים אומרים: הבשר טמא רק במגע טריפה שחוטה (ולא במגע נבלה). ומוסיפים נימוק: כשם שמצאנו בטריפה ששחיטתה מטהרתה מטומאת נבלה, אף שחיטת האם תטהר את האבר.</div>
+    <div class="trans" data-when="en">And the Rabbis say: The flesh has the ritual impurity of having been in contact with a tereifa that was slaughtered, as the limb is regarded as a tereifa that was slaughtered. By Torah law, although it is prohibited to consume it, it does not impart ritual impurity. Nevertheless, the Sages decreed that a tereifa that was slaughtered, as well as anything that comes in contact with it, is regarded as ritually impure to the extent that it disqualifies sacrificial foods that come in contact with it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ב ב — Chullin 72b:1</span></div>
+    <div class="orig">מָה מָצִינוּ בִּטְרֵפָה שֶׁשְּׁחִיטָתָהּ מְטַהַרְתָּהּ, אַף שְׁחִיטַת בְּהֵמָה תְּטַהֵר אֶת הָאֵבֶר.</div>
+    <div class="trans" data-when="he">המשך דברי חכמים: מה מצינו בטריפה ששחיטתה מטהרת אותה מטומאת נבלה — אף ששחיטה אינה מתירתה באכילה — כך שחיטת האם תטהר את האבר שיצא, אף שאינו ניתר באכילה.</div>
+    <div class="trans" data-when="en">The Rabbis explain the rationale behind their opinion: Just as we found in the case of a tereifa that its slaughter renders it ritually pure according to Torah law, i.e., ritual slaughter prevents it from having the ritual impurity of a carcass despite not rendering the animal permitted for consumption, so too, the slaughter of the mother animal should render the limb of its fetus that left the womb ritually pure, despite the fact that its consumption is prohibited.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ב ב — Chullin 72b:2</span></div>
+    <div class="orig">אָמַר לָהֶם רַבִּי מֵאִיר: לֹא, אִם טִיהֲרָה שְׁחִיטַת טְרֵפָה אוֹתָהּ, דָּבָר שֶׁגּוּפָהּ, תְּטַהֵר אֶת הָאֵבֶר דָּבָר שֶׁאֵינוֹ גּוּפָהּ?</div>
+    <div class="trans" data-when="he">השיב להם ר׳ מאיר: לא! אם שחיטת הטריפה טיהרה את הטריפה עצמה — שהיא דבר שהוא מגוף הבהמה (הצוואר נשחט בגופה) — וכי מכאן שתטהר את האבר, שהוא דבר שאינו מגוף האם?</div>
+    <div class="trans" data-when="en">Rabbi Meir said to them: No, if the slaughter of a tereifa renders the body of the animal ritually pure, it is because the slaughter is performed on something that is part of its body, i.e., its throat. Does it necessarily follow that you should also render the limb that left the womb pure, given that it is something that is not part of the mother’s body? Certainly not.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ב ב — Chullin 72b:3</span></div>
+    <div class="orig">מִנַּיִן לִטְרֵפָה שֶׁשְּׁחִיטָתָהּ מְטַהַרְתָּהּ? בְּהֵמָה טְמֵאָה אֲסוּרָה בַּאֲכִילָה, אַף טְרֵפָה אֲסוּרָה בַּאֲכִילָה, מָה בְּהֵמָה טְמֵאָה – אֵין שְׁחִיטָתָהּ מְטַהַרְתָּהּ, אַף טְרֵפָה – לֹא תְּטַהֲרֶנָּה שְׁחִיטָה!</div>
+    <div class="trans" data-when="he">מקור הדין שבמחלוקת: מניין שטריפה ששחיטתה מטהרתה? מצד הסברה היה מקום לומר ההפך — בהמה טמאה אסורה באכילה, אף טריפה אסורה באכילה; מה בהמה טמאה אין שחיטתה מטהרתה, אף טריפה לא תטהרנה שחיטה!</div>
+    <div class="trans" data-when="en">The mishna asks: From where is it derived with regard to a tereifa that its slaughter renders it ritually pure, i.e., prevents it from having the ritual impurity of a carcass? The mishna notes there is a reason to say the slaughter should not render it pure, as one can compare a tereifa with a non-kosher animal: A non-kosher animal is prohibited for consumption; so too, a tereifa is prohibited for consumption. Therefore, conclude: Just as with regard to a non-kosher animal, its slaughter does not render it ritually pure, so too with regard to a tereifa, its slaughter should not render it ritually pure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ב ב — Chullin 72b:4</span></div>
+    <div class="orig">לֹא, אִם אָמַרְתָּ בִּבְהֵמָה טְמֵאָה שֶׁלֹּא הָיְתָה לָהּ שְׁעַת הַכּוֹשֶׁר, תֹּאמַר בִּטְרֵפָה שֶׁהָיְתָה לָהּ שְׁעַת הַכּוֹשֶׁר?</div>
+    <div class="trans" data-when="he">דחיית ההשוואה: לא! מה שאמרת בבהמה טמאה — אינו דומה לטריפה. בהמה טמאה מעולם לא הייתה לה שעת כושר שבה שחיטה תתירנה; וכי תאמר כן בטריפה, שהייתה לה שעת כושר (בעודה בריאה) שבה שחיטה התירתה?</div>
+    <div class="trans" data-when="en">The mishna questions the comparison: No, if you said that slaughtering cannot prevent an animal from having the ritual impurity of a carcass in the case of a non-kosher animal, which is distinct in that it did not have a period of potential fitness when slaughtering it could have rendered its consumption permitted, does it necessarily follow that you should also say this in the case of a tereifa, which did have a period of potential fitness? Perhaps, since the animal had a period of potential fitness its slaughter remains effective in preventing it from having the ritual impurity of a carcass.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ב ב — Chullin 72b:5</span></div>
+    <div class="orig">טוֹל לְךָ מַה שֶּׁהֵבֵאתָ, הֲרֵי שֶׁנּוֹלְדָה טְרֵפָה מִן הַבֶּטֶן, מִנַּיִן?</div>
+    <div class="trans" data-when="he">טול לך את החילוק שהבאת, שאינו עומד: והרי בהמה שנולדה טריפה מן הבטן מעולם לא הייתה לה שעת כושר — ובכל זאת שחיטתה מטהרתה; אם כן מניין הדין? בעל כורחנו צריך מקור אחר.</div>
+    <div class="trans" data-when="en">The mishna rejects this distinction: Take back to yourself this claim that you brought, as it is insufficient. What about a case where an animal was born as a tereifa from the womb, and so it never had a period of potential fitness? For such a case, from where is it derived that its slaughter renders it ritually pure?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ב ב — Chullin 72b:6</span></div>
+    <div class="orig">לֹא, אִם אָמַרְתָּ בִּבְהֵמָה טְמֵאָה שֶׁכֵּן אֵין בְּמִינָהּ שְׁחִיטָה, תֹּאמַר בִּטְרֵפָה שֶׁיֵּשׁ בְּמִינָהּ שְׁחִיטָה?</div>
+    <div class="trans" data-when="he">נוסח חילוק אחר: לא! בהמה טמאה אין במינה שחיטה כלל (התורה לא נתנה שחיטה במין טמא); וכי תאמר כן בטריפה, שיש במינה שחיטה (שהרי מין כשר הוא, ובהמות כשרות נשחטות)?</div>
+    <div class="trans" data-when="en">The mishna reformulates the distinction: No, if you say that slaughtering cannot prevent a prohibited animal from having the ritual impurity of a carcass with regard to a non-kosher animal, which is distinct in that there are no animals of its kind that are permitted through slaughtering, as the Torah states the concept of slaughtering only with regard to kosher animals, does it necessarily follow that you should also say this with regard to a tereifa kosher animal, given that there are other animals of its kind that are permitted through slaughtering, i.e., kosher animals that are not tereifa? Perhaps, since the concept of slaughtering is relevant to that kind of animal it can serve to prevent the animal from having the ritual impurity of a carcass even if the slaughter cannot render it permitted for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ב ב — Chullin 72b:7</span></div>
+    <div class="orig">בֶּן שְׁמֹנֶה חַי, אֵין שְׁחִיטָתוֹ מְטַהַרְתּוֹ, לְפִי שֶׁאֵין בְּמִינוֹ שְׁחִיטָה.</div>
+    <div class="trans" data-when="he">מסקנת ההיגיון: לפי חילוק זה, בן שמונה חודשים שנולד חי — אין שחיטתו מטהרתו, לפי שאין במינו שחיטה (שאינו בר־קיימא, והתורה נתנה שחיטה רק בנולד לתשעה חודשים).</div>
+    <div class="trans" data-when="en">The mishna notes: Based on this reasoning, one must conclude that with regard to an eight-month-old fetus that was born alive, slaughter does not render it ritually pure, as there are no animals of its kind that are permitted through slaughtering. The Torah applies the concept of slaughter only with regard to animals that were born full term.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">טומאת שאר העובר — בית הסתרים, עולא ורבינא</span><span data-when="en">Why the rest of the fetus is impure — concealed area, Ulla and Ravina</span>
+      <span class="ref">Chullin 72b:8–73a:5</span></h2>
+  <div class="lead"><span data-when="he">מדוע נטמא שאר העובר במגע האבר, והרי טומאת בית הסתרים אינה מטמאה? עולא ורבינא מיישבים מן המשנה ב״שלושה על שלושה״, וקובעים: כל העומד לחתוך כחתוך דמי.</span><span data-when="en">Why is the rest of the fetus impure through the limb, given that concealed-area impurity does not impart? Ulla and Ravina resolve it from the “three-by-three” mishna: whatever stands to be cut is regarded as already cut.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① גמרא: אמאי טמא שאר העובר? טומאת בית הסתרים היא, ולא מטמאה! לימא ר׳ מאיר לטעמיה?"}:::question
+  P1["② דתנן: שלושה על שלושה שנחלק — טהור מן המדרס, אבל טמא מגע מדרס, דברי ר׳ מאיר"]:::proof
+  S1["③ ותניא, ר׳ יוסי: באיזה מדרס נגע? אלא שאם נגע בו זב — טמא מגע זב"]:::statement
+  A1["④ עולא: לא נחלקו אלא בשלושה על שלושה שנחלק"]:::answer
+  A2["⑤ אבל שלוש על שלוש הבאות מבגד גדול — מקבלות טומאה מאביהן; אף כאן האבר"]:::answer
+  A3["⑥ רבינא: בגד אינו עומד לחתיכה, עובר עומד לחתיכה — וכל העומד לחתוך"]:::answer
+  P2["⑦ כחתוך דמי. כמאן? כר׳ מאיר, דתנן: ידות הכלים הארוכות — מטביל עד מקום מדה"]:::proof
+  S2["⑧ וחכמים: עד שיטביל את כולו"]:::statement
+  A4["⑨ אפילו תימא רבנן: חיבורי אוכלין כמאן דמפרתי דמי, ונגיעי בהדדי"]:::answer
+  C1["⑩ מסקנה: לעולא ׳חתכה׳ מובן; לרבינא — איידי דתנא רישא ׳חתכה׳ תנא נמי סיפא"]:::conclusion
+  Q1 -->|לטעמיה| P1
+  P1 -->|ותניא| S1
+  S1 -->|עולא| A1
+  A1 -->|חילוק| A2
+  A2 -->|רבינא| A3
+  A3 -->|כמאן| P2
+  P2 -.->|וחכמים| S2
+  S2 -->|אפילו רבנן| A4
+  A4 -->|יישוב הלשון| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Gemara: why is the rest impure? It is concealed-area impurity, which does not impart! Shall we say R. Meir follows his view?"}:::question
+  P1["② As we learned: a three-by-three split — pure from treading, but impure by contact with treading — R. Meir"]:::proof
+  S1["③ And it is taught, R. Yosei: which treading did it touch? Rather, only if a zav touched it — impure by a zav’s contact"]:::statement
+  A1["④ Ulla: they disagree only over a three-by-three that was split"]:::answer
+  A2["⑤ But three-by-three pieces from a large garment receive impurity from their parent at separation; so too the limb here"]:::answer
+  A3["⑥ Ravina: a garment does not stand to be cut, a fetus does — and whatever stands to be cut"]:::answer
+  P2["⑦ is regarded as cut. Like whom? R. Meir, as we learned: long vessel-handles — one immerses up to the measured point"]:::proof
+  S2["⑧ And the Rabbis: until he immerses all of it"]:::statement
+  A4["⑨ Even say the Rabbis: connections of foods are regarded as separated, touching one another"]:::answer
+  C1["⑩ Conclusion: for Ulla ׳severed׳ fits; for Ravina — since the first clause taught ׳severed,׳ so did the latter"]:::conclusion
+  Q1 -->|his view| P1
+  P1 -->|and it is taught| S1
+  S1 -->|Ulla| A1
+  A1 -->|distinction| A2
+  A2 -->|Ravina| A3
+  A3 -->|like whom| P2
+  P2 -.->|and the Rabbis| S2
+  S2 -->|even the Rabbis| A4
+  A4 -->|resolving the wording| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① גְּמָ׳ אַמַּאי? טוּמְאַת בֵּית הַסְּתָרִים הִיא, וְטוּמְאַת בֵּית הַסְּתָרִים לָא מְטַמְּיָא! לֵימָא רַבִּי מֵאִיר לְטַעְמֵיהּ?"}:::question
+  P1["② דִּתְנַן: שְׁלֹשָׁה עַל שְׁלֹשָׁה שֶׁנֶּחְלַק – טָהוֹר מִן הַמִּדְרָס, אֲבָל טָמֵא מַגַּע מִדְרָס, דִּבְרֵי רַבִּי מֵאִיר"]:::proof
+  S1["③ וְתַנְיָא, אָמַר רַבִּי יוֹסֵי: וְכִי בְּאֵיזֶה מִדְרָס נָגַע זֶה? אֶלָּא שֶׁאִם נָגַע בּוֹ זָב, שֶׁיְּהֵא טָמֵא מַגַּע זָב"]:::statement
+  A1["④ לָאו אִיתְּמַר עֲלַהּ, אָמַר עוּלָּא: לֹא שָׁנוּ אֶלָּא שְׁלֹשָׁה עַל שְׁלֹשָׁה שֶׁנֶּחְלַק"]:::answer
+  A2["⑤ אֲבָל שָׁלֹשׁ עַל שָׁלֹשׁ הַבָּאוֹת מִבֶּגֶד גָּדוֹל … מְקַבְּלוֹת טוּמְאָה מֵאֲבִיהֶן … מְקַבֵּל טוּמְאָה מֵאֵבֶר"]:::answer
+  A3["⑥ רָבִינָא אָמַר: בֶּגֶד – לָאו לַחֲתִיכָה קָאֵי, עוּבָּר – לַחֲתִיכָה קָאֵי, וְכׇל הָעוֹמֵד לַחְתּוֹךְ"]:::answer
+  P2["⑦ כְּחָתוּךְ דָּמֵי. כְּמַאן? כְּרַבִּי מֵאִיר, דִּתְנַן: כָּל יְדוֹת הַכֵּלִים … מַטְבִּיל עַד מָקוֹם מִדָּה"]:::proof
+  S2["⑧ וַחֲכָמִים אוֹמְרִים: עַד שֶׁיַּטְבִּיל אֶת כּוּלּוֹ"]:::statement
+  A4["⑨ אֲפִילּוּ תֵּימָא רַבָּנַן, חִבּוּרֵי אֳכָלִין כְּמַאן דְּמִפַּרְתִי דָּמֵי, וּנְגִיעִי בַּהֲדָדֵי"]:::answer
+  C1["⑩ בִּשְׁלָמָא לְעוּלָּא … ׳חֲתָכָהּ׳ … אַיְּידֵי דִּתְנָא רֵישָׁא ׳חֲתָכָהּ׳, תְּנָא נָמֵי סֵיפָא ׳חֲתָכָהּ׳"]:::conclusion
+  Q1 -->|לטעמיה| P1
+  P1 -->|ותניא| S1
+  S1 -->|עולא| A1
+  A1 -->|חילוק| A2
+  A2 -->|רבינא| A3
+  A3 -->|כמאן| P2
+  P2 -.->|וחכמים| S2
+  S2 -->|אפילו רבנן| A4
+  A4 -->|יישוב הלשון| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ב ב — Chullin 72b:8</span></div>
+    <div class="orig">גְּמָ׳ אַמַּאי? טוּמְאַת בֵּית הַסְּתָרִים הִיא, וְטוּמְאַת בֵּית הַסְּתָרִים לָא מְטַמְּיָא! לֵימָא רַבִּי מֵאִיר לְטַעְמֵיהּ?</div>
+    <div class="trans" data-when="he">גמרא: לדעת ר׳ מאיר במשנה, שאר העובר נטמא במגע האבר. הגמרא תמהה: למה? הרי מקום החיבור שבין האבר לעובר הוא ״בית הסתרים״ (מקום מוסתר), וטומאת בית הסתרים אינה מטמאה! נאמר שר׳ מאיר לשיטתו, שטומאת בית הסתרים מטמאה?</div>
+    <div class="trans" data-when="en">GEMARA: The mishna states that according to Rabbi Meir, if a foreleg of a fetus emerges from the womb and is severed after the slaughter of the mother, it is regarded as a carcass with the associated ritual impurity. Furthermore, the rest of the fetus from which it was cut is thereby rendered ritually impure through its contact with the foreleg. The Gemara asks: Why should the rest of the fetus be impure? This is a case of impurity imparted within a concealed area, as the point of contact between the foreleg and the fetus existed when they were still naturally connected to each other. And the halakha is that an impure item within a concealed area does not impart impurity. If the two items were in contact in a concealed area and not on an external surface, impurity cannot be imparted from one item to the other. Shall we say that Rabbi Meir conforms to his standard line of reasoning in this regard, as he holds that an impure item within a concealed area does impart impurity?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ב ב — Chullin 72b:9</span></div>
+    <div class="orig">דִּתְנַן: שְׁלֹשָׁה עַל שְׁלֹשָׁה שֶׁנֶּחְלַק – טָהוֹר מִן הַמִּדְרָס,</div>
+    <div class="trans" data-when="he">ראיה שר׳ מאיר סובר טומאת בית הסתרים מטמאה: דתנן (כלים) — בגד שלושה טפחים על שלושה שנחלק לחתיכות, טהור מטומאת מדרס (שוב אינו מטמא במדרס) —</div>
+    <div class="trans" data-when="en">This is as we learned in a mishna (Kelim 27:10) concerning ritual impurity imparted by treading: If a person who is ritually impure due to having experienced a bodily emission, such as a man who experiences a gonorrhea-like discharge [zav], sits or leans upon an item that was designated for that purpose, the item is rendered ritually impure due to ritual impurity imparted by treading. The item will then impart impurity to people or utensils that come in contact with it. In the case of a garment that is impure with ritual impurity imparted by treading that was three by three handbreadths in size, i.e., the minimum size to impart such impurity, that was split into smaller pieces, each part is ritually pure with regard to ritual impurity imparted by treading and will no longer impart impurity to people and utensils that come in contact with it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ב ב — Chullin 72b:10</span></div>
+    <div class="orig">אֲבָל טָמֵא מַגַּע מִדְרָס, דִּבְרֵי רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">— אבל טמא במגע מדרס: כל חתיכה נשארת טמאה מחמת מגעה בשאר חלקי הבגד קודם שנחלק; ומגע זה היה בבית הסתרים (חיבור פנימי) — ובכל זאת מטמא. דברי ר׳ מאיר, שטומאת בית הסתרים מטמאה.</div>
+    <div class="trans" data-when="en">The mishna continues: But each piece will still have the ritual impurity of having been in contact with an item that imparts ritual impurity imparted by treading. Before the garment was split, when it still imparted ritual impurity imparted by treading, each piece of the garment was in contact with another part of it. Through that connection, each piece was rendered ritually impure with the impurity of having been in contact with ritual impurity imparted by treading. When the garment was subsequently split, although the pieces were no longer able to impart ritual impurity imparted by treading, they retained the ritual impurity they acquired through their contact with the other pieces before the garment was split. This is the statement of Rabbi Meir. In this case, the contact between the pieces occurred within a concealed area, as the connection between parts of the same item has the status of a connection within a concealed area. Evidently, Rabbi Meir holds that impurity can be imparted within a concealed area.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ב ב — Chullin 72b:11</span></div>
+    <div class="orig">וְתַנְיָא, אָמַר רַבִּי יוֹסֵי: וְכִי בְּאֵיזֶה מִדְרָס נָגַע זֶה? אֶלָּא שֶׁאִם נָגַע בּוֹ זָב, שֶׁיְּהֵא טָמֵא מַגַּע זָב.</div>
+    <div class="trans" data-when="he">ותניא, ר׳ יוסי חולק: וכי באיזה מדרס נגע זה? (מתעלם ממגע החתיכות שבבית הסתרים) — אלא טומאת החתיכות אינה אלא אם נגע בבגד זב עצמו במישרין, שאז יהא טמא מגע זב. נמצא שדברי ר׳ מאיר שבמשנתנו עולים רק לשיטת ר׳ מאיר שם.</div>
+    <div class="trans" data-when="en">And it is taught in that mishna that Rabbi Yosei says, disagreeing with Rabbi Meir: But what source of impurity imparted by treading did these pieces touch? Rabbi Yosei disregards the contact between the pieces that occurred before the garment was split, as that contact has the status of a connection within a concealed area. Rather, the only way the pieces could still be ritually impure is if a zav had touched the garment directly, e.g., when he sat on the garment he also touched it with his skin. In that case the garment would have also been rendered ritually impure due to contact with a zav, and that impurity would remain even after the garment was split. It would appear, then, that the opinion of Rabbi Meir in the mishna here can be reconciled only with the opinion of Rabbi Meir in the mishna in Kelim, but not with the opinion of Rabbi Yosei.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ב ב — Chullin 72b:12</span></div>
+    <div class="orig">לָאו אִיתְּמַר עֲלַהּ, אָמַר עוּלָּא: לֹא שָׁנוּ אֶלָּא שְׁלֹשָׁה עַל שְׁלֹשָׁה שֶׁנֶּחְלַק.</div>
+    <div class="trans" data-when="he">תירוץ עולא (שאף ר׳ יוסי יודה במשנתנו): והרי נאמר על אותה משנה, אמר עולא — לא נחלק ר׳ יוסי על ר׳ מאיר אלא בשלושה על שלושה שנחלק, שאז שוב אין חתיכה גדולה דייה לטמא את האחרות.</div>
+    <div class="trans" data-when="en">The Gemara responds: Wasn’t it stated with regard to that mishna in Kelim that Ulla said: They taught that Rabbi Yosei disagrees with Rabbi Meir only in the case of a garment of three by three handbreadths that was split into smaller pieces, as once it is split, there is no piece large enough to impart to the other pieces impurity imparted through treading.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ב ב — Chullin 72b:13</span></div>
+    <div class="orig">אֲבָל שָׁלֹשׁ עַל שָׁלֹשׁ הַבָּאוֹת מִבֶּגֶד גָּדוֹל – בִּשְׁעַת פְּרִישָׁתָן מֵאֲבִיהֶן, מְקַבְּלוֹת טוּמְאָה מֵאֲבִיהֶן. הָא נָמֵי בִּשְׁעַת פְּרִישָׁתָן מֵאֵבֶר, מְקַבֵּל טוּמְאָה מֵאֵבֶר.</div>
+    <div class="trans" data-when="he">המשך עולא: אבל חתיכות שלוש אצבעות על שלוש הנחתכות מבגד גדול (שעדיין מטמא מדרס) — בשעת פרישתן מ״אביהן״ (הבגד הגדול) הן מקבלות ממנו טומאה. אף כאן: בשעת פרישת בשר העובר מן האבר, הוא מקבל טומאה מן האבר; ובזה אף ר׳ יוסי יודה.</div>
+    <div class="trans" data-when="en">But with regard to pieces of three by three fingerbreadths that come, i.e., are cut, from a large garment, everyone agrees that at the time of their separation from their original garment, before they are fully detached from it, they are rendered impure through their contact with the original garment, despite the fact that the contact occurs within a concealed area. In this case of the mishna here also, one can say that at the time of separation of the flesh of the fetus from the limb, i.e., the foreleg, it is rendered impure through its contact with the limb. According to Ulla, then, the mishna can be reconciled also with the opinion of Rabbi Yosei.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ב ב — Chullin 72b:14</span></div>
+    <div class="orig">רָבִינָא אָמַר: בֶּגֶד – לָאו לַחֲתִיכָה קָאֵי, עוּבָּר – לַחֲתִיכָה קָאֵי, וְכׇל הָעוֹמֵד לַחְתּוֹךְ</div>
+    <div class="trans" data-when="he">תירוץ רבינא: בגד אינו עומד להיחתך — אדרבה, מוטב שיישאר שלם, ולכן החיבור שבין חלקיו נחשב בית הסתרים שאינו מטמא. אבל עובר שהוציא ידו — האבר עומד להיחתך (שהרי אסור באכילה ושאר העובר מותר); וכל העומד להיחתך —</div>
+    <div class="trans" data-when="en">Ravina said there is a different explanation of how the mishna can be reconciled with the opinion of Rabbi Yosei: A garment does not stand, i.e., is not intended, to be cut. On the contrary, it is better for it to remain whole. Therefore, the connections between its pieces are regarded as being within a concealed area that cannot impart impurity. By contrast, with regard to a fetus that extends its foreleg, the foreleg does stand to be cut, as it is prohibited for consumption while the rest of the fetus is permitted, and the halakhic principle is that any item that stands to be cut</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ג א — Chullin 73a:1</span></div>
+    <div class="orig">כְּחָתוּךְ דָּמֵי.</div>
+    <div class="trans" data-when="he">— כחתוך דמי: כל הראוי והעומד להיחתך נחשב כאילו כבר נחתך. נמצא שהאבר חשוב כחתוך, והחיבור עמו אינו בית הסתרים אלא מגע גלוי — ולכן מטמא את שאר העובר.</div>
+    <div class="trans" data-when="en">is regarded as though it were cut. Therefore, it is regarded as though the foreleg had already been severed from the body of the fetus, and the point of contact between them is not considered to be a concealed area. Rather, it is regarded as if the foreleg and fetus were two separate items that came into contact with each other. Consequently, the former can impart impurity to the latter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ג א — Chullin 73a:2</span></div>
+    <div class="orig">כְּמַאן? כְּרַבִּי מֵאִיר, דִּתְנַן: כָּל יְדוֹת הַכֵּלִים שֶׁהֵן אֲרוּכּוֹת וְעָתִיד לְקׇצְצָן – מַטְבִּיל עַד מָקוֹם מִדָּה, דִּבְרֵי רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">כמאן (כדעת מי) עיקרון זה? כר׳ מאיר, דתנן (מקואות): כל ידות הכלים הארוכות שעתיד לקצצן — מטביל את הכלי רק עד מקום המידה (עד היכן שיישאר אחר הקציצה), והכלי טהור אף שלא טבל כל היד. דברי ר׳ מאיר — כל העומד להיקצץ כקצוץ דמי.</div>
+    <div class="trans" data-when="en">The Gemara asks: In accordance with whose opinion is this halakhic principle that Ravina cites? It is in accordance with the opinion of Rabbi Meir, as we learned in a mishna (Mikvaot 10:5): When a vessel is immersed in a ritual bath, it is purified only if all parts of the vessel are submerged at the same time. But with regard to any handles of vessels that are too long and therefore will ultimately be cut off, one must immerse them only until the point of their eventual size. Even though the part of the handle that will be cut off is not submerged, the vessel is nevertheless purified; this is the statement of Rabbi Meir. Evidently, Rabbi Meir holds that even though the handle is still physically attached, since that part of the handle stands to be cut off, it is already regarded as though it were cut off. Consequently, immersing the handle up until that point is regarded as immersing the entire vessel.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ג א — Chullin 73a:3</span></div>
+    <div class="orig">וַחֲכָמִים אוֹמְרִים: עַד שֶׁיַּטְבִּיל אֶת כּוּלּוֹ.</div>
+    <div class="trans" data-when="he">וחכמים אומרים: אין הכלי טהור עד שיטביל את כולו, ובכלל זה כל היד. נמצא שחכמים אינם סוברים ״כל העומד לחתוך כחתוך דמי״, ולכאורה תירוץ רבינא עולה רק לר׳ מאיר.</div>
+    <div class="trans" data-when="en">And the Rabbis say that the vessel is not purified until he immerses all of it, including the handle. Apparently, the Rabbis do not hold that an item that stands to be cut is regarded as though it was already cut, and Ravina’s explanation is in accordance only with the opinion of Rabbi Meir.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״ג א — Chullin 73a:4</span></div>
+    <div class="orig">אֲפִילּוּ תֵּימָא רַבָּנַן, חִבּוּרֵי אֳכָלִין כְּמַאן דְּמִפַּרְתִי דָּמֵי, וּנְגִיעִי בַּהֲדָדֵי.</div>
+    <div class="trans" data-when="he">יישוב: אפילו תאמר כדעת חכמים — בכלים בלבד נחלקו, אבל חיבורי אוכלין כמאן דמפרתי דמי (כאילו כבר נפרדו) ונוגעים זה בזה. והעובר והאבר חשובים כאוכל, ולכן נחשבים כנפרדים ונוגעים — והאבר מטמא את העובר. ובכך מיושב גם לחכמים.</div>
+    <div class="trans" data-when="en">The Gemara responds: You may even say that Ravina’s explanation is in accordance with the opinion of the Rabbis. The disagreement between the Rabbis and Rabbi Meir concerns utensils, but even the Rabbis agree that the connections between two pieces of food are disregarded, and the item is considered as though it is already separated into two pieces that are touching one another, and so ritual impurity can be imparted from one piece to another. Similarly, the fetus and the foreleg are considered like food in this regard. Therefore, it is considered as if they have already been separated and are touching, allowing the foreleg to impart impurity to the fetus.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״ג א — Chullin 73a:5</span></div>
+    <div class="orig">בִּשְׁלָמָא לְעוּלָּא, הַיְינוּ דְּקָתָנֵי ״חֲתָכָהּ״, אֶלָּא לְרָבִינָא, מַאי ״חֲתָכָהּ״? אַיְּידֵי דִּתְנָא רֵישָׁא ״חֲתָכָהּ״, תְּנָא נָמֵי סֵיפָא ״חֲתָכָהּ״.</div>
+    <div class="trans" data-when="he">מסקנת הלשון: בשלמא לעולא, שהטומאה בשעת הפרישה — מובן שהמשנה נקטה ״חתכה״. אלא לרבינא, שאף בלא חיתוך מטמא — למה נקטה ״חתכה״? תירוץ: איידי דתנא ברישא ״חתכה״, תנא נמי בסיפא ״חתכה״ — לשם אחידות הלשון בלבד.</div>
+    <div class="trans" data-when="en">The Gemara asks: Granted, according to the explanation of Ulla that the fetus was rendered impure at the time of separation of the flesh of the fetus from the limb, this explanation is consistent with that which the mishna teaches, that the foreleg was severed from the body of the fetus. But according to the explanation of Ravina, the connection between the foreleg and fetus is like that of food, and even if the foreleg was never severed from the fetus it would still impart impurity to the fetus. What, then, is the reason the mishna states it was severed? The Gemara answers: Since the mishna needed to teach in the first clause that the foreleg was severed, it also taught in the latter clause that it was severed, for stylistic consistency, even though the halakha would apply even were it not severed.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
