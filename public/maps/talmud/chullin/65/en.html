@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ס״ה</title>
+<meta name="description" content="מפת הסוגיא של חולין ס״ה: סימני עוף טהור — דורס, אצבע יתירה, זפק, קרקבן נקלף; וסימני חגב טהור — ארבע רגלים, ארבע כנפים, קרצולים, וכנפיו חופין את רובו; ודרשת ׳למינהו׳ בכלל ופרט וכלל.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="65">
+<meta name="gemara-map:sefaria-ref" content="Chullin 65">
+<meta name="gemara-map:topic-he" content="סימני עוף וחגב טהורים">
+<meta name="gemara-map:topic-en" content="Signs of kosher birds and grasshoppers">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ס״ה">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 65">
+<meta name="gemara-map:blurb-he" content="כיצד מזהים עוף טהור (דורס, סימני גוף, ושכן עם טמאים) וחגב טהור (ארבעה סימנים), ודרשת הכתובים ׳למינהו׳ להוסיף מינים.">
+<meta name="gemara-map:blurb-en" content="How a kosher bird is identified (clawing, body-signs, dwelling) and a kosher grasshopper (four signs), with the verse ‘after its kinds’ expounded to add species.">
+<meta name="gemara-map:sugya-count" content="2">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ס״ה</span><span data-when="en">Sugya map — Chullin 65</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ס״ה א — ס״ו א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 65a–66a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שני המשכי משנה על סימני טהרה: <b>בעוף</b> — ברייתא מונה סימני טהרה (דורס, אצבע יתירה, זפק, קרקבן נקלף, מבחן החוט), והדעה ש״שכן עם טהורים — טהור״ מצומצמת ל״שכן ונדמה״; <b>בחגב</b> — ״רובו״ נדרש גם לאורכו וגם להיקפו, ודרשת ״למינהו״ ארבע פעמים מרבה מינים, עם מחלוקת תנא דבי רב ותנא דבי ר׳ ישמעאל אם <b>ראשו ארוך</b> כשר (כלל ופרט מול כלל ופרט וכלל).</span>
+    <span data-when="en"><b>Bottom line:</b> Two Mishna follow-ups on kosher signs: for a <b>bird</b> a baraita lists the signs (clawing, extra digit, crop, peelable gizzard, the string-test), and “dwells with kosher — kosher” is narrowed to “dwells and resembles”; for a <b>grasshopper</b>, “most of it” means both length and circumference, and the fourfold “after its kinds” adds species — with a dispute between the school of Rav and the school of R. Yishmael whether a <b>long-headed</b> grasshopper is kosher (generalization-and-detail vs. generalization-detail-generalization).</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ס״ה</span><span data-when="en">Overview — Chullin 65</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · סימני עוף טהור — דורס, ושכן ונדמה"]:::statement
+  O2["2 · סימני חגב — רובו, ודרשת למינהו"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Kosher-bird signs — clawing, dwells and resembles"]:::statement
+  O2["2 · Grasshopper signs — most of it, the verse ׳after its kinds׳"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">סימני עוף טהור — דורס, סימני גוף, ושכן ונדמה</span><span data-when="en">Signs of a kosher bird — clawing, body-signs, dwells and resembles</span>
+      <span class="ref">Chullin 65a:3–6</span></h2>
+  <div class="lead"><span data-when="he">ברייתא מפרטת סימני טהרה בעוף: דורס, אצבע יתירה, זפק, קרקבן נקלף, ומבחן החוט; ״הקולט מן האויר״ סויג ל״קולט ואוכל״; והדעה ״שכן עם טהורים״ מצומצמת ל״שכן ונדמה״.</span><span data-when="en">A baraita details a bird’s kosher signs: clawing, an extra digit, a crop, a peelable gizzard, the string-test; “catches in the air” is qualified to “catches and eats,” and “dwells with kosher” is narrowed to “dwells and resembles.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: כל עוף הדורס — טמא; ברייתא מונה סימני טהרה"]):::mishnah
+  S1["① רשב״א: כל עוף הקולט מן האויר — טמא"]:::statement
+  Q1{"② והרי ציפרתא קולטת וטהורה!"}:::question
+  A1["② אביי: קולט ואוכל באויר — דווקא"]:::answer
+  S2["③ אחרים: שכן עם טמאים — טמא, עם טהורים — טהור"]:::statement
+  Q2{"④ כמאן? כר׳ אליעזר — זרזיר אצל עורב מינו?"}:::question
+  A2["④ אפילו כרבנן: שכן ונדמה קאמרינן"]:::answer
+  M1 -->|דעה בברייתא| S1
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  M1 -->|דעה נוספת| S2
+  S2 -->|כמאן| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: a clawing bird is non-kosher; a baraita lists kosher signs"]):::mishnah
+  S1["① R. Shimon b. Elazar: any bird that catches in the air — non-kosher"]:::statement
+  Q1{"② But the tziparta catches and is kosher!"}:::question
+  A1["② Abaye: only one that catches AND eats in the air"]:::answer
+  S2["③ Others: dwells with non-kosher — non-kosher, with kosher — kosher"]:::statement
+  Q2{"④ Like whom? R. Eliezer — zarzir dwells with crow as its species?"}:::question
+  A2["④ Even per the Rabbis: we mean dwells AND resembles"]:::answer
+  M1 -->|view in baraita| S1
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  M1 -->|further view| S2
+  S2 -->|like whom| Q2
+  Q2 -->|answer| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① רַבָּן גַּמְלִיאֵל: דּוֹרֵס וְאוֹכֵל — טָמֵא … קֻרְקְבָנוֹ נִקְלָף — טָהוֹר"]):::mishnah
+  S1["① רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר: כׇּל עוֹף הַקּוֹלֵט מִן הָאֲוִיר — טָמֵא"]:::statement
+  Q1{"② צִיפַּרְתָּא נָמֵי מִקְלָט קָלְטָה!"}:::question
+  A1["② אָמַר אַבָּיֵי: ׳קוֹלֵט וְאוֹכֵל׳ קָאָמְרִי"]:::answer
+  S2["③ אֲחֵרִים: שָׁכֵן עִם טְמֵאִים — טָמֵא, עִם טְהוֹרִים — טָהוֹר"]:::statement
+  Q2{"④ כְּמַאן? כְּרַבִּי אֱלִיעֶזֶר … זַרְזִיר אֵצֶל עוֹרֵב … מִינוֹ"}:::question
+  A2["④ אֲפִילּוּ תֵּימָא רַבָּנַן, שָׁכֵן וְנִדְמֶה קָאָמְרִינַן"]:::answer
+  M1 -->|דעה בברייתא| S1
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  M1 -->|דעה נוספת| S2
+  S2 -->|כמאן| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ה א — Chullin 65a:3</span></div>
+    <div class="orig">אֲבָל אָמְרוּ חֲכָמִים: כׇּל עוֹף. תַּנְיָא, רַבָּן גַּמְלִיאֵל אוֹמֵר: דּוֹרֵס וְאוֹכֵל – בְּיָדוּעַ שֶׁהוּא טָמֵא, יֵשׁ לוֹ אֶצְבַּע יְתֵירָה וְזֶפֶק וְקֻרְקְבָנוֹ נִקְלָף – בְּיָדוּעַ שֶׁהוּא טָהוֹר. רַבִּי אֶלְעָזָר בְּרַבִּי צָדוֹק אוֹמֵר: מוֹתְחִין לוֹ חוּט שֶׁל מְשִׁיחָה, אִם חוֹלֵק אֶת רַגְלָיו, שְׁתַּיִם לְכָאן וּשְׁתַּיִם לְכָאן – טָמֵא, שָׁלֹשׁ לְכָאן וְאַחַת לְכָאן – טָהוֹר. רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹמֵר: כׇּל עוֹף הַקּוֹלֵט מִן הָאֲוִיר – טָמֵא.</div>
+    <div class="trans" data-when="he">המשנה אמרה שחכמים מסרו סימן: כל עוף הדורס — טמא. ברייתא מפרטת: רבן גמליאל — הדורס ואוכל בידוע שטמא; ויש לו אצבע יתירה (אחורית), זפק, וקרקבן הנקלף ביד — בידוע שטהור. ר׳ אלעזר בר׳ צדוק: מותחים חוט והעוף עומד עליו — אם חולק רגליו שתיים מכאן ושתיים מכאן טמא, שלוש ואחת טהור. רשב״א: כל עוף הקולט מזונו מן האויר — טמא.</div>
+    <div class="trans" data-when="en">§ The mishna states: But the Sages stated that any bird that claws its prey and eats it is non-kosher. It is taught in a baraita: Rabban Gamliel says: A bird that claws its prey and eats it is certainly non-kosher. If it has an extra digit and a crop, and its gizzard can be peeled, it is certainly kosher. Rabbi Elazar, son of Rabbi Tzadok, says: One stretches a line, and the bird perches on it. If it splits its feet on the line, with two digits here and two there, it is non-kosher. If it places three digits here and one there, it is possibly kosher. Rabbi Shimon ben Elazar says: Any bird that catches food out of the air is non-kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ה א — Chullin 65a:4</span></div>
+    <div class="orig">צִיפַּרְתָּא נָמֵי מִקְלָט קָלְטָה! אָמַר אַבָּיֵי: ״קוֹלֵט וְאוֹכֵל״ קָאָמְרִי.</div>
+    <div class="trans" data-when="he">קושיא: הרי גם הציפרתא (עוף טהור) קולטת מזון מן האויר, ולשיטת רשב״א הייתה צריכה להיות טמאה! תירוץ אביי: רשב״א דיבר דווקא בעוף הקולט ואוכל באויר, אבל הציפרתא נוחתת קודם שאוכלת.</div>
+    <div class="trans" data-when="en">The Gemara interjects: But the tziparta also catches food out of the air, and it is kosher. Abaye said: We say this only for a bird that both catches and eats its food in the air. The tziparta lands before eating what it has caught.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ה א — Chullin 65a:5</span></div>
+    <div class="orig">אֲחֵרִים אוֹמְרִים: שָׁכֵן עִם טְמֵאִים – טָמֵא, עִם טְהוֹרִים – טָהוֹר.</div>
+    <div class="trans" data-when="he">סיום הברייתא: אחרים אומרים סימן נוסף — עוף השוכן (גר) עם עופות טמאים טמא, ועם טהורים טהור.</div>
+    <div class="trans" data-when="en">The baraita concludes: Others say: If a bird dwells with non-kosher birds, it is non-kosher; if it dwells with kosher birds, it is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ה א — Chullin 65a:6</span></div>
+    <div class="orig">כְּמַאן? כְּרַבִּי אֱלִיעֶזֶר, דְּתַנְיָא: רַבִּי אֱלִיעֶזֶר אוֹמֵר: לֹא לְחִנָּם הָלַךְ זַרְזִיר אֵצֶל עוֹרֵב, אֶלָּא מִפְּנֵי שֶׁהוּא מִינוֹ. אֲפִילּוּ תֵּימָא רַבָּנַן, שָׁכֵן וְנִדְמֶה קָאָמְרִינַן.</div>
+    <div class="trans" data-when="he">כמאן ננקטה דעת ״אחרים״? כר׳ אליעזר, ששנינו: לא לחינם הלך הזרזיר אצל העורב אלא מפני שהוא מינו (ולכן הזרזיר טמא). דחייה: אפשר אפילו כרבנן (המכשירים את הזרזיר), שכן ״אחרים״ אמרו ״שכן ונדמה״ — טמא רק כשגם שוכן עמו וגם נדמה לו, והזרזיר אינו נדמה לעורב.</div>
+    <div class="trans" data-when="en">The Gemara asks: In accordance with whose opinion is this last statement? Perhaps it is in accordance with the opinion of Rabbi Eliezer, as it is taught in a baraita: Rabbi Eliezer says: It was not for naught that the zarzir went to dwell with the crow, but because it is of the same species. The Gemara rejects this: You may even say that the opinion introduced with the words: Others say, is like that of the Rabbis, who disagree with Rabbi Eliezer and deem the zarzir kosher. The statement introduced with the words: Others say, is understood as follows: We say that a bird is non-kosher whenever it both dwells with a non-kosher bird and resembles it. The zarzir, though, does not resemble the crow.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">סימני חגב טהור — ׳רובו׳ ודרשת ׳למינהו׳</span><span data-when="en">Signs of a kosher grasshopper — ‘most of it’ and the verse ‘after its kinds’</span>
+      <span class="ref">Chullin 65a:7–66a:8</span></h2>
+  <div class="lead"><span data-when="he">״רובו״ נדרש גם לאורכו וגם להיקפו; הכתובים ״למינהו״ ארבע פעמים מרבים מינים; ומחלוקת תנא דבי רב ותנא דבי ר׳ ישמעאל אם חגב שראשו ארוך כשר — תלוי בדרשת כלל ופרט.</span><span data-when="en">“Most of it” is read as both length and circumference; the fourfold “after its kinds” adds species; and the school of Rav and the school of R. Yishmael dispute whether a long-headed grasshopper is kosher, turning on how to expound generalization-and-detail.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: חגב — כנפיו חופין רובו. מאי רובו? רוב ארכו וגם רוב הקיפו"]):::mishnah
+  S1["② עתיד לגדל כנפים, כגון הזחל — מותר"]:::statement
+  S2["③ ׳למינהו׳ ד׳ פעמים — להביא ציפורת כרמים ועוד"]:::statement
+  P1["④–⑨ דבי ר׳ ישמעאל: כלל ופרט וכלל, ובנין אב — אף ראשו ארוך כשר"]:::proof
+  Q1{"⑩ פריך רב אחאי: מה להנך שאין ראשן ארוך?"}:::question
+  A1["⑪–⑫ רב אחאי: סלעם יתירא — תנהו לראשו ארוך"]:::answer
+  Q2{"⑬ במאי קמיפלגי תנא דבי רב ודבי ר׳ ישמעאל?"}:::question
+  S3["⑭ דבי רב: כלל ופרט — אין בכלל אלא מה שבפרט"]:::statement
+  S4["⑮ דבי ר׳ ישמעאל: כלל ופרט וכלל — כעין הפרט"]:::statement
+  Q3{"⑯ והא לא דמי כללא קמא לכללא בתרא?"}:::question
+  A2["⑰ דבי ר׳ ישמעאל דאין כי האי גוונא"]:::answer
+  Q4{"⑱–⑲ אמר מר: ׳למינהו׳ — עד שיהו בו כל הסימנים; מהיכא תיתי?"}:::question
+  C1["⑳ סלעם מרבה ראשו ארוך, ולכן ׳למינהו׳ ממעט שאר; מר כי אתריה"]:::conclusion
+  M1 -->|ברייתא| S1
+  S1 -->|דרשה| S2
+  S2 -->|דבי ר׳ ישמעאל| P1
+  P1 -.->|פירכא| Q1
+  Q1 -->|מסקנת רב אחאי| A1
+  A1 -->|במאי פליגי| Q2
+  Q2 -->|דבי רב| S3
+  Q2 -->|דבי ר׳ ישמעאל| S4
+  S4 -.->|קושיא| Q3
+  Q3 -->|תירוץ| A2
+  A2 -->|ניתוח הברייתא| Q4
+  Q4 -->|יישוב ומסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: a grasshopper — wings cover most of it. Most? Both length and circumference"]):::mishnah
+  S1["② Will grow wings later, e.g. the zaḥal — permitted"]:::statement
+  S2["③ ׳After its kinds׳ four times — to add the vineyard-bird and others"]:::statement
+  P1["④–⑨ School of R. Yishmael: generalization-detail-generalization, paradigm — even long-headed is kosher"]:::proof
+  Q1{"⑩ Rav Aḥai refutes: these are unique in not having long heads!"}:::question
+  A1["⑪–⑫ Rav Aḥai: solam is redundant — apply it to the long-headed"]:::answer
+  Q2{"⑬ Over what do the school of Rav and of R. Yishmael differ?"}:::question
+  S3["⑭ School of Rav: generalization-and-detail — only what is in the detail"]:::statement
+  S4["⑮ School of R. Yishmael: generalization-detail-generalization — like the detail"]:::statement
+  Q3{"⑯ But the first generalization is unlike the latter!"}:::question
+  A2["⑰ R. Yishmael expounds even such a case"]:::answer
+  Q4{"⑱–⑲ Master said: ׳after its kinds׳ — needs all signs; whence the alternative?"}:::question
+  C1["⑳ Solam adds the long-headed, so ׳after its kinds׳ excludes the rest; each per his locale"]:::conclusion
+  M1 -->|baraita| S1
+  S1 -->|exposition| S2
+  S2 -->|school of R. Yishmael| P1
+  P1 -.->|refutation| Q1
+  Q1 -->|Rav Aḥai׳s resolution| A1
+  A1 -->|over what they differ| Q2
+  Q2 -->|school of Rav| S3
+  Q2 -->|school of R. Yishmael| S4
+  S4 -.->|objection| Q3
+  Q3 -->|answer| A2
+  A2 -->|analyzing the baraita| Q4
+  Q4 -->|resolution, conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① מַאי רוּבּוֹ? … רוֹב אׇרְכּוֹ … רוֹב הֶקֵּיפוֹ … בָּעֵינַן רוֹב אׇרְכּוֹ, וּבָעֵינַן רוֹב הֶקֵּיפוֹ"]):::mishnah
+  S1["② אֵין לוֹ עַכְשָׁיו וְעָתִיד לְגַדֵּל … כְּגוֹן הַזַּחַל – מוּתָּר"]:::statement
+  S2["③ ׳לְמִינוֹ׳ ׳לְמִינֵהוּ׳ … אַרְבַּע פְּעָמִים? לְהָבִיא צִיפּוֹרֶת כְּרָמִים …"]:::statement
+  P1["④–⑨ דְּבֵי רַבִּי יִשְׁמָעֵאל תָּנָא … הֲרֵי אַתָּה דָן בִּנְיַן אָב מִשְּׁלׇשְׁתָּן … אַף כֹּל … חוֹפִין אֶת רוּבּוֹ"]:::proof
+  Q1{"⑩ פָּרֵיךְ רַב אַחַאי: מָה לְהָנָךְ, שֶׁכֵּן אֵין רֹאשָׁן אָרוֹךְ?"}:::question
+  A1["⑪–⑫ אָמַר רַב אַחַאי: סׇלְעָם יַתִּירָא הוּא … תְּנֵהוּ עִנְיָן לְרֹאשׁוֹ אָרוֹךְ"]:::answer
+  Q2{"⑬ בְּמַאי קָמִיפַּלְגִי תָּנָא דְּבֵי רַב וְתָנָא דְּבֵי רַבִּי יִשְׁמָעֵאל? בְּרֹאשׁוֹ אָרוֹךְ"}:::question
+  S3["⑭ תָּנָא דְּבֵי רַב: כְּלָל וּפְרָט – אֵין בַּכְּלָל אֶלָּא מַה שֶּׁבַּפְּרָט"]:::statement
+  S4["⑮ תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל: כְּלָל וּפְרָט וּכְלָל – כְּעֵין הַפְּרָט"]:::statement
+  Q3{"⑯ וְהָא לָא דָּמֵי כְּלָלָא קַמָּא לִכְלָלָא בָּתְרָא?"}:::question
+  A2["⑰ תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל … כִּי הַאי גַוְונָא דָּאֵין"]:::answer
+  Q4{"⑱–⑲ אָמַר מָר: ׳לְמִינֵהוּ׳ – עַד שֶׁיְּהוּ בּוֹ כׇּל הַסִּימָנִין … מֵהֵיכָא תֵּיתֵי?"}:::question
+  C1["⑳ דִּכְתִיב ׳סׇלְעָם׳ – לְרַבּוֹיֵי רֹאשׁוֹ אָרוֹךְ … מָר כִּי אַתְרֵיהּ וּמָר כִּי אַתְרֵיהּ"]:::conclusion
+  M1 -->|ברייתא| S1
+  S1 -->|דרשה| S2
+  S2 -->|דבי ר׳ ישמעאל| P1
+  P1 -.->|פירכא| Q1
+  Q1 -->|מסקנת רב אחאי| A1
+  A1 -->|במאי פליגי| Q2
+  Q2 -->|דבי רב| S3
+  Q2 -->|דבי ר׳ ישמעאל| S4
+  S4 -.->|קושיא| Q3
+  Q3 -->|תירוץ| A2
+  A2 -->|ניתוח הברייתא| Q4
+  Q4 -->|יישוב ומסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ה א — Chullin 65a:7</span></div>
+    <div class="orig">וּבַחֲגָבִים, כֹּל שֶׁיֵּשׁ לוֹ כּוּ׳. מַאי רוּבּוֹ? אָמַר רַב יְהוּדָה אָמַר רַב: רוֹב אׇרְכּוֹ, וְאָמְרִי לַהּ: רוֹב הֶקֵּיפוֹ. אָמַר רַב פָּפָּא: הִלְכָּךְ בָּעֵינַן רוֹב אׇרְכּוֹ, וּבָעֵינַן רוֹב הֶקֵּיפוֹ.</div>
+    <div class="trans" data-when="he">המשנה: ״ובחגבים — כל שיש לו ארבע רגלים, ארבע כנפים, קרצולים, וכנפיו חופין את רובו״. הגמרא שואלת: מהו ״רובו״? רב יהודה בשם רב: רוב אורכו; ויש אומרים: רוב היקפו. רב פפא: לכן צריך גם רוב אורכו וגם רוב היקפו.</div>
+    <div class="trans" data-when="en">§ The mishna states: And with regard to grasshoppers, any grasshopper that has four legs, and four wings, and two additional jumping legs, and whose wings cover most of its body, is kosher. The Gemara asks: What is considered most of its body? Rav Yehuda said that Rav said: Most of its length. And some say that he said: Most of its circumference. Rav Pappa said: Therefore, one must satisfy both versions of the statement. We require that the wings cover most of its length, and we also require that they cover most of its circumference.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ה א — Chullin 65a:8</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: אֵין לוֹ עַכְשָׁיו וְעָתִיד לְגַדֵּל לְאַחַר זְמַן, כְּגוֹן הַזַּחַל – מוּתָּר. רַבִּי אֶלְעָזָר בְּרַבִּי יוֹסֵי אוֹמֵר: ״אֲשֶׁר לֹא כְרָעַיִם״ – אַף עַל פִּי שֶׁאֵין לוֹ עַכְשָׁיו וְעָתִיד לְגַדֵּל לְאַחַר זְמַן. מַאי זַחַל? אָמַר אַבָּיֵי: אַסְקְרָא.</div>
+    <div class="trans" data-when="he">ברייתא: חגב שאין לו כנפים (או קרצולים) עכשיו אך עתיד לגדלן לאחר זמן, כגון הזחל — מותר. ר׳ אלעזר בר׳ יוסי לומד זאת מן הכתוב ״אשר לא כרעיים״ (נכתב באל״ף) — אף שאין לו כרעיים עתה אך עתיד לגדלן. מאי זחל? אביי: אסקרא.</div>
+    <div class="trans" data-when="en">The Sages taught in a baraita: A grasshopper that has no wings now but will grow them after a time, e.g., the zaḥal, is permitted. Rabbi Elazar, son of Rabbi Yosei, says: The verse states: “Yet these may you eat of all winged swarming things that go upon all fours, which have [lo] jointed legs above their feet, wherewith to leap upon the earth” (Leviticus 11:21). The word lo is written with the letter alef, meaning not, so that it can be understood as: Do not have jointed legs. This teaches that even though it has no jointed legs now but will grow them after a time, it is still kosher. The Gemara asks: What is the zaḥal? Abaye said: It is called askarin in Aramaic.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ה א — Chullin 65a:9</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״אֶת אֵלֶּה מֵהֶם תֹּאכֵלוּ אֶת הָאַרְבֶּה וְגוֹ׳״. אַרְבֶּה – זֶה גּוֹבַאי, סַלְעָם – זֶה רָשׁוֹן, חַרְגּוֹל – זֶה נִיפּוּל, חָגָב – זֶה נַדְיָאן. מָה תַּלְמוּד לוֹמַר ״לְמִינוֹ״ ״לְמִינֵהוּ״ ״לְמִינֵהוּ״ ״לְמִינֵהוּ״ אַרְבַּע פְּעָמִים? לְהָבִיא צִיפּוֹרֶת כְּרָמִים, וְיוֹחָנָא יְרוּשַׁלְמִית, וְהָעַרְצוּבְיָא, וְהָרַזְבָּנִית.</div>
+    <div class="trans" data-when="he">ברייתא: הכתוב מונה ארבעה מיני חגבים טהורים — ארבה (גובאי), סלעם (רשון), חרגול (ניפול), חגב (נדיאן). מדוע נכתב ״למינו/למינהו״ ארבע פעמים? להביא (להוסיף) ארבעה מינים נוספים: ציפורת כרמים, יוחנא ירושלמית, ערצוביא, ורזבנית.</div>
+    <div class="trans" data-when="en">The Sages taught in a baraita that the verse states: “These of them you may eat: The arbeh after its kinds, and the solam after its kinds, and the ḥargol after its kinds, and the ḥagav after its kinds” (Leviticus 11:22). The arbeh is the insect known as the govai. The solam is the rashon. The ḥargol is the nippul. The ḥagav is the gadyan. Why must the verse state: “After its kinds,” “after its kinds,” “after its kinds,” and “after its kinds,” four times? It is to include four similar species: The vineyard bird, and the Jerusalem yoḥana, and the artzuveya, and the razbanit, which are also kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ה א — Chullin 65a:10</span></div>
+    <div class="orig">דְּבֵי רַבִּי יִשְׁמָעֵאל תָּנָא: אֵלּוּ כְּלָלֵי כְלָלוֹת, וְאֵלּוּ פְּרָטֵי פְרָטוֹת. ״אַרְבֶּה״ – זֶה ״גּוֹבַאי״, ״לְמִינוֹ״ לְהָבִיא</div>
+    <div class="trans" data-when="he">בית מדרשו של ר׳ ישמעאל שנה דרך אחרת: הכתובים ״למינהו״ הם כללות, והמינים המפורשים הם פרטות. ״ארבה״ — זה גובאי (פרט), ״למינו״ — כלל הבא להביא (לרבות) —</div>
+    <div class="trans" data-when="en">The school of Rabbi Yishmael taught: These appearances of the phrase “after its kinds” in the verse are generalizations, and these species mentioned explicitly are details. The verse must be understood in light of the previous verse, which offers general signs of a kosher grasshopper. The two verses together are a generalization, and a detail, and a generalization, in the following manner: The first verse is a generalization, arbeh is a detail referring to the species govai, and the phrase “after its kinds” is another generalization. According to Rabbi Yishmael’s hermeneutical principles, the second generalization serves to include a case similar to the detail. In this case, the phrase “after its kinds” serves to include</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ה ב — Chullin 65b:1</span></div>
+    <div class="orig">צִיפּוֹרֶת כְּרָמִים.</div>
+    <div class="trans" data-when="he">— את ציפורת כרמים, הדומה לארבה בכך שמצחו אינו חלק אלא יש בו שערות דקות.</div>
+    <div class="trans" data-when="en">the vineyard bird, which is similar to the arbeh in that its forehead is not smooth but has small hairs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ה ב — Chullin 65b:2</span></div>
+    <div class="orig">אֵין לִי אֶלָּא הַבָּא וְאֵין לוֹ גַּבַּחַת. הַבָּא וְיֵשׁ לוֹ גַּבַּחַת מִנַּיִן? תַּלְמוּד לוֹמַר ״סׇלְעָם״ – זֶה נִיפּוּל, ״לְמִינֵהוּ״ – לְהָבִיא אֶת הָאוּשְׁכָּף.</div>
+    <div class="trans" data-when="he">אין לי אלא מין הבא ואין לו מצח חלק (גבחת), כמו ארבה. מנין שאף מין שיש לו מצח חלק כשר? ת״ל ״סלעם״ — זה ניפול (שמצחו חלק), ו״למינהו״ — כלל המרבה את האושכף, הדומה לסלעם במצחו החלק.</div>
+    <div class="trans" data-when="en">I have derived only that a species that comes before a person and does not have a smooth forehead is kosher. From where is it derived that even one that comes before a person and has a smooth forehead is kosher? The verse states: “Solam,” and this is the nippul, which has a smooth forehead. The phrase “after its kinds” that follows solam is another generalization, which serves to include a case similar to the detail, i.e., the ushkaf, which has a smooth forehead like the solam.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״ה ב — Chullin 65b:3</span></div>
+    <div class="orig">וְאֵין לִי אֶלָּא הַבָּא וְאֵין לוֹ גַּבַּחַת. הַבָּא וְיֵשׁ לוֹ גַּבַּחַת, הַבָּא וְאֵין לוֹ זָנָב, הַבָּא וְיֵשׁ לוֹ זָנָב מִנַּיִן? תַּלְמוּד לוֹמַר ״חַרְגֹּל״ – זֶה רָשׁוֹן, ״לְמִינֵהוּ״ – לְהָבִיא אֶת הַכַּרְסֶפֶת וְאֶת הַשַּׁחֲלָנִית.</div>
+    <div class="trans" data-when="he">עדיין אין לי אלא מין בלא מצח חלק, או עם מצח חלק, או בלא זנב. מנין שאף מין שיש לו זנב כשר? ת״ל ״חרגול״ — זה רשון (שיש לו זנב), ו״למינהו״ — להביא את הכרספת ואת השחלנית, שאף להן זנב.</div>
+    <div class="trans" data-when="en">And I have derived only that a species that comes before a person and does not have a smooth forehead, like the arbeh, or one that comes before a person and has a smooth forehead, like the solam, or one that comes before a person and has no tail, is kosher, since none of the previously mentioned grasshoppers have a tail. From where is it derived that even one that comes before a person and has a tail is kosher? The verse states: “Ḥargol,” and this is the rashon, which has a tail. The phrase “after its kinds” that follows ḥargol is another generalization, and it serves to include the karsefet and the shaḥlanit, which also have tails.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס״ה ב — Chullin 65b:4</span></div>
+    <div class="orig">וְאֵין לִי אֶלָּא הַבָּא וְאֵין לוֹ גַּבַּחַת. הַבָּא וְיֵשׁ לוֹ גַּבַּחַת, הַבָּא וְאֵין לוֹ זָנָב, הַבָּא וְיֵשׁ לוֹ זָנָב, הַבָּא וְאֵין רֹאשׁוֹ אָרוֹךְ, הַבָּא וְרֹאשׁוֹ אָרוֹךְ מִנַּיִן?</div>
+    <div class="trans" data-when="he">ועדיין אין לי אלא המינים שאין ראשם ארוך. מנין שאף מין הבא וראשו ארוך כשר?</div>
+    <div class="trans" data-when="en">And I have derived only that a species that comes before a person and does not have a smooth forehead, or that comes before a person and has a smooth forehead, or that comes and has no tail, or that comes and has a tail, or that comes and its head is not long, is kosher, since every grasshopper mentioned until this point does not have a long head. From where is it derived that even one that comes and its head is long is kosher?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס״ה ב — Chullin 65b:5</span></div>
+    <div class="orig">אָמַרְתָּ: הֲרֵי אַתָּה דָן בִּנְיַן אָב מִשְּׁלׇשְׁתָּן, לֹא רְאִי אַרְבֶּה כִּרְאִי חַרְגּוֹל, וְלֹא רְאִי חַרְגּוֹל כִּרְאִי אַרְבֶּה, וְלֹא רְאִי שְׁנֵיהֶם כִּרְאִי סׇלְעָם, וְלֹא רְאִי סׇלְעָם כִּרְאִי שְׁנֵיהֶם. הַצַּד הַשָּׁוֶה שֶׁבָּהֶן – שֶׁיֵּשׁ לוֹ אַרְבַּע רַגְלַיִם, וְאַרְבַּע כְּנָפַיִם, וְקַרְצוּלַּיִם, וּכְנָפָיו חוֹפִין אֶת רוּבּוֹ; אַף כֹּל שֶׁיֵּשׁ לוֹ אַרְבַּע רַגְלַיִם, וְאַרְבַּע כְּנָפַיִם, וְקַרְצוּלַּיִם, וּכְנָפָיו חוֹפִין אֶת רוּבּוֹ.</div>
+    <div class="trans" data-when="he">תשובה: אתה דן בנין אב משלושת המינים — אין צד אחד דומה לחברו לגמרי, והצד השווה שבהם: ארבע רגלים, ארבע כנפים, קרצולים, וכנפיו חופין את רובו. אף כל מין שיש בו ארבעת הסימנים — כשר, אף שראשו ארוך.</div>
+    <div class="trans" data-when="en">You will say: You derive a paradigm from the three of them, as follows: The aspect [re’i] of the arbeh, which has neither smooth forehead nor tail, is not similar to the aspect of the ḥargol, which has both; and the aspect of the ḥargol is not similar to the aspect of the arbeh. And the aspect of neither of them is similar to the aspect of the solam, which has a smooth forehead but no tail, and the aspect of the solam is similar to neither of their aspects. The characteristic that renders them all kosher can only be an aspect common to all of them. Their common denominator is that each has four legs, and four wings, and jumping legs, and its wings cover most of its body. So too, any other species that has four legs, and four wings, and jumping legs, and its wings cover most of its body is kosher, even if its head is long.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ס״ה ב — Chullin 65b:6</span></div>
+    <div class="orig">וַהֲלֹא הַצַּרְצוּר הַזֶּה יֵשׁ לוֹ אַרְבַּע רַגְלַיִם, וְאַרְבַּע כְּנָפַיִם, וְקַרְצוּלַּיִם, וּכְנָפָיו חוֹפִין אֶת רוּבּוֹ, יָכוֹל יְהֵא מוּתָּר? תַּלְמוּד לוֹמַר ״חָגָב״, שֶׁשְּׁמוֹ חָגָב.</div>
+    <div class="trans" data-when="he">ועדיין יש מקום לטעות: הרי גם הצרצור יש לו ארבעת הסימנים — יכול שאף הוא מותר? ת״ל ״חגב״ — דווקא מי ששמו חגב, ולא הצרצור.</div>
+    <div class="trans" data-when="en">One might ask: But doesn’t this tzartzur have four legs, and four wings, and jumping legs, and its wings cover most of its body? Consequently, one might have thought that it should be permitted. Therefore, the verse states: “Ḥagav,” to indicate that its name must be ḥagav. This includes all of the species previously mentioned, but not the tzartzur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ס״ה ב — Chullin 65b:7</span></div>
+    <div class="orig">אִי שְׁמוֹ חָגָב, יָכוֹל אֵין בּוֹ כׇּל הַסִּימָנִין הַלָּלוּ? תַּלְמוּד לוֹמַר ״לְמִינֵהוּ״ – עַד שֶׁיְּהֵא בּוֹ כׇּל הַסִּימָנִין הַלָּלוּ.</div>
+    <div class="trans" data-when="he">ואם שמו חגב, יכול שכשר אף בלא כל הסימנים? ת״ל ״למינהו״ — אינו כשר עד שיהיו בו כל הסימנים הללו. כאן מסתיימת ברייתא דבי ר׳ ישמעאל.</div>
+    <div class="trans" data-when="en">But if its name must be ḥagav, one might have thought that any ḥagav is kosher, even if it does not have all these signs. Therefore, the verse states: “After its kinds,” indicating that even if it is called a ḥagav it is not kosher unless it has all these signs. This concludes the baraita of the school of Rabbi Yishmael.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ס״ה ב — Chullin 65b:8</span></div>
+    <div class="orig">פָּרֵיךְ רַב אַחַאי: מָה לְהָנָךְ, שֶׁכֵּן אֵין רֹאשָׁן אָרוֹךְ? וְכִי תֵּימָא: כֵּיוָן דְּשָׁווּ בְּאַרְבַּע סִימָנִין מַיְיתִינַן וְלָא פָּרְכִינַן – אִי הָכִי, חַרְגּוֹל נָמֵי דְּשָׁווּ לְהוּ, לָא לִיכְתּוֹב וְתֵיתֵי מֵאַרְבֶּה וְסׇלְעָם!</div>
+    <div class="trans" data-when="he">רב אחאי פורך את בנין האב: מה לשלושת המינים שכן אין ראשם ארוך — אולי דווקא בכך כשרים? ואם תאמר: כיון ששווים בארבעת הסימנים מרבים ואין פורכים — אם כן, אף החרגול שווה להם, לא היה צריך הכתוב לכותבו, ויבוא בבנין אב מארבה וסלעם!</div>
+    <div class="trans" data-when="en">Rav Aḥai refutes the baraita: The four signs listed are not the sole common denominators between the arbeh, ḥargol, and solam. What is also unique about these grasshoppers in addition to these signs? They are unique in that their heads are not long. If so, grasshoppers with long heads might not be kosher. And if you would say: Since they share these four signs, we include all others with these four signs and we do not refute them, since the included species need not be identical in all their aspects, if so, the Torah should not even write the ḥargol, which shares these four signs with the arbeh and the solam, and let it be derived that the ḥargol is kosher by inference from the common denominators between the arbeh and solam.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ס״ה ב — Chullin 65b:9</span></div>
+    <div class="orig">אֶלָּא, אִיכָּא לְמִיפְרַךְ: מָה לְהָנָךְ שֶׁכֵּן אֵין לָהֶן זָנָב. הָכִי נָמֵי אִיכָּא לְמִיפְרַךְ: מָה לְהָנָךְ שֶׁכֵּן אֵין רֹאשָׁן אָרוֹךְ?</div>
+    <div class="trans" data-when="he">אלא יש לפרוך: צריך הכתוב לכתוב חרגול, כי בלעדיו אפשר היה לפרוך — מה לארבה וסלעם שכן אין להם זנב? כיון שלחרגול יש זנב. וכך גם אפשר לפרוך על ראש ארוך: מה לשלושתם שכן אין ראשם ארוך?</div>
+    <div class="trans" data-when="en">Rather, it was necessary for the verse to write ḥargol because if it were omitted, its inclusion could be refuted as follows: What is unique about these, the arbeh and solam? They are unique in that they both have no tail. Since the ḥargol has a tail, its kosher status cannot be inferred from theirs. So too, the inclusion of grasshoppers with long heads can be refuted as follows: What is unique about these, the arbeh, ḥargol, and solam? They are unique in that their heads are not long. If so, grasshoppers with long heads might not be kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ס״ה ב — Chullin 65b:10</span></div>
+    <div class="orig">אֶלָּא אָמַר רַב אַחַאי: סׇלְעָם יַתִּירָא הוּא, לָא לִיכְתּוֹב רַחֲמָנָא ״סׇלְעָם״, וְתֵיתֵי מֵאַרְבֶּה וּמֵחַרְגּוֹל, דְּמַאי פָּרְכַתְּ? מָה לְאַרְבֶּה דְּאֵין לוֹ גַּבַּחַת – הֲרֵי חַרְגּוֹל דְּיֵשׁ לוֹ גַּבַּחַת, מָה לְחַרְגּוֹל דְּיֵשׁ לוֹ זָנָב – הֲרֵי אַרְבֶּה דְּאֵין לוֹ זָנָב, סׇלְעָם דִּכְתַב רַחֲמָנָא לְמָה לִי? אִם אֵינוֹ עִנְיָן לְגוּפוֹ – תְּנֵהוּ עִנְיָן לְרֹאשׁוֹ אָרוֹךְ.</div>
+    <div class="trans" data-when="he">אלא אמר רב אחאי: סלעם מיותר — שהרי אפשר ללמדו בבנין אב מארבה ומחרגול, ואין מה לפרוך (מצח חלק יש בחרגול, זנב יש בארבה). ואם כן למה כתבה התורה ״סלעם״? אם אינו ענין לגופו — תנהו ענין לרבות חגב שראשו ארוך.</div>
+    <div class="trans" data-when="en">Rather, Rav Aḥai said: One can derive that grasshoppers with long heads are kosher as follows: The solam mentioned in the verse is redundant. How so? Let the Merciful One not write solam, and instead let it be derived by inference from the common denominators between the arbeh and ḥargol, that they have four legs, four wings, jumping legs, and that their wings cover most of their body. As what can you say to refute this? If you say: What can be derived from the arbeh, which, unlike the solam, does not have a smooth forehead; one can respond: But there is the ḥargol, which has a smooth forehead. And if you say: What can be derived from the ḥargol, which, unlike the solam, has a tail, one can respond: But there is the arbeh, which has no tail. If so, why do I need the solam that the Merciful One wrote? Rather, if the solam is not necessary for the matter itself, apply it to the matter of a long-headed grasshopper, to teach that it is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ס״ו א — Chullin 66a:1</span></div>
+    <div class="orig">בְּמַאי קָמִיפַּלְגִי תָּנָא דְּבֵי רַב וְתָנָא דְּבֵי רַבִּי יִשְׁמָעֵאל? בְּרֹאשׁוֹ אָרוֹךְ קָמִיפַּלְגִי.</div>
+    <div class="trans" data-when="he">במה נחלקו תנא דבי רב (הברייתא הראשונה) ותנא דבי ר׳ ישמעאל? בחגב שראשו ארוך — לתנא דבי רב אסור, ולתנא דבי ר׳ ישמעאל מותר.</div>
+    <div class="trans" data-when="en">The Gemara asks: With regard to what do the tanna of the study hall, who taught the first baraita above, and the tanna of the school of Rabbi Yishmael disagree? They disagree with regard to a grasshopper whose head is long. According to the tanna of the study hall it is prohibited, and according to the tanna of the school of Rabbi Yishmael it is permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ס״ו א — Chullin 66a:2</span></div>
+    <div class="orig">תָּנָא דְּבֵי רַב סָבַר: ״אֲשֶׁר לוֹ כְּרָעַיִם״ – כָּלַל, ״אַרְבֶּה״ ״סׇלְעָם״ ״חַרְגֹּל״ ״חָגָב״ ״לְמִינֵהוּ״ – פָּרַט, כְּלָל וּפְרָט אֵין בַּכְּלָל אֶלָּא מַה שֶּׁבַּפְּרָט, דְּמִינֵיהּ – אִין, דְּלָאו (דמיניה) [מִינֵּיהּ] – לָא, וּמְרַבֵּי דְּדָמֵי לֵיהּ מִשְּׁנֵי צְדָדִין.</div>
+    <div class="trans" data-when="he">תנא דבי רב סובר: ״אשר לו כרעיים״ — כלל, ושמות המינים עם ״למינהו״ — פרט. כלל ופרט — אין בכלל אלא מה שבפרט: רק מין כיוצא בהם כשר, ושאינו ממינם פסול; ו״למינהו״ מרבה רק מה שדומה להם משני צדדים (ולכן ראש ארוך אסור).</div>
+    <div class="trans" data-when="en">The Gemara elaborates: The tanna of the study hall holds that the previous verse, permitting all species “which have jointed legs” (Leviticus 11:21), is a generalization. The species arbeh, solam, ḥargol, and ḥagav, and the phrase “after its kinds,” that appears after each, are a detail. As a rule, in any instance of a generalization and a detail, the generalization includes only that which is spelled out in the detail. Therefore, only grasshoppers of the same species as those detailed in the verse are kosher. Grasshoppers that are not of the same species as them are not kosher. And the phrase “after its kinds” amplifies the halakha to include grasshoppers that are similar to the named species in two aspects, i.e., that are very similar to them. Since all the named species have short heads, grasshoppers with long heads are forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין ס״ו א — Chullin 66a:3</span></div>
+    <div class="orig">תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל סָבַר: ״אֲשֶׁר לוֹ כְרָעַיִם״ – כָּלַל, ״אַרְבֶּה״ ״סׇלְעָם״ ״חַרְגֹּל״ ״חָגָב״ – פָּרַט, ״לְמִינֵהוּ״ – חָזַר וְכָלַל, כְּלָל וּפְרָט וּכְלָל – אִי אַתָּה דָן אֶלָּא כְעֵין הַפְּרָט, וּמְרַבֵּי כֹּל דְּדָמֵי לֵיהּ בְּחַד צַד.</div>
+    <div class="trans" data-when="he">תנא דבי ר׳ ישמעאל סובר: ״אשר לו כרעיים״ — כלל, שמות המינים — פרט, ו״למינהו״ — חזר וכלל. כלל ופרט וכלל — אי אתה דן אלא כעין הפרט, ולכן מרבה כל הדומה להם אפילו בצד אחד (וכך ראש ארוך מותר).</div>
+    <div class="trans" data-when="en">By contrast, the tanna of the school of Rabbi Yishmael holds that the phrase “which have jointed legs” is a generalization. The species arbeh, solam, ḥargol, and ḥagav are a detail. And by the phrase “after its kinds” after each species, it then generalized again. In any instance of a generalization, and a detail, and a generalization, you may deduce that the verse is referring only to items similar to the detail. And the verse therefore amplifies the halakha to include any grasshopper that is similar to the named species in even one aspect, i.e., that has the four signs listed in the mishna, even if its head is long.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין ס״ו א — Chullin 66a:4</span></div>
+    <div class="orig">וְהָא לָא דָּמֵי כְּלָלָא קַמָּא לִכְלָלָא בָּתְרָא? כְּלָלָא קַמָּא – ״אֲשֶׁר לוֹ כְרָעַיִם״ אָמַר רַחֲמָנָא, דְּאִית לֵיהּ אֱכוֹל, דְּלֵית לֵיהּ לָא תֵּיכוֹל. כְּלָלָא בָּתְרָא – עַד דְּשָׁווּ בְּאַרְבָּעָה סִימָנִין.</div>
+    <div class="trans" data-when="he">קושיא: והרי הכלל הראשון אינו דומה לכלל האחרון (תנאי לכלל ופרט וכלל)! הכלל הראשון ״אשר לו כרעיים״ — כל שיש לו כרעיים אכול, ואם אין לו לא תאכל. הכלל האחרון ״למינהו״ — עד שיהיו בו כל ארבעת הסימנים. שני כללים שונים בהיקפם.</div>
+    <div class="trans" data-when="en">The Gemara asks: But how can this be considered a generalization, a detail, and a generalization? The first generalization is not similar to the latter generalization. In the first generalization, the Merciful One states: “Which have jointed legs,” indicating that you may eat a grasshopper that has jointed legs, but you may not eat one that does not have jointed legs, irrespective of any other sign. However, the latter generalization: “After its kinds,” indicates that no grasshopper is kosher unless it shares all four signs with the named species.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">19</span> <span class="ref">חולין ס״ו א — Chullin 66a:5</span></div>
+    <div class="orig">תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל בִּכְלָלֵי וּפְרָטֵי כִּי הַאי גַוְונָא דָּאֵין, וּדְאָמְרִינַן נָמֵי בְּעָלְמָא דְּדָאֵין תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל בִּכְלָלֵי וּפְרָטֵי כִּי הַאי גַוְונָא מֵהָכָא.</div>
+    <div class="trans" data-when="he">תירוץ: תנא דבי ר׳ ישמעאל דורש כללי ופרטי כי האי גוונא — אף כשהכללים אינם דומים זה לזה. ומה שאומרים בעלמא שתנא דבי ר׳ ישמעאל דורש כך — מקורו מכאן.</div>
+    <div class="trans" data-when="en">The Gemara responds: The tanna of the school of Rabbi Yishmael deduces from generalizations and details like this case, even if the generalizations are not similar to one another. The Gemara notes: And that which we also say generally, that the tanna of the school of Rabbi Yishmael deduces from generalizations and details like this case, is derived from here.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">20</span> <span class="ref">חולין ס״ו א — Chullin 66a:6</span></div>
+    <div class="orig">אָמַר מָר: אִי שְׁמוֹ ״חָגָב״, יָכוֹל אֵין בּוֹ כׇּל הַסִּימָנִין הַלָּלוּ? תַּלְמוּד לוֹמַר ״לְמִינֵהוּ״ – עַד שֶׁיְּהוּ בּוֹ כׇּל הַסִּימָנִין הַלָּלוּ. אֵין בּוֹ כׇּל הַסִּימָנִין הַלָּלוּ מֵהֵיכָא תֵּיתֵי? ״אַרְבֶּה״ וְ״חַרְגּוֹל״ כְּתִיב!</div>
+    <div class="trans" data-when="he">הגמרא חוזרת לברייתא דבי ר׳ ישמעאל: אמר מר — אם שמו חגב, יכול שכשר אף בלא כל הסימנים? ת״ל ״למינהו״ — עד שיהיו בו כולם. ושואלת: מהיכן בכלל היה עולה שכשר בלא כל הסימנים? והרי ״ארבה״ ו״חרגול״ כתובים, ומהם למדים שצריך את כל הסימנים!</div>
+    <div class="trans" data-when="en">The Gemara analyzes the baraita of the school of Rabbi Yishmael: The Master said: If its name must be ḥagav, one might have thought that any ḥagav is kosher, even if it does not have all these four signs. Therefore, the verse states: “After its kinds,” indicating that it is not kosher unless it has all these signs. The Gemara asks: From where would this be derived, that a grasshopper is kosher even if it does not have all these signs? How could one entertain this possibility? Arbeh and ḥargol are written beforehand, indicating that all kosher grasshoppers must share the signs they both possess.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">21</span> <span class="ref">חולין ס״ו א — Chullin 66a:7</span></div>
+    <div class="orig">אִי לָא כְּתִיב ״סׇלְעָם״ – כִּדְקָאָמְרַתְּ, הַשְׁתָּא דִּכְתִיב ״סׇלְעָם״ – לְרַבּוֹיֵי רֹאשׁוֹ אָרוֹךְ, אֵימָא לִירַבֵּי נָמֵי כֹּל דְּהוּ – קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">תירוץ: אילו לא נכתב ״סלעם״ — הדין כדבריך (היו צריכים כל הסימנים מעצם הכתוב). אך עכשיו שנכתב ״סלעם״ לרבות ראש ארוך, היה עולה לרבות אף כל מין שהוא — לכן ״למינהו״ משמיענו שצריך כל הסימנים.</div>
+    <div class="trans" data-when="en">The Gemara responds: If solam had not been written as well, it would be as you said. But now that it is written: “Solam,” to include long-headed grasshoppers even though none of the named species have long heads, I will say: Let us also include any grasshopper that is called ḥagav. Therefore, the phrase “after its kinds” teaches us that this is not so.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">22</span> <span class="ref">חולין ס״ו א — Chullin 66a:8</span></div>
+    <div class="orig">מַאי שְׁנָא הָתָם דְּאָמְרַתְּ: ״סׇלְעָם״ – זֶה ״רָשׁוֹן״, ״חַרְגֹּל״ – זֶה ״נִיפּוּל״, וּמַאי שְׁנָא הָכָא דְּאָמְרַתְּ: ״סׇלְעָם״ – זֶה ״נִיפּוּל״, ״חַרְגֹּל״ – זֶה ״רָשׁוֹן״? מָר כִּי אַתְרֵיהּ וּמָר כִּי אַתְרֵיהּ.</div>
+    <div class="trans" data-when="he">קושיא אחרונה: מדוע בברייתא הראשונה ״סלעם זה רשון, חרגול זה ניפול״, ואילו בדבי ר׳ ישמעאל הפוך — ״סלעם זה ניפול, חרגול זה רשון״? תירוץ: כל חכם נקט כלשון מקומו — מר כי אתריה ומר כי אתריה.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is different there, in the baraita of the study hall, that you say that the solam is the rashon, and the ḥargol is the nippul, and what is different here, in the baraita of the school of Rabbi Yishmael, that you say: The solam is the nippul, and the ḥargol is the rashon? The Gemara responds: This Sage refers to them in accordance with the custom of his locale and that Sage refers to them in accordance with the custom of his locale.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
