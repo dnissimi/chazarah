@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ס׳</title>
+<meta name="description" content="מפת הסוגיא של חולין ס׳: אגדות על גדולת הבורא — סעודה לאלוהי ישראל, פלך לבת קיסר, שורו של אדם הראשון, מיעוט הירח, וכלל בריאה שלמה; ומסוף הדף סוגיית סימני העוף הטהור.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="60">
+<meta name="gemara-map:sefaria-ref" content="Chullin 60">
+<meta name="gemara-map:topic-he" content="אגדות הבריאה וסימני העוף">
+<meta name="gemara-map:topic-en" content="Creation aggadot and bird signs">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ס׳">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 60">
+<meta name="gemara-map:blurb-he" content="רצף אגדות על גדולת הבורא ומעשה בראשית, ומסוף הדף בירור הלכתי ארוך: כיצד למדים מן הפסוקים שעוף הבא בסימן אחד טהור.">
+<meta name="gemara-map:blurb-en" content="A run of aggadot on God's greatness and Creation, then a long halakhic sugya: how the verses teach that a bird with even one kosher sign is permitted.">
+<meta name="gemara-map:sugya-count" content="8">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ס׳</span><span data-when="en">Sugya map — Chullin 60</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ס׳ א — ס״ב א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 60a–62a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> רוב הדף הוא רצף <b>אגדות</b> על גדולת הבורא ומעשה בראשית: קיסר המבקש לערוך סעודה לאלוהי ישראל ונכשל, בת קיסר המבקשת פלך, שורו של אדם הראשון שנברא בקומתו, מיעוט הירח, והדשאים שהמתינו לתפילת אדם. בסוף הדף עוברת הגמרא ל<b>סוגיית סימני העוף</b> (ס״ב–ס״א): מתוך פירכות חוזרות על ״נשר״ ו״תורים״ נלמד שעוף הבא בסימן אחד — טהור, ובלבד שאינו דורס.</span>
+    <span data-when="en"><b>Bottom line:</b> Most of the daf is a run of <b>aggadot</b> on God's greatness and the Creation: the emperor who tries and fails to host a meal for Israel's God, his daughter who asks for a distaff, the single-horned ox Adam offered, the diminishing of the moon, and the grasses that waited for Adam's prayer. The daf closes with the long <b>bird-signs sugya</b> (60b–62a): through repeated objections about the <i>nesher</i> and the dove, the Gemara establishes that a bird with even one kosher sign is permitted — provided it does not claw its prey.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ס׳</span><span data-when="en">Overview — Chullin 60</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · קיסר מבקש לערוך סעודה לה׳"]:::statement
+  O2["2 · בת קיסר — פלך וצרעת"]:::statement
+  O3["3 · שורו של אדם הראשון"]:::statement
+  O4["4 · קל וחומר של הדשאים — למינהו"]:::statement
+  O5["5 · מיעוט הירח"]:::statement
+  O6["6 · דשאים שהמתינו לתפילה"]:::statement
+  O7["7 · השסועה ומקראות מיותרים"]:::statement
+  O8["8 · סימני העוף הטהור"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Emperor asks to host a meal for God"]:::statement
+  O2["2 · Emperor's daughter — distaff and leprosy"]:::statement
+  O3["3 · The ox of Adam the first man"]:::statement
+  O4["4 · The grasses' a-fortiori — after its kind"]:::statement
+  O5["5 · Diminishing of the moon"]:::statement
+  O6["6 · Grasses that waited for prayer"]:::statement
+  O7["7 · Hashesua and superfluous verses"]:::statement
+  O8["8 · Signs of the kosher bird"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">קיסר מבקש לערוך סעודה לה׳</span><span data-when="en">The emperor's meal for God</span>
+      <span class="ref">Chullin 60a:2-3</span></h2>
+  <div class="lead"><span data-when="he">הקיסר מבקש לערוך סעודה לאלוהי ישראל, וכל מאמציו נבלעים בים — ואינם אלא פירורי משרתיו.</span><span data-when="en">The emperor wants to host a meal for Israel's God; his whole effort is swept into the sea — and it was only His attendants' scraps.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① קיסר: רוצה לערוך סעודה לאלוהיכם"]:::statement
+  Q1{"① ר׳ יהושע: לא תוכל — חיילותיו מרובים"}:::question
+  S2["① ערוך על שפת הים, שיש מקום רחב"]:::statement
+  C1["② ניסה שנה שלמה — רוח וגשם בלעו הכל; אלו רק המכבדים והשוטפים"]:::conclusion
+  S1 --> Q1
+  Q1 -->|בכל זאת| S2
+  S2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Emperor: I wish to host a meal for your God"]:::statement
+  Q1{"① R. Yehoshua: you cannot — His hosts are too great"}:::question
+  S2["① Arrange it by the sea, where space is wide"]:::statement
+  C1["② A full year's effort — wind and rain swept it off; only His sweepers and washers"]:::conclusion
+  S1 --> Q1
+  Q1 -->|even so| S2
+  S2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בָּעֵינָא דְּאִיצְבֵּית לֵיהּ נַהֲמָא לֵאלָהַיְכוּ"]:::statement
+  Q1{"① לָא מָצֵית … נְפִישִׁי חֵילְוָותֵיהּ"}:::question
+  S2["① פּוֹק צְבֵית לְגֻידָּא דִּרְבִיתָא, דִּרְוִיחַ עָלְמָא"]:::statement
+  C1["② אֲתָא זִיקָא כַּנְשֵׁיהּ לְיַמָּא … הָנֵי כָּנוֹשָׁאֵי זָלוֹחָאֵי"]:::conclusion
+  S1 --> Q1
+  Q1 -->|בכל זאת| S2
+  S2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ א — Chullin 60a:2</span></div>
+    <div class="orig">אֲמַר לֵיהּ קֵיסָר לְרַבִּי יְהוֹשֻׁעַ בֶּן חֲנַנְיָה: בָּעֵינָא דְּאִיצְבֵּית לֵיהּ נַהֲמָא לֵאלָהַיְכוּ. אֲמַר לֵיהּ: לָא מָצֵית. אַמַּאי? נְפִישִׁי חֵילְוָותֵיהּ. אֲמַר לֵיהּ: אִיבְרָא. אֲמַר לֵיהּ: פּוֹק צְבֵית לְגֻידָּא דִּרְבִיתָא, דִּרְוִיחַ עָלְמָא. טְרַח שִׁיתָּא יַרְחֵי קַיְיטָא, אֲתָא זִיקָא כַּנְשֵׁיהּ לְיַמָּא.</div>
+    <div class="trans" data-when="he">הקיסר אמר לרבי יהושע בן חנניה: רצוני לערוך סעודה לאלוהיכם. אמר לו: לא תוכל. מדוע? חיילותיו מרובים. אמר: אף על פי כן רצוני. אמר לו: צא וערוך את הסעודה על שפת הים הגדול, ששם יש מקום רחב. טרח כל ששת חודשי הקיץ — באה רוח וסחפה את הכל לים.</div>
+    <div class="trans" data-when="en">§ The Gemara recounts: The Roman emperor said to Rabbi Yehoshua ben Ḥananya: I desire to arrange bread, i.e., a meal, for your God. Rabbi Yehoshua said to him: You cannot. The emperor asked him: Why? Rabbi Yehoshua said to him: His hosts are too great. The emperor said to him: Truly, I wish to do it. Rabbi Yehoshua said to him: Go out and arrange a meal on the shore of the great sea [dirvita], where there is a wide open space. The emperor worked all the six months of summer to accomplish this. A wind came and swept it all into the sea.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס׳ א — Chullin 60a:3</span></div>
+    <div class="orig">טְרַח שִׁיתָּא יַרְחֵי דְּסִיתְוָא, אֲתָא מִיטְרָא טַבְּעֵיהּ בְּיַמָּא. אֲמַר לֵיהּ: מַאי הַאי? אֲמַר לֵיהּ: הָנֵי כָּנוֹשָׁאֵי זָלוֹחָאֵי דְּאָתוּ קַמֵּיהּ. אֲמַר לֵיהּ: אִי הָכִי לָא מָצֵינָא.</div>
+    <div class="trans" data-when="he">טרח כל ששת חודשי החורף — בא גשם וטיבע את הכל בים. אמר הקיסר: מה זה? אמר לו: אלו רק המכבדים והשוטפים המשרתים לפניו, והם לבדם אכלו את הכל. אמר: אם כן, איני יכול.</div>
+    <div class="trans" data-when="en">The emperor worked to arrange another meal all the six months of winter. Rain came and sank it all in the sea. The emperor said to Rabbi Yehoshua: What is this? Rabbi Yehoshua said to him: These are only the sweepers and floor washers that wait on Him, and they alone have eaten everything. The emperor said to him: If so, I cannot arrange a meal before Him.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">בת קיסר — פלך וצרעת</span><span data-when="en">The emperor's daughter — distaff and leprosy</span>
+      <span class="ref">Chullin 60a:4-5</span></h2>
+  <div class="lead"><span data-when="he">בת קיסר מבקשת מאלוהי ישראל פלך; היא לוקה בצרעת, ומבקשת שיטול בחזרה — אלוהינו נותן ואינו נוטל.</span><span data-when="en">The emperor's daughter asks Israel's God for a distaff; she is struck with leprosy and asks Him to take it back — our God gives, but does not take.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בת קיסר: אלוהיכם נגר — שיעשה לי פלך"]:::statement
+  S2["① ר׳ יהושע ביקש רחמים — ולקתה בצרעת, וישבה בשוק עם פלך"]:::statement
+  C1["② בקשי שיטול את שנתן — אלוהינו נותן ואינו נוטל"]:::conclusion
+  S1 --> S2
+  S2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Daughter: your God is a carpenter — let Him make me a distaff"]:::statement
+  S2["① R. Yehoshua prayed — she was struck with leprosy, sitting in the market with a distaff"]:::statement
+  C1["② Ask Him to take back what He gave — our God gives but does not take"]:::conclusion
+  S1 --> S2
+  S2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אֱלָהֵיכוֹן נַגָּרָא הוּא … דְּנֶעְבֵּיד לִי חֲדָא מַסְתּוּרִיתָא"]:::statement
+  S2["① בְּעָא רַחֲמֵי עֲלַהּ וְאִינַּגְעָה … וְיָתֵיב בְּשׁוּקָא וְסָתַר דּוּלְלֵי"]:::statement
+  C1["② אֵימָא לֵיהּ לֵאלָהָיךְ לִשְׁקוֹל … אֱלָהָא דִּידַן מֵיהָב יָהֵיב, מִשְׁקָל לָא שָׁקֵיל"]:::conclusion
+  S1 --> S2
+  S2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ א — Chullin 60a:4</span></div>
+    <div class="orig">אֲמַרָה לֵיהּ בַּת קֵיסָר לְרַבִּי יְהוֹשֻׁעַ בֶּן חֲנַנְיָה: אֱלָהֵיכוֹן נַגָּרָא הוּא, דִּכְתִיב ״הַמְקָרֶה בַמַּיִם עֲלִיּוֹתָיו״. אֵימָא לֵיהּ דְּנֶעְבֵּיד לִי חֲדָא מַסְתּוּרִיתָא. אֲמַר: לְחַיֵּי, בְּעָא רַחֲמֵי עֲלַהּ וְאִינַּגְעָה. אוֹתְבַהּ בְּשׁוּקָא דְּרוֹמִי וְיָהֲבִי לַהּ מַסְתּוּרִיתָא, דַּהֲווֹ נְהִיגִי דְּכֹל דִּמְנַגַּע בְּרוֹמִי יָהֲבוּ לֵיהּ מַסְתּוּרִיתָא, וְיָתֵיב בְּשׁוּקָא וְסָתַר דּוּלְלֵי, כִּי הֵיכִי דְּלִיחְזוֹ אִינָשֵׁי וְלִיבְעֵי רַחֲמֵי עֲלֵיהּ.</div>
+    <div class="trans" data-when="he">בת הקיסר אמרה לרבי יהושע בן חנניה: אלוהיכם נגר הוא, שכתוב ״המקרה במים עליותיו״; אמור לו שיעשה לי פלך (כלי טווייה). אמר: בסדר; ביקש עליה רחמים ולקתה בצרעת. הושיבוה בשוק רומי ונתנו לה פלך, שכן נהגו לתת פלך לכל מצורע ברומי, והוא יושב בשוק ומפרק גרגרי צמר, כדי שיראו אנשים ויבקשו עליו רחמים.</div>
+    <div class="trans" data-when="en">§ The Gemara recounts: The daughter of the Roman emperor said to Rabbi Yehoshua ben Ḥananya: Your God is a carpenter, as it is written: “Who lays the beams of His upper chambers in the waters” (Psalms 104:3). Tell Him to make for me a distaff, a simple tool used in spinning. Rabbi Yehoshua ben Ḥananya said: Very well. He prayed for mercy for her and she was stricken with leprosy. She sat in the Roman market, and they gave her a distaff, since it was their custom to give a distaff to anyone stricken with leprosy in Rome, and the leper would sit in the market and untangle bunches of wool, so that people would see and pray for mercy on him.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס׳ א — Chullin 60a:5</span></div>
+    <div class="orig">יוֹמָא חַד הֲוָה קָא חָלֵיף הָתָם, הֲוָת יָתְבָא וְסָתְרָה דּוּלְלֵי בְּשׁוּקָא דְּרוֹמָאֵי, אֲמַר לַהּ: שַׁפִּירְתָּא מַסְתּוּרִיתָא דִּיהַב לִיךְ אֱלָהַי. אֲמַרָה לֵיהּ: אֵימָא לֵיהּ לֵאלָהָיךְ לִשְׁקוֹל מַאי דִּיהַב לִי. אָמַר לָהּ: אֱלָהָא דִּידַן מֵיהָב יָהֵיב, מִשְׁקָל לָא שָׁקֵיל.</div>
+    <div class="trans" data-when="he">יום אחד עבר שם רבי יהושע וראה אותה יושבת ומפרקת צמר בשוק. אמר לה: יפה הפלך שנתן לך אלוהי. אמרה לו: אמור לאלוהיך שייטול בחזרה מה שנתן לי. אמר לה: אלוהינו נותן הוא נותן, אך אינו נוטל בחזרה.</div>
+    <div class="trans" data-when="en">One day Rabbi Yehoshua ben Ḥananya was passing there, and he saw that she was sitting and untangling bunches of wool in the Roman market. Rabbi Yehoshua ben Ḥananya said to her: Is the distaff my God gave you pleasing? She said to him: Tell your God to take back what He has given me. Rabbi Yehoshua ben Ḥananya said to her: Our God gives, but does not take.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">שורו של אדם הראשון</span><span data-when="en">The ox of Adam the first man</span>
+      <span class="ref">Chullin 60a:6-9</span></h2>
+  <div class="lead"><span data-when="he">מימרות רב יהודה: סימני שור וחמור, ושורו של אדם הראשון — קרן אחת, וקרניו קדמו לפרסותיו — ומסייע שהכל נברא בקומתו.</span><span data-when="en">Rav Yehuda's sayings: the marks of bull and donkey, and Adam's ox — single-horned, horns before hooves — supporting that all was created full-grown.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① רב יהודה: סימני שור וחמור — נפקא מינה למקח וממכר"]:::statement
+  S2["② רב יהודה: שור אדם הראשון — קרן אחת במצחו"]:::statement
+  Q1{"② ׳מקרין׳ — שתי קרניים משמע!"}:::question
+  A1["② רב נחמן: ׳מקרן׳ כתיב — קרן אחת"]:::answer
+  S3["③ רב יהודה: קרניו קדמו לפרסותיו — מקרין ברישא"]:::statement
+  P1["④ מסייע לריב״ל: כל מעשה בראשית בקומתן ובצביונם נבראו"]:::proof
+  S1 --> S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> S3
+  S3 -->|מסייע| P1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Rav Yehuda: marks of bull and donkey — relevant for buying and selling"]:::statement
+  S2["② Rav Yehuda: Adam's ox had a single horn on its forehead"]:::statement
+  Q1{"② ׳Makrin׳ implies two horns!"}:::question
+  A1["② Rav Naḥman: written ׳makran׳ — a single horn"]:::answer
+  S3["③ Rav Yehuda: its horns preceded its hooves — ׳horns׳ comes first"]:::statement
+  P1["④ Supports R. Yehoshua b. Levi: all Creation made full-grown and in full form"]:::proof
+  S1 --> S2
+  S2 -->|question| Q1
+  Q1 -->|answer| A1
+  A1 --> S3
+  S3 -->|supports| P1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① שׁוֹר כְּרַסְתָּן וּפַרְסְתָן … וְחִילּוּפָא בַּחֲמָרָא … לְמִקָּח וּמִמְכָּר"]:::statement
+  S2["② שׁוֹר שֶׁהִקְרִיב אָדָם הָרִאשׁוֹן, קֶרֶן אַחַת הָיְתָה לוֹ בְּמִצְחוֹ"]:::statement
+  Q1{"② מַקְרִין תַּרְתֵּי מַשְׁמַע!"}:::question
+  A1["② אָמַר רַב נַחְמָן: ״מַקְרָן״ כְּתִיב"]:::answer
+  S3["③ קַרְנָיו קוֹדְמוֹת לְפַרְסוֹתָיו … מַקְרִין בְּרֵישָׁא, וַהֲדַר מַפְרִיס"]:::statement
+  P1["④ כׇּל מַעֲשֵׂה בְרֵאשִׁית בְּקוֹמָתָן … בְּצִבְיוֹנָם נִבְרְאוּ"]:::proof
+  S1 --> S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> S3
+  S3 -->|מסייע| P1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ א — Chullin 60a:6</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: שׁוֹר כְּרַסְתָּן וּפַרְסְתָן, רַב רֵישֵׁיהּ וְרַב גְּנוּבְתֵּיהּ, וְחִילּוּפָא בַּחֲמָרָא. לְמַאי נָפְקָא מִינַּהּ? לְמִקָּח וּמִמְכָּר.</div>
+    <div class="trans" data-when="he">רב יהודה: שור — כרסו ופרסותיו גדולות, וראשו וזנבו גדולים; ובחמור להפך (הראש והזנב קטנים). ומה הנפקא מינה? למקח וממכר: המוכר שור חייב לספק כזה, ובחמור להפך.</div>
+    <div class="trans" data-when="en">§ Rav Yehuda says: A bull has a large paunch and large hooves. Its head is large, and its tail is large. And the opposite is true for a donkey. The Gemara explains: What is the practical difference that results from such a statement? It is relevant for purposes of buying and selling. One who agrees to sell a bull must provide the buyer with one that fits this description, and the opposite for a donkey.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס׳ א — Chullin 60a:7</span></div>
+    <div class="orig">וְאָמַר רַב יְהוּדָה: שׁוֹר שֶׁהִקְרִיב אָדָם הָרִאשׁוֹן, קֶרֶן אַחַת הָיְתָה לוֹ בְּמִצְחוֹ, שֶׁנֶּאֱמַר: ״וְתִיטַב לַה׳ מִשּׁוֹר פָּר מַקְרִין מַפְרִיס״ – מַקְרִין תַּרְתֵּי מַשְׁמַע! אָמַר רַב נַחְמָן: ״מַקְרָן״ כְּתִיב.</div>
+    <div class="trans" data-when="he">רב יהודה: השור שהקריב אדם הראשון (כקרבן תודה על שניצל) — קרן אחת הייתה לו במצחו, שנאמר ״ותיטב לה׳ משור פר מקרין מפריס״. הקשו: ״מקרין״ משמעו שתי קרניים! ענה רב נחמן: אף שנקרא בלשון רבים, ״מקרן״ כתוב חסר יו״ד — קרן אחת.</div>
+    <div class="trans" data-when="en">And Rav Yehuda says: The bull that Adam, the first man, sacrificed as a thanks offering for his life being spared had a single horn on its forehead, as it is stated: “And it shall please the Lord better than a bullock that has horns [makrin] and hoofs” (Psalms 69:32). The Gemara comments: On the contrary, the word makrin indicates two horns. Rav Naḥman said: Although it is vocalized in the plural, makran is written in the verse, without the letter yod, to indicate that it had only a single horn.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס׳ א — Chullin 60a:8</span></div>
+    <div class="orig">וְאָמַר רַב יְהוּדָה: שׁוֹר שֶׁהִקְרִיב אָדָם הָרִאשׁוֹן, קַרְנָיו קוֹדְמוֹת לְפַרְסוֹתָיו, שֶׁנֶּאֱמַר: ״וְתִיטַב לַה׳ מִשּׁוֹר פָּר מַקְרִין מַפְרִיס״ – מַקְרִין בְּרֵישָׁא, וַהֲדַר מַפְרִיס.</div>
+    <div class="trans" data-when="he">רב יהודה: שורו של אדם הראשון — קרניו קדמו לפרסותיו, שלא נולד מפרה אלא עלה מן הארץ בשלמותו וראשו יצא תחילה, שנאמר ״משור פר מקרין מפריס״ — ״מקרין״ (קרניים) בראש, ואחר כך ״מפריס״ (פרסות).</div>
+    <div class="trans" data-when="en">And Rav Yehuda says: With regard to the bull that Adam, the first man, sacrificed, its horns preceded its hooves. It was not born of a cow, but rose fully formed out of the earth such that its head emerged first, as it is stated: “And it shall please the Lord better than a bullock that has horns and hoofs.” The phrase “has horns” comes first, and only afterward the word “hoofs.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס׳ א — Chullin 60a:9</span></div>
+    <div class="orig">מְסַיַּיע לֵיהּ לְרַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי, דְּאָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: כׇּל מַעֲשֵׂה בְרֵאשִׁית בְּקוֹמָתָן נִבְרְאוּ, בְּדַעְתָּן נִבְרְאוּ, בְּצִבְיוֹנָם נִבְרְאוּ, שֶׁנֶּאֱמַר ״וַיְכֻלּוּ הַשָּׁמַיִם וְהָאָרֶץ וְכׇל צְבָאָם״, אַל תִּקְרֵי ״צְבָאָם״ אֶלָּא ״צִבְיוֹנָם״.</div>
+    <div class="trans" data-when="he">דבר זה מסייע לרבי יהושע בן לוי, שאמר: כל מעשה בראשית נבראו בקומתם המלאה, מוכנים מיד לפרי, נבראו בדעתם השלמה ובצביונם (צורתם המושלמת), שנאמר ״ויכלו השמים והארץ וכל צבאם״ — אל תקרא ״צבאם״ אלא ״צביונם״.</div>
+    <div class="trans" data-when="en">And this supports the statement of Rabbi Yehoshua ben Levi, as Rabbi Yehoshua ben Levi says: All items created during the acts of Creation were created with their full stature, immediately fit to bear fruit; they were created with their full mental capacities; they were created with their full form. As it is stated: “And the heaven and the earth were finished, and all the host of them” (Genesis 2:1). Do not read it as: “The host of them [tzeva’am]”; rather, read it as: Their form [tzivyonam].</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">קל וחומר של הדשאים — למינהו</span><span data-when="en">The grasses' a-fortiori — after its kind</span>
+      <span class="ref">Chullin 60a:10-60b:1</span></h2>
+  <div class="lead"><span data-when="he">הדשאים נשאו קל וחומר מן האילנות ויצאו ״למינהו״; שר העולם שיבחם. ובעיית רבינא — הרכבת מינים — נשארת בתיקו.</span><span data-when="en">The grasses drew an a-fortiori from the trees and emerged each after its kind; the angel of the world praised them. Ravina's dilemma — grafting species — stays unresolved.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ חנינא בר פפא: פסוק ׳ישמח ה׳ במעשיו׳ — שר העולם אמרו"]:::statement
+  S2["② הדשאים נשאו קל וחומר: ומה אילנות נצטוו ׳למינהו׳ — אנו על אחת כמה"]:::statement
+  S3["③ מיד יצא כל אחד למינו, ושר העולם פתח ׳יהי כבוד ה׳ לעולם׳"]:::statement
+  Q1{"④ בעי רבינא: הרכיב שני דשאים זה על זה — מהו?"}:::question
+  C1["⑤ לא נכתב בהם ׳למינהו׳, או שהסכים אחר כך — תיקו"]:::conclusion
+  S1 --> S2 --> S3
+  S3 -->|בעיא| Q1
+  Q1 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Ḥanina b. Pappa: the verse ׳let the Lord rejoice in His works׳ — the world's angel said it"]:::statement
+  S2["② Grasses reasoned a-fortiori: if trees were told ׳after its kind׳ — all the more so we"]:::statement
+  S3["③ At once each emerged after its kind, and the angel opened ׳May the glory of the Lord endure׳"]:::statement
+  Q1{"④ Ravina's dilemma: one grafted two grasses onto each other — what is the law?"}:::question
+  C1["⑤ ׳After its kind׳ not written of them, or God agreed after the fact — unresolved"]:::conclusion
+  S1 --> S2 --> S3
+  S3 -->|dilemma| Q1
+  Q1 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ׳יְהִי כְבוֹד ה׳ … יִשְׂמַח ה׳ בְּמַעֲשָׂיו׳, פָּסוּק זֶה שַׂר הָעוֹלָם אֲמָרוֹ"]:::statement
+  S2["② נָשְׂאוּ דְּשָׁאִים קַל וָחוֹמֶר … אִילָנוֹת … לְמִינֵהוּ – אָנוּ עַל אַחַת כַּמָּה וְכַמָּה"]:::statement
+  S3["③ מִיָּד כׇּל אֶחָד יָצָא לְמִינוֹ, פָּתַח שַׂר הָעוֹלָם … יְהִי כְבוֹד ה׳ לְעוֹלָם"]:::statement
+  Q1{"④ בָּעֵי רָבִינָא: הִרְכִּיב שְׁנֵי דְּשָׁאִים זֶה עַל גַּב זֶה … מַהוּ?"}:::question
+  C1["⑤ לָא כְּתַב בְּהוּ ׳לְמִינֵהוּ׳ … אוֹ דְּהִסְכִּים אַיְּדַיְהוּ … תֵּיקוּ"]:::conclusion
+  S1 --> S2 --> S3
+  S3 -->|בעיא| Q1
+  Q1 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ א — Chullin 60a:10</span></div>
+    <div class="orig">דָּרֵשׁ רַבִּי חֲנִינָא בַּר פָּפָּא: ״יְהִי כְבוֹד ה׳ לְעוֹלָם יִשְׂמַח ה׳ בְּמַעֲשָׂיו״, פָּסוּק זֶה שַׂר הָעוֹלָם אֲמָרוֹ, בְּשָׁעָה שֶׁאָמַר הַקָּדוֹשׁ בָּרוּךְ הוּא ״לְמִינֵהוּ״ בָּאִילָנוֹת, נָשְׂאוּ דְּשָׁאִים קַל וָחוֹמֶר בְּעַצְמָן:</div>
+    <div class="trans" data-when="he">דרש ר׳ חנינא בר פפא: הפסוק ״יהי כבוד ה׳ לעולם ישמח ה׳ במעשיו״ — שר העולם (המלאך הממונה על העולם) אמרו. כשציווה הקב״ה ״למינהו״ באילנות, נשאו הדשאים קל וחומר על עצמם:</div>
+    <div class="trans" data-when="en">§ Rabbi Ḥanina bar Pappa taught: “May the glory of the Lord endure forever; let the Lord rejoice in His works” (Psalms 104:31). This verse was stated by the minister of the world, i.e., the angel charged with overseeing the world. When the Holy One, Blessed be He, said: “Let the earth put forth grass, herb yielding seed, and fruit tree bearing fruit after its kind” (Genesis 1:11), the grasses drew an a fortiori inference with regard to themselves.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס׳ א — Chullin 60a:11</span></div>
+    <div class="orig">אִם רְצוֹנוֹ שֶׁל הַקָּדוֹשׁ בָּרוּךְ הוּא בְּעִרְבּוּבְיָא, לָמָּה אָמַר ״לְמִינֵהוּ״ בָּאִילָנוֹת? וְעוֹד קַל וָחוֹמֶר: וּמָה אִילָנוֹת שֶׁאֵין דַּרְכָּן לָצֵאת בְּעִרְבּוּבְיָא, אָמַר הַקָּדוֹשׁ בָּרוּךְ הוּא ״לְמִינֵהוּ״ – אָנוּ עַל אַחַת כַּמָּה וְכַמָּה!</div>
+    <div class="trans" data-when="he">הדשאים אמרו: אם רצונו של הקב״ה בעירבוביה, למה אמר ״למינהו״ באילנות? ועוד קל וחומר: ומה אילנות, שאין דרכם לצאת מעורבבים, נצטוו ״למינהו״ — אנו, שדרכנו לצמוח מעורבבים, על אחת כמה וכמה!</div>
+    <div class="trans" data-when="en">They reasoned: If the Holy One, Blessed be He, wishes the mixing of species, why did he say: After its kind, with regard to the trees? And furthermore, let us draw an a fortiori inference: If with regard to trees, which do not naturally grow mixed, as they are large and distinct from one another, the Holy One, Blessed be He, said: “After its kind,” all the more so with regard to us, since grass naturally grows mixed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס׳ א — Chullin 60a:12</span></div>
+    <div class="orig">מִיָּד כׇּל אֶחָד וְאֶחָד יָצָא לְמִינוֹ, פָּתַח שַׂר הָעוֹלָם וְאָמַר: ״יְהִי כְבוֹד ה׳ לְעוֹלָם יִשְׂמַח ה׳ בְּמַעֲשָׂיו״.</div>
+    <div class="trans" data-when="he">מיד יצא כל מין דשא למינו, שנאמר ״ותוצא הארץ דשא עשב מזריע זרע למינהו״. פתח שר העולם ואמר: ״יהי כבוד ה׳ לעולם ישמח ה׳ במעשיו״ — העושים רצונו אף כשלא נצטוו במפורש.</div>
+    <div class="trans" data-when="en">Immediately, every kind of grass emerged after its kind, as it is stated: “And the earth brought forth grass, herb yielding seed after its kind” (Genesis 1:12). The minister of the world began to speak and said: “May the glory of the Lord endure forever; let the Lord rejoice in His works,” who do His will even when not explicitly instructed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס׳ א — Chullin 60a:13</span></div>
+    <div class="orig">בָּעֵי רָבִינָא: הִרְכִּיב שְׁנֵי דְּשָׁאִים זֶה עַל גַּב זֶה</div>
+    <div class="trans" data-when="he">בעי רבינא: אם הרכיב אדם שני מיני דשא זה על זה (כדרך שמרכיבים אילנות) —</div>
+    <div class="trans" data-when="en">With regard to the above description, Ravina raises a dilemma: If one grafted two species of grass onto one another, as is done with trees,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס׳ ב — Chullin 60b:1</span></div>
+    <div class="orig">לְרַבִּי חֲנִינָא בַּר פָּפָּא מַהוּ? כֵּיוָן דְּלָא כְּתַב בְּהוּ ״לְמִינֵהוּ״ לָא מִיחַיַּיב, אוֹ דִילְמָא כֵּיוָן דְּהִסְכִּים אַיְּדַיְהוּ – כְּמַאן דִּכְתִיב בְּהוּ ״לְמִינֵהוּ״ דָּמְיָא? תֵּיקוּ.</div>
+    <div class="trans" data-when="he">— מהו לדעת ר׳ חנינא בר פפא? האם כיוון שלא נכתב בדשאים ״למינהו״ אין מתחייב על הרכבתם, או שמא כיוון שהקב״ה הסכים אחר כך לדבריהם — הרי זה כאילו נכתב בהם ״למינהו״ ומתחייב? תיקו.</div>
+    <div class="trans" data-when="en">what is the halakha according to Rabbi Ḥanina bar Pappa? Shall one say that since the phrase “after its kind” is not written as a mitzva with regard to them, one is not liable for transgressing the prohibition against mixing diverse kinds? Or perhaps, since God agreed with them after the fact, as the verse states: “Let the Lord rejoice in His works,” it is as if the mitzva “after its kind” is written with regard to them. The Gemara responds: The dilemma shall stand unresolved.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">מיעוט הירח</span><span data-when="en">Diminishing of the moon</span>
+      <span class="ref">Chullin 60b:2-4</span></h2>
+  <div class="lead"><span data-when="he">סתירה בין ׳שני המאורות הגדולים׳ ל׳המאור הקטן׳: הירח קטרג, נצטווה למעט עצמו, ולבסוף שעיר ראש חודש לכפרה.</span><span data-when="en">A contradiction between ׳two great lights׳ and ׳the lesser light׳: the moon objected, was told to diminish itself, and finally the New-Moon goat as atonement.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① ר׳ שמעון בן פזי: ׳שני המאורות הגדולים׳ מול ׳המאור הקטן׳ — סתירה"}:::question
+  S1["① הירח: אפשר לשני מלכים בכתר אחד? — לכי ומעטי עצמך"]:::statement
+  A1["② נחמות לירח: תמשול ביום ובלילה, יספרו בך, ייקראו צדיקים בשמך"]:::answer
+  C1["③ ראה שלא נתיישבה דעתה — שעיר ראש חודש כפרה על שמיעט הירח"]:::conclusion
+  Q1 --> S1
+  S1 -->|נחמה| A1
+  A1 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① R. Shimon b. Pazi: ׳two great lights׳ vs ׳the lesser light׳ — a contradiction"}:::question
+  S1["① The moon: can two kings share one crown? — Go and diminish yourself"]:::statement
+  A1["② Consolations: rule day and night, be counted by, righteous named for you"]:::answer
+  C1["③ He saw she was not comforted — the New-Moon goat atones for diminishing the moon"]:::conclusion
+  Q1 --> S1
+  S1 -->|consolation| A1
+  A1 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① רָמֵי: ׳שְׁנֵי הַמְּאֹרֹת הַגְּדֹלִים׳ … ׳הַמָּאוֹר הַקָּטֹן׳"}:::question
+  S1["① אֶפְשָׁר לִשְׁנֵי מְלָכִים שֶׁיִּשְׁתַּמְּשׁוּ בְּכֶתֶר אֶחָד? … לְכִי וּמַעֲטִי אֶת עַצְמֵךְ"]:::statement
+  A1["② מְשׁוֹל בַּיּוֹם וּבַלַּיְלָה … לִימְנוֹ בָּךְ … לִיקְרוֹ צַדִּיקֵי בִּשְׁמִיךְ"]:::answer
+  C1["③ הָבִיאוּ כַּפָּרָה עָלַי שֶׁמִּיעַטְתִּי אֶת הַיָּרֵחַ … שָׂעִיר שֶׁל רֹאשׁ חֹדֶשׁ"]:::conclusion
+  Q1 --> S1
+  S1 -->|נחמה| A1
+  A1 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ ב — Chullin 60b:2</span></div>
+    <div class="orig">רַבִּי שִׁמְעוֹן בֶּן פַּזִּי רָמֵי: כְּתִיב ״וַיַּעַשׂ אֱלֹהִים אֶת שְׁנֵי הַמְּאֹרֹת הַגְּדֹלִים״, וּכְתִיב ״אֶת הַמָּאוֹר הַגָּדוֹל וְאֶת הַמָּאוֹר הַקָּטֹן״. אָמְרָה יָרֵחַ לִפְנֵי הַקָּדוֹשׁ בָּרוּךְ הוּא: רִבּוֹנוֹ שֶׁל עוֹלָם, אֶפְשָׁר לִשְׁנֵי מְלָכִים שֶׁיִּשְׁתַּמְּשׁוּ בְּכֶתֶר אֶחָד? אָמַר לָהּ: לְכִי וּמַעֲטִי אֶת עַצְמֵךְ.</div>
+    <div class="trans" data-when="he">ר׳ שמעון בן פזי מקשה סתירה: כתוב ״ויעש אלהים את שני המאורות הגדולים״ — שניהם גדולים; וכתוב באותו פסוק ״את המאור הגדול ואת המאור הקטן״ — שאחד קטן. נבראו שווים, ואז אמרה הירח לפני הקב״ה: אפשר לשני מלכים להשתמש בכתר אחד? אמר לה: לכי ומעטי את עצמך.</div>
+    <div class="trans" data-when="en">§ Rabbi Shimon ben Pazi raises a contradiction between two verses. It is written: “And God made the two great lights” (Genesis 1:16), and it is also written in the same verse: “The greater light to rule the day, and the lesser light to rule the night,” indicating that only one was great. Rabbi Shimon ben Pazi explains: When God first created the sun and the moon, they were equally bright. Then, the moon said before the Holy One, Blessed be He: Master of the Universe, is it possible for two kings to serve with one crown? One of us must be subservient to the other. God therefore said to her, i.e., the moon: If so, go and diminish yourself.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס׳ ב — Chullin 60b:3</span></div>
+    <div class="orig">אָמְרָה לְפָנָיו: רִבּוֹנוֹ שֶׁל עוֹלָם, הוֹאִיל וְאָמַרְתִּי לְפָנֶיךָ דָּבָר הָגוּן, אַמְעִיט אֶת עַצְמִי?! אָמַר לָהּ: לְכִי וּמְשׁוֹל בַּיּוֹם וּבַלַּיְלָה. אֲמַרָה לֵיהּ: מַאי רְבוּתֵיהּ? דִּשְׁרָגָא בְּטִיהֲרָא מַאי אַהֲנִי? אֲמַר לַהּ: זִיל לִימְנוֹ בָּךְ יִשְׂרָאֵל יָמִים וְשָׁנִים. אָמְרָה לֵיהּ: יוֹמָא נָמֵי אִי אֶפְשָׁר דְּלָא מָנוּ בֵּיהּ תְּקוּפָתָא, דִּכְתִיב ״וְהָיוּ לְאֹתֹת וּלְמוֹעֲדִים וּלְיָמִים וְשָׁנִים״. זִיל לִיקְרוֹ צַדִּיקֵי בִּשְׁמִיךְ: ״יַעֲקֹב הַקָּטָן״, ״שְׁמוּאֵל הַקָּטָן״, ״דָּוִד הַקָּטָן״.</div>
+    <div class="trans" data-when="he">אמרה לפניו: ריבונו של עולם, מפני שאמרתי דבר הגון אמעיט את עצמי?! ניחמהּ: לכי ומשלי ביום ובלילה. אמרה: מה התועלת? נר בצהריים מה מועיל? אמר: יספרו בך ישראל ימים ושנים. אמרה: אף ביום ייאלצו למנות תקופות, שנאמר ״והיו לאותות ולמועדים ולימים ושנים״. אמר: ייקראו צדיקים על שמך — ״יעקב הקטן״, ״שמואל הקטן״, ״דוד הקטן״.</div>
+    <div class="trans" data-when="en">She said before Him: Master of the Universe, since I said a correct observation before You, must I diminish myself? God said to her: As compensation, go and rule both during the day along with the sun and during the night. She said to Him: What is the greatness of shining alongside the sun? What use is a candle in the middle of the day? God said to her: Go; let the Jewish people count the days and years with you, and this will be your greatness. She said to Him: But the Jewish people will count with the sun as well, as it is impossible that they will not count seasons with it, as it is written: “And let them be for signs, and for seasons, and for days and years” (Genesis 1:14). God said to her: Go; let righteous men be named after you. Just as you are called the lesser [hakatan] light, there will be Ya’akov HaKatan, i.e., Jacob our forefather (see Amos 7:2), Shmuel HaKatan the tanna, and David HaKatan, i.e., King David (see I Samuel 17:14).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס׳ ב — Chullin 60b:4</span></div>
+    <div class="orig">חַזְיַיהּ דְּלָא קָא מִיַּתְּבָא דַּעְתַּהּ, אָמַר הַקָּדוֹשׁ בָּרוּךְ הוּא: הָבִיאוּ כַּפָּרָה עָלַי שֶׁמִּיעַטְתִּי אֶת הַיָּרֵחַ! וְהַיְינוּ דְּאָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: מָה נִשְׁתַּנָּה שָׂעִיר שֶׁל רֹאשׁ חֹדֶשׁ שֶׁנֶּאֱמַר בּוֹ ״לַה׳״? אָמַר הַקָּדוֹשׁ בָּרוּךְ הוּא: שָׂעִיר זֶה יְהֵא כַּפָּרָה עַל שֶׁמִּיעַטְתִּי אֶת הַיָּרֵחַ.</div>
+    <div class="trans" data-when="he">ראה הקב״ה שלא נתיישבה דעתה, אמר: הביאו כפרה עליי על שמיעטתי את הירח! וזהו שאמר ר׳ שמעון בן לקיש: מה נשתנה שעיר של ראש חודש, שנאמר בו ״לה׳״ (חטאת לה׳)? אמר הקב״ה: שעיר זה יהא כפרה על שמיעטתי את הירח.</div>
+    <div class="trans" data-when="en">God saw that the moon was not comforted. The Holy One, Blessed be He, said: Bring atonement for me, since I diminished the moon. The Gemara notes: And this is what Rabbi Shimon ben Lakish says: What is different about the goat offering of the New Moon, that it is stated with regard to it: “For the Lord” (Numbers 28:15)? The Holy One, Blessed be He, said: This goat shall be an atonement for Me for having diminished the size of the moon.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">דשאים שהמתינו לתפילה</span><span data-when="en">Grasses that waited for prayer</span>
+      <span class="ref">Chullin 60b:5-6</span></h2>
+  <div class="lead"><span data-when="he">סתירה בין ׳ותוצא הארץ דשא׳ ל׳טרם יהיה בארץ׳: הדשאים עמדו על הפתח עד שאדם התפלל — הקב״ה מתאווה לתפילת צדיקים.</span><span data-when="en">A contradiction between ׳the earth brought forth grass׳ and ׳not yet in the earth׳: grasses waited until Adam prayed — God desires the prayer of the righteous.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① רב אסי: ׳ותוצא הארץ דשא׳ בשלישי מול ׳טרם יהיה בארץ׳ בערב שבת"}:::question
+  S1["① הדשאים עמדו על הפתח עד שאדם התפלל וירדו גשמים — מתאווה לתפילת צדיקים"]:::statement
+  P1["② רב נחמן בר פפא: גינתו לא צמחה, ביקש רחמים וירד גשם — היינו דרב אסי"]:::proof
+  Q1 -->|תירוץ| S1
+  S1 -->|מעשה מסייע| P1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① Rav Asi: ׳the earth brought forth grass׳ on the third day vs ׳not yet in the earth׳ on Shabbat eve"}:::question
+  S1["① The grasses stood at the opening until Adam prayed and rain fell — He desires the prayer of the righteous"]:::statement
+  P1["② Rav Naḥman b. Pappa: his garden did not sprout, he prayed and rain came — this is Rav Asi's point"]:::proof
+  Q1 -->|resolved| S1
+  S1 -->|supporting incident| P1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① רַב אַסִּי רָמֵי: ׳וַתּוֹצֵא הָאָרֶץ דֶּשֶׁא׳ … ׳וְכׇל שִׂיחַ הַשָּׂדֶה טֶרֶם יִהְיֶה בָאָרֶץ׳"}:::question
+  S1["① עָמְדוּ עַל פֶּתַח קַרְקַע, עַד שֶׁבָּא אָדָם … וּבִקֵּשׁ … מִתְאַוֶּה לִתְפִלָּתָן שֶׁל צַדִּיקִים"]:::statement
+  P1["② רַב נַחְמָן בַּר פָּפָּא … שְׁדִי בַּיהּ בִּיזְרָנֵי וְלָא צְמַח … בְּעָא רַחֲמֵי … הַיְינוּ דְּרַב אַסִּי"]:::proof
+  Q1 -->|תירוץ| S1
+  S1 -->|מעשה מסייע| P1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ ב — Chullin 60b:5</span></div>
+    <div class="orig">רַב אַסִּי רָמֵי, כְּתִיב: ״וַתּוֹצֵא הָאָרֶץ דֶּשֶׁא״ (בתלת) [בִּתְלָתָא] בְּשַׁבָּא, וּכְתִיב: ״וְכׇל שִׂיחַ הַשָּׂדֶה טֶרֶם יִהְיֶה בָאָרֶץ״ בְּמַעֲלֵי שַׁבְּתָא, מְלַמֵּד שֶׁיָּצְאוּ דְּשָׁאִים וְעָמְדוּ עַל פֶּתַח קַרְקַע, עַד שֶׁבָּא אָדָם הָרִאשׁוֹן וּבִקֵּשׁ עֲלֵיהֶם רַחֲמִים, וְיָרְדוּ גְּשָׁמִים וְצָמְחוּ, לְלַמֶּדְךָ שֶׁהַקָּדוֹשׁ בָּרוּךְ הוּא מִתְאַוֶּה לִתְפִלָּתָן שֶׁל צַדִּיקִים.</div>
+    <div class="trans" data-when="he">רב אסי מקשה סתירה: כתוב ״ותוצא הארץ דשא״ ביום שלישי לבריאה, וכתוב ״וכל שיח השדה טרם יהיה בארץ״ בערב שבת (יום שישי). מלמד שהדשאים יצאו ביום שלישי ועמדו על פתח הקרקע, ולא צמחו עד שבא אדם הראשון וביקש עליהם רחמים, וירדו גשמים וצמחו — ללמדך שהקב״ה מתאווה לתפילתם של צדיקים.</div>
+    <div class="trans" data-when="en">§ Rav Asi raises a contradiction between two verses. It is written: “And the earth brought forth grass” (Genesis 1:12), on the third day of the week of Creation. And it is also written: “No shrub of the field was yet in the earth” (Genesis 2:5), on Shabbat eve, the sixth day of Creation, immediately before Adam was created. Rav Asi explains: This teaches that the grasses emerged on the third day and stood at the opening of the ground, but they did not grow until Adam, the first man, came and prayed for mercy upon them, and rain came, and they sprouted. And this is meant to teach you that the Holy One, Blessed be He, desires the prayers of the righteous.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס׳ ב — Chullin 60b:6</span></div>
+    <div class="orig">רַב נַחְמָן בַּר פָּפָּא הַוְיָא לֵיהּ הָהִיא גִּינְּתָא, שְׁדִי בַּיהּ בִּיזְרָנֵי וְלָא צְמַח. בְּעָא רַחֲמֵי, אֲתָא מִיטְרָא וּצְמַח. אֲמַר: הַיְינוּ דְּרַב אַסִּי.</div>
+    <div class="trans" data-when="he">לרב נחמן בר פפא הייתה גינה; זרע בה זרעים ולא צמחו. ביקש רחמים, בא גשם וצמחו. אמר: זהו ממש מה שלימד רב אסי, שהקב״ה מתאווה לתפילת צדיקים.</div>
+    <div class="trans" data-when="en">The Gemara recounts: Rav Naḥman bar Pappa had a certain garden. He planted seeds but they did not sprout. He prayed for mercy, and rain came, and they sprouted. He said: This is what is meant by the statement of Rav Asi, that the Holy One, Blessed be He, desires the prayers of the righteous.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">השסועה ומקראות מיותרים</span><span data-when="en">Hashesua and superfluous verses</span>
+      <span class="ref">Chullin 60b:7-15</span></h2>
+  <div class="lead"><span data-when="he">״השסועה״ בריה בעלת שני גבין — ראיה שתורה מן השמים; ומכאן רצף ״מקראות מיותרים״ שהם גופי תורה.</span><span data-when="en">The hashesua — a creature with two backs — proves the Torah is divine; then a string of seemingly superfluous verses that are themselves Torah.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב חנן בר רבא: ׳השסועה׳ בריה בעלת שני גבין — תשובה לאומר אין תורה מן השמים"]:::statement
+  S2["② רב חסדא לרב תחליפא: כתוב ׳קניגי ובליסטרי׳ באגדתך ופרשהּ"]:::statement
+  S3["③ חמשה סרני פלשתים וחושב שישה — ׳ארונקי׳ (הגדולים) חמישה; עוים מתימן"]:::statement
+  P1["⑤ ריש לקיש: הרבה מקראות שראויין לשרוף — והן הן גופי תורה"]:::statement
+  C1["⑥ כפתורים, סיחון, חרמון, יוסף — כל ׳מיותר׳ מלמד הלכה או מידה"]:::conclusion
+  S1 --> S2 --> S3
+  S3 -->|כלל| P1
+  P1 -->|דוגמאות| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Ḥanan b. Rava: ׳hashesua׳ is a creature with two backs — refutes those who deny the Torah is divine"]:::statement
+  S2["② Rav Ḥisda to Rav Taḥlifa: write ׳hunter and archer׳ in your aggada and explain"]:::statement
+  S3["③ Five Philistine lords yet it lists six — the ׳greatest׳ are five; the Avvim from Teiman"]:::statement
+  P1["⑤ Reish Lakish: many verses seem fit to be burned — yet they are the essence of Torah"]:::statement
+  C1["⑥ Caphtorim, Sihon, Hermon, Joseph — each ׳superfluous׳ verse teaches a law or trait"]:::conclusion
+  S1 --> S2 --> S3
+  S3 -->|principle| P1
+  P1 -->|examples| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ׳הַשְּׁסוּעָה׳ בְּרִיָּה … שְׁנֵי גַּבִּין וּשְׁנֵי שִׁדְרָאוֹת … תְּשׁוּבָה לָאוֹמֵר אֵין תּוֹרָה מִן הַשָּׁמַיִם"]:::statement
+  S2["② זִיל כְּתוֹב ׳קְנִיגִי וּבַלִּיסְטָרִי׳ בְּאַגַּדְתָּיךְ, וּפָרְשַׁהּ"]:::statement
+  S3["③ אָמַר חַמְשָׁה וְחָשֵׁיב שִׁיתָּא … אֲרוּנְקֵי שֶׁלָּהֶן חֲמִשָּׁה … עַוִּים מִתֵּימָן בָּאוּ"]:::statement
+  P1["⑤ הַרְבֵּה מִקְרָאוֹת שֶׁרְאוּיִין לִשְׂרוֹף כְּסִפְרֵי מִינִין, וְהֵן הֵן גּוּפֵי תוֹרָה"]:::statement
+  C1["⑥ לֵיתוֹ כַּפְתּוֹרִים … עַמּוֹן וּמוֹאָב טִיהֲרוּ בְּסִיחוֹן … חֲבִיבִין … דְּלָא לִיקְרוֹ … גָּלְוָותָא"]:::conclusion
+  S1 --> S2 --> S3
+  S3 -->|כלל| P1
+  P1 -->|דוגמאות| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ ב — Chullin 60b:7</span></div>
+    <div class="orig">אָמַר רַב חָנָן בַּר רָבָא: ״הַשְּׁסוּעָה״ בְּרִיָּה בִּפְנֵי עַצְמָהּ הִיא, שֶׁיֵּשׁ לָהּ שְׁנֵי גַּבִּין וּשְׁנֵי שִׁדְרָאוֹת. וְכִי מֹשֶׁה רַבֵּינוּ קְנִיגִי הָיָה אוֹ בַּלִּיסְטָרִי הָיָה? מִכָּאן תְּשׁוּבָה לָאוֹמֵר אֵין תּוֹרָה מִן הַשָּׁמַיִם.</div>
+    <div class="trans" data-when="he">רב חנן בר רבא: ״השסועה״ שבתורה אינה תיאור כפול של הפרסה הסדוקה, אלא בריה בפני עצמה, שיש לה שני גבין ושתי שדראות ונראית כשסועה לגמרי. וכי משה רבנו צייד או קשת היה, שיכיר בריות נדירות כאלה? אלא מכאן תשובה לאומר אין תורה מן השמים, שלא ידעהּ אלא מפי הגבורה.</div>
+    <div class="trans" data-when="en">§ In one of the passages discussing kosher and non-kosher animals, the Torah states: “Nevertheless, these you shall not eat of them that only chew the cud, or of them that have split hooves that are cloven [hashesua]: The camel, and the hare, and the hyrax” (Deuteronomy 14:7). Rav Ḥanan bar Rava said: “Hashesua” is not a redundant description of the split hooves but a distinct creature, which has two backs and two spines and therefore looks like an entirely cloven animal. One might ask: But was Moses our teacher a hunter, or was he an archer, who was familiar with the most exotic animals? Rather, from here there is a refutation to those who say that the Torah is not from Heaven, since Moses could not have known of the existence of such an animal save by divine revelation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס׳ ב — Chullin 60b:8</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב חִסְדָּא לְרַב תַּחְלִיפָא בַּר אֲבִינָא: זִיל כְּתוֹב ״קְנִיגִי וּבַלִּיסְטָרִי״ בְּאַגַּדְתָּיךְ, וּפָרְשַׁהּ.</div>
+    <div class="trans" data-when="he">רב חסדא לרב תחליפא בר אבינא: לך כתוב את המילים ״קניגי (צייד) ובליסטרי (קשת/יורה)״ בספר האגדה שלך ופרש אותן, שכן יש שאינם מכירים מילים אלו.</div>
+    <div class="trans" data-when="en">Rav Ḥisda said to Rav Taḥlifa bar Avina: Go write this statement about the hunter [kinnigi] and the archer [ballisteri] in your book of aggada, and explain those two words, since some are unfamiliar with them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס׳ ב — Chullin 60b:9</span></div>
+    <div class="orig">״וְאֶת חֲמֵשֶׁת סַרְנֵי פְלִשְׁתִּים הָעַזָּתִי וְהָאַשְׁדּוֹדִי הָאֶשְׁקְלוֹנִי הַגִּתִּי וְהָעֶקְרוֹנִי וְהָעַוִּים״, אָמַר חַמְשָׁה וְחָשֵׁיב שִׁיתָּא! אָמַר רַבִּי יוֹנָתָן: אֲרוּנְקֵי שֶׁלָּהֶן חֲמִשָּׁה. אֲמַר לֵיהּ רַב חִסְדָּא לְרַב תַּחְלִיפָא בַּר אֲבִינָא: כְּתוֹב ״אֲרוּנְקֵי״ בְּאַגַּדְתָּיךְ וּפָרְשַׁהּ. וּפְלִיגָא דְּרַב, דְּאָמַר רַב: עַוִּים מִתֵּימָן בָּאוּ.</div>
+    <div class="trans" data-when="he">הפסוק קשה: ״חמשת סרני פלשתים״ — ומונה שישה! ר׳ יונתן: היו שישה, אבל הגדולים שבהם (״ארונקי״) חמישה. רב חסדא לרב תחליפא: כתוב ״ארונקי״ באגדתך ופרשהּ. וזה חולק על רב, שאמר: העוים לא היו פלשתים אלא באו מתימן.</div>
+    <div class="trans" data-when="en">The Gemara relates another statement. The verse states: “The five lords of the Philistines: The Gazite, and the Ashdodite, the Ashkelonite, the Gittite, and the Ekronite; also the Avvim” (Joshua 13:3). The verse is difficult, since it first said there are five lords of the Philistines, but it then lists six. Rabbi Yonatan said: There were in fact six lords, but the greatest of them were only five. Rav Ḥisda said to Rav Taḥlifa bar Avina: Write this statement about the greatest [arunekei] in your book of aggada, and explain that word. The Gemara notes: And this statement disagrees with the opinion of Rav, as Rav says: The Avvim were not Philistines; rather, they came from Teiman.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס׳ ב — Chullin 60b:10</span></div>
+    <div class="orig">תַּנְיָא נָמֵי הָכִי: עַוִּים מִתֵּימָן בָּאוּ, וְלָמָּה נִקְרָא שְׁמָן עַוִּים? שֶׁעִיוְּתוּ אֶת מְקוֹמָן. דָּבָר אַחֵר: עַוִּים, שֶׁאִיוּוּ לֶאֱלֹהוֹת הַרְבֵּה. דָּבָר אַחֵר: עַוִּים, שֶׁכׇּל הָרוֹאֶה אוֹתָם אוֹחַזְתּוֹ עֲוִית. אָמַר רַב יוֹסֵף: וְאִית לְהוּ שִׁיתַּסְרֵי דָּרֵי שִׁינֵּי לְכׇל חַד וְחַד.</div>
+    <div class="trans" data-when="he">ברייתא מסייעת: עוים מתימן באו. ולמה נקראו ״עוים״? שעיוותו והשחיתו את מקומם בצאתם. דבר אחר: שאיוו (חמדו) אלוהות רבות. דבר אחר: שכל הרואה אותם אוחזתו עווית מאימתם. רב יוסף: ולכל אחד מהם שש־עשרה שורות שיניים.</div>
+    <div class="trans" data-when="en">This is also taught in a baraita: The Avvim came from Teiman. And why were they called Avvim and not Teimanim? Because they corrupted [ivvetu] and destroyed their place of origin when they left. Alternatively, they were called Avvim since they desired [ivvu] many deities. Alternatively, they were called Avvim since they were so fearsome that all who saw them were seized by convulsions [avit]. Rav Yosef said: And each one of them has sixteen rows of teeth.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס׳ ב — Chullin 60b:11</span></div>
+    <div class="orig">אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: הַרְבֵּה מִקְרָאוֹת שֶׁרְאוּיִין לִשְׂרוֹף כְּסִפְרֵי מִינִין, וְהֵן הֵן גּוּפֵי תוֹרָה. ״וְהָעַוִּים הַיֹּשְׁבִים בַּחֲצֵרִים עַד עַזָּה״ – מַאי נָפְקָא לַן מִינַּהּ?</div>
+    <div class="trans" data-when="he">ריש לקיש: הרבה מקראות שלכאורה ראויים להישרף כספרי מינים, מפני שנראים מיותרים — והם עצמם גופי תורה. למשל ״והעוים היושבים בחצרים עד עזה״ — מה תועלת יש לנו בידיעה זו?</div>
+    <div class="trans" data-when="en">The Gemara cites another statement related to the Avvim: Rabbi Shimon ben Lakish says: There are many verses that are seemingly fit to be burned as books of the heretics, since they appear redundant or frivolous, and yet they are themselves the essence of Torah. For example, the verse states: “And the Avvim, that dwelt in villages as far as Gaza, the Caphtorim, that came forth out of Caphtor, destroyed them, and dwelt in their stead” (Deuteronomy 2:23). What practical difference does this make for us?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס׳ ב — Chullin 60b:12</span></div>
+    <div class="orig">מִדְּאַשְׁבְּעֵיהּ אֲבִימֶלֶךְ לְאַבְרָהָם ״אִם תִּשְׁקֹר לִי וּלְנִינִי וּלְנֶכְדִּי״, אָמַר הַקָּדוֹשׁ בָּרוּךְ הוּא: לֵיתוֹ כַּפְתּוֹרִים לִיפְּקוּ מֵעַוִּים, דְּהַיְינוּ פְּלִשְׁתִּים, וְלֵיתוֹ יִשְׂרָאֵל לִיפְּקוּ מִכַּפְתּוֹרִים.</div>
+    <div class="trans" data-when="he">הפסוק מלמד: מאחר שאבימלך השביע את אברהם ״אם תשקר לי ולניני ולנכדי״, נאסר על ישראל לכבוש את ארץ פלשתים עד שיעברו ארבעה דורות. לכן אמר הקב״ה: יבואו כפתורים ויטלו את הארץ מן העוים — שהם פלשתים — ויבואו ישראל ויטלו מן הכפתורים, ובכך נעקף השבועה.</div>
+    <div class="trans" data-when="en">The verse teaches the following: Since Abimelech, king of the Philistines, administered an oath to Abraham: “That you will not deal falsely with me, nor with my son, nor with my grandson” (Genesis 21:23), the Jewish people were prohibited from conquering the land of the Philistines until four generations had passed. Therefore, the Holy One, Blessed be He, said: Let the Caphtorim come and remove the land from the Avvim, who are the same as the Philistines, and let Israel come and remove it from the Caphtorim, circumventing the prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס׳ ב — Chullin 60b:13</span></div>
+    <div class="orig">כְּיוֹצֵא בַּדָּבָר אַתָּה אוֹמֵר: ״כִּי חֶשְׁבּוֹן עִיר סִיחֹן מֶלֶךְ הָאֱמֹרִי הִוא וְהוּא נִלְחַם בְּמֶלֶךְ מוֹאָב וְגוֹ׳״. מַאי נָפְקָא מִינַּהּ? דַּאֲמַר לְהוּ הַקָּדוֹשׁ בָּרוּךְ הוּא לְיִשְׂרָאֵל: ״אַל תָּצַר אֶת מוֹאָב״. אָמַר הַקָּדוֹשׁ בָּרוּךְ הוּא: לֵיתֵי סִיחוֹן לִיפּוֹק מִמּוֹאָב, וְלֵיתוֹ יִשְׂרָאֵל וְלִיפְּקוּ מִסִּיחוֹן. וְהַיְינוּ דְּאָמַר רַב פָּפָּא: עַמּוֹן וּמוֹאָב טִיהֲרוּ בְּסִיחוֹן.</div>
+    <div class="trans" data-when="he">כיוצא בו: ״כי חשבון עיר סיחן מלך האמרי היא והוא נלחם במלך מואב הראשון״. מה התועלת? שאמר הקב״ה לישראל ״אל תצר את מואב״, ונאסרה כיבוש ארץ מואב; לכן אמר: יבוא סיחון וייטול ממואב, ויבואו ישראל וייטלו מסיחון. וזהו שאמר רב פפא: עמון ומואב טיהרו (הותרו לכיבוש) בסיחון.</div>
+    <div class="trans" data-when="en">Similarly, you say with regard to another apparently unnecessary verse, describing a city that the Israelites conquered: “For Heshbon was the city of Sihon, the king of the Amorites, who had fought against the former king of Moab, and taken all his land out of his hand” (Numbers 21:26). What is the practical difference in knowing this information? It teaches that since the Holy One, Blessed be He, said to Israel: “Be not at enmity with Moab” (Deuteronomy 2:9), the Jewish people were prohibited from conquering the land of Moab. Therefore, the Holy One, Blessed be He, said: Let Sihon come and remove the land from Moab, and let Israel come and remove it from Sihon. The Gemara notes: And this is what Rav Pappa says: The lands of Ammon and Moab were purified by Sihon, i.e., rendered permitted for conquest.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס׳ ב — Chullin 60b:14</span></div>
+    <div class="orig">״צִידֹנִים יִקְרְאוּ לְחֶרְמוֹן שִׂרְיֹן״, תָּנָא: שְׂנִיר וְשִׂרְיוֹן מֵהָרֵי אֶרֶץ יִשְׂרָאֵל, מְלַמֵּד שֶׁכׇּל אֶחָד וְאֶחָד מֵאוּמּוֹת הָעוֹלָם הָלַךְ וּבָנָה לוֹ כְּרַךְ גָּדוֹל לְעַצְמוֹ, וְהֶעֱלָה לוֹ עַל שֵׁם הָרֵי אֶרֶץ יִשְׂרָאֵל, לְלַמֶּדְךָ שֶׁאֲפִילּוּ הָרֵי אֶרֶץ יִשְׂרָאֵל חֲבִיבִין עַל אֻומּוֹת הָעוֹלָם.</div>
+    <div class="trans" data-when="he">״צידנים יקראו לחרמון שרין״ — תנא: שניר ושריון הם מהרי ארץ ישראל. מלמד שכל אומה מאומות העולם הלכה ובנתה לעצמה כרך גדול, וקראתהּ על שם אחד מהרי ארץ ישראל, ללמדך שאפילו הרי ארץ ישראל חביבים על אומות העולם.</div>
+    <div class="trans" data-when="en">The Gemara cites another seemingly superfluous verse, describing Mount Hermon: “Which Hermon the Sidonians call Sirion, and the Amorites call it Senir” (Deuteronomy 3:9). A Sage taught: Senir and Sirion are mountains of Eretz Yisrael. The verse teaches that every one of the nations of the world went and built itself a great city on Mount Hermon, and named it after one of the mountains of Eretz Yisrael, teaching you that even the mountains of Eretz Yisrael are beloved by the nations of the world.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס׳ ב — Chullin 60b:15</span></div>
+    <div class="orig">כַּיּוֹצֵא בּוֹ: ״וְאֶת הָעָם הֶעֱבִיר אֹתוֹ לֶעָרִים״, מַאי נָפְקָא מִינַּהּ? דְּלָא לִיקְרוֹ לְאֶחָיו גָּלְוָותָא.</div>
+    <div class="trans" data-when="he">כיוצא בו: ״ואת העם העביר אתו לערים״ (יוסף העביר את מצרים מעיר לעיר). מה התועלת? מלמד אהבת יוסף לאחיו — שעשה כן כדי שלא יקראו לאחיו ״גולים״, שאף המצרים יהיו עקורים ממקומם.</div>
+    <div class="trans" data-when="en">Similarly, a difficult verse describes Joseph’s treatment of the Egyptians: “And as for the people, he removed them city by city” (Genesis 47:21). What is the practical difference of this information? It teaches Joseph’s love for his brothers, as he transferred the entire Egyptian population so that they would not call his brothers exiles.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-8">
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">סימני העוף הטהור</span><span data-when="en">Signs of the kosher bird</span>
+      <span class="ref">Chullin 60b:16-62a:4</span></h2>
+  <div class="lead"><span data-when="he">המשנה: סימני העוף לא נאמרו בתורה. הגמרא מבררת מן הברייתא דרך פירכות חוזרות, וקובעת: עוף הבא בסימן אחד טהור — ובלבד שאינו דורס.</span><span data-when="en">The Mishna: bird signs were not stated in the Torah. Through repeated objections the Gemara establishes: a bird with even one sign is kosher — provided it does not claw.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① משנה: סימני העוף לא נאמרו — והרי ברייתא דורשת ׳נשר׳ ו׳תורים׳!"}:::question
+  A1["② אביי: לא נאמר פירושן בתורה אלא מדברי סופרים"]:::answer
+  S1["③ ר׳ חייא: עוף הבא בסימן אחד טהור — שאינו דומה לנשר"]:::statement
+  Q2{"④ פירכות חוזרות: נילף מתורים, מעורב, מפרס ועזניה — כמה סימנים מעכבים?"}:::question
+  A2["⑦ עיקרון: כל ׳נילף מן הטמא׳ מתורץ — אם כן ׳נשר/תורים׳ למה לי?"]:::answer
+  S2["⑨ רב נחמן: בקי בשמותיהן — סימן אחד טהור; אינו בקי — צריך שניים ושיכיר עורב"]:::statement
+  Q3{"⑩ עורב ותו לא? והתניא ׳למינו׳ — זרזיר, סנונית לבנה"}:::question
+  C1["⑭ אמימר: הלכה — סימן אחד טהור, והוא דלא דריס; פרס ועזניה ליתנהו ביישוב"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 --> S1
+  S1 -->|פירכות| Q2
+  Q2 -->|כלל| A2
+  A2 --> S2
+  S2 -->|קושיא| Q3
+  Q3 -->|הלכה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Mishna: bird signs were not stated — but a baraita derives from ׳nesher׳ and ׳doves׳!"}:::question
+  A1["② Abaye: their explanation was not stated in the Torah but from the Sages"]:::answer
+  S1["③ R. Ḥiyya: a bird with one sign is kosher — since it is unlike a nesher"]:::statement
+  Q2{"④ Repeated objections: derive from doves, crow, peres and ozniyya — how many signs are needed?"}:::question
+  A2["⑦ Principle: every ׳derive from the non-kosher׳ is answered — else why ׳nesher/doves׳?"]:::answer
+  S2["⑨ Rav Naḥman: familiar with their names — one sign kosher; unfamiliar — needs two and to know the crow"]:::statement
+  Q3{"⑩ Only the crow? But the baraita: ׳after its kind׳ — the zarzir, the white senunit"}:::question
+  C1["⑭ Ameimar: halakha — one sign is kosher, if it does not claw; peres and ozniyya are not in settled areas"]:::conclusion
+  Q1 -->|answer| A1
+  A1 --> S1
+  S1 -->|objections| Q2
+  Q2 -->|principle| A2
+  A2 --> S2
+  S2 -->|question| Q3
+  Q3 -->|halakha| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① סִימָנֵי הָעוֹף לֹא נֶאֶמְרוּ, וְלָא? וְהָתַנְיָא: ׳נֶשֶׁר׳ … תּוֹרִין"}:::question
+  A1["② אָמַר אַבָּיֵי: לֹא נֶאֱמַר פֵּירוּשָׁן מִדִּבְרֵי תוֹרָה אֶלָּא מִדִּבְרֵי סוֹפְרִים"]:::answer
+  S1["③ תָּנֵי רַבִּי חִיָּיא: עוֹף הַבָּא בְּסִימָן אֶחָד טָהוֹר, לְפִי שֶׁאֵין דּוֹמֶה לְנֶשֶׁר"]:::statement
+  Q2{"④ וְלֵילַף מִתּוֹרִין … מֵעוֹרֵב … מִפֶּרֶס וְעׇזְנִיָּה?"}:::question
+  A2["⑦ אֶלָּא נֶשֶׁר דְּלֵית לֵיהּ כְּלָל … הָא דְּאִית לֵיהּ חַד – אֱכוֹל"]:::answer
+  S2["⑨ אָמַר רַב נַחְמָן: הָיָה בָּקִי … בְּסִימָן אֶחָד טָהוֹר … וְהוּא שֶׁיַּכִּיר עוֹרֵב"]:::statement
+  Q3{"⑩ עוֹרֵב וְתוּ לָא? וְהָתַנְיָא: ׳לְמִינוֹ׳ … הַזַּרְזִיר … סְנוּנִית לְבָנָה"}:::question
+  C1["⑭ אָמַר אַמֵּימָר: הִלְכְתָא … בְּסִימָן אֶחָד טָהוֹר, וְהוּא דְּלָא דָּרֵיס … לֵיתַנְהוּ בַּיִּשּׁוּב"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 --> S1
+  S1 -->|פירכות| Q2
+  Q2 -->|כלל| A2
+  A2 --> S2
+  S2 -->|קושיא| Q3
+  Q3 -->|הלכה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ ב — Chullin 60b:16</span></div>
+    <div class="orig">סִימָנֵי הָעוֹף לֹא נֶאֶמְרוּ, וְלָא? וְהָתַנְיָא: ״נֶשֶׁר״,</div>
+    <div class="trans" data-when="he">המשנה אמרה: סימני העוף הטהור לא נאמרו במפורש בתורה. שואלת הגמרא: ולא נאמרו? והרי שנינו בברייתא דרשה על ״נשר״ —</div>
+    <div class="trans" data-when="en">§ The mishna states: The signs of the kosher bird were not explicitly stated in the Torah. The Gemara asks: And is it true that they were not stated in the Torah? But isn’t it taught in a baraita: “The nesher” (Leviticus 11:13) is a non-kosher bird.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״א א — Chullin 61a:1</span></div>
+    <div class="orig">מָה נֶשֶׁר מְיוּחָד שֶׁאֵין לוֹ אֶצְבַּע יְתֵרָה וְזֶפֶק וְאֵין קוּרְקְבָנוֹ נִקְלָף וְדוֹרֵס וְאוֹכֵל – טָמֵא, אַף כׇּל כַּיּוֹצֵא בּוֹ – טָמֵא. תּוֹרִין שֶׁיֵּשׁ לָהֶן אֶצְבַּע יְתֵרָה וְזֶפֶק וְקוּרְקְבָן נִקְלָף וְאֵין דּוֹרְסִין וְאוֹכְלִין – טְהוֹרִין, אַף כׇּל כַּיּוֹצֵא בָּהֶן – טְהוֹרִין. אָמַר אַבָּיֵי: לֹא נֶאֱמַר פֵּירוּשָׁן מִדִּבְרֵי תוֹרָה אֶלָּא מִדִּבְרֵי סוֹפְרִים.</div>
+    <div class="trans" data-when="he">הברייתא: מה נשר מיוחד שאין לו אצבע יתרה, ולא זפק, ואין קורקבנו נקלף, והוא דורס ואוכל — טמא, אף כל הדומה לו טמא. ותורים שיש להם ארבעה סימנים אלו — טהורים, אף כל הדומה להם טהור. הרי שהסימנים כן נדרשו מן התורה! תירץ אביי: המשנה אומרת שפירוש הסימנים לא נאמר בתורה עצמה אלא מדברי סופרים (הברייתא).</div>
+    <div class="trans" data-when="en">Just as a nesher is unique in that it has no extra digit or crop, and its gizzard cannot be peeled, and it claws its prey and eats it, and it is non-kosher, so too, all like birds with these four signs are non-kosher. And just as doves and pigeons, which have an extra digit and a crop, and whose gizzard can be peeled, and do not claw their food and eat it, are kosher, as they are fit for sacrifice on the altar (see Leviticus 1:14), so too, all like birds with these four signs are kosher. If so, why does the mishna state that the signs were not stated in the Torah? Abaye said: The mishna means that the explanation of the signs of a kosher bird was not stated in the Torah. Rather, one learns it from the statements of the Sages, i.e., the baraita.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״א א — Chullin 61a:2</span></div>
+    <div class="orig">תָּנֵי רַבִּי חִיָּיא: עוֹף הַבָּא בְּסִימָן אֶחָד טָהוֹר, לְפִי שֶׁאֵין דּוֹמֶה לְנֶשֶׁר. נֶשֶׁר דְּלֵית לֵיהּ כְּלָל – הוּא דְּלָא תֵּיכוֹל, הָא אִיכָּא דְּאִית לֵיהּ חַד – תֵּיכוֹל.</div>
+    <div class="trans" data-when="he">תני ר׳ חייא: עוף הבא בסימן אחד מסימני הטהרה (ואינו מנוי בתורה כטמא) — טהור, לפי שאינו דומה לנשר. שהרי הנשר, שאין לו אף סימן כלל — הוא שלא תאכל; הא עוף שיש לו ולו סימן אחד — תאכל.</div>
+    <div class="trans" data-when="en">Rabbi Ḥiyya teaches: A bird that comes before a person with one sign of a kosher bird, and which is not listed in the Torah as non-kosher, is kosher, since it is unlike a nesher. The verse did not need to state that the nesher is non-kosher, since one could have inferred this from the list of other non-kosher birds. Rather, the verse mentions the nesher specifically to indicate that it is only a bird like a nesher, which has none of the signs of a kosher bird, that you shall not eat. But if there is a bird that has even one of the signs, you may eat it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״א א — Chullin 61a:3</span></div>
+    <div class="orig">וְלֵילַף מִתּוֹרִין: מָה תּוֹרִין דְּאִיכָּא כּוּלְּהוּ אַרְבְּעָה, אַף הָכָא נָמֵי עַד דְּאִיכָּא כּוּלְּהוּ אַרְבְּעָה?</div>
+    <div class="trans" data-when="he">פירכא: ולמה ללמוד דווקא מן הנשר? נלמד להפך מן התורים — מה תורים שהתורה התירה במפורש יש בהם כל ארבעת הסימנים, אף כאן אין עוף טהור עד שיהיו בו כל ארבעה!</div>
+    <div class="trans" data-when="en">The Gemara asks: But why learn specifically from the case of a nesher? Let one derive the opposite from the case of doves: Just as doves, which the Torah mentions explicitly as kosher, have all four signs, so too here, no other bird is kosher unless it has all four signs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״א א — Chullin 61a:4</span></div>
+    <div class="orig">אִם כֵּן, שְׁאָר עוֹפוֹת טְמֵאִין דִּכְתַב רַחֲמָנָא לְמָה לִי?</div>
+    <div class="trans" data-when="he">תירוץ: אם למדים מן התורים שצריך ארבעה סימנים, שאר העופות הטמאים שמנתה התורה למה לי? הרי אין בהם ארבעה, וטומאתם נלמדת מן התורים. אלא ודאי אין למדים מן התורים.</div>
+    <div class="trans" data-when="en">The Gemara responds: If it is so that one learns from the case of a dove, why do I need the rest of the non-kosher birds that the Merciful One wrote? Since none of them has all four signs of a kosher bird, their non-kosher status could simply be inferred from the case of a dove. Rather, since the Torah states explicitly that they are non-kosher, it follows that one does not learn from the case of a dove.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״א א — Chullin 61a:5</span></div>
+    <div class="orig">וְנֵילַף מִינַּיְיהוּ: מָה הָתָם תְּלָתָא וְלָא אָכְלִינַן, אַף כֹּל תְּלָתָא וְלָא נֵיכוֹל, וְכׇל שֶׁכֵּן תְּרֵי וְחַד?</div>
+    <div class="trans" data-when="he">פירכא: ונלמד מן העופות הטמאים עצמם — מה הם, שיש בכל אחד שלושה סימנים, ובכל זאת אסורים, אף כל עוף שיש בו שלושה אסור, וכל שכן שניים או אחד!</div>
+    <div class="trans" data-when="en">The Gemara objects: But let us derive instead from them, i.e., the rest of the non-kosher birds, which each have only three signs, the following: Just as there, those birds have three of the signs of a kosher bird mentioned in the mishna, and we still do not eat them, so too, all other birds that have three signs should have the same halakhic status, and we will not eat them. And all the more so should this apply to a bird that has only two signs or one.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״א א — Chullin 61a:6</span></div>
+    <div class="orig">אִם כֵּן, עוֹרֵב, דִּכְתַב רַחֲמָנָא, לְמָה לִי? הַשְׁתָּא דְּאִית לֵיהּ תְּלָתָא לָא אָכְלִינַן, דְּאִית לֵיהּ תְּרֵי מִיבַּעְיָא?</div>
+    <div class="trans" data-when="he">תירוץ: אם כן, העורב שכתבה התורה למה לי? עכשיו שעוף בעל שלושה סימנים אינו נאכל, וכי צריך לומר את העורב, שיש בו רק שניים? אלא ודאי אין למדים מן העופות הטמאים בעלי שלושה.</div>
+    <div class="trans" data-when="en">The Gemara responds: If so, why do I need the crow that the Merciful One wrote among the non-kosher birds? Now that it is established that we do not eat any bird that has three signs, is it necessary to mention the crow, which has only two? Rather, those birds explicitly listed as non-kosher are prohibited, and all other birds with any number of signs are kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס״א ב — Chullin 61b:1</span></div>
+    <div class="orig">וְלֵילַף מֵעוֹרֵב: מָה הָתָם תְּרֵי לָא, אַף כֹּל תְּרֵי לָא? אִם כֵּן, פֶּרֶס וְעׇזְנִיָּה דִּכְתַב רַחֲמָנָא לְמָה לִי? הַשְׁתָּא דְּאִית לֵיהּ תְּרֵי לָא אָכְלִינַן, דְּאִית לֵיהּ חַד מִיבַּעְיָא!</div>
+    <div class="trans" data-when="he">פירכא: ונלמד מן העורב — מה עורב בעל שני סימנים אסור, אף כל בעל שניים אסור! תירוץ: אם כן, פרס ועזניה שכתבה התורה למה לי? עכשיו שבעל שניים אסור, וכי צריך לומר אותם, שיש בהם רק אחד? אלא אף בעל סימן אחד טהור, חוץ מן המנויים בתורה.</div>
+    <div class="trans" data-when="en">The Gemara objects: But one should derive instead from a crow: Just as there, a bird with two signs is not kosher, so too any other bird that has only two signs is not kosher. The Gemara responds: If so, why do I need the peres and the ozniyya that the Merciful One wrote among the non-kosher birds? Now that it is established that we do not eat any bird that has two signs, is it necessary to mention these birds, which have only one? Rather, even birds that have only one sign are kosher, save those mentioned explicitly in the Torah as non-kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס״א ב — Chullin 61b:2</span></div>
+    <div class="orig">וְנִיגְמַר מִפֶּרֶס וְעׇזְנִיָּה? אִם כֵּן, נֶשֶׁר דִּכְתַב רַחֲמָנָא לְמָה לִי? הַשְׁתָּא דְּאִית לֵיהּ חַד לָא אָכְלִינַן, דְּלֵית לֵיהּ כְּלָל מִיבַּעְיָא! אֶלָּא נֶשֶׁר דְּלֵית לֵיהּ כְּלָל – הוּא דְּלָא תֵּיכוֹל, הָא דְּאִית לֵיהּ חַד – אֱכוֹל.</div>
+    <div class="trans" data-when="he">פירכא: ונלמד מפרס ועזניה, שאף בעל סימן אחד אסור! תירוץ: אם כן, נשר שכתבה התורה למה לי? עכשיו שבעל אחד אסור, וכי צריך לומר את הנשר, שאין לו כלל? אלא: נשר שאין לו אף סימן — הוא שלא תאכל; הא בעל סימן אחד — אכול.</div>
+    <div class="trans" data-when="en">The Gemara objects: But let us learn instead from the peres and ozniyya themselves that all other birds with only one sign are non-kosher. The Gemara responds: If so, why do I need the nesher that the Merciful One wrote? Now that it is established that we do not eat any bird that has one sign, is it necessary to mention the nesher, which has none? Rather, the Torah mentions the nesher to indicate that it is a nesher, which has none of the signs of a kosher bird, that you shall not eat. But if you find any bird that has even one of the signs, you may eat it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ס״א ב — Chullin 61b:3</span></div>
+    <div class="orig">וְאֶלָּא, טַעְמָא דִּכְתַב רַחֲמָנָא נֶשֶׁר, הָא לָאו הָכִי הֲוָה אָמֵינָא: לֵילַף מִפֶּרֶס וְעׇזְנִיָּה? הָוֵה לֵיהּ פֶּרֶס וְעׇזְנִיָּה שְׁנֵי כְתוּבִין הַבָּאִין כְּאֶחָד, וּשְׁנֵי כְּתוּבִין הַבָּאִין כְּאֶחָד אֵין מְלַמְּדִין.</div>
+    <div class="trans" data-when="he">פירכא: ומשמע שרק מפני שכתבה התורה ״נשר״ אנו מתירים בעל סימן אחד — שאלמלא כן היינו למדים מפרס ועזניה לאסור! דחייה: אי אפשר ללמוד מהם, שכן פרס ועזניה הם ״שני כתובים הבאים כאחד״ (שניהם מלמדים אותו דבר), ושני כתובים הבאים כאחד אין מלמדים.</div>
+    <div class="trans" data-when="en">The Gemara objects: But if so, the reason for eating birds with even one sign is only that the Merciful One wrote: “Nesher.” One can infer, then, that if not for this, I would say: Derive from the peres and ozniyya that any bird with one sign is non-kosher. But that cannot be, since the peres and ozniyya are two verses that come as one, i.e., that teach the same matter, and as a rule, two verses that come as one do not teach a principle.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ס״א ב — Chullin 61b:4</span></div>
+    <div class="orig">גְּמִירִי, דְּאִיכָּא בְּהַאי לֵיכָּא בְּהַאי, וּדְאִיכָּא בְּהַאי לֵיכָּא בְּהַאי.</div>
+    <div class="trans" data-when="he">תירוץ: למדנו במסורת שהסימן שיש בפרס אינו בעזניה, ושיש בעזניה אינו בפרס; אם כן אינם ״שני כתובים הבאים כאחד״ אלא מלמד כל אחד לחוד, והיה אפשר ללמוד מהם לאסור — לכן הוצרך ״נשר״ להתיר.</div>
+    <div class="trans" data-when="en">The Gemara responds: It is learned as a tradition that the sign present in this, the peres, is absent in that, the ozniyya, and that which is present in that is absent in this. Accordingly, this is not a case of two verses that come as one, since each case would teach only that any other bird with only its respective sign is non-kosher. Consequently, it would have been possible to derive from them that any bird with only one sign is non-kosher. The verse therefore states: “Nesher,” to indicate otherwise.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ס״א ב — Chullin 61b:5</span></div>
+    <div class="orig">מִכְּדֵי עֶשְׂרִים וְאַרְבָּעָה עוֹפוֹת טְמֵאִים הָווּ, אִי אֶפְשָׁר דְּחַד דְּאִיכָּא בְּהָנָךְ לֵיכָּא בְּהָנֵי, וְהָווּ לְהוּ שְׁנֵי כְּתוּבִים הַבָּאִים כְּאֶחָד.</div>
+    <div class="trans" data-when="he">פירכא: והרי עשרים וארבעה עופות טמאים נמנו בתורה, ואי אפשר שהסימן היחיד שבפרס ובעזניה לא יימצא באף אחד מהשאר; ושוב הרי הם ושאר העופות ״שני כתובים הבאים כאחד״, ואין צורך ב״נשר״.</div>
+    <div class="trans" data-when="en">The Gemara persists: Now, there are twenty-four non-kosher birds mentioned in the verses. It is impossible that the one sign present in these, the peres and ozniyya, respectively, is absent in all those other birds. Consequently, the mentioning of the peres, ozniyya, and the other birds constitutes two verses that come as one. If so, one could not have derived from the cases of the peres and ozniyya that a bird with one sign is not kosher, and the inclusion of the nesher is unnecessary.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ס״א ב — Chullin 61b:6</span></div>
+    <div class="orig">גְּמִירִי: עֶשְׂרִים וְאַרְבָּעָה עוֹפוֹת טְמֵאִים הָווּ, וְאַרְבָּעָה סִימָנִין. תְּלָתָא הָדְרִי בְּכוּלְּהוּ, עֶשְׂרִים מֵהֶם שְׁלֹשָׁה שְׁלֹשָׁה, וּתְרֵי בְּעוֹרֵב, חַד בְּפֶרֶס וְחַד בְּעׇזְנִיָּה, דְּאִיתֵיהּ בְּהָא לֵיתֵיהּ בְּהָא. מַהוּ דְּתֵימָא לֵילַיף מִינֵּיהּ – כְּתַב רַחֲמָנָא ״נֶשֶׁר״, נֶשֶׁר דְּלֵית לֵיהּ כְּלָל הוּא דְּלָא תֵּיכוֹל, הָא אִיכָּא דְּאִית לֵיהּ חַד – אֱכוֹל.</div>
+    <div class="trans" data-when="he">תירוץ: מסורת בידינו — עשרים וארבעה עופות טמאים וארבעה סימנים. שלושה סימנים חוזרים בכולם: עשרים מהם שלושה־שלושה, ושניים בעורב, אחד בפרס ואחד בעזניה, והסימן שבזה אינו בזה. ואותו סימן רביעי, היחיד שבפרס/עזניה, אינו בשאר; ומפני שתאמר נלמד ממנו לאסור — כתבה התורה ״נשר״: נשר שאין לו כלל הוא שלא תאכל, הא בעל סימן אחד — אכול.</div>
+    <div class="trans" data-when="en">The Gemara responds: It is learned as a tradition that there are twenty-four non-kosher birds, and four signs of a kosher bird. The same three signs can be found in all of them, with the exception of either the peres or the ozniyya. Twenty of them have all three signs, and two of those signs can be found in a crow. One sign is found in a peres and one in an ozniyya, and the sign present in this is absent in that, i.e., one of them has the fourth sign, which is absent from the other twenty-three non-kosher birds. Lest you say: Derive from it that any other bird with only that sign is non-kosher, the Merciful One wrote about the nesher to indicate: It is a nesher, which has none of the signs of a kosher bird, that you shall not eat. But if there is any bird that has even one of the signs, you may eat it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ס״א ב — Chullin 61b:7</span></div>
+    <div class="orig">אֶלָּא, תּוֹרִין דִּכְתַב רַחֲמָנָא לְמָה לִי? אָמַר רַב עוּקְבָא בַּר חָמָא: לְקׇרְבָּן. אָמַר רַב נַחְמָן:</div>
+    <div class="trans" data-when="he">אם למדים מן הנשר שעוף בעל סימן אחד טהור, תורים שכתבה התורה כטהורים למה לי, והרי יש בהם כל ארבעה? אמר רב עוקבא בר חמא: התורים לא הוזכרו ללמד היתר אכילה אלא ללמד שהם כשרים לקרבן. אמר רב נחמן —</div>
+    <div class="trans" data-when="en">The Gemara asks: But if one learns from nesher that a bird with even one sign is kosher, why do I need the doves that the Merciful One wrote are kosher, which have all four? Rav Ukva bar Ḥama said: The dove was not mentioned to teach that it is kosher, but rather to teach that it is the only bird fit to be sacrificed as an offering. Rav Naḥman says:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ס״ב א — Chullin 62a:1</span></div>
+    <div class="orig">הָיָה בָּקִי בָּהֶן וּבִשְׁמוֹתֵיהֶן – עוֹף הַבָּא בְּסִימָן אֶחָד טָהוֹר, לֹא הָיָה בָּקִי בָּהֶן וּבִשְׁמוֹתֵיהֶן – בְּסִימָן אֶחָד טָמֵא, בִּשְׁנֵי סִימָנִין טָהוֹר, וְהוּא שֶׁיַּכִּיר עוֹרֵב.</div>
+    <div class="trans" data-when="he">רב נחמן: היה אדם בקי בעופות הטמאים ובשמותיהם — עוף הבא בסימן אחד טהור, שיודע שאינו פרס או עזניה. לא היה בקי בהם — בסימן אחד טמא (שמא הוא פרס/עזניה), ובשני סימנים טהור, ובלבד שיכיר את העורב, שהוא היחיד הטמא בעל שני סימנים.</div>
+    <div class="trans" data-when="en">If one is familiar with the non-kosher birds and their names, any bird that comes before him with only one sign is kosher, since he can be sure that it is not the peres or ozniyya, which have only one sign. If he is not familiar with them and their names, any bird that he finds with one sign is non-kosher, since it may be the peres or ozniyya. But if he finds a bird with exactly two signs, it is kosher, provided that he can recognize a crow, since the crow is the only non-kosher bird with exactly two signs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ס״ב א — Chullin 62a:2</span></div>
+    <div class="orig">עוֹרֵב וְתוּ לָא? וְהָתַנְיָא: ״עוֹרֵב״ – זֶה עוֹרֵב, ״לְמִינוֹ״ – רַבִּי אֱלִיעֶזֶר אוֹמֵר: לְהָבִיא אֶת הַזַּרְזִיר. אָמְרוּ לוֹ לְרַבִּי אֱלִיעֶזֶר: וַהֲלֹא אַנְשֵׁי כְּפַר תְּמַרְתָּא שֶׁבִּיהוּדָה הָיוּ אוֹכְלִים אוֹתָן מִפְּנֵי שֶׁיֵּשׁ לָהֶן זֶפֶק! אָמַר לָהֶם: אַף הֵן עֲתִידִין לִיתֵּן אֶת הַדִּין.</div>
+    <div class="trans" data-when="he">קושיא על רב נחמן: עורב בלבד ולא יותר? והתניא: ״עורב״ — זה העורב המוכר; ״למינו״ — ר׳ אליעזר: להביא את הזרזיר, שהוא מין עורב טמא. אמרו לו: והרי אנשי כפר תמרתא שביהודה היו אוכלים אותו, מפני שיש לו זפק! אמר להם: אף הם עתידים ליתן את הדין.</div>
+    <div class="trans" data-when="en">The Gemara asks: Must he recognize only the crow and nothing more? But isn’t it taught in a baraita: The verse states: “Every orev after its kinds” (Leviticus 11:15). With regard to the orev, this is the well-known crow; as for the phrase “after its kinds,” Rabbi Eliezer says: It is written to include the zarzir, another type of crow, to teach that it is non-kosher. The Sages said to Rabbi Eliezer: But wouldn’t the people of Kefar Temarta in Judea eat the zarzir, because it has a crop? Rabbi Eliezer said to them: They too will be judged in the future for their transgression.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין ס״ב א — Chullin 62a:3</span></div>
+    <div class="orig">דָּבָר אַחֵר: ״לְמִינֵהוּ״ לְהָבִיא סְנוּנִית לְבָנָה, דִּבְרֵי רַבִּי אֱלִיעֶזֶר. אָמְרוּ לוֹ: וַהֲלֹא אַנְשֵׁי גָּלִיל הָעֶלְיוֹן אוֹכְלִים אוֹתוֹ, מִפְּנֵי שֶׁקֻּרְקְבָנוֹ נִקְלָף! אָמַר לָהֶם: אַף הֵן עֲתִידִין לִיתֵּן אֶת הַדִּין. אֶלָּא עוֹרֵב וְכׇל מִין עוֹרֵב.</div>
+    <div class="trans" data-when="he">דבר אחר: ״למינהו״ — להביא את הסנונית הלבנה, דברי ר׳ אליעזר. אמרו לו: והרי אנשי גליל העליון אוכלים אותה, מפני שקורקבנה נקלף! אמר להם: אף הם עתידים ליתן את הדין. נמצא שיש עופות טמאים נוספים בעלי שני סימנים. תירוץ: רב נחמן התכוון — ובלבד שיכיר עורב וכל מין עורב.</div>
+    <div class="trans" data-when="en">Alternatively, the phrase “after its kinds” is written to include the white senunit and teach that it is non-kosher; this is the statement of Rabbi Eliezer. The Rabbis said to him: But don’t the people of the upper Galilee eat it, because its gizzard can be peeled? Rabbi Eliezer said to them: They too will be judged in the future for their transgression. In any event, the baraita indicates that other non-kosher birds exist that have two signs, like the crow. The Gemara responds: Rather, Rav Naḥman must have meant that one must be able to recognize the well-known crow and all other species of crow.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין ס״ב א — Chullin 62a:4</span></div>
+    <div class="orig">אָמַר אַמֵּימָר: הִלְכְתָא, עוֹף הַבָּא בְּסִימָן אֶחָד – טָהוֹר, וְהוּא דְּלָא דָּרֵיס. אֲמַר לֵיהּ רַב אָשֵׁי לְאַמֵּימָר: הָא דְּרַב נַחְמָן מַאי? אֲמַר לֵיהּ: לָא שְׁמִיעַ לִי, כְּלוֹמַר לָא סְבִירָא לִי. מַאי אִיכָּא? מִשּׁוּם פֶּרֶס וְעׇזְנִיָּה? לֵיתַנְהוּ בַּיִּשּׁוּב.</div>
+    <div class="trans" data-when="he">אמימר: הלכה — עוף הבא בסימן אחד טהור, ובלבד שאינו דורס. רב אשי שאל: ומה עם דברי רב נחמן (שצריך בקיאות)? השיב: לא שמעתי, כלומר איני סובר כן. ומה החשש? משום פרס ועזניה (בעלי סימן אחד)? אינם מצויים ביישוב, ואין לחשוש להם.</div>
+    <div class="trans" data-when="en">Ameimar said: The halakha is: Any bird that comes before a person with one sign is kosher, provided that it does not claw its food. Rav Ashi said to Ameimar: What about that which Rav Naḥman said, that if one finds a bird with exactly one sign, he may eat it only if he can identify all the non-kosher birds in the Torah, to be sure that it is not one of them? Ameimar said to him: I did not hear this statement; that is to say: I do not hold accordingly. What concern is there? Is one concerned because of the peres and ozniyya, which have only one sign? They are not found in settled areas, and one need not be concerned about them.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
