@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ס״ג</title>
+<meta name="description" content="מפת הסוגיא של חולין ס״ג: מניין עשרים וארבעה עופות טמאים מן הכתוב, ריבוי העופות הטהורים ואכילת עוף במסורת, ולקיחת ביצים מן הגוים וסימני הביצה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="63">
+<meta name="gemara-map:sefaria-ref" content="Chullin 63">
+<meta name="gemara-map:topic-he" content="עופות טמאים, מסורת וביצים">
+<meta name="gemara-map:topic-en" content="Non-kosher birds, tradition, eggs">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ס״ג">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 63">
+<meta name="gemara-map:blurb-he" content="כ״ד עופות טמאים נדרשים מן ׳למינה׳; עוף טהור נאכל במסורת מצייד הבקי; וביצי נכרי כשרות אלא בטרופות בקערה — וסימני הביצה אינם מן התורה.">
+<meta name="gemara-map:blurb-en" content="Twenty-four non-kosher birds are derived from ‘after its kinds’; a kosher bird is eaten on a hunter’s tradition; gentile eggs are permitted except when beaten in a bowl — and the egg-signs are not Torah-binding.">
+<meta name="gemara-map:sugya-count" content="3">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ס״ג</span><span data-when="en">Sugya map — Chullin 63</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ס״ג א — ס״ד ב · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 63a–64b · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שלוש סוגיות סביב סימני העוף וזיהויו. <b>כ״ד עופות טמאים</b>: כיצד מגיע הכתוב למספר זה — שלוש פעמים ׳למינה׳ ׳למינו׳ ׳למינהו׳ מוסיפות, ודאה=ראה, איה=דיה — לעומת רבי אבהו. שנית, <b>ריבוי הטהורים</b>: הכתוב מנה את הטמאים שהם המעטים, ולכן עוף טהור נאכל ב<b>מסורת</b> מצייד הבקי בשמותם. שלישית, <b>ביצי נכרי</b>: מותרות אם נקב העוף, ונחלקו אם לסמוך על סימני הביצה — ומסקנה שאינם מן התורה.</span>
+    <span data-when="en"><b>Bottom line:</b> Three sugyot on identifying birds and their eggs. <b>Twenty-four non-kosher birds</b>: how Scripture reaches that count — the repeated “after its kinds” adds four, and da’a=ra’a, ayya=dayya — against Rabbi Abbahu. Then <b>the kosher majority</b>: Scripture lists the few non-kosher birds, so a kosher bird is eaten on a <b>tradition</b> from a hunter who knows their names. Finally <b>gentile eggs</b>: permitted if the bird is named, with a dispute over relying on the egg-signs — concluding that the signs are not Torah-binding.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ס״ג</span><span data-when="en">Overview — Chullin 63</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · כ״ד עופות טמאים — מניין?"]:::statement
+  O2["2 · רוב העופות טהורים — אכילה במסורת"]:::statement
+  O3["3 · לקיחת ביצים מן הגוי וסימני הביצה"]:::statement
+  O1 --> O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · 24 non-kosher birds — how counted?"]:::statement
+  O2["2 · Most birds are kosher — eaten on tradition"]:::statement
+  O3["3 · Buying eggs from a gentile, and egg-signs"]:::statement
+  O1 --> O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">כ״ד עופות טמאים — מניין?</span><span data-when="en">Twenty-four non-kosher birds</span>
+      <span class="ref">Chullin 63a:17–63b:7</span></h2>
+  <div class="lead"><span data-when="he">רב מסר: כ״ד עופות טמאים. כיצד מגיע הכתוב למספר זה — והאם רבי אבהו חולק.</span><span data-when="en">Rav taught: twenty-four non-kosher birds. How Scripture reaches that count — and whether Rabbi Abbahu dissents.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב: כ״ד עופות טמאים — אך בכתוב רק כ׳ או כ״א"]:::statement
+  A1["② ׳למינה׳ ׳למינה׳ ׳למינו׳ ׳למינהו׳ — ארבעה נוספים"]:::answer
+  Q1{"② ולפי זה כ״ו!"}:::question
+  A2["②③ אביי: דאה וראה אחת היא — שלא נכפלו"]:::answer
+  A3["④ אביי: כשם שראה ודאה, כך איה ודיה אחת — נשלם כ״ד"]:::answer
+  Q2{"⑤ מיתיבי: למה נשנו? בבהמה להוסיף, אף בעופות?"}:::question
+  A4["⑤ תירוץ: שם להוסיף, כאן לפרש בלבד"]:::answer
+  C1["⑥⑦ רבי אבהו חולק: ראה=איה — ולשיטתו רק כ״ג"]:::conclusion
+  S1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A2
+  A2 -->|המשך| A3
+  A3 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A4
+  A4 -.->|ופליגא| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav: 24 non-kosher birds — but Scripture lists only 20 or 21"]:::statement
+  A1["② Four ׳after its kinds׳ phrases add four more"]:::answer
+  Q1{"② Then there are 26!"}:::question
+  A2["②③ Abaye: da׳a and ra׳a are one species — not doubled"]:::answer
+  A3["④ Abaye: as ra׳a=da׳a, so ayya=dayya — yielding 24"]:::answer
+  Q2{"⑤ Objection: why repeat the list? For animals to add — so birds too?"}:::question
+  A4["⑤ Answer: there to add, here only to clarify"]:::answer
+  C1["⑥⑦ Rabbi Abbahu dissents: ra׳a=ayya — for him only 23"]:::conclusion
+  S1 -->|answer| A1
+  A1 -.->|objection| Q1
+  Q1 -->|answer| A2
+  A2 -->|continues| A3
+  A3 -.->|objection| Q2
+  Q2 -->|answer| A4
+  A4 -.->|differs| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עֶשְׂרִים וְאַרְבָּעָה עוֹפוֹת טְמֵאִין הֵן … אִי דְּוַיִּקְרָא – עֶשְׂרִים … אִי דְּמִשְׁנֵה תוֹרָה – עֶשְׂרִים וְחַד"]:::statement
+  A1["② ׳לְמִינָהּ׳ ׳לְמִינָהּ׳ ׳לְמִינוֹ׳ ׳לְמִינֵהוּ׳ – הֲרֵי כָּאן אַרְבַּע"]:::answer
+  Q1{"② אִי הָכִי עֶשְׂרִין וְשֵׁית הָווּ?"}:::question
+  A2["②③ דָּאָה וְרָאָה אַחַת הִיא … שְׁמַע מִינַּהּ מִין רָאָה וְדָאָה אַחַת הִיא"]:::answer
+  A3["④ כְּשֵׁם שֶׁרָאָה וְדָאָה אַחַת הִיא, כָּךְ אַיָּה וְדַיָּה אַחַת הִיא"]:::answer
+  Q2{"⑤ מֵיתִיבִי: לָמָּה נִשְׁנוּ? … מַאי לָאו … עוֹפוֹת נָמֵי לְאוֹסוֹפֵי?"}:::question
+  A4["⑤ לָא, הָתָם לְאוֹסוֹפֵי, הָכָא לְפָרוֹשֵׁי"]:::answer
+  C1["⑥⑦ וּפְלִיגָא דְּרַבִּי אֲבָהוּ … רָאָה זוֹ אַיָּה … דָּאָה וְרָאָה דַּיָּה וְאַיָּה אַחַת הִיא"]:::conclusion
+  S1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A2
+  A2 -->|המשך| A3
+  A3 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A4
+  A4 -.->|ופליגא| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ג א — Chullin 63a:17</span></div>
+    <div class="orig">אָמַר רַב חָנָן בַּר רַב חִסְדָּא אָמַר רַב חִסְדָּא אָמַר רַב חָנָן בְּרֵיהּ דְּרָבָא אָמַר רַב: עֶשְׂרִים וְאַרְבָּעָה עוֹפוֹת טְמֵאִין הֵן. אֲמַר לֵיהּ רַב חָנָן בַּר רַב חִסְדָּא לְרַב חִסְדָּא: דְּהֵיכָא? אִי דְּוַיִּקְרָא – עֶשְׂרִים הָווּ, אִי דְּמִשְׁנֵה תוֹרָה – עֶשְׂרִים וְחַד הָווּ, וְכִי תֵּימָא דָּאָה דִּכְתִיבָא בְּוַיִּקְרָא וְלָא כְּתִיבָא בְּמִשְׁנֵה תוֹרָה שִׁדְיַיהּ עֲלַיְיהוּ – אַכַּתִּי עֶשְׂרִין וּתְרֵין הָווּ!</div>
+    <div class="trans" data-when="he">רב מסר בשם רב: כ״ד עופות טמאים. שאל רב חנן את רב חסדא אביו: מניין? אם מרשימת ויקרא — רק עשרים; אם ממשנה תורה — עשרים ואחד; ואף אם תוסיף את ה׳דאה׳ שבויקרא ואינה במשנה תורה — עדיין רק עשרים ושניים.</div>
+    <div class="trans" data-when="en">§ Rav Ḥanan bar Rav Ḥisda says that Rav Ḥisda says that Rav Ḥanan, son of Rava, says that Rav says: There are twenty-four non-kosher birds. Rav Ḥanan bar Rav Ḥisda said to Rav Ḥisda, his father: From where in the Torah is this number obtained? If you are referring to the list of Leviticus (11:13–19), there are only twenty birds listed there. If you are referring to the list of Deuteronomy (14:12–18), there are only twenty-one there. And if you would say: Add the da’a, which is written in Leviticus but is not written in Deuteronomy, to the others in Deuteronomy, still there are only twenty-two.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ג א — Chullin 63a:18</span></div>
+    <div class="orig">אֲמַר לֵיהּ: הָכִי אָמַר אֲבוּהּ דְּאִמָּךְ מִשְּׁמֵיהּ דְּרַב: ״לְמִינָהּ״ ״לְמִינָהּ״ ״לְמִינוֹ״ ״לְמִינֵהוּ״ – הֲרֵי כָּאן אַרְבַּע. אִי הָכִי עֶשְׂרִין וְשֵׁית הָווּ? אָמַר אַבָּיֵי: דָּאָה וְרָאָה אַחַת הִיא, דְּאִי סָלְקָא דַּעְתָּךְ תַּרְתֵּי אִינּוּן,</div>
+    <div class="trans" data-when="he">רב חסדא: כך אמר אבי אמך בשם רב — ארבע הלשונות ״למינה״ ״למינה״ ״למינו״ ״למינהו״ מרבות ארבעה עופות נוספים. ואם כן יש כ״ו? אביי: דאה וראה עוף אחד הם, שאם תאמר שני מינים —</div>
+    <div class="trans" data-when="en">Rav Ḥisda said to him: This is what your mother’s father, Rav Ḥanan, son of Rava, said in the name of Rav: The phrases “after its kinds,” “after its kinds,” “after its kinds,” and “after its kinds,” that appear in each list indicate additional cases. Here, then, are four more. The Gemara objects: If so, there are twenty-six, not twenty-four. Abaye said: The da’a mentioned in Leviticus and the ra’a mentioned in Deuteronomy are one bird. As, if it enters your mind that they are two different birds,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ג ב — Chullin 63b:1</span></div>
+    <div class="orig">מִכְּדֵי מִשְׁנֵה תוֹרָה לְאוֹסוֹפֵי הוּא דַּאֲתָא, מַאי שְׁנָא הָכָא דִּכְתִיב ״דָּאָה״ וּמַאי שְׁנָא הָכָא דִּכְתִיב ״רָאָה״ וְלָא כְּתִיב ״דָּאָה״? אֶלָּא שְׁמַע מִינַּהּ מִין רָאָה וְדָאָה אַחַת הִיא.</div>
+    <div class="trans" data-when="he">המשך אביי: שהרי משנה תורה בא להוסיף — אם דאה וראה שני מינים, מדוע כאן (ויקרא) ׳דאה׳ וכאן (משנה תורה) ׳ראה׳ ולא ׳דאה׳? אלא שמע מינה: ראה ודאה מין אחד הם.</div>
+    <div class="trans" data-when="en">one might ask: Since it is assumed that the list in Deuteronomy comes to add to the list in Leviticus, what is different here, in Leviticus, that it is written: “Da’a,” and what is different here, in Deuteronomy, that it is written: “Ra’a,” and da’a is not written? Rather, conclude from the presence of each on only one list that the ra’a and da’a are one species.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ג ב — Chullin 63b:2</span></div>
+    <div class="orig">וְאַכַּתִּי עֶשְׂרִין וְחַמְשָׁה הָווּ? אָמַר אַבָּיֵי: כְּשֵׁם שֶׁרָאָה וְדָאָה אַחַת הִיא, כָּךְ אַיָּה וְדַיָּה אַחַת הִיא. דְּאִי סָלְקָא דַּעְתָּךְ תַּרְתֵּי אִינּוּן, מִכְּדֵי מִשְׁנֵה תוֹרָה לְאוֹסוֹפֵי הוּא דַּאֲתָא, מַאי שְׁנָא הָכָא דִּכְתִיב ״לְמִינָהּ״ אַאַיָּה, וּמַאי שְׁנָא הָתָם דִּכְתִיב ״לְמִינָהּ״ אַדַּיָּה? אֶלָּא שְׁמַע מִינַּהּ: אַיָּה וְדַיָּה אַחַת הִיא.</div>
+    <div class="trans" data-when="he">ועדיין כ״ה? אביי: כשם שראה ודאה מין אחד, כך איה ודיה מין אחד; שאם שני מינים — מדוע כאן ׳למינה׳ על האיה וכאן ׳למינה׳ על הדיה? אלא שמע מינה איה ודיה אחת היא. בכך נשלם כ״ד.</div>
+    <div class="trans" data-when="en">The Gemara objects: But still, there are twenty-five birds, not twenty-four. Abaye said: Just as the ra’a and da’a are one species, so too, the ayya and the dayya, the latter of which is mentioned only in Deuteronomy, are one species. As, if it enters your mind that they are two different species, one might ask: Since it is assumed that the list in Deuteronomy comes to add to the list in Leviticus, what is different here, in Leviticus, that it is written: “After its kinds,” about the ayya, prohibiting some other kind of ayya, and what is different there, in Deuteronomy, that it is written: “After its kinds,” about the dayya? Why is the ayya not mentioned? Rather, learn from the use of the same phrase with regard to the ayya and dayya that they are one species.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ג ב — Chullin 63b:3</span></div>
+    <div class="orig">וְכִי מֵאַחַר שֶׁאַיָּה וְדַיָּה אַחַת הִיא, לְמָה לֵיהּ לְמִיכְתַּב אַיָּה וְדַיָּה? כִּדְתַנְיָא, רַבִּי אוֹמֵר: אֶקְרָא אֲנִי אַיָּה, דַּיָּה לָמָּה נֶאֶמְרָה? כְּדֵי שֶׁלֹּא תִּתֵּן פִּתְחוֹן פֶּה לְבַעַל דִּין לַחְלוֹק, שֶׁלֹּא תְּהֵא אַתָּה קוֹרֵא אַיָּה וְהוּא קוֹרֵא דַּיָּה, אַתָּה קוֹרֵא דַּיָּה וְהוּא קוֹרֵא אַיָּה, לְכָךְ כָּתַב בְּמִשְׁנֵה תוֹרָה: ״וְהָרָאָה וְאֶת הָאַיָּה וְהַדַּיָּה לְמִינָהּ״.</div>
+    <div class="trans" data-when="he">ואם איה ודיה אחת — למה נכתבו שתיהן? כברייתא, רבי: אקרא רק ׳איה׳; ׳דיה׳ למה נאמרה? כדי שלא ייתן אדם פתחון פה לחלוק — שלא יקרא אחד ׳איה׳ והשני ׳דיה׳ ויתירנה; לכך כתב משנה תורה את שתי השמות.</div>
+    <div class="trans" data-when="en">The Gemara asks: And now that the ayya and dayya are one species, why did the Torah need to write both ayya and dayya in Deuteronomy? The Gemara responds: As it is taught in a baraita that Rabbi Yehuda HaNasi says: Given that the two are one species, I will read ayya and know that it is forbidden. Why is dayya stated? It is so as not to give a claim to a litigant to disagree, and it should not occur that you call it an ayya and he calls it a dayya and eats it. Likewise, the Torah did not write only dayya so that it will not occur that you call it a dayya and he calls it an ayya and eats it. Therefore, the Torah writes in Deuteronomy: “And the ra’a, and the ayya, and the dayya after its kinds” (Deuteronomy 14:13). Consequently, both the list in Leviticus and that in Deuteronomy enumerate twenty-four birds, in accordance with the statement attributed to Rav.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ג ב — Chullin 63b:4</span></div>
+    <div class="orig">מֵיתִיבִי: לָמָּה נִשְׁנוּ? בִּבְהֵמָה – מִפְּנֵי הַשְּׁסוּעָה, וּבָעוֹפוֹת – מִפְּנֵי הָרָאָה. מַאי לָאו, מִדִּבְהֵמָה דְּהָתָם לְאוֹסוֹפֵי, עוֹפוֹת נָמֵי לְאוֹסוֹפֵי? לָא, הָתָם לְאוֹסוֹפֵי, הָכָא לְפָרוֹשֵׁי.</div>
+    <div class="trans" data-when="he">מיתיבי מברייתא: למה נשנו הרשימות? בבהמה — מפני השסועה (שלא נמנתה בויקרא), ובעופות — מפני הראה. ואם בבהמה השנייה באה להוסיף, אף בעופות להוסיף — ויהיו יותר מכ״ד! תירוץ: לא; שם להוסיף, כאן הראה רק לפרש.</div>
+    <div class="trans" data-when="en">The Gemara raises an objection from a baraita: Why is the list of non-kosher animals in Leviticus repeated? It is due to the necessity of adding the shesua (Deuteronomy 14:7), which was not listed in Leviticus. And the list of non-kosher birds is repeated due to the ra’a. What, is it not understood from the fact that the extra list of animals there, in Deuteronomy, is to add animals, that the list of birds is also repeated to add birds? The Gemara responds: No, there, i.e., with regard to animals, the list is repeated to add, but here, with regard to birds, it is repeated only to explain.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״ג ב — Chullin 63b:5</span></div>
+    <div class="orig">וּפְלִיגָא דְּרַבִּי אֲבָהוּ, דְּאָמַר רַבִּי אֲבָהוּ: רָאָה זוֹ אַיָּה, וְלָמָּה נִקְרָא שְׁמָהּ רָאָה? שֶׁרוֹאָה בְּיוֹתֵר, וְכֵן הוּא אוֹמֵר: ״נָתִיב לֹא יְדָעוֹ עָיִט וְלֹא שְׁזָפַתּוּ עֵין אַיָּה״, תָּנָא: עוֹמֶדֶת בְּבָבֶל וְרוֹאָה נְבֵלָה בְּאֶרֶץ יִשְׂרָאֵל.</div>
+    <div class="trans" data-when="he">וזה חולק על רבי אבהו, שאמר: ראה היא איה, ונקראת ׳ראה׳ על שם שרואה ביותר, וכן ״ולא שזפתו עין איה״; ותנא: עומדת בבבל ורואה נבלה בארץ ישראל.</div>
+    <div class="trans" data-when="en">And the opinion that the da’a and ra’a are one species, and that the ayya and dayya are another species, differs from the opinion of Rabbi Abbahu, as Rabbi Abbahu says: The ra’a is the ayya. And why is it called the ra’a? Since it sees [ro’ah] most vividly. And so the verse states: “That path no bird of prey knows, neither has the eye of the ayya seen it” (Job 28:7). And a Sage taught: The ra’a can stand in Babylonia and see a carcass in Eretz Yisrael.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס״ג ב — Chullin 63b:6</span></div>
+    <div class="orig">מִדְּרָאָה הַיְינוּ אַיָּה, מִכְּלָל דְּדָאָה לָאו הַיְינוּ רָאָה. מִכְּדֵי מִשְׁנֵה תוֹרָה לְאוֹסוֹפֵי הוּא דַּאֲתָא, מַאי שְׁנָא הָכָא דִּכְתִיב ״דָּאָה״, וּמַאי שְׁנָא הָתָם דְּלָא כְּתִיב ״דָּאָה״? אֶלָּא לָאו שְׁמַע מִינַּהּ דָּאָה וְרָאָה וְאַיָּה אַחַת הִיא.</div>
+    <div class="trans" data-when="he">מכך שראה היא איה, נמצא לרבי אבהו שדאה אינה ראה. ושוב: משנה תורה להוסיף בא — מדוע כאן ׳דאה׳ ושם אין ׳דאה׳? אלא שמע מינה: דאה וראה ואיה — לרבי אבהו — מין אחד.</div>
+    <div class="trans" data-when="en">The Gemara discusses Rabbi Abbahu’s statement: Since the ra’a is the same as the ayya, by inference, one may conclude that the da’a is not the same as the ra’a; otherwise, there are not twenty-four non-kosher birds. But since it is assumed that the list in Deuteronomy comes to add to the list in Leviticus, what is different here, in Leviticus, that it is written: “Da’a,” and what is different there, in Deuteronomy, that da’a is not written? Rather, must one not conclude from the discrepancy that the two are the same? If so, one must conclude that according to Rabbi Abbahu, the da’a and ra’a and ayya are all one species.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס״ג ב — Chullin 63b:7</span></div>
+    <div class="orig">וּמִדְּרָאָה הַיְינוּ אַיָּה, מִכְּלַל דְּדַיָּה לָאו הַיְינוּ אַיָּה. מַאי שְׁנָא הָתָם דִּכְתִיב ״לְמִינֵהוּ״ אַאַיָּה, וּמַאי שְׁנָא הָכָא דְּלָא כְּתִיב ״לְמִינֵהוּ״ אַאַיָּה אֶלָּא אַדַּיָּה? אֶלָּא שְׁמַע מִינַּהּ דָּאָה וְרָאָה דַּיָּה וְאַיָּה אַחַת הִיא.</div>
+    <div class="trans" data-when="he">ועוד: מכך שראה היא איה, דיה אינה איה. מדוע שם ׳למינהו׳ על האיה וכאן ׳למינהו׳ על הדיה? אלא שמע מינה: דאה וראה דיה ואיה — לרבי אבהו — אחת הן; ולשיטתו רק כ״ג עופות טמאים.</div>
+    <div class="trans" data-when="en">And furthermore, from the fact that Rabbi Abbahu holds that the ra’a is the same as the ayya, by inference, one may conclude that the dayya is not the same as the ayya. But if so, one may ask again: What is different there, in Leviticus, that it is written: “After its kinds,” about the ayya, and what is different here, in Deuteronomy, that it is not written: “After its kinds,” about the ayya but about the dayya? Rather, the ayya and dayya must be one species. And one may learn from the combination of the two disputes that according to Rabbi Abbahu, the da’a and ra’a, dayya and ayya are all one species. Consequently, according to Rabbi Abbahu, there are only twenty-three non-kosher species.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">רוב העופות טהורים — אכילה במסורת</span><span data-when="en">A kosher bird eaten on tradition</span>
+      <span class="ref">Chullin 63b:8–12</span></h2>
+  <div class="lead"><span data-when="he">העופות הטהורים מרובים, לכן מנה הכתוב את הטמאים; ועוף טהור נאכל במסורת מצייד הבקי בשמות.</span><span data-when="en">Kosher birds are the majority, so Scripture lists the few non-kosher; a kosher bird is eaten on a tradition from a hunter who knows their names.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① איסי: מאה עופות טמאים, כולם מין איה; ולעופות הטהורים אין מספר"]:::statement
+  S2["② רבי: הטמאים מועטים, לכן מנה הכתוב אותם"]:::statement
+  Q1{"③ מאי קא משמע לן?"}:::question
+  A1["③ ישנה אדם לתלמידו דרך קצרה"]:::answer
+  S3["④ רבי יצחק: עוף טהור נאכל במסורת — נאמן הצייד; ובלבד שבקי בשמות"]:::statement
+  Q2{"⑤ בעי רבי זירא: רבו חכם או רבו צייד?"}:::question
+  C1["⑤ תא שמע: בקי בהן ובשמותם — רבו צייד"]:::conclusion
+  S1 -->|המשך| S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  S2 -->|דין| S3
+  S3 -->|בעיא| Q2
+  Q2 -->|תא שמע| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Isi: 100 non-kosher birds, all of the ayya kind; kosher birds countless"]:::statement
+  S2["② Rabbi: non-kosher are few, so Scripture listed them"]:::statement
+  Q1{"③ What does this teach us?"}:::question
+  A1["③ Teach your student in a concise way"]:::answer
+  S3["④ R. Yitzḥak: a kosher bird is eaten on tradition — the hunter is trusted, if expert in the names"]:::statement
+  Q2{"⑤ R. Zeira asks: his Sage-teacher or his hunter-teacher?"}:::question
+  C1["⑤ Come and hear: ׳familiar with them and their names׳ — the hunter"]:::conclusion
+  S1 -->|continues| S2
+  S2 -->|question| Q1
+  Q1 -->|answer| A1
+  S2 -->|ruling| S3
+  S3 -->|dilemma| Q2
+  Q2 -->|come and hear| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מֵאָה עוֹפוֹת טְמֵאִין … וְכוּלָּן מִין ׳אַיָּה׳ הֵן … וּלְעוֹפוֹת טְהוֹרִים אֵין מִסְפָּר"]:::statement
+  S2["② שֶׁעוֹפוֹת טְהוֹרִין מְרוּבִּין עַל הַטְּמֵאִין, לְפִיכָךְ מָנָה הַכָּתוּב בַּטְּמֵאִין"]:::statement
+  Q1{"③ מַאי קָא מַשְׁמַע לַן?"}:::question
+  A1["③ לְעוֹלָם יִשְׁנֶה אָדָם לְתַלְמִידוֹ דֶּרֶךְ קְצָרָה"]:::answer
+  S3["④ עוֹף טָהוֹר נֶאֱכָל בְּמָסוֹרֶת … נֶאֱמָן הַצַּיָּיד … וְהוּא שֶׁבָּקִי בָּהֶן וּבִשְׁמוֹתֵיהֶן"]:::statement
+  Q2{"⑤ בָּעֵי רַבִּי זֵירָא: רַבּוֹ חָכָם, אוֹ רַבּוֹ צַיָּיד?"}:::question
+  C1["⑤ תָּא שְׁמַע … שֶׁבָּקִי בָּהֶן וּבִשְׁמוֹתֵיהֶן … שְׁמַע מִינַּהּ רַבּוֹ צַיָּיד"]:::conclusion
+  S1 -->|המשך| S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  S2 -->|דין| S3
+  S3 -->|בעיא| Q2
+  Q2 -->|תא שמע| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ג ב — Chullin 63b:8</span></div>
+    <div class="orig">תַּנְיָא, אִיסִי בֶּן יְהוּדָה אוֹמֵר: מֵאָה עוֹפוֹת טְמֵאִין יֵשׁ בַּמִּזְרָח, וְכוּלָּן מִין ״אַיָּה״ הֵן. תָּנֵי אֲבִימִי בְּרֵיהּ דְּרַבִּי אֲבָהוּ: שְׁבַע מֵאוֹת מִינֵי דָגִים הֵן, וּשְׁמוֹנֶה מֵאוֹת מִינֵי חֲגָבִים, וּלְעוֹפוֹת אֵין מִסְפָּר. עוֹפוֹת עֶשְׂרִין וְאַרְבָּעָה הָווּ! אֶלָּא: וּלְעוֹפוֹת טְהוֹרִים אֵין מִסְפָּר.</div>
+    <div class="trans" data-when="he">ברייתא, איסי בן יהודה: מאה עופות טמאים יש במזרח, וכולם מין ׳איה׳. אבימי בנו של רבי אבהו: שבע מאות מיני דגים, שמונה מאות מיני חגבים, ולעופות אין מספר. הקשו: הרי רק כ״ד עופות טמאים! אלא כוונתו: ולעופות הטהורים אין מספר.</div>
+    <div class="trans" data-when="en">§ With regard to the phrase: “The ayya after its kinds” (Leviticus 11:14), it is taught in a baraita that Isi ben Yehuda says: There are one hundred non-kosher birds in the East, and they are all species of ayya. Avimi, son of Rabbi Abbahu, taught: There are seven hundred types of non-kosher fish, and eight hundred types of non-kosher grasshopper, and there are countless birds. The Gemara protests: Are there countless non-kosher birds? But there are only twenty-four non-kosher birds mentioned in the Torah. Rather, Avimi must have meant: And there are countless kosher birds.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ג ב — Chullin 63b:9</span></div>
+    <div class="orig">תַּנְיָא, רַבִּי אוֹמֵר: גָּלוּי וְיָדוּעַ לִפְנֵי מִי שֶׁאָמַר וְהָיָה הָעוֹלָם שֶׁבְּהֵמָה טְמֵאָה מְרוּבָּה מִן הַטְּהוֹרוֹת, לְפִיכָךְ מָנָה הַכָּתוּב בַּטְּהוֹרָה. גָּלוּי וְיָדוּעַ לִפְנֵי מִי שֶׁאָמַר וְהָיָה הָעוֹלָם שֶׁעוֹפוֹת טְהוֹרִין מְרוּבִּין עַל הַטְּמֵאִין, לְפִיכָךְ מָנָה הַכָּתוּב בַּטְּמֵאִין.</div>
+    <div class="trans" data-when="he">ברייתא, רבי: גלוי וידוע לפני הקב״ה שהבהמות הטמאות מרובות מן הטהורות, לכן מנה הכתוב את הטהורות (ושאר טמאות); וגלוי שהעופות הטהורים מרובים מן הטמאים, לכן מנה הכתוב את הטמאים בלבד.</div>
+    <div class="trans" data-when="en">It is taught in a baraita: Rabbi Yehuda HaNasi says: It is revealed and known before the One Who spoke and the world came into being that the species of non-kosher animals are more numerous than the kosher ones. Therefore, the Torah lists the kosher animals, teaching that all the rest are non-kosher. On the other hand, it is revealed and known before the One Who spoke and the world came into being that the species of kosher birds are more numerous than the non-kosher ones. Therefore, the Torah lists the non-kosher birds.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ג ב — Chullin 63b:10</span></div>
+    <div class="orig">מַאי קָא מַשְׁמַע לַן? כִּדְרַב הוּנָא אָמַר רַב, וְאָמְרִי לַהּ אָמַר רַב הוּנָא אָמַר רַב מִשּׁוּם רַבִּי מֵאִיר: לְעוֹלָם יִשְׁנֶה אָדָם לְתַלְמִידוֹ דֶּרֶךְ קְצָרָה.</div>
+    <div class="trans" data-when="he">מה משמיעה הברייתא? כדברי רב הונא בשם רב (ויש אומרים משום רבי מאיר): לעולם ישנה אדם לתלמידו בדרך קצרה — כשם שהתורה קיצרה ומנתה את המעטים.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is this baraita teaching us? The Gemara responds: As Rav Huna says that Rav says, and some say that Rav Huna says that Rav says in the name of Rabbi Meir: A person should always teach his student in a concise manner, just as the Torah is concise in its language.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ג ב — Chullin 63b:11</span></div>
+    <div class="orig">אָמַר רַבִּי יִצְחָק: עוֹף טָהוֹר נֶאֱכָל בְּמָסוֹרֶת, נֶאֱמָן הַצַּיָּיד לוֹמַר: עוֹף זֶה טָהוֹר, מָסַר לִי רַבִּי. אָמַר רַבִּי יוֹחָנָן: וְהוּא שֶׁבָּקִי בָּהֶן וּבִשְׁמוֹתֵיהֶן.</div>
+    <div class="trans" data-when="he">רבי יצחק: עוף טהור נאכל על פי מסורת, בלי בדיקת סימנים; ונאמן הצייד לומר ׳עוף זה טהור, מסר לי רבי׳. רבי יוחנן: ובלבד שהצייד בקי בעופות ובשמותיהם.</div>
+    <div class="trans" data-when="en">Rabbi Yitzḥak says: A kosher bird may be eaten on the strength of a tradition that it is kosher, without inspecting for the signs listed in the mishna. And the hunter is deemed credible to say: My teacher conveyed to me that this bird is kosher. Rabbi Yoḥanan said: And this is the halakha only when the teacher is familiar with the non-kosher birds and with their names.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ג ב — Chullin 63b:12</span></div>
+    <div class="orig">בָּעֵי רַבִּי זֵירָא: רַבּוֹ חָכָם, אוֹ רַבּוֹ צַיָּיד? תָּא שְׁמַע, דְּאָמַר רַבִּי יוֹחָנָן: וְהוּא שֶׁבָּקִי בָּהֶן וּבִשְׁמוֹתֵיהֶן. אִי אָמְרַתְּ בִּשְׁלָמָא רַבּוֹ צַיָּיד – שַׁפִּיר, אֶלָּא אִי אָמְרַתְּ רַבּוֹ חָכָם, בִּשְׁלָמָא שְׁמַיְיהוּ גְּמִיר לְהוּ, אֶלָּא אִינְהוּ מִי יָדַע לְהוּ? אֶלָּא לָאו שְׁמַע מִינַּהּ: רַבּוֹ צַיָּיד. שְׁמַע מִינַּהּ.</div>
+    <div class="trans" data-when="he">בעי רבי זירא: ה׳רבי׳ שמסר — רבו החכם או רבו הצייד (שלימדו לצוד)? תא שמע מדברי רבי יוחנן ׳שבקי בהן ובשמותיהן׳: אם רבו צייד — מובן; אם רבו חכם — שמותם למד, אך את העופות עצמם אינו מכיר. אלא שמע מינה: רבו צייד.</div>
+    <div class="trans" data-when="en">Rabbi Zeira raises a dilemma: Was Rabbi Yoḥanan referring to the hunter’s teacher the Sage, or to his teacher the hunter, i.e., the one who taught him how to hunt? The Gemara responds: Come and hear proof from that which Rabbi Yoḥanan said: And this applies only when the teacher is familiar with them and with their names. Granted, if you say this is referring to his teacher the hunter, this works out well. But if you say it is referring to his teacher the Sage, granted, a Sage will know their names, since he has learned them, but does he recognize the birds themselves? Rather, must one not conclude from it that Rabbi Yoḥanan referred to his teacher the hunter? The Gemara concludes: Indeed, conclude from it that this is so.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">לקיחת ביצים מן הגוי וסימני הביצה</span><span data-when="en">Buying eggs from a gentile, and egg-signs</span>
+      <span class="ref">Chullin 63b:13–64b:1</span></h2>
+  <div class="lead"><span data-when="he">לוקחים ביצים מן הגוי כשמפרש שם עוף טהור; ונחלקו אם לסמוך על סימני הביצה — ומסקנה שאינם מן התורה.</span><span data-when="en">Eggs may be bought from a gentile when he names a kosher bird; a dispute over relying on egg-signs concludes that they are not Torah-binding.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: לוקחים ביצים מן הגוי בכל מקום"]:::statement
+  Q1{"② ודלמא של עוף טמא? — באומר ׳של עוף פלוני טהור׳"}:::question
+  Q2{"③ ולבדוק בסימנים? — סימני ביצים"}:::question
+  S2["④⑤ סימני הביצה: ראש כד וראש חד, חלבון מבחוץ — טהורה"]:::statement
+  A1["⑥ צריך הגוי: בחתוכות ובטרופות בקערה — אין סימן"]:::answer
+  Q3{"⑦ והא אין לוקחים טרופות בקערה!"}:::question
+  C1["⑧ רבי זירא: סימנין לאו דאורייתא — שמ׳ ספיקות"]:::conclusion
+  S3["⑨ ולמסקנה הסימן רק לרעותא, ובמפרש שם טהור — סומך"]:::statement
+  P1["⑩⑪ מעורבין — ביצת שרץ: רב עוקבא, רבא — לוקה משום שרץ"]:::proof
+  C2["⑫⑬ ואף אפרוחי טהורה — מדרבנן וקרא אסמכתא"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|קושיא| Q2
+  Q2 -->|ברייתא| S2
+  S2 -->|יישוב| A1
+  A1 -.->|קושיא| Q3
+  Q3 -->|מסקנה| C1
+  C1 -->|ביאור| S3
+  S3 -->|דין נוסף| P1
+  P1 -->|מסקנה| C2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: one may buy eggs from a gentile anywhere"]:::statement
+  Q1{"② Perhaps a non-kosher bird? — when he names ׳such kosher bird׳"}:::question
+  Q2{"③ Let him inspect signs? — egg-signs"}:::question
+  S2["④⑤ Egg-signs: one end round one pointed, albumen outside — kosher"]:::statement
+  A1["⑥ The gentile is needed: when cut, or beaten in a bowl — no sign"]:::answer
+  Q3{"⑦ But one may not buy eggs beaten in a bowl!"}:::question
+  C1["⑧ R. Zeira: the signs are not Torah-law — the eight uncertain birds"]:::conclusion
+  S3["⑨ So the sign serves only to forbid, but if a kosher bird is named — rely on it"]:::statement
+  P1["⑩⑪ Mixed = creeping-thing egg: R. Ukva, Rava — flogged as a sheretz"]:::proof
+  C2["⑫⑬ Even a kosher bird׳s chick — rabbinic, the verse a mere support"]:::conclusion
+  S1 -->|objection| Q1
+  Q1 -->|objection| Q2
+  Q2 -->|baraita| S2
+  S2 -->|resolved| A1
+  A1 -.->|objection| Q3
+  Q3 -->|conclusion| C1
+  C1 -->|explained| S3
+  S3 -->|further law| P1
+  P1 -->|conclusion| C2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① לוֹקְחִין בֵּיצִים מִן הַגּוֹיִם בְּכׇל מָקוֹם … לֹא מִשּׁוּם נְבֵלוֹת וְלֹא מִשּׁוּם טְרֵפוֹת"]:::statement
+  Q1{"② וְדִילְמָא דְּעוֹף טָמֵא נִינְהוּ? … בְּאוֹמֵר שֶׁל עוֹף פְּלוֹנִי טָהוֹר"}:::question
+  Q2{"③ וְלִבְדּוֹק בְּסִימָנִין! … כְּסִימָנֵי בֵיצִים"}:::question
+  S2["④⑤ רֹאשָׁהּ אֶחָד כַּד וְרֹאשָׁהּ אֶחָד חַד … חֶלְבּוֹן מִבַּחוּץ … טְהוֹרָה"]:::statement
+  A1["⑥ לָא צְרִיכָא, דַּחֲתוּכוֹת … בִּטְרוּפוֹת בִּקְעָרָה"]:::answer
+  Q3{"⑦ אֵין מוֹכְרִין בֵּיצַת טְרֵפָה … אֶלָּא אִם כֵּן טְרוּפָה בִּקְעָרָה"}:::question
+  C1["⑧ אָמַר רַבִּי זֵירָא: סִימָנִין לָאו דְּאוֹרָיְיתָא … שְׁמֹנָה סְפֵיקוֹת הֵן"]:::conclusion
+  S3["⑨ … וְאָמַר לָךְ שֶׁל עוֹף פְּלוֹנִי וְטָהוֹר הוּא – סְמוֹךְ עֲלֵיהּ"]:::statement
+  P1["⑩⑪ בֵּיצַת הַשֶּׁרֶץ … רִיקְּמָה וְאָכְלָה – לוֹקֶה … מִשּׁוּם ׳שֶׁרֶץ הַשֹּׁרֵץ׳"]:::proof
+  C2["⑫⑬ לְרַבּוֹת אֶפְרוֹחִים … מִדְּרַבָּנַן, וּקְרָא אַסְמַכְתָּא בְּעָלְמָא"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|קושיא| Q2
+  Q2 -->|ברייתא| S2
+  S2 -->|יישוב| A1
+  A1 -.->|קושיא| Q3
+  Q3 -->|מסקנה| C1
+  C1 -->|ביאור| S3
+  S3 -->|דין נוסף| P1
+  P1 -->|מסקנה| C2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ג ב — Chullin 63b:13</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: לוֹקְחִין בֵּיצִים מִן הַגּוֹיִם בְּכׇל מָקוֹם, וְאֵין חוֹשְׁשִׁין לֹא מִשּׁוּם נְבֵלוֹת וְלֹא מִשּׁוּם טְרֵפוֹת.</div>
+    <div class="trans" data-when="he">ברייתא: לוקחים ביצים מן הגוים בכל מקום, ואין חוששים לא משום נבלות (שמא הוצאו מבהמה מתה) ולא משום טרפות, שאין זה מצוי.</div>
+    <div class="trans" data-when="en">§ The Sages taught in a baraita: One may buy eggs from the gentiles anywhere, and one need not be concerned, neither with regard to carcasses, i.e., that the egg may have been removed from a carcass of a bird and therefore forbidden, nor with regard to eggs from tereifot, because neither of these possibilities is likely.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ג ב — Chullin 63b:14</span></div>
+    <div class="orig">וְדִילְמָא דְּעוֹף טָמֵא נִינְהוּ? אָמַר אֲבוּהּ דִּשְׁמוּאֵל: בְּאוֹמֵר שֶׁל עוֹף פְּלוֹנִי טָהוֹר. וְלֵימָא שֶׁל עוֹף טָהוֹר? אִי הָכִי, אִית לֵיהּ לְאִישְׁתְּמוֹטֵי.</div>
+    <div class="trans" data-when="he">קושיא: ושמא הביצים מעוף טמא? אבוה דשמואל: מדובר כשהגוי אומר ׳של עוף פלוני (טהור) הן׳. והקשו: יאמר סתם ׳של עוף טהור׳! תירוץ: אם לא יפרש שם, יוכל להישמט; כשמפרש, אפשר לבדוק בביצה אחרת מאותו מין.</div>
+    <div class="trans" data-when="en">The Gemara objects: But perhaps they are from a non-kosher bird. Shmuel’s father said: The baraita is referring to a case where the gentile says they are of such and such bird, which is known to be kosher. The Gemara challenges: But if the gentile is deemed credible, let him say only that they are of a kosher bird. Why does he need to name the species? The Gemara responds: If so, if he does not name the species, he has the opportunity to deflect scrutiny if he is dishonest; but if he names the species, one can bring other eggs of the same species to compare and validate the claim.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ג ב — Chullin 63b:15</span></div>
+    <div class="orig">וְלִבְדּוֹק בְּסִימָנִין! דְּתַנְיָא: כְּסִימָנֵי בֵיצִים כָּךְ סִימָנֵי דָגִים. סִימָנֵי דָגִים סָלְקָא דַּעְתָּךְ? ״סְנַפִּיר וְקַשְׂקֶשֶׂת״ אָמַר רַחֲמָנָא! אֶלָּא אֵימָא: כָּךְ סִימָנֵי</div>
+    <div class="trans" data-when="he">קושיא: ולמה לסמוך על הגוי — יבדוק בסימני הביצה! כברייתא: ״כסימני ביצים כך סימני דגים״. הקשו: סימני דגים? והרי ׳סנפיר וקשקשת׳ נאמרו בתורה! אלא אימא: כך סימני…</div>
+    <div class="trans" data-when="en">The Gemara asks: But why must one rely on the gentile? Let him inspect the eggs for signs, as it is taught in a baraita: Like the signs of kosher eggs, so too are the signs of fish. The Gemara interjects: Can it enter your mind that the baraita is referring to the signs of fish? The Merciful One states them explicitly in the Torah: “Fins and scales” (Leviticus 11:9). Rather, say: So too are the signs of</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ד א — Chullin 64a:1</span></div>
+    <div class="orig">עוּבְּרֵי דָּגִים.</div>
+    <div class="trans" data-when="he">— עוברי דגים, היינו ביצי הדגים שבמעיהם. (השוואת הברייתא היא בין סימני ביצי עוף לסימני ביצי דגים.)</div>
+    <div class="trans" data-when="en">fish embryos, i.e., fish eggs found in the fish’s innards.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ד א — Chullin 64a:2</span></div>
+    <div class="orig">וְתַנְיָא גַּבֵּי בֵיצִים: אֵלּוּ הֵן סִימָנֵי בֵיצִים – כָּל שֶׁכּוֹדֶרֶת וַעֲגוּלְגּוֹלֶת, רֹאשָׁהּ אֶחָד כַּד וְרֹאשָׁהּ אֶחָד חַד – טְהוֹרָה, שְׁנֵי רָאשֶׁיהָ כַּדִּין אוֹ שְׁנֵי רָאשֶׁיהָ חַדִּין – טְמֵאִין. חֶלְבּוֹן מִבַּחוּץ וְחֶלְמוֹן מִבִּפְנִים – טְהוֹרָה, חֶלְמוֹן מִבַּחוּץ וְחֶלְבּוֹן מִבְּפָנִים – טְמֵאָה, חֶלְמוֹן וְחֶלְבּוֹן מְעוֹרָבִין זֶה בָּזֶה – בְּיָדוּעַ שֶׁהִיא בֵּיצַת הַשֶּׁרֶץ.</div>
+    <div class="trans" data-when="he">ברייתא בסימני הביצים: ביצה ראשהּ אחד עגול ואחד חד — טהורה; שני ראשיה עגולים או שניהם חדים — טמאים. חלבון מבחוץ וחלמון בפנים — טהורה; חלמון מבחוץ — טמאה; חלמון וחלבון מעורבים — ביצת שרץ.</div>
+    <div class="trans" data-when="en">The Gemara continues: And it is taught in a baraita about eggs that these are the signs of bird eggs: Any egg that narrows at the top and is rounded, so that one of its ends is rounded and the other one of its ends is pointed, is kosher. If both of its ends are rounded or both of its ends are pointed, they are non-kosher. If the albumen is on the outside and the yolk on the inside, it is kosher. If the yolk is on the outside and the albumen on the inside, it is non-kosher. If the yolk and albumen are mixed with each other, it is certainly the egg of a creeping animal. Therefore, if it is possible to recognize a kosher egg by these signs, there is no need to rely on the gentile.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ד א — Chullin 64a:3</span></div>
+    <div class="orig">לָא צְרִיכָא, דַּחֲתוּכוֹת. וְלִיבְדּוֹק בְּחֶלְמוֹן וְחֶלְבּוֹן? בִּטְרוּפוֹת בִּקְעָרָה.</div>
+    <div class="trans" data-when="he">תירוץ: צריך לסמוך על הגוי כשהביצים חתוכות ואין לראות צורתן. ויבדוק בחלמון וחלבון? כשהן טרופות (מעורבבות) בקערה, שאי אפשר להבחין.</div>
+    <div class="trans" data-when="en">The Gemara responds: No, it is necessary if the eggs have already been cut and one cannot know their original shape. The Gemara challenges: But let him inspect the yolk and the albumen, to see which is inside and which is outside. The Gemara responds: The baraita deals with a case where the eggs are mixed in a bowl, and it is impossible to discern this.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״ד א — Chullin 64a:4</span></div>
+    <div class="orig">וּכְהַאי גַּוְונָא מִי זָבְנִינַן מִינַּיְיהוּ? וְהָא תַּנְיָא: אֵין מוֹכְרִין בֵּיצַת טְרֵפָה לְגוֹי, אֶלָּא אִם כֵּן טְרוּפָה בִּקְעָרָה; לְפִיכָךְ אֵין לוֹקְחִין מֵהֶם בֵּיצִים טְרוּפוֹת בִּקְעָרָה.</div>
+    <div class="trans" data-when="he">קושיא: וכי בכהאי גוונא, טרופות בקערה, קונים מהם? והרי ברייתא: אין מוכרים ביצת טרפה לגוי אלא אם כן טרופה בקערה; לפיכך אין לוקחים מהם ביצים טרופות בקערה, שמא מטרפה הן.</div>
+    <div class="trans" data-when="en">The Gemara counters: But in a case like this, where the eggs are mixed, may we buy eggs from them? Isn’t it taught in another baraita: One may sell the egg of a tereifa bird to a gentile only if it is mixed in a bowl; therefore, one may not buy eggs mixed in a bowl from them, because they may be from tereifot? If so, it cannot be that the baraita deals with a case where they are mixed, and one should be able to inspect the yolk and albumen.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס״ד א — Chullin 64a:5</span></div>
+    <div class="orig">אֶלָּא אָמַר רַבִּי זֵירָא: סִימָנִין לָאו דְּאוֹרָיְיתָא, דְּאִי לָא תֵּימָא הָכִי, הָא דְּאָמַר רַב אַסִּי: שְׁמֹנָה סְפֵיקוֹת הֵן – לִיבְדּוֹק בְּבֵיצִים דִּידְהוּ! אֶלָּא שְׁמַע מִינַּהּ: סִימָנִין לָאו דְּאוֹרָיְיתָא.</div>
+    <div class="trans" data-when="he">אלא רבי זירא: סימני הביצה אינם מן התורה. שאם תאמר שהם מן התורה — הרי רב אסי אמר ׳שמונה עופות ספק הם׳, יבדקו בביצים שלהם ויכריעו! אלא שמע מינה: סימנין לאו דאורייתא.</div>
+    <div class="trans" data-when="en">Rather, Rabbi Zeira said: The signs of a kosher egg are not valid by Torah law. As, if you do not say so, one encounters difficulty with that which Rav Asi says: There are eight birds whose kosher status is uncertain. Why is there uncertainty? Let one inspect their eggs for the signs listed in the baraita to determine whether they are kosher. Rather, learn from it that the signs are not valid by Torah law and one may not rely on them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס״ד א — Chullin 64a:6</span></div>
+    <div class="orig">אֶלָּא לְמַאי הִלְכְתָא קָתָנֵי לַהּ? הָכִי קָאָמַר: שְׁנֵי רָאשֶׁיהָ כַּדִּין, אוֹ שְׁנֵי רָאשֶׁיהָ חַדִּין, אוֹ חֶלְמוֹן מִבַּחוּץ וְחֶלְבּוֹן מִבִּפְנִים – וַדַּאי טְמֵאָה. רֵישֵׁיהּ חַד חַד, רֵישֵׁיהּ חַד כַּד, וְחֶלְבּוֹן מִבַּחוּץ וְחֶלְמוֹן מִבִּפְנִים, וְאָמַר לָךְ שֶׁל עוֹף פְּלוֹנִי וְטָהוֹר הוּא – סְמוֹךְ עֲלֵיהּ. בִּסְתָמָא – לָא תִּסְמוֹךְ עֲלֵיהּ, דְּאִיכָּא דְּעוֹרְבָא דְּדָמֵי לִדְיוֹנָה.</div>
+    <div class="trans" data-when="he">אם אינם מן התורה, למה שנו את הסימנים? אלא כך: סימני טומאה (שני ראשים שווים, או חלמון מבחוץ) — ודאי טמאה. ובסימני טהרה — רק כשהגוי מפרש שם עוף טהור, סומך עליו; בסתם — לא, שיש עורב הדומה ליונה.</div>
+    <div class="trans" data-when="en">The Gemara asks: But if one may not rely on these signs, with regard to what halakha is the baraita teaching them? The Gemara responds: This is what the baraita is saying: If both of its ends are rounded, or both its ends are pointed, or the yolk is on the outside and the albumen is on the inside, it is certainly non-kosher. But if one of its ends is pointed and one of its ends is rounded, and the albumen is on the outside and the yolk on the inside, and the gentile says to you that it is from such and such bird, and that bird is kosher, rely on the signs. But if he offers no specification of the type of bird, or if one simply finds eggs with these signs, do not rely on them, since there are crow’s eggs that resemble those of a pigeon.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ס״ד א — Chullin 64a:7</span></div>
+    <div class="orig">אָמַר מָר: חֶלְבּוֹן וְחֶלְמוֹן מְעוֹרָבִין זֶה בָּזֶה – בְּיָדוּעַ שֶׁהִיא בֵּיצַת הַשֶּׁרֶץ. לְמַאי הִלְכְתָא? אָמַר רַב עוּקְבָא בַּר חָמָא: לוֹמַר שֶׁאִם רִיקְּמָה וְנִיקְּבָה בְּכַעֲדָשָׁה – מְטַמֵּא.</div>
+    <div class="trans" data-when="he">אמר מר: חלבון וחלמון מעורבים — ביצת שרץ. למאי הלכתא? הרי בלאו הכי אסורה. רב עוקבא בר חמא: לומר שאם נרקם בה עובר וניקב, בשיעור כעדשה — מטמא, כנבלת שרץ.</div>
+    <div class="trans" data-when="en">The Gemara analyzes the baraita: The Master said: If the albumen and yolk are mixed with each other, it is certainly the egg of a creeping animal and not of a non-kosher bird. The Gemara asks: For what halakha is this information necessary? Either way, the egg is forbidden. Rav Ukva bar Ḥama said: The baraita means to say that if tissue of an embryo developed [rikema] inside it and it was perforated, and one touched it, it transmits ritual impurity provided that the embryo is at least the size of a lentil-bulk, because the carcass of a creeping animal of this size is a source of ritual impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ס״ד א — Chullin 64a:8</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רָבִינָא: וְדִלְמָא דְּנָחָשׁ הִיא? אֶלָּא אָמַר רָבָא: שֶׁאִם רִיקְּמָה וְאָכְלָה – לוֹקֶה עָלֶיהָ מִשּׁוּם ״שֶׁרֶץ הַשֹּׁרֵץ עַל הָאָרֶץ״.</div>
+    <div class="trans" data-when="he">רבינא הקשה: שמא ביצת נחש היא, שאינו מטמא? אלא רבא: הברייתא לעניין מלקות — שאם נרקם בה עובר ואכלהּ, לוקה משום ״שרץ השורץ על הארץ״.</div>
+    <div class="trans" data-when="en">Ravina objects to this: But perhaps it is the egg of a snake, whose carcass does not transmit ritual impurity, even though the albumen and yolk of its eggs are mixed together. Rather, Rava said: The baraita does not teach about ritual impurity, but rather that if tissue of an embryo developed inside the egg and one ate it, he is flogged on its account, due to the prohibition: “And every swarming thing that swarms upon the earth is a detestable thing; it shall not be eaten” (Leviticus 11:41).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ס״ד א — Chullin 64a:9</span></div>
+    <div class="orig">אִי הָכִי, מַאי אִירְיָא דִּטְמֵאָה? אֲפִילּוּ דִּטְהוֹרָה נָמֵי! דְּתַנְיָא: ״כׇּל הַשֶּׁרֶץ הַשֹּׁרֵץ עַל הָאָרֶץ״ –</div>
+    <div class="trans" data-when="he">קושיא: אם כן, מה לי ביצת טמאה? אף בביצת עוף טהור שנרקם בה עובר ואכלהּ — לוקה! כברייתא: ״כל השרץ השורץ על הארץ״ —</div>
+    <div class="trans" data-when="en">The Gemara asks: If so, why specifically mention the egg of a non-kosher creeping animal? The same would apply even for one who eats the embryo of a kosher bird as well. In either case, one is flogged, as it is taught in a baraita that the verse: “Every swarming thing that swarms upon the earth,”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ס״ד ב — Chullin 64b:1</span></div>
+    <div class="orig">לְרַבּוֹת אֶפְרוֹחִים שֶׁלֹּא נִפְתְּחוּ עֵינֵיהֶם! מִדְּרַבָּנַן, וּקְרָא אַסְמַכְתָּא בְּעָלְמָא.</div>
+    <div class="trans" data-when="he">— לרבות אפרוחים שלא נפתחו עיניהם, אף של עוף טהור, באיסור שרץ. תירוץ: איסור זה מדרבנן, והפסוק אסמכתא בלבד; ואין לוקים עליו.</div>
+    <div class="trans" data-when="en">serves to include chicks of pigeons whose eyes have not yet opened in the prohibition against consuming swarming things. The Gemara responds: This prohibition is by rabbinic law, and the verse cited is a mere support for it. One who eats the embryo of a kosher bird is not liable to receive lashes.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
