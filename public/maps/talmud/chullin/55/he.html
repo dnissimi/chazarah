@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין נ״ה</title>
+<meta name="description" content="מפת הסוגיא של חולין נ״ה: המשך טריפות שאינן טריפה — טחול שניטל מול ניקב, כליות שלקו, השוואת ריאה וכוליא, לחי תחתון, האם, ריאה שצמקה (חרותה), ובהמה גלודה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="55">
+<meta name="gemara-map:sefaria-ref" content="Chullin 55">
+<meta name="gemara-map:topic-he" content="טחול, כליות, חרותה וגלודה">
+<meta name="gemara-map:topic-en" content="Spleen, kidneys, shrivel and flaying">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין נ״ה">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 55">
+<meta name="gemara-map:blurb-he" content="המשנה מנתה אברים שניטלו והבהמה כשרה; הגמרא מסייגת: ניקוב הטחול והכליה, ריאה שצמקה בידי אדם, וגלודה שלא נשתייר בה כסלע — טריפה.">
+<meta name="gemara-map:blurb-en" content="The Mishna lists organs whose removal leaves the animal kosher; the Gemara qualifies: a perforated spleen or kidney, a lung shriveled by man, and a flayed animal with no patch of hide left — treifa.">
+<meta name="gemara-map:sugya-count" content="7">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין נ״ה</span><span data-when="en">Sugya map — Chullin 55</span></h1>
+    <div class="subtitle"><span data-when="he">חולין נ״ה א — נ״ו א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 55a–56a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשנה מנתה אברים שהבהמה כשרה אף שניטלו; דף נ״ה מסייג כל אחד. <b>טחול</b> שניטל כשר, אך אם <b>ניקב</b> בעובי — טריפה. <b>כליה שלקתה</b> עד מקום החריץ — טריפה, ולא כל הפוסל בריאה פוסל בכוליא. <b>לחי תחתון</b> והאם — כשרים בתנאי. ריאה ש<b>צמקה</b> בידי שמים כשרה, ובידי אדם טריפה, ובודקים אותה במים מעת לעת. ולבסוף ה<b>גלודה</b>: ניטל כל העור — טריפה, אלא אם כן נשתייר כסלע על פני השדרה.</span>
+    <span data-when="en"><b>Bottom line:</b> The Mishna lists organs whose removal still leaves the animal kosher; daf 55 qualifies each. A removed <b>spleen</b> is kosher, but a <b>perforated</b> one (in its thick end) is treifa. A <b>diseased kidney</b> that reaches the crevice is treifa, yet not every lung-disqualifier disqualifies a kidney. The <b>lower jaw</b> and womb are kosher conditionally. A lung that <b>shriveled</b> by Heaven is kosher, by a person treifa — tested by soaking it for a day. Finally the <b>flayed</b> animal: stripped of its hide it is treifa, unless a piece the size of a sela remains along the spine.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין נ״ה</span><span data-when="en">Overview — Chullin 55</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · טחול: ניטל כשר, ניקב טריפה"]:::statement
+  O2["2 · כליות שלקו — עד מקום החריץ"]:::statement
+  O3["3 · אין מדמים טריפה לחברתה"]:::statement
+  O4["4 · לחי תחתון — לעיטה והמראה"]:::statement
+  O5["5 · ניטלה האם"]:::statement
+  O6["6 · ריאה שצמקה — בידי שמים או אדם"]:::statement
+  O7["7 · הגלודה — שיור כסלע"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Spleen: removed kosher, perforated treifa"]:::statement
+  O2["2 · Diseased kidney — up to the crevice"]:::statement
+  O3["3 · One treifa is not compared to another"]:::statement
+  O4["4 · Lower jaw — feeding and stuffing"]:::statement
+  O5["5 · The womb was removed"]:::statement
+  O6["6 · Shriveled lung — by Heaven or by man"]:::statement
+  O7["7 · The flayed animal — a sela remains"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">טחול — ניטל מול ניקב</span><span data-when="en">Spleen — removed vs perforated</span>
+      <span class="ref">Chullin 55a:7-9</span></h2>
+  <div class="lead"><span data-when="he">המשנה: ניטל הטחול — כשרה. רב עוירא: דווקא ניטל, אבל ניקב — טריפה; ומיתיבי מסיפא של ברייתא.</span><span data-when="en">Mishna: a removed spleen is kosher. Rav Avira: only removed, but perforated is treifa; an objection is raised from a baraita.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: ניטל הטחול — כשרה"]):::mishnah
+  S1["① רב עוירא בשם רבא: ניטל כשר, אבל ניקב — טריפה"]:::statement
+  Q1{"② מיתיבי: חותך מן הטחול אסור באכילה — משמע הבהמה עצמה מותרת"}:::question
+  A1["③ תירוץ: באמת אף הבהמה אסורה; או ניקב לחוד ונחתך לחוד"]:::answer
+  M1 -->|סייג| S1
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: a removed spleen is kosher"]):::mishnah
+  S1["① Rav Avira / Rava: removed is kosher, but perforated is treifa"]:::statement
+  Q1{"② Objection: cutting from the spleen is forbidden — implying the animal itself is permitted"}:::question
+  A1["③ Answer: in truth the animal too is forbidden; or perforated and cut are distinct cases"]:::answer
+  M1 -->|qualifies| S1
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① נִיטַּל הַטְּחוֹל … כְּשֵׁרָה"]):::mishnah
+  S1["① לֹא שָׁנוּ אֶלָּא נִיטַּל, אֲבָל נִיקַּב – טְרֵפָה"]:::statement
+  Q1{"② מֵתִיב … מִן הַטְּחוֹל … אָסוּר בַּאֲכִילָה. הָא בְּהֵמָה גּוּפַהּ שַׁרְיָא!"}:::question
+  A1["③ הוּא הַדִּין דַּאֲפִילּוּ בְּהֵמָה נָמֵי אֲסִירָא … נִיקַּב לְחוֹד, וְנֶחְתַּךְ לְחוּד"]:::answer
+  M1 -->|סייג| S1
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ה א — Chullin 55a:7</span></div>
+    <div class="orig">נִיטַּל הַטְּחוֹל, אָמַר רַב עַוִּירָא מִשְּׁמֵיהּ דְּרָבָא: לֹא שָׁנוּ אֶלָּא נִיטַּל, אֲבָל נִיקַּב – טְרֵפָה.</div>
+    <div class="trans" data-when="he">המשנה: ״ניטל הטחול״ — כשרה. רב עוירא בשם רבא: לא שנו שהבהמה כשרה אלא כשניטל הטחול לגמרי, אבל אם ניקב — טריפה.</div>
+    <div class="trans" data-when="en">§ The mishna states: If the spleen was removed the animal remains kosher. Rav Avira says in the name of Rava: The Sages taught that it is kosher only when the spleen was removed, but if it was perforated, it is a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ה א — Chullin 55a:8</span></div>
+    <div class="orig">מֵתִיב רַבִּי יוֹסֵי בַּר אָבִין, וְאִיתֵּימָא רַבִּי יוֹסֵי בַּר זְבִידָא: חוֹתֵךְ מֵעוּבָּר שֶׁבְּמֵעֶיהָ – מוּתָּר בַּאֲכִילָה, מִן הַטְּחוֹל וּמִן הַכְּלָיוֹת – אָסוּר בַּאֲכִילָה. הָא בְּהֵמָה גּוּפַהּ שַׁרְיָא!</div>
+    <div class="trans" data-when="he">רבי יוסי בר אבין (ויש אומרים רבי יוסי בר זבידא) הקשה ממשנה: החותך חתיכות מעובר שבמעי הבהמה לפני שחיטה — מותרות באכילה מכוח שחיטת האם; אך החותך מן הטחול או הכליות — אסור באכילה, שאבר מן החי אינו ניתר בשחיטה. ומדייקים: דווקא החתיכה אסורה, אך הבהמה עצמה מותרת — משמע שטחול שנחתך אינו עושה טריפה.</div>
+    <div class="trans" data-when="en">Rabbi Yosei bar Avin, and some say Rabbi Yosei bar Zevida, raises an objection from a mishna in the next chapter (68a): If, prior to slaughtering an animal, one severs pieces from a fetus that is in the womb and leaves those pieces in the womb, their consumption is permitted by virtue of the slaughter of the mother animal (see 69a). By contrast, if one severs pieces of the spleen or of the kidneys of an animal and then slaughters it, then even if those pieces are left inside the animal their consumption is prohibited, because an organ severed from a living being is not permitted by the subsequent slaughter of the animal. One can infer from the mishna that the animal itself is permitted even when part of the spleen was severed. Evidently, such an animal is not a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ה א — Chullin 55a:9</span></div>
+    <div class="orig">הוּא הַדִּין דַּאֲפִילּוּ בְּהֵמָה נָמֵי אֲסִירָא, אַיְּידֵי דִּתְנָא רֵישָׁא ״מוּתָּר בַּאֲכִילָה״, תְּנָא נָמֵי סֵיפָא ״אָסוּר בַּאֲכִילָה״. וְאִיבָּעֵית אֵימָא: נִיקַּב לְחוֹד, וְנֶחְתַּךְ לְחוּד.</div>
+    <div class="trans" data-when="he">תירוץ: באמת הוא הדין שאף הבהמה אסורה, אלא שמכיוון שהרישא נקטה ״מותר באכילה״, נקטה הסיפא בלשון מקבילה ״אסור באכילה״. ואם תרצה: ניקוב לחוד ונחתך לחוד — ניקב הטחול טריפה, אבל נחתך אינו טריפה.</div>
+    <div class="trans" data-when="en">The Gemara responds: The same is true of the animal, and even the animal is prohibited. But since the mishna taught in the first clause, with regard to the parts of the fetus: Their consumption is permitted, it taught in the last clause with regard to the parts of the spleen: Their consumption is prohibited, to contrast between them. Or, if you wish, say instead that a perforated spleen is a discrete case, in which the animal is a tereifa, and a cut spleen is a discrete case, in which the animal is not.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">כליות שלקו — עד מקום החריץ</span><span data-when="en">Diseased kidney — up to the crevice</span>
+      <span class="ref">Chullin 55a:10-55b:2</span></h2>
+  <div class="lead"><span data-when="he">המשנה: ניטלו הכליות — כשרה. רב: כליה שלקתה טריפה, ובלבד שהגיע הליקוי למקום החריץ; וההלכה כרכיש בר פפא ולא כרב עוירא.</span><span data-when="en">Mishna: removed kidneys are kosher. Rav: a diseased kidney is treifa, but only if the disease reached the crevice; the halakha follows Rakhish bar Pappa, not Rav Avira.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: ניטלו הכליות — כשרה"]):::mishnah
+  S1["① רכיש בר פפא בשם רב: לקתה בכוליא אחת — טריפה; ובלבד שהגיע למקום החריץ"]:::statement
+  S2["② רב נחוניא: הלכה כרכיש בר פפא, ואין הלכה כרב עוירא בטחול"]:::conclusion
+  S3["③ וברב עוירא: ניקב בעובי הטחול טריפה, ואם נשתייר כעובי דינר זהב — כשרה"]:::statement
+  M1 -->|סייג| S1
+  S1 -->|פסק| S2
+  S2 -->|סיוג| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: removed kidneys are kosher"]):::mishnah
+  S1["① Rakhish bar Pappa / Rav: one diseased kidney is treifa — but only if it reached the crevice"]:::statement
+  S2["② Rav Neḥunya: halakha follows Rakhish bar Pappa, not Rav Avira on the spleen"]:::conclusion
+  S3["③ And as to Rav Avira: a perforated thick end is treifa, but a dinar-thick layer remaining is kosher"]:::statement
+  M1 -->|qualifies| S1
+  S1 -->|ruling| S2
+  S2 -->|qualifies| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① נִיטְּלוּ הַכְּלָיוֹת … כְּשֵׁרָה"]):::mishnah
+  S1["① לָקְתָה בְּכוּלְיָא אַחַת – טְרֵפָה … וְהוּא דִּמְטַאי לָקוּתָא לִמְקוֹם חָרִיץ"]:::statement
+  S2["② הִלְכְתָא כְּרָכִישׁ בַּר פָּפָּא, וְלֵית הִלְכְתָא כְּרַב עַוִּירָא"]:::conclusion
+  S3["③ אֲבָל בְּסוּמְכֵיהּ – טְרֵפָה, וְאִי אִישְׁתְּיַיר בֵּיהּ כְּעוֹבִי דִּינַר זָהָב – כְּשֵׁרָה"]:::statement
+  M1 -->|סייג| S1
+  S1 -->|פסק| S2
+  S2 -->|סיוג| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ה א — Chullin 55a:10</span></div>
+    <div class="orig">נִיטְּלוּ הַכְּלָיוֹת. אָמַר רָכִישׁ בַּר פָּפָּא מִשְּׁמֵיהּ דְּרַב: לָקְתָה בְּכוּלְיָא אַחַת – טְרֵפָה. אָמְרִי בְּמַעְרְבָא: וְהוּא דִּמְטַאי לָקוּתָא</div>
+    <div class="trans" data-when="he">המשנה: ״ניטלו הכליות״ — כשרה. רכיש בר פפא בשם רב: בהמה שלקתה (חלתה) אפילו בכוליא אחת — טריפה. אמרו בארץ ישראל: ודווקא כשהגיע הליקוי —</div>
+    <div class="trans" data-when="en">§ The mishna states: If the kidneys were removed the animal remains kosher. Rakhish bar Pappa said in the name of Rav: If an animal was diseased in even one kidney, the animal is a tereifa. In the West, Eretz Yisrael, they say: And this applies only in a case where the disease reached</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ה ב — Chullin 55b:1</span></div>
+    <div class="orig">לִמְקוֹם חָרִיץ. וְהֵיכָא מְקוֹם חָרִיץ? לְחִיוָּרָא דְּתוּתֵי מׇתְנֵי. אָמַר רַב נְחוּנְיָא: שְׁאֵילְתִּינְהוּ לְכוּלְּהוּ טָרוֹפָאֵי דְּמַעְרְבָא, וְאָמְרִי לִי הִלְכְתָא כְּרָכִישׁ בַּר פָּפָּא, וְלֵית הִלְכְתָא כְּרַב עַוִּירָא.</div>
+    <div class="trans" data-when="he">— למקום החריץ. והיכן מקום החריץ? המקום הלבן שתחת המותניים. רב נחוניא: שאלתי את כל מומחי הטריפות שבארץ ישראל, ואמרו לי שההלכה כרכיש בר פפא — שכליה שלקתה טריפה — ואין ההלכה כרב עוירא, שאמר שטחול שניקב טריפה.</div>
+    <div class="trans" data-when="en">the location of the crevice. And where is the location of the crevice? This is a reference to the white matter under the loins. Rav Neḥunya said: I asked all the authorities on tereifot of the West, and they said to me: The halakha is in accordance with the opinion of Rakhish bar Pappa in the name of Rav that a diseased kidney renders an animal a tereifa, but the halakha is not in accordance with the opinion of Rav Avira that a perforated spleen renders the animal a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ה ב — Chullin 55b:2</span></div>
+    <div class="orig">דְּרַב עַוִּירָא נָמֵי לָא אֲמַרַן, אֶלָּא בְּקוּלְשֵׁיהּ, אֲבָל בְּסוּמְכֵיהּ – טְרֵפָה, וְאִי אִישְׁתְּיַיר בֵּיהּ כְּעוֹבִי דִּינַר זָהָב – כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">ואף בדברי רב עוירא לא אמרנו שאין הלכה כמותו אלא בניקב הטחול בצדו הדק התחתון; אבל בצדו העבה העליון — טריפה. ואם נשתייר מן הטחול שלא ניקב כעובי דינר זהב — כשרה.</div>
+    <div class="trans" data-when="en">The Gemara adds: And even with regard to the opinion of Rav Avira, we said that the halakha is not in accordance with his opinion only if the spleen was perforated in its narrow, lower end, but if it was perforated in its thick, upper end, the animal is a tereifa. And even if it was perforated in its thick end, if it was not perforated completely and a layer of the spleen as thick as a gold dinar remains intact, the animal is kosher.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">אין מדמים טריפה לחברתה</span><span data-when="en">One treifa is not compared to another</span>
+      <span class="ref">Chullin 55b:3-6</span></h2>
+  <div class="lead"><span data-when="he">כלל מארץ ישראל: כל הפוסל בריאה כשר בכוליא. רבי תנחומא מקשה, ורב אשי דוחה את ההשוואה בין טריפות.</span><span data-when="en">A principle from Eretz Yisrael: whatever disqualifies a lung is kosher in a kidney. Rabbi Tanḥuma objects, and Rav Ashi rejects comparing one treifa to another.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① כלל ממערבא: כל הפוסל בריאה — כשר בכוליא, וכל שכן הכשר בריאה"]:::statement
+  Q1{"② מתקיף רבי תנחומא: והרי מוגלא ומים זכין סותרים את הכלל"}:::question
+  A1["② רב אשי: אין מדמים טריפה לטריפה — חותכה מכאן ומתה, מכאן וחיתה"]:::answer
+  S2["③ סיוג: מים זכין כשרים רק כשצלולים ואינם מסריחים"]:::statement
+  S3["④ כוליא שהקטינה: בדקה עד כפול, בגסה עד כענבה בינונית"]:::statement
+  S1 -.->|מתקיף| Q1
+  Q1 -->|דחיית הכלל| A1
+  A1 -->|המשך| S2
+  A1 -->|המשך| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Principle (West): whatever disqualifies a lung is kosher in a kidney, all the more so the converse"]:::statement
+  Q1{"② Rabbi Tanḥuma objects: pus and clear fluid contradict the rule"}:::question
+  A1["② Rav Ashi: tereifot are not compared — cut here it dies, cut there it lives"]:::answer
+  S2["③ Refinement: clear fluid is kosher only if unclouded and not fetid"]:::statement
+  S3["④ A shrunken kidney: small animal to a bean, large to a medium grape"]:::statement
+  S1 -.->|objects| Q1
+  Q1 -->|rule rejected| A1
+  A1 -->|continued| S2
+  A1 -->|continued| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① כׇּל הַפּוֹסֵל בָּרֵיאָה – כָּשֵׁר בַּכּוּלְיָא … וְכׇל שֶׁכֵּן … כָּשֵׁר בַּכּוּלְיָא"]:::statement
+  Q1{"② מַתְקֵיף … רַבִּי תַּנְחוּמָא: וּכְלָלָא הוּא? הֲרֵי מוּגְלָא … וַהֲרֵי מַיִם זַכִּין"}:::question
+  A1["② אָמַר רַב אָשֵׁי: אֵין אוֹמְרִים בִּטְרֵפוֹת זוֹ דּוֹמָה לָזוֹ … חוֹתְכָהּ מִכָּאן וָמֵתָה, חוֹתְכָהּ מִכָּאן וְחָיְתָה"]:::answer
+  S2["③ מַיִם זַכִּין … לָא אֲמַרַן אֶלָּא דְּצִילִּי … דְּלָא סְרִיחַ, אֲבָל סְרִיחַ – טְרֵפָה"]:::statement
+  S3["④ הַכּוּלְיָא שֶׁהִקְטִינָה, בַּדַּקָּה – עַד כְּפוֹל, בַּגַּסָּה – עַד כַּעֲנָבָה בֵּינוֹנִית"]:::statement
+  S1 -.->|מתקיף| Q1
+  Q1 -->|דחיית הכלל| A1
+  A1 -->|המשך| S2
+  A1 -->|המשך| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ה ב — Chullin 55b:3</span></div>
+    <div class="orig">אָמְרִי בְּמַעְרְבָא: כׇּל הַפּוֹסֵל בָּרֵיאָה – כָּשֵׁר בַּכּוּלְיָא, שֶׁהֲרֵי נֶקֶב פָּסוּל בָּרֵיאָה, וְכָשֵׁר בַּכּוּלְיָא, וְכׇל שֶׁכֵּן הֵיכָא דְּכָשֵׁר בָּרֵיאָה – כָּשֵׁר בַּכּוּלְיָא.</div>
+    <div class="trans" data-when="he">אמרו בארץ ישראל כלל: כל מום הפוסל בריאה — כשר כשהוא בכוליא; שהרי נקב פוסל בריאה אך כשר בכוליא. וכל שכן מקום שהמום כשר בריאה — כשר בכוליא.</div>
+    <div class="trans" data-when="en">§ They say in the West, Eretz Yisrael: Any injury that renders an animal unfit for consumption when occurring in the lung is kosher when occurring in the kidney. For example, a perforation renders an animal unfit when occurring in the lung (see 42a), but the animal is kosher if it occurs in the kidney. And it follows that all the more so, where an animal is kosher despite an injury in the lung, it will remain kosher despite a similar injury in the kidney.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ה ב — Chullin 55b:4</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַבִּי תַּנְחוּמָא: וּכְלָלָא הוּא? הֲרֵי מוּגְלָא, דְּכָשֵׁר בָּרֵיאָה וּפָסוּל בַּכּוּלְיָא! וַהֲרֵי מַיִם זַכִּין, דִּכְשֵׁרִים הָכָא וְהָכָא, אֶלָּא אָמַר רַב אָשֵׁי: טְרֵפוֹת קָא מְדַמֵּית לַהֲדָדֵי? אֵין אוֹמְרִים בִּטְרֵפוֹת זוֹ דּוֹמָה לָזוֹ, שֶׁהֲרֵי חוֹתְכָהּ מִכָּאן וָמֵתָה, חוֹתְכָהּ מִכָּאן וְחָיְתָה.</div>
+    <div class="trans" data-when="he">רבי תנחומא מקשה: וכי כלל הוא? והרי מוגלא (ליחה) — כשרה בריאה ופוסלת בכוליא; ומים צלולים — כשרים בשתיהן. אלא אמר רב אשי: וכי מדמים טריפה אחת לחברתה? אין אומרים בטריפות ״זו דומה לזו״, שהרי חותך את הבהמה במקום אחד ומתה, וחותכה במקום אחר וחיה — כל אבר ודינו.</div>
+    <div class="trans" data-when="en">Rabbi Tanḥuma objects to this: And is this an established principle? But what about a case of pus, where the animal is kosher if it occurs in the lung and unfit for consumption if it occurs in the kidney? And what about clear fluid, which is kosher both here and there, i.e., whether occurring in the lungs or the kidney? Rather, Rav Ashi said: Are you comparing tereifot to one another? One cannot say with regard to tereifot: This is similar to that, as one cuts an animal from here, in one place, and it dies, while one cuts it from there, in another place, and it lives. Certain injuries may compromise the kidney but not the lung, or vice versa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ה ב — Chullin 55b:5</span></div>
+    <div class="orig">וּמַיִם זַכִּין כְּשֵׁרִים, לָא אֲמַרַן אֶלָּא דְּצִילִּי, אֲבָל עֲכִירִי – טְרֵפָה. וְכִי צִילִּי נָמֵי לָא אֲמַרַן אֶלָּא דְּלָא סְרִיחַ, אֲבָל סְרִיחַ – טְרֵפָה.</div>
+    <div class="trans" data-when="he">ומה שאמרו שמים זכים (צלולים) כשרים — לא אמרו אלא כשהם צלולים, אבל עכורים — טריפה. ואף כשהם צלולים לא אמרו אלא כשאינם מסריחים, אבל מסריחים — טריפה.</div>
+    <div class="trans" data-when="en">The Gemara notes: And with regard to clear fluid found in the lungs or kidney, which is kosher, we said so only in a case where the fluid was unclouded, but if it was clouded, the animal is a tereifa. And even when the fluid was unclouded, we said the animal is kosher only if the fluid is not fetid, but if it is fetid, the animal is a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ה ב — Chullin 55b:6</span></div>
+    <div class="orig">הַכּוּלְיָא שֶׁהִקְטִינָה, בַּדַּקָּה – עַד כְּפוֹל, בַּגַּסָּה – עַד כַּעֲנָבָה בֵּינוֹנִית.</div>
+    <div class="trans" data-when="he">כוליא שהקטינה (התכווצה ממחלה): בבהמה דקה (כצאן) — טריפה אם הקטינה עד כשיעור פול; ובבהמה גסה (כבקר) — עד כשיעור ענבה בינונית.</div>
+    <div class="trans" data-when="en">The Gemara continues to discuss cases of tereifot due to the kidneys: With regard to a kidney that shrank, in small animals, such as sheep, the animal is a tereifa if it shrank until the size of a bean; in large animals, such as cattle, the animal is a tereifa if it shrank until the size of an intermediate-sized grape.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">לחי תחתון — לעיטה והמראה</span><span data-when="en">Lower jaw — feeding and stuffing</span>
+      <span class="ref">Chullin 55b:7</span></h2>
+  <div class="lead"><span data-when="he">המשנה: ניטל הלחי התחתון — כשרה. רבי זירא מסייג: דווקא כשיכולה לחיות על ידי לעיטה והמראה.</span><span data-when="en">Mishna: a removed lower jaw is kosher. Rabbi Zeira qualifies: only if the animal can survive by being fed and force-fed.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: ניטל הלחי התחתון — כשרה"]):::mishnah
+  S1["① רבי זירא: דווקא שיכולה לחיות בלעיטה והמראה; אינה יכולה — טריפה"]:::statement
+  M1 -->|סייג| S1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: a removed lower jaw is kosher"]):::mishnah
+  S1["① Rabbi Zeira: only if it can live by feeding and stuffing; if not — treifa"]:::statement
+  M1 -->|qualifies| S1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① נִיטַּל לֶחִי הַתַּחְתּוֹן … כְּשֵׁרָה"]):::mishnah
+  S1["① לֹא שָׁנוּ אֶלָּא שֶׁיְּכוֹלָה לִחְיוֹת עַל יְדֵי לְעִיטָה וְהַמְרָאָה … אֲבָל אֵינָהּ יְכוֹלָה … טְרֵפָה"]:::statement
+  M1 -->|סייג| S1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ה ב — Chullin 55b:7</span></div>
+    <div class="orig">נִיטַּל לֶחִי הַתַּחְתּוֹן, אָמַר רַבִּי זֵירָא: לֹא שָׁנוּ אֶלָּא שֶׁיְּכוֹלָה לִחְיוֹת עַל יְדֵי לְעִיטָה וְהַמְרָאָה, אֲבָל אֵינָהּ יְכוֹלָה לִחְיוֹת עַל יְדֵי לְעִיטָה וְהַמְרָאָה – טְרֵפָה.</div>
+    <div class="trans" data-when="he">המשנה: ״ניטל הלחי התחתון״ — כשרה. רבי זירא: לא שנו שכשרה אלא כשיכולה לחיות על ידי שמאכילים אותה ומפטמים אותה (לעיטה והמראה); אבל אם אינה יכולה לחיות אף כך — טריפה.</div>
+    <div class="trans" data-when="en">§ The mishna states: If the animal’s lower jaw was removed, it remains kosher. With regard to this, Rabbi Zeira says: The Sages taught this only when the animal is able to live by placing food in its mouth or stuffing it down its throat. But if it cannot live by placing or stuffing food into it, it is a tereifa.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">ניטלה האם</span><span data-when="en">The womb was removed</span>
+      <span class="ref">Chullin 55b:8</span></h2>
+  <div class="lead"><span data-when="he">המשנה: ניטלה האם — כשרה. תנא מבאר ששלושה שמות לאבר אחד.</span><span data-when="en">Mishna: a removed womb is kosher. A Sage explains that one organ has three names.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: ניטלה האם שלה — כשרה"]):::mishnah
+  S1["① תנא: היא האם, היא טרפחת, והיא שלפוחית — שם אחד לאבר"]:::statement
+  M1 -->|ביאור| S1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: a removed womb is kosher"]):::mishnah
+  S1["① Sage: em, tarpaḥat and shalpuḥit are one and the same organ"]:::statement
+  M1 -->|explains| S1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① נִיטְּלָה הָאֵם שֶׁלָּהּ … כְּשֵׁרָה"]):::mishnah
+  S1["① תָּנָא: הִיא הָאֵם, הִיא טַרְפַּחַת, וְהִיא שַׁלְפּוּחִית"]:::statement
+  M1 -->|ביאור| S1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ה ב — Chullin 55b:8</span></div>
+    <div class="orig">נִיטְּלָה הָאֵם שֶׁלָּהּ, תָּנָא: הִיא הָאֵם, הִיא טַרְפַּחַת, וְהִיא שַׁלְפּוּחִית.</div>
+    <div class="trans" data-when="he">המשנה: ״ניטלה האם שלה״ (הרחם) — כשרה. תנא: אבר זה שלושה שמות לו — היא ה״אם״, היא ה״טרפחת״, והיא ה״שלפוחית״.</div>
+    <div class="trans" data-when="en">§ The mishna states: If its womb [em] was removed, the animal remains kosher. A Sage taught: The em is synonymous with the tarpaḥat, and it is synonymous with the shalpuḥit.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">ריאה שצמקה — בידי שמים או אדם</span><span data-when="en">Shriveled lung — by Heaven or by man</span>
+      <span class="ref">Chullin 55b:9-12</span></h2>
+  <div class="lead"><span data-when="he">המשנה: ריאה שחרבה בידי שמים — כשרה. ברייתא: בידי אדם טריפה; ספק בדברי רשב״א, ובדיקה במים מעת לעת.</span><span data-when="en">Mishna: a lung shriveled by Heaven is kosher. Baraita: by man it is treifa; a doubt in R. Shimon ben Elazar, resolved by a 24-hour soak test.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: חרותה בידי שמים — כשרה"]):::mishnah
+  S1["① ברייתא: צמקה בידי שמים כשרה, בידי אדם טריפה; רשב״א: אף בידי כל הבריות"]:::statement
+  Q1{"② איבעיא: רשב״א ארישא קאי ולקולא, או אסיפא ולחומרא?"}:::question
+  P1["③ תא שמע: חרותה בידי אדם טריפה, רשב״א אף בידי כל הבריות — אסיפא קאי"]:::proof
+  C1["④ מעשה רבה בר בר חנה: בודקים הריאה במים מעת לעת — חזרה, כשרה"]:::conclusion
+  M1 -->|ברייתא| S1
+  S1 -->|ספק| Q1
+  Q1 -->|פשיטות| P1
+  P1 -->|למעשה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: a lung shriveled by Heaven is kosher"]):::mishnah
+  S1["① Baraita: by Heaven kosher, by man treifa; R. Shimon b. Elazar: even by any creature"]:::statement
+  Q1{"② Dilemma: does R. Shimon refer to the first clause (lenient) or the last (stringent)?"}:::question
+  P1["③ Come and hear: by man treifa, R. Shimon even by any creature — he refers to the last clause"]:::proof
+  C1["④ Rabba bar bar Ḥana: soak the lung in water for a day — if it expands, kosher"]:::conclusion
+  M1 -->|baraita| S1
+  S1 -->|dilemma| Q1
+  Q1 -->|resolved| P1
+  P1 -->|in practice| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① וַחֲרוּתָה בִּידֵי שָׁמַיִם – כְּשֵׁרָה"]):::mishnah
+  S1["① בִּידֵי שָׁמַיִם – כְּשֵׁרָה, בִּידֵי אָדָם – טְרֵפָה. רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹמֵר: אַף בִּידֵי כׇּל הַבְּרִיּוֹת"]:::statement
+  Q1{"② אִיבַּעְיָא לְהוּ: אַרֵישָׁא קָאֵי וּלְקוּלָּא, אוֹ אַסֵּיפָא קָאֵי וּלְחוּמְרָא?"}:::question
+  P1["③ תָּא שְׁמַע … חֲרוּתָה בִּידֵי אָדָם – טְרֵפָה, רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹמֵר: אַף בִּידֵי כׇּל הַבְּרִיּוֹת"]:::proof
+  C1["④ רַבָּה בַּר בַּר חָנָה … מַלִּינְהוּ מַיָּא … אַנְּחִינְהוּ מֵעֵת לְעֵת. אִי הָדְרָן בָּרְיָין … כְּשֵׁרָה, וְאִי לָא – טְרֵפָה"]:::conclusion
+  M1 -->|ברייתא| S1
+  S1 -->|ספק| Q1
+  Q1 -->|פשיטות| P1
+  P1 -->|למעשה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ה ב — Chullin 55b:9</span></div>
+    <div class="orig">וַחֲרוּתָה בִּידֵי שָׁמַיִם – כְּשֵׁרָה. תָּנוּ רַבָּנַן: אֵיזוֹהִי חֲרוּתָה? כֹּל שֶׁצָּמְקָה רֵיאָה שֶׁלָּהּ. בִּידֵי שָׁמַיִם – כְּשֵׁרָה, בִּידֵי אָדָם – טְרֵפָה. רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹמֵר: אַף בִּידֵי כׇּל הַבְּרִיּוֹת.</div>
+    <div class="trans" data-when="he">המשנה: ״וחרותה בידי שמים״ — כשרה. ברייתא: איזוהי חרותה? כל שצמקה (התכווצה) ריאתה. אם אירע הדבר בידי שמים (כגון מפחד רעמים) — כשרה; בידי אדם שהבעית אותה — טריפה. רבי שמעון בן אלעזר: אף אם צמקה בידי כל בריה (כשאגת אריה).</div>
+    <div class="trans" data-when="en">§ The mishna states: Or if its lung shriveled [ḥaruta] by the hand of Heaven, the animal is kosher. The Sages taught in a baraita: Which is a ḥaruta? It is any animal whose lung shriveled. If this occurred by the hand of Heaven, e.g., if the lung shriveled from fright of thunder and lightning, the animal is kosher. But if it happened by the hands of a person who frightened it, e.g., if it witnessed another animal being slaughtered, it is a tereifa. Rabbi Shimon ben Elazar says: Even if the lung shriveled by the hands of any creature, e.g., if it was frightened by a lion’s roar.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ה ב — Chullin 55b:10</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אַרֵישָׁא קָאֵי וּלְקוּלָּא, אוֹ אַסֵּיפָא קָאֵי וּלְחוּמְרָא?</div>
+    <div class="trans" data-when="he">נסתפקו בני הישיבה: דברי רבי שמעון בן אלעזר ״אף בידי כל הבריות״ — האם הם מוסבים על הרישא (בידי שמים) ולהקל, שאף שאגת אריה ככוח שמים וכשרה; או על הסיפא (בידי אדם) ולהחמיר, שאף בידי בריה טריפה?</div>
+    <div class="trans" data-when="en">A dilemma was raised before the Sages: Is the statement of Rabbi Shimon ben Elazar referring to the first clause of the baraita, in which case the statement is a leniency, and even the roar of a lion is considered by the hand of Heaven? Or perhaps it is referring to the latter clause, and the statement is a stringency, and a lung shriveled by the hand of any creature renders the animal a tereifa?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ה ב — Chullin 55b:11</span></div>
+    <div class="orig">תָּא שְׁמַע, דְּתַנְיָא: חֲרוּתָה בִּידֵי אָדָם – טְרֵפָה, רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹמֵר: אַף בִּידֵי כׇּל הַבְּרִיּוֹת.</div>
+    <div class="trans" data-when="he">תא שמע מברייתא: ״חרותה בידי אדם — טריפה, רבי שמעון בן אלעזר אומר: אף בידי כל הבריות״. שנינו את דבריו סמוך ל״בידי אדם״ — משמע שעל הסיפא קאי ולהחמיר.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a proof, as it is taught in the above baraita: A lung that was shriveled by the hands of a person renders the animal a tereifa. Rabbi Shimon ben Elazar says: Even by the hands of any creature. Evidently, Rabbi Shimon ben Elazar is referring to the latter clause.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ה ב — Chullin 55b:12</span></div>
+    <div class="orig">רַבָּה בַּר בַּר חָנָה הֲוָה קָאָזֵיל בְּמַדְבְּרָא, אַשְׁכַּח הָנְהוּ דִּיכְרֵי דִּצְמִיק רֵיאָה דִּידְהוּ. אֲתָא שְׁאֵיל בֵּי מִדְרְשָׁא, אֲמַרוּ לֵיהּ: בְּקַיְיטָא – אַיְיתִי מְשִׁיכְלֵי חִיוָּרֵי, וּמַלִּינְהוּ מַיָּא קָרִירֵי, וְאַנְּחִינְהוּ מֵעֵת לְעֵת. אִי הָדְרָן בָּרְיָין – בִּידֵי שָׁמַיִם הִיא וּכְשֵׁרָה, וְאִי לָא – טְרֵפָה. בְּסִיתְוָא – אַיְיתִי מְשִׁיכְלֵי שִׁיחוּמֵי, וּמַלִּינְהוּ מַיָּא פָּשׁוֹרֵי, וְאַנְּחִינְהוּ מֵעֵת לְעֵת. אִי הָדְרָא בָּרְיָא – כְּשֵׁרָה, וְאִי לָא – טְרֵפָה.</div>
+    <div class="trans" data-when="he">רבה בר בר חנה הלך במדבר ומצא אילים שצמקה ריאתם. בא ושאל בבית המדרש כיצד לבדוק. אמרו לו: בקיץ — הבא כלים לבנים, מלאם מים קרים, והנח בהם הריאות מעת לעת. אם חזרו ונתמלאו — בידי שמים היא וכשרה, ואם לאו — טריפה. בחורף — הבא כלים שחורים, מלאם מים פושרים, והנח מעת לעת; חזרה — כשרה, ואם לאו — טריפה.</div>
+    <div class="trans" data-when="en">The Gemara recounts: Rabba bar bar Ḥana was walking in the desert, and he found certain rams whose lungs were shriveled. He came and asked in the study hall how one can determine the cause of the shriveling. The Sages said to him: In the summer, bring white vessels and fill them with cold water and set the lungs in them for a twenty-four-hour period. If they go back to appearing healthy, i.e., if they expand, one knows that it was by the hand of Heaven and the animals are kosher; but if they do not expand, the animals are tereifa. In the winter, bring dark vessels and fill them with tepid water, and set the lungs in them for a twenty-four-hour period. If they go back to appearing healthy, they are kosher; but if not, they are tereifa.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">הגלודה — שיור כסלע</span><span data-when="en">The flayed animal — a sela remains</span>
+      <span class="ref">Chullin 55b:13-56a:1</span></h2>
+  <div class="lead"><span data-when="he">המשנה: הגלודה — מחלוקת רבי מאיר וחכמים. הגמרא מבררת אם רבי מאיר חזר בו, וכמה עור צריך להישתייר, ואם עור בית הפרסות מציל.</span><span data-when="en">Mishna: the flayed animal — R. Meir vs. the Rabbis. The Gemara clarifies whether R. Meir retracted, how much hide must remain, and whether the hide of the hooves saves it.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: הגלודה — רבי מאיר מכשיר, חכמים פוסלים"]):::mishnah
+  S1["① ברייתא: וכבר העידו על הגלודה שפסולה; רשב״א: חזר בו רבי מאיר"]:::statement
+  Q1{"② מכלל דפליג? והתניא: לא נחלקו, ואם נשתייר כסלע — כשרה"}:::question
+  A1["③ רב נחמן בר יצחק: ׳לא נחלקו׳ — לא עמד רבי מאיר במחלוקתו"]:::answer
+  S2["④ היכן השיור? שמואל: ברוחב סלע על פני כל השדרה; ובעי תיקו"]:::statement
+  S3["⑤ עור בית הפרסות — רב פוסל, רבי יוחנן מכשיר; אל תקניטני"]:::statement
+  C1["⑥ ברייתא: עור שתחת האליה ובית הבושת — כעורותיהן כבשרן, כרבי שמעון"]:::conclusion
+  M1 -->|ברייתא| S1
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|המשך| S2
+  S2 -->|המשך| S3
+  S3 -->|ברייתא| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: flayed animal — R. Meir kosher, the Rabbis treifa"]):::mishnah
+  S1["① Baraita: it was testified that the flayed is unfit; R. Shimon b. Elazar: R. Meir retracted"]:::statement
+  Q1{"② By inference he disagreed? But a baraita: they did not disagree, and a sela remaining is kosher"}:::question
+  A1["③ Rav Naḥman b. Yitzḥak: ׳did not disagree׳ — R. Meir did not stand firm in his view"]:::answer
+  S2["④ Where must it remain? Shmuel: width of a sela along the whole spine; a dilemma left unresolved"]:::statement
+  S3["⑤ Hide of the hooves — Rav disqualifies, R. Yoḥanan permits; do not trouble me"]:::statement
+  C1["⑥ Baraita: hide beneath the tail and the vulva count as flesh — only per R. Shimon"]:::conclusion
+  M1 -->|baraita| S1
+  S1 -.->|question| Q1
+  Q1 -->|answer| A1
+  A1 -->|continued| S2
+  S2 -->|continued| S3
+  S3 -->|baraita| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① הַגְּלוּדָה – רַבִּי מֵאִיר מַכְשִׁיר וַחֲכָמִים פּוֹסְלִים"]):::mishnah
+  S1["① וּכְבָר הֵעִיד … עַל הַגְּלוּדָה שֶׁפְּסוּלָה … חָזַר בּוֹ רַבִּי מֵאִיר"]:::statement
+  Q1{"② מִכְּלָל דִּ … פְּלִיג? וְהָתַנְיָא … לֹא נֶחְלְקוּ … וְאִם נִשְׁתַּיֵּיר בּוֹ כְּסֶלַע – כְּשֵׁרָה"}:::question
+  A1["③ אָמַר רַב נַחְמָן בַּר יִצְחָק: מַאי לֹא נֶחְלְקוּ? לֹא עָמַד רַבִּי מֵאִיר בְּמַחֲלוֹקְתּוֹ"]:::answer
+  S2["④ אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: עַל פְּנֵי הַשִּׁדְרָה כּוּלָּהּ … בְּרוֹחַב כְּסֶלַע … תֵּיקוּ"]:::statement
+  S3["⑤ עוֹר בֵּית הַפְּרָסוֹת … רַבִּי יוֹחָנָן אָמַר: אֲפִילּוּ … מַצִּיל … אַל תַּקְנִיטֵנִי"]:::statement
+  C1["⑥ אֶחָד עוֹר … תַּחַת הָאַלְיָה … עוֹר בֵּית הַבּוֹשֶׁת … שֶׁעוֹרוֹתֵיהֶן כִּבְשָׂרָן"]:::conclusion
+  M1 -->|ברייתא| S1
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|המשך| S2
+  S2 -->|המשך| S3
+  S3 -->|ברייתא| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ה ב — Chullin 55b:13</span></div>
+    <div class="orig">הַגְּלוּדָה: תָּנוּ רַבָּנַן: הַגְּלוּדָה – רַבִּי מֵאִיר מַכְשִׁיר וַחֲכָמִים פּוֹסְלִים, וּכְבָר הֵעִיד אֶלְעָזָר סָפְרָא וְיוֹחָנָן בֶּן גּוּדְגְּדָא עַל הַגְּלוּדָה שֶׁפְּסוּלָה. אָמַר רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר: חָזַר בּוֹ רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">המשנה: הגלודה (בהמה שהופשט כל עורה) — רבי מאיר מכשיר וחכמים פוסלים. ברייתא: וכבר העידו אלעזר ספרא ויוחנן בן גודגדא על הגלודה שפסולה. רבי שמעון בן אלעזר: חזר בו רבי מאיר והודה שפסולה.</div>
+    <div class="trans" data-when="en">§ The mishna states: In the case of an animal whose hide was removed, Rabbi Meir deems it kosher, and the Rabbis deem it a tereifa. With regard to this, the Sages taught: In the case of an animal whose hide was removed, Rabbi Meir deems it kosher, and the Rabbis deem it a tereifa and unfit for consumption. And Elazar the scribe and Yoḥanan ben Gudgeda already testified before the Sages with regard to an animal whose hide was removed that it is unfit for consumption. Rabbi Shimon ben Elazar said: Rabbi Meir retracted his statement.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ה ב — Chullin 55b:14</span></div>
+    <div class="orig">מִכְּלָל דִּלְרַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר פְּלִיג רַבִּי מֵאִיר בִּגְלוּדָה? וְהָתַנְיָא: אָמַר רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר: לֹא נֶחְלְקוּ רַבִּי מֵאִיר וַחֲכָמִים עַל הַגְּלוּדָה שֶׁפְּסוּלָה, וּכְבָר הֵעִיד רַבִּי אוֹשַׁעְיָא בְּנוֹ שֶׁל רַבִּי יְהוּדָה הַבַּשָּׂם לִפְנֵי רַבִּי עֲקִיבָא מִשּׁוּם רַבִּי טַרְפוֹן עַל הַגְּלוּדָה שֶׁפְּסוּלָה, וְאִם נִשְׁתַּיֵּיר בּוֹ כְּסֶלַע – כְּשֵׁרָה. אָמַר רַב נַחְמָן בַּר יִצְחָק: מַאי ״לֹא נֶחְלְקוּ״? לֹא עָמַד רַבִּי מֵאִיר בְּמַחֲלוֹקְתּוֹ.</div>
+    <div class="trans" data-when="he">קושיא: מכלל דברי רשב״א שחזר בו משמע שמתחילה חלק רבי מאיר. והתניא: רשב״א עצמו אמר ״לא נחלקו רבי מאיר וחכמים על הגלודה שפסולה״, וכבר העיד רבי אושעיא בשם רבי טרפון שפסולה, ואם נשתייר בה עור כסלע — כשרה. רב נחמן בר יצחק: ״לא נחלקו״ אין פירושו שלא חלק מעולם, אלא שלא עמד רבי מאיר במחלוקתו וחזר בו.</div>
+    <div class="trans" data-when="en">The Gemara objects: By inference, one may conclude that according to Rabbi Shimon ben Elazar, Rabbi Meir initially disagreed with regard to an animal whose hide was removed. But isn’t it taught in a baraita: Rabbi Shimon ben Elazar said: Rabbi Meir and the Sages did not disagree with regard to an animal whose hide was removed, and all agree that it is unfit for consumption. And Rabbi Oshaya, son of Rabbi Yehuda the spice merchant, already testified before Rabbi Akiva in the name of Rabbi Tarfon with regard to an animal whose hide was removed that it is unfit for consumption. And if a piece of hide the same size as a sela remained intact, the animal is kosher. The Gemara explains the objection: The phrase: Did not disagree, indicates that Rabbi Meir never disagreed with the Sages. Rav Naḥman bar Yitzḥak said: What is the meaning of the phrase: Did not disagree? It means that Rabbi Meir did not stand firm in his disagreement and retracted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ה ב — Chullin 55b:15</span></div>
+    <div class="orig">אָמַר מָר: אִם נִשְׁתַּיֵּיר בּוֹ כְּסֶלַע – כְּשֵׁרָה. הֵיכָא? אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: עַל פְּנֵי הַשִּׁדְרָה כּוּלָּהּ.</div>
+    <div class="trans" data-when="he">אמר מר (בברייתא): אם נשתייר בה עור כשיעור סלע — כשרה. הגמרא שואלת: היכן צריך השיור להיות? רב יהודה בשם שמואל: על פני כל השדרה.</div>
+    <div class="trans" data-when="en">The Gemara analyzes the baraita: The Master said: If a piece of hide the same size as a sela remained intact in the animal, it is kosher. The Gemara asks: Where must this piece of hide be? Rav Yehuda said that Shmuel said: The piece of hide must be along the entire spine.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ה ב — Chullin 55b:16</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: דַּאֲרִיךְ וְקַטִּין, דְּכִי מְצָרֵף לַהּ הָוֵי כְּסֶלַע, אוֹ דִלְמָא בְּרוֹחַב סֶלַע עַל פְּנֵי הַשִּׁדְרָה כּוּלָּהּ? תָּא שְׁמַע, דְּפָרֵישׁ רַבִּי נְהוֹרַאי מִשְּׁמֵיהּ דִּשְׁמוּאֵל: בְּרוֹחַב כְּסֶלַע עַל פְּנֵי כׇּל הַשִּׁדְרָה כּוּלָּהּ.</div>
+    <div class="trans" data-when="he">נסתפקו: האם די בעור ארוך וצר שכשמצרפים את שטחו עולה כסלע, או שצריך רוחב סלע ממש על פני כל השדרה? תא שמע: רבי נהוראי ביאר בשם שמואל — ברוחב כסלע על פני כל השדרה כולה.</div>
+    <div class="trans" data-when="en">A dilemma was raised before the Sages: Does Shmuel mean that it is kosher if a long and thin strip of hide remains along the spine, such that when one combines its area, it will constitute the same size as a sela? Or perhaps it is kosher only if the remaining hide is the width of a sela along the entire spine? The Gemara responds: Come and hear proof from that which Rabbi Nehorai explained in the name of Shmuel: It must be the width of a sela along the entire spine.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ה ב — Chullin 55b:17</span></div>
+    <div class="orig">רַבָּה בַּר בַּר חָנָה אָמַר: רָאשֵׁי פְרָקִים. רַבִּי אֶלְעָזָר בֶּן אַנְטִיגְנוֹס מִשּׁוּם רַבִּי אֶלְעָזָר בְּרַבִּי יַנַּאי אָמַר: מְקוֹם טִיבּוּרוֹ.</div>
+    <div class="trans" data-when="he">רבה בר בר חנה: די בעור כסלע על ראשי הפרקים (קצות העצמות). רבי אלעזר בן אנטיגנוס בשם רבי אלעזר ברבי ינאי: מקום הטבור.</div>
+    <div class="trans" data-when="en">Rabba bar bar Ḥana says: There must be a piece of hide the size of a sela on the tips of all segments of the spine and on the tips of the femur and tibia. Rabbi Elazar ben Antigonus says in the name of Rabbi Elazar, son of Rabbi Yannai: The piece of hide must be the width of a sela at the place of its navel.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ה ב — Chullin 55b:18</span></div>
+    <div class="orig">בָּעֵי רַבִּי יַנַּאי בְּרַבִּי יִשְׁמָעֵאל: נִיטַּל מְקוֹם הַשִּׁדְרָה וְכוּלּוֹ קַיָּים, נִיטַּל מְקוֹם טִיבּוּרוֹ וְכוּלּוֹ קַיָּים, נִיטְּלוּ רָאשֵׁי פְרָקִים וְכוּלּוֹ קַיָּים, מַאי? תֵּיקוּ.</div>
+    <div class="trans" data-when="he">בעי רבי ינאי ברבי ישמעאל: אם ניטל דווקא עור מקום השדרה וכל שאר העור קיים, או מקום הטבור וכל השאר קיים, או ראשי הפרקים וכל השאר קיים — מהו? תיקו, ולא נפשט הספק.</div>
+    <div class="trans" data-when="en">Rabbi Yannai, son of Rabbi Yishmael, raises a dilemma: If all the hide covering the place of the spine was removed, but all of the remaining hide was intact, or if the hide covering the place of its navel was removed but all of the remaining hide was intact, or if the hide covering all the tips of the segments were removed but all of the remaining hide was intact, what is the halakha? The Gemara responds: The dilemma shall stand unresolved.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ה ב — Chullin 55b:19</span></div>
+    <div class="orig">אָמַר רַב: כׇּל הָעוֹר כּוּלּוֹ מַצִּיל בִּגְלוּדָה, חוּץ מֵעוֹר בֵּית הַפְּרָסוֹת, וְרַבִּי יוֹחָנָן אָמַר: אֲפִילּוּ עוֹר בֵּית הַפְּרָסוֹת נָמֵי מַצִּיל.</div>
+    <div class="trans" data-when="he">רב: כל חלק מן העור (כשיעור סלע) מציל את הגלודה מטריפה, חוץ מעור בית הפרסות (סמוך לטלפיים), שאינו נחשב עור. רבי יוחנן: אף עור בית הפרסות מציל.</div>
+    <div class="trans" data-when="en">Rav says: Any portion of the hide that is the size of a sela saves an animal whose hide was removed from becoming a tereifa, except for the hide of the hooves, which is not considered hide. And Rabbi Yoḥanan says: Even the hide of the hooves saves it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין נ״ה ב — Chullin 55b:20</span></div>
+    <div class="orig">בְּעָא מִינֵּיהּ רַבִּי אַסִּי מֵרַבִּי יוֹחָנָן: עוֹר בֵּית הַפְּרָסוֹת מַהוּ שֶׁיַּצִּיל בִּגְלוּדָה? אֲמַר לֵיהּ: מַצִּיל. אֲמַר לֵיהּ, לִמַּדְתָּנוּ רַבֵּינוּ: אֵלּוּ שֶׁעוֹרוֹתֵיהֶן כִּבְשָׂרָן – עוֹר בֵּית הַפְּרָסוֹת! אֲמַר לֵיהּ: אַל תַּקְנִיטֵנִי, שֶׁבִּלְשׁוֹן יָחִיד אֲנִי שׁוֹנֶה אוֹתָהּ.</div>
+    <div class="trans" data-when="he">רבי אסי שאל את רבי יוחנן: עור בית הפרסות מהו שיציל בגלודה? אמר לו: מציל. הקשה לו: והרי לימדתנו במשנה שעור בית הפרסות הוא מאלו ש״עורותיהן כבשרן״, ואינו עור! אמר לו: אל תקניטני — משנה זו אני שונה בלשון יחיד, כדעת רבי שמעון בלבד.</div>
+    <div class="trans" data-when="en">The Gemara recounts: Rabbi Asi asked Rabbi Yoḥanan: With regard to the hide of the hooves, what is the halakha? Does it save an animal whose hide was removed if a piece of it the size of a sela remains? Rabbi Yoḥanan said to him: It saves the animal. Rabbi Asi said to him: But didn’t you teach us, our teacher, the following mishna (122a): These are the entities whose hide is like their flesh in terms of halakhic status, in that it transmits ritual impurity…the skin of a head of a young calf, and the hide of the hooves? Evidently, the hide of the hooves is considered like flesh and not true skin. Rabbi Yoḥanan said to him: Do not trouble me by invoking that mishna, as I teach it in the singular. Only according to one Sage, Rabbi Shimon, is the hide of the hooves not true skin; according to the Rabbis, it is considered true skin.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין נ״ה ב — Chullin 55b:21</span></div>
+    <div class="orig">דְּתַנְיָא: הַשּׁוֹחֵט אֶת הָעוֹלָה לְהַקְטִיר כְּזַיִת מֵעוֹר שֶׁל תַּחַת הָאַלְיָה חוּץ לִמְקוֹמוֹ – פָּסוּל, וְאֵין בּוֹ כָּרֵת; חוּץ לִזְמַנּוֹ – פִּגּוּל, וְחַיָּיבִין עָלָיו כָּרֵת.</div>
+    <div class="trans" data-when="he">ראיה לכך שיש מי ששונה שעור בית הפרסות כבשר: ברייתא — השוחט עולה על מנת להקטיר כזית מן העור שתחת האליה חוץ למקומו — פסול ואין בו כרת, וחוץ לזמנו — פיגול וחייבים עליו כרת. הרי שעור רך זה נחשב כבשר לדעת חכמים.</div>
+    <div class="trans" data-when="en">As it is taught in a baraita: One who slaughters a burnt offering with intent to burn an olive-bulk of the hide beneath the tail outside its designated area, i.e., outside the Temple courtyard, renders the offering unfit, but there is no liability for excision from the World-to-Come [karet] for one who partakes of the offering. If he had intent to burn it beyond its designated time, then it is rendered piggul, and one is liable to receive karet for partaking of it. This halakha usually applies to an offering’s flesh but not its hide. Since the hide beneath the tail is soft, it is treated like part of the flesh. This is the opinion of the Rabbis.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין נ״ה ב — Chullin 55b:22</span></div>
+    <div class="orig">אֱלִיעֶזֶר בֶּן יְהוּדָה אִישׁ אֶיבְלַיִם אָמַר מִשּׁוּם רַבִּי יַעֲקֹב, וְכֵן הָיָה רַבִּי שִׁמְעוֹן בֶּן יְהוּדָה אִישׁ [כְּפַר] עִיכּוּס אוֹמֵר מִשּׁוּם רַבִּי שִׁמְעוֹן: אֶחָד עוֹר בֵּית הַפְּרָסוֹת, וְאֶחָד עוֹר הָרֹאשׁ שֶׁל עֵגֶל הָרַךְ, וְאֶחָד עוֹר שֶׁל תַּחַת הָאַלְיָה, וְכֹל שֶׁמָּנוּ חֲכָמִים גַּבֵּי טוּמְאָה אֵלּוּ שֶׁעוֹרוֹתֵיהֶן כִּבְשָׂרָן,</div>
+    <div class="trans" data-when="he">לעומת הברייתא הקודמת (כחכמים), אליעזר בן יהודה איש איבלים בשם רבי יעקב, וכן רבי שמעון בן יהודה איש כפר עיכוס בשם רבי שמעון: אחד עור בית הפרסות, ואחד עור ראש העגל הרך, ואחד העור שתחת האליה, וכל אותם שמנו חכמים אצל טומאה ״שעורותיהן כבשרן״ —</div>
+    <div class="trans" data-when="en">Eliezer ben Yehuda of Evlayim said in the name of Rabbi Ya’akov, and so says Rabbi Shimon ben Yehuda of Ikos in the name of Rabbi Shimon: Whether the hide of the hooves, or the hide of the head of a young calf, or the hide beneath the tail, or any hide that the Sages listed with regard to ritual impurity under the heading: These are the entities whose hide is like their flesh in terms of halakhic status,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין נ״ו א — Chullin 56a:1</span></div>
+    <div class="orig">לְהָבִיא עוֹר בֵּית הַבּוֹשֶׁת חוּץ לִמְקוֹמוֹ פָּסוּל וְאֵין בּוֹ כָּרֵת, חוּץ לִזְמַנּוֹ פִּיגּוּל וְחַיָּיבִים עָלָיו כָּרֵת.</div>
+    <div class="trans" data-when="he">— להביא אף את עור בית הבושת (הרחם): השוחט להקטיר כזית ממנו חוץ למקומו — פסול ואין בו כרת, חוץ לזמנו — פיגול וחייבים עליו כרת. הרי שלדעת רבי שמעון עורות אלו כבשר, ולחכמים אינם — וכדברי רבי יוחנן.</div>
+    <div class="trans" data-when="en">including the hide of the vulva, the halakha is the same: If one performs the sacrificial rites with intent to burn one of them outside its designated area, the offering is unfit, but there is no liability for karet for one who partakes of the offering. If he had intent to burn it beyond its designated time, this renders it piggul, and one is liable to receive karet for eating it. This baraita indicates that only Rabbi Shimon holds that the hide of the hooves is treated like its flesh, and that the Sages disagree, as Rabbi Yoḥanan stated.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
