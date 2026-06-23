@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ע״ט</title>
+<meta name="description" content="מפת הסוגיא של חולין ע״ט: הכוי (כלאי תיש וצבי) ושלושה דינים — אותו ואת בנו, כיסוי הדם, ומתנות כהונה; ׳חוששין לזרע האב׳ ו׳שה ואפילו מקצת שה׳, ומסקנת רב פפא.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="79">
+<meta name="gemara-map:sefaria-ref" content="Chullin 79">
+<meta name="gemara-map:topic-he" content="הכוי, זרע האב, ומקצת שה">
+<meta name="gemara-map:topic-en" content="The koy, paternity, and partial sheep">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ע״ט">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 79">
+<meta name="gemara-map:blurb-he" content="מחלוקת ר׳ אליעזר וחכמים בכוי תלויה בשני צירים — ׳חוששין לזרע האב׳ ו׳שה ואפילו מקצת שה׳; ורב פפא ממפה אילו צירופים נדרשים לכל אחד מן הדינים.">
+<meta name="gemara-map:blurb-en" content="The dispute over the koy turns on two axes — concern for paternity and ‘sheep even in part’; Rav Pappa charts which case each of the three laws requires.">
+<meta name="gemara-map:sugya-count" content="1">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ע״ט</span><span data-when="en">Sugya map — Chullin 79</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ע״ט ב — פ׳ א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 79b–80a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> מהו הכוי שבו נחלקו ר׳ אליעזר וחכמים, ובמה בדיוק נחלקו? הסוגיה מבררת שהמחלוקת תלויה ב<b>שני צירים</b>: האם <b>חוששין לזרע האב</b> (ומכאן שהוולד הוא מקצת ממין אביו), והאם דורשים <b>״שה ואפילו מקצת שה״</b>. שלושה דינים — אותו ואת בנו, כיסוי הדם, ומתנות כהונה — נבחנים בשני צירופי ההורים (תיש על הצבייה / צבי על התיישה), ו<b>רב פפא</b> ממפה אילו צירופים מתאימים לכל דין.</span>
+    <span data-when="en"><b>Bottom line:</b> What is the koy over which R. Eliezer and the Rabbis disagree, and over what exactly? The sugya isolates <b>two axes</b>: whether one is <b>concerned with paternity</b> (so the offspring is partly of its father’s species), and whether we read <b>“sheep — even partially sheep.”</b> Three laws — itself-and-offspring, covering the blood, and priestly gifts — are tested against both parent-pairings (goat-on-doe / deer-on-goat), and <b>Rav Pappa</b> maps which pairing each law requires.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">הכוי — זרע האב, מקצת שה, ושלושת הדינים</span><span data-when="en">The koy — paternity, partial sheep, and the three laws</span>
+      <span class="ref">Chullin 79b:2–80a:10</span></h2>
+  <div class="lead"><span data-when="he">איזה כוי שנו ר׳ אליעזר וחכמים, ובמה נחלקו? המחלוקת מתבררת דרך שלושה דינים — אותו ואת בנו, כיסוי הדם, ומתנות כהונה — ומתנקזת לשני צירים: זרע האב ו״מקצת שה״.</span><span data-when="en">Which koy did R. Eliezer and the Rabbis discuss, and over what? The dispute is clarified through three laws — itself-and-offspring, covering the blood, and priestly gifts — and distilled to two axes: paternity and “partial sheep.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: אותו ואת בנו בכלאים ובכוי; ר׳ אליעזר ממעט כוי. כוי = תיש וצבייה"]:::statement
+  Q1{"② תיש על הצבייה? הכל מודים בצבייה ובנה תיש — פטור"}:::question
+  Q2{"③ צבי על התיישה? הכל מודים בתיישה ובנה צבי — חייב"}:::question
+  A1["④ דור שלישי: תיש על צבייה, ילדה בת, ובת ילדה בן"]:::answer
+  S2["⑤ חכמים: חוששין לזרע האב, ושה ואפילו מקצת שה · ר׳ אליעזר: אין חוששין"]:::statement
+  Q3{"⑥ ויחלקו במחלוקת חנניה ורבנן בלבד?"}:::question
+  A2["⑦ קמ״ל שאף ב׳מקצת שה׳ פליגי"]:::answer
+  Q4{"⑧ מיתיבי: כוי אין שוחטין ביו״ט, ואם שחטו אין מכסין דמו"}:::question
+  S3["⑨ תיש על צבייה? ילדה — לכו״ע ישחוט ויכסה"]:::statement
+  S4["⑩ צבי על תיישה — אף זה קשה לרבנן ולר׳ אליעזר"]:::statement
+  A3["⑪ צבי על התיישה, ורבנן מספקא להו אי חוששין לזרע האב"]:::answer
+  A4["⑫ ומדלרבנן מספקא — לר׳ אליעזר פשיטא ליה"]:::answer
+  Q5{"⑬ מיתיבי: זרוע לחיים וקבה נוהגים בכוי; ר׳ אליעזר פוטר כוי"}:::question
+  S5["⑭ תיש על צבייה — קשה לרבנן: יתן חצי, ועל החצי יביא ראיה"]:::statement
+  S6["⑮ צבי על תיישה — קשה לר׳ אליעזר: יתחייב בכל המתנות!"]:::statement
+  A5["⑯ צבי על התיישה, ואף ר׳ אליעזר מספקא ליה — אם כן במאי פליגי?"]:::answer
+  C1["⑰ נחלקו ב׳מקצת שה׳: רבנן — אפילו מקצת שה; ר׳ אליעזר — ולא מקצת שה"]:::conclusion
+  C2["⑱ רב פפא: כיסוי ומתנות — רק בצבי על התיישה (שניהם מספקא, ופליגי במקצת שה)"]:::conclusion
+  C3["⑲ אותו ואת בנו — בשני הצירופים: תיש על צבייה לאיסור, צבי על תיישה למלקות"]:::conclusion
+  S1 -->|הֵיכִי דָמֵי| Q1
+  Q1 -.->|פטור, נדחה| Q2
+  Q2 -.->|חייב, נדחה| A1
+  A1 -->|טעם המחלוקת| S2
+  S2 -.->|קושיא| Q3
+  Q3 -->|תירוץ| A2
+  A2 -.->|מיתיבי| Q4
+  Q4 -->|אילימא| S3
+  S3 -.->|אלא| S4
+  S4 -->|לעולם| A3
+  A3 -->|מדיוק| A4
+  A4 -.->|מיתיבי| Q5
+  Q5 -->|אילימא| S5
+  S5 -.->|אלא| S6
+  S6 -->|לעולם| A5
+  A5 -->|במאי פליגי| C1
+  C1 -->|הלכך| C2
+  C1 -->|הלכך| C3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: itself-and-offspring applies to kilayim and koy; R. Eliezer exempts a koy. Koy = goat and doe"]:::statement
+  Q1{"② Goat-on-doe? All concede doe whose offspring is a goat — exempt"}:::question
+  Q2{"③ Deer-on-goat? All concede goat whose offspring is a deer — liable"}:::question
+  A1["④ Third generation: goat-on-doe births a female, the female births a male"]:::answer
+  S2["⑤ Rabbis: concern for paternity, sheep even in part · R. Eliezer: no concern"]:::statement
+  Q3{"⑥ Let them differ only as in Ḥananya vs the Rabbis?"}:::question
+  A2["⑦ Teaches us they differ even on ׳partial sheep׳"]:::answer
+  Q4{"⑧ Objection: koy not slaughtered on a Festival, and if slaughtered its blood is not covered"}:::question
+  S3["⑨ Goat-on-doe? Then by all let him slaughter and cover"]:::statement
+  S4["⑩ Deer-on-goat — this too is hard for Rabbis and R. Eliezer"]:::statement
+  A3["⑪ Deer-on-goat, and the Rabbis are uncertain whether to mind paternity"]:::answer
+  A4["⑫ And since the Rabbis are uncertain — for R. Eliezer it is obvious"]:::answer
+  Q5{"⑬ Objection: foreleg, jaw, maw apply to a koy; R. Eliezer exempts a koy"}:::question
+  S5["⑭ Goat-on-doe — hard for Rabbis: give half, for the half bring proof"]:::statement
+  S6["⑮ Deer-on-goat — hard for R. Eliezer: he should owe all the gifts!"]:::statement
+  A5["⑯ Deer-on-goat, R. Eliezer too is uncertain — then over what do they differ?"]:::answer
+  C1["⑰ They differ on ׳partial sheep׳: Rabbis — even partly sheep; R. Eliezer — not partly"]:::conclusion
+  C2["⑱ Rav Pappa: covering and gifts — only deer-on-goat (both uncertain, differ on partial sheep)"]:::conclusion
+  C3["⑲ Itself-and-offspring — both pairings: goat-on-doe for the prohibition, deer-on-goat for lashes"]:::conclusion
+  S1 -->|what case| Q1
+  Q1 -.->|exempt, rejected| Q2
+  Q2 -.->|liable, rejected| A1
+  A1 -->|reason for dispute| S2
+  S2 -.->|challenge| Q3
+  Q3 -->|answer| A2
+  A2 -.->|objection| Q4
+  Q4 -->|if we say| S3
+  S3 -.->|rather| S4
+  S4 -->|actually| A3
+  A3 -->|inference| A4
+  A4 -.->|objection| Q5
+  Q5 -->|if we say| S5
+  S5 -.->|rather| S6
+  S6 -->|actually| A5
+  A5 -->|over what| C1
+  C1 -->|therefore| C2
+  C1 -->|therefore| C3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בְּכִלְאַיִם וּבְכוֹי … זֶה הַבָּא מִן הַתַּיִישׁ וּמִן הַצְּבִיָּיה"]:::statement
+  Q1{"② אִילֵּימָא בְּתַיִישׁ הַבָּא עַל הַצְּבִיָּיה … הִיא צְבִיָּיה וּבְנָהּ תַּיִישׁ, שֶׁפָּטוּר"}:::question
+  Q2{"③ אֶלָּא בִּצְבִי הַבָּא עַל הַתְּיָישָׁה … הִיא תְּיָישָׁה וּבְנָהּ צְבִי – שֶׁחַיָּיב"}:::question
+  A1["④ לְעוֹלָם, בְּתַיִישׁ הַבָּא עַל הַצְּבִיָּיה, וְיָלְדָה בַּת, וּבַת יָלְדָה בֵּן"]:::answer
+  S2["⑤ רַבָּנַן: חוֹשְׁשִׁין לְזֶרַע הָאָב, וְשֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה · רַבִּי אֱלִיעֶזֶר: אֵין חוֹשְׁשִׁין"]:::statement
+  Q3{"⑥ וְלִיפְלוֹג בְּחוֹשְׁשִׁין לְזֶרַע הָאָב, בִּפְלוּגְתָּא דַּחֲנַנְיָה וְרַבָּנַן"}:::question
+  A2["⑦ קָא מַשְׁמַע לַן דְּ׳שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה׳ פְּלִיגִי"]:::answer
+  Q4{"⑧ כּוֹי אֵין שׁוֹחֲטִין אוֹתוֹ בְּיוֹם טוֹב, וְאִם שְׁחָטוֹ – אֵין מְכַסִּין אֶת דָּמוֹ"}:::question
+  S3["⑨ אִילֵימָא בְּתַיִישׁ … לִשְׁחוֹט וְלִיכַסֵּי, צְבִי וַאֲפִילּוּ מִקְצָת צְבִי"]:::statement
+  S4["⑩ אֶלָּא בִּצְבִי הַבָּא עַל הַתְּיָישָׁה … לִשְׁחוֹט וְלָא לִיכַסֵּי"]:::statement
+  A3["⑪ לְעוֹלָם בִּצְבִי … וְרַבָּנַן סַפּוֹקֵי מְסַפְּקָא לְהוּ אִי חוֹשְׁשִׁין לְזֶרַע הָאָב"]:::answer
+  A4["⑫ וּמִדִּלְרַבָּנַן מְסַפְּקָא לְהוּ, לְרַבִּי אֱלִיעֶזֶר פְּשִׁיטָא לֵיהּ"]:::answer
+  Q5{"⑬ הַזְּרוֹעַ וְהַלְּחָיַיִם וְהַקֵּבָה נוֹהֲגִים בְּכוֹי … מִן הַכּוֹי – פָּטוּר מִן הַמַּתָּנוֹת"}:::question
+  S5["⑭ אֶלָּא לְרַבָּנַן … אִידַּךְ פַּלְגָא לֵימָא לֵיהּ: אַיְיתִי רְאָיָיה … וּשְׁקוֹל"]:::statement
+  S6["⑮ אֶלָּא, בִּצְבִי … אֶלָּא לְרַבִּי אֱלִיעֶזֶר, לִיחַיַּיב בְּכוּלְּהִי מַתָּנוֹת"]:::statement
+  A5["⑯ לְעוֹלָם בִּצְבִי … וְרַבִּי אֱלִיעֶזֶר נָמֵי סַפּוֹקֵי מְסַפְּקָא לֵיהּ … בְּמַאי פְּלִיגִי"]:::answer
+  C1["⑰ רַבָּנַן: ׳שֶׂה׳ וַאֲפִילּוּ מִקְצָת שֶׂה, וְרַבִּי אֱלִיעֶזֶר: ׳שֶׂה׳ וְלֹא מִקְצָת שֶׂה"]:::conclusion
+  C2["⑱ אָמַר רַב פָּפָּא … לְעִנְיַן כִּסּוּי הַדָּם וּמַתָּנוֹת, לָא מַשְׁכַּחַתְּ אֶלָּא בִּצְבִי הַבָּא עַל הַתְּיָישָׁה"]:::conclusion
+  C3["⑲ לְעִנְיַן אוֹתוֹ וְאֶת בְּנוֹ … בֵּין בְּתַיִישׁ … וּבֵין בִּצְבִי הַבָּא עַל הַתְּיָישָׁה"]:::conclusion
+  S1 -->|הֵיכִי דָמֵי| Q1
+  Q1 -.->|פטור, נדחה| Q2
+  Q2 -.->|חייב, נדחה| A1
+  A1 -->|טעם המחלוקת| S2
+  S2 -.->|קושיא| Q3
+  Q3 -->|תירוץ| A2
+  A2 -.->|מיתיבי| Q4
+  Q4 -->|אילימא| S3
+  S3 -.->|אלא| S4
+  S4 -->|לעולם| A3
+  A3 -->|מדיוק| A4
+  A4 -.->|מיתיבי| Q5
+  Q5 -->|אילימא| S5
+  S5 -.->|אלא| S6
+  S6 -->|לעולם| A5
+  A5 -->|במאי פליגי| C1
+  C1 -->|הלכך| C2
+  C1 -->|הלכך| C3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ט ב — Chullin 79b:2</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בְּכִלְאַיִם וּבְכוֹי. רַבִּי אֱלִיעֶזֶר אוֹמֵר: כִּלְאַיִם הַבָּא מִן הָעֵז וּמִן הָרָחֵל – אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בּוֹ, כּוֹי – אֵין אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בּוֹ. אָמַר רַב חִסְדָּא: אֵיזֶהוּ כּוֹי שֶׁנֶּחְלְקוּ בּוֹ רַבִּי אֱלִיעֶזֶר וַחֲכָמִים? זֶה הַבָּא מִן הַתַּיִישׁ וּמִן הַצְּבִיָּיה.</div>
+    <div class="trans" data-when="he">ברייתא: איסור ״אותו ואת בנו״ נוהג בכלאי בהמה ובכוי. ר׳ אליעזר חולק: בכלאים מן העז והרחל — נוהג; בכוי — אינו נוהג. רב חסדא מגדיר: הכוי שעליו נחלקו ר׳ אליעזר וחכמים הוא הוולד הבא מתיש (עז זכר) ומצבייה.</div>
+    <div class="trans" data-when="en">§ The Sages taught in a baraita (see Tosefta 5:1): The prohibition against slaughtering an animal itself and its offspring applies to the offspring of diverse kinds of animals, such as a goat and a ewe, and to the koy, even though the prohibition does not apply to undomesticated animals. Rabbi Eliezer says: With regard to a hybrid that results from the mating of a goat and a ewe, the prohibition of a mother and its offspring applies; with regard to a koy, the prohibition of a mother and its offspring does not apply. Rav Ḥisda says: What is the koy about which Rabbi Eliezer and the Rabbis disagree? It is that which results from the mating of a goat and a doe.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ט ב — Chullin 79b:3</span></div>
+    <div class="orig">הֵיכִי דָמֵי? אִילֵּימָא בְּתַיִישׁ הַבָּא עַל הַצְּבִיָּיה, וְיָלְדָה, וְקָא שָׁחֵיט לַהּ וְלִבְרַהּ – וְהָאָמַר רַב חִסְדָּא: הַכֹּל מוֹדִים בְּהִיא צְבִיָּיה וּבְנָהּ תַּיִישׁ, שֶׁפָּטוּר! שֶׂה וּבְנוֹ אָמַר רַחֲמָנָא, וְלֹא צְבִי וּבְנוֹ!</div>
+    <div class="trans" data-when="he">היכי דמי הכוי הזה? אם נאמר תיש הבא על הצבייה והיא ילדה, ושוחט אותה ואת בנה — והרי אמר רב חסדא: הכל מודים שאם היא צבייה (האם) ובנה תיש — פטור, שאמרה תורה ״שה ובנו״ ולא ״צבי ובנו״, והאם כאן צבייה.</div>
+    <div class="trans" data-when="en">The Gemara asks: What are the circumstances surrounding the birth of this koy? If we say that it is the result of a goat that mates with a doe, and she gives birth, and one slaughters her and her offspring on the same day, that is difficult: But doesn’t Rav Ḥisda say: All concede in the case where she is a doe and her offspring is a goat, because she mated with a goat, that one who slaughters them both on the same day is exempt from lashes for violating the prohibition of a mother and its offspring? He is exempt because the Merciful One states: “And whether it be a bull or a sheep, you shall not slaughter it and its offspring both in one day” (Leviticus 22:28), indicating that the prohibition applies to a domesticated animal and its offspring, but not to an undomesticated animal and its offspring, such as a doe and its offspring.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ט ב — Chullin 79b:4</span></div>
+    <div class="orig">אֶלָּא בִּצְבִי הַבָּא עַל הַתְּיָישָׁה וְיָלְדָה, וְקָא שָׁחֵיט לַהּ וְלִבְרַהּ, וְהָאָמַר רַב חִסְדָּא: הַכֹּל מוֹדִים בְּהִיא תְּיָישָׁה וּבְנָהּ צְבִי – שֶׁחַיָּיב, ״שֶׂה״ אָמַר רַחֲמָנָא, וּבְנוֹ כֹּל דְּהוּ!</div>
+    <div class="trans" data-when="he">אלא נאמר צבי הבא על התיישה (עז נקבה) והיא ילדה, ושוחט אותה ואת בנה — והרי אמר רב חסדא: הכל מודים שאם היא תיישה (האם) ובנה צבי — חייב, שאמרה תורה ״שה״ ובנו מכל מין שהוא, והאם כאן עז.</div>
+    <div class="trans" data-when="en">Rather, perhaps this koy is the product of a deer that mates with a female goat, and she gives birth, and one slaughters her and her offspring on the same day. But doesn’t Rav Ḥisda say: All concede that in the case where she is a goat and her offspring is a deer because she mated with a deer, that one who slaughters them both on the same day is liable? He is liable because the Merciful One states in the Torah: “A sheep…and its offspring” (Leviticus 22:28), indicating that the prohibition applies to a domesticated animal such as a sheep and its offspring of any species, even if it is an undomesticated animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ט ב — Chullin 79b:5</span></div>
+    <div class="orig">לְעוֹלָם, בְּתַיִישׁ הַבָּא עַל הַצְּבִיָּיה, וְיָלְדָה בַּת, וּבַת יָלְדָה בֵּן, וְקָא שָׁחֵיט לַהּ וְלִבְרַהּ.</div>
+    <div class="trans" data-when="he">תירוץ: לעולם תיש על הצבייה — אך לא בדור ראשון, אלא הצבייה ילדה בת (היא הכוי), והבת ילדה בן, ושוחט את הבת ואת בנה. כאן האם עצמה מחצה עז (מצד אביה), ולכן יש מקום לדון.</div>
+    <div class="trans" data-when="en">The Gemara responds: Actually, the dispute between Rabbi Eliezer and the Rabbis is in the case of a goat that mates with a doe, and she gives birth to a female offspring, a koy, and this female offspring gives birth to a male offspring, and one slaughters her and her male offspring on the same day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ט ב — Chullin 79b:6</span></div>
+    <div class="orig">רַבָּנַן סָבְרִי: חוֹשְׁשִׁין לְזֶרַע הָאָב, וְשֶׂה – וַאֲפִילּוּ מִקְצָת שֶׂה. וְרַבִּי אֱלִיעֶזֶר סָבַר: אֵין חוֹשְׁשִׁין לְזֶרַע הָאָב, וְ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״ – לָא אָמְרִינַן.</div>
+    <div class="trans" data-when="he">בכך נחלקו: חכמים סוברים חוששין לזרע האב — ולכן הכוי הוא מקצת עז מחמת אביה — ו״שה״ פירושו אפילו מקצת שה. ר׳ אליעזר סובר אין חוששין לזרע האב, ואין דורשים ״שה ואפילו מקצת שה״.</div>
+    <div class="trans" data-when="en">The Rabbis hold: One needs to be concerned with its paternity, and therefore the koy is partially a goat due to its father, and the word “sheep” in the verse means that even if it is partially a sheep, i.e., a domesticated animal, it may not be slaughtered with its offspring in a single day. And Rabbi Eliezer holds: One need not be concerned with its paternity, and the status of the koy is unaffected by the fact that its father is a goat, and therefore, in this case we do not say that the word “sheep” mentioned in the verse means that even if it is partially a sheep it may not be slaughtered with its offspring in a single day, as the father’s component is ignored.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ט ב — Chullin 79b:7</span></div>
+    <div class="orig">וְלִיפְלוֹג בְּחוֹשְׁשִׁין לְזֶרַע הָאָב, בִּפְלוּגְתָּא דַּחֲנַנְיָה וְרַבָּנַן?</div>
+    <div class="trans" data-when="he">קושיא: ואם כל המחלוקת היא בשאלה אם חוששין לזרע האב — שיחלקו בה במישרין, כמחלוקת חנניה ורבנן (אם ״אותו ואת בנו״ נוהג אף באב), ולמה תלו זאת בכוי?</div>
+    <div class="trans" data-when="en">The Gemara challenges: And let them disagree with regard to any animal of mixed breed about whether one needs to be concerned with its paternity, i.e., with regard to the issue that is the subject of the dispute between Ḥananya and the Rabbis, whether the prohibition against slaughtering an animal and its offspring on the same day also applies to a father and its offspring because one needs to be concerned with an animal’s paternity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ט ב — Chullin 79b:8</span></div>
+    <div class="orig">אִי פְּלִיגִי בְּהָהִיא, הֲוָה אָמֵינָא: בְּהָא אֲפִילּוּ רַבָּנַן מוֹדוּ, דְּ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״ לָא אָמְרִינַן, קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">תירוץ: אילו נחלקו רק בשאלת זרע האב, הייתי אומר שבמקרה הכוי אף חכמים מודים שאין אומרים ״שה ואפילו מקצת שה״; לכן שנו דווקא בכוי, להשמיענו שלדעת חכמים אף ״מקצת שה״ אסור.</div>
+    <div class="trans" data-when="en">The Gemara responds: If they would disagree only about that issue, I would say: With regard to this issue of a doe mother and a goat father, even the Rabbis concede that we do not say that the word “sheep” mentioned in the verse means that even if an animal is partially a sheep, i.e., a domesticated animal, it may not be slaughtered with its offspring in a single day. Therefore, the baraita teaches us that according to the Rabbis, not only does one need to be concerned with paternity, but the word “sheep” indicates that even if it is partially a sheep, i.e., a domesticated animal, it may not be slaughtered with its offspring.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ט ב — Chullin 79b:9</span></div>
+    <div class="orig">וְהָא דִּתְנַן: כּוֹי אֵין שׁוֹחֲטִין אוֹתוֹ בְּיוֹם טוֹב, וְאִם שְׁחָטוֹ – אֵין מְכַסִּין אֶת דָּמוֹ.</div>
+    <div class="trans" data-when="he">מיתיבי ממשנה (לקמן פג:): אין שוחטין כוי ביום טוב (שמא יתחייב לכסות דמו, וזו מלאכה שאינה ודאית), ואם שחטו — אין מכסין את דמו (מספק). משנה זו לכאורה סותרת את הבנת המחלוקת.</div>
+    <div class="trans" data-when="en">The Gemara challenges: But that which we learned in a mishna (83b) appears to contradict this: One may not slaughter a koy on a Festival, because covering its blood entails the performance of prohibited labor that is permitted only if there is a definite obligation to do so. And if one slaughtered a koy on a Festival after the fact, one does not cover its blood, as the Sages prohibited transporting soil on a Festival where it is uncertain that a mitzva by Torah law exists.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״ט ב — Chullin 79b:10</span></div>
+    <div class="orig">בְּמַאי עָסְקִינַן? אִילֵימָא בְּתַיִישׁ הַבָּא עַל הַצְּבִיָּיה וְיָלְדָה, בֵּין לְרַבָּנַן בֵּין לְרַבִּי אֱלִיעֶזֶר – לִשְׁחוֹט וְלִיכַסֵּי, צְבִי וַאֲפִילּוּ מִקְצָת צְבִי.</div>
+    <div class="trans" data-when="he">במאי עסקינן? אם בתיש על הצבייה וילדה — האם צבייה, ולכן בין לחכמים בין לר׳ אליעזר ישחוט ויכסה את הדם, שהוולד הוא צבי (חיה) ואפילו מקצת צבי, ודמו טעון כיסוי. אם כן אין כאן ספק.</div>
+    <div class="trans" data-when="en">The Gemara explains the question: What are we dealing with? If we say that we are dealing with a goat who mates with a doe, and she gives birth, then whether according to the opinion of the Rabbis or according to the opinion of Rabbi Eliezer, let him slaughter the koy on the Festival ab initio and cover the blood, as the mother of the koy is a deer, and the koy therefore may be termed an undomesticated animal, whose blood requires covering. This should be so even if it is partially a deer, i.e., it has an undomesticated animal component from only one parent, since all agree that the offspring’s species derives from its mother.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״ט ב — Chullin 79b:11</span></div>
+    <div class="orig">אֶלָּא בִּצְבִי הַבָּא עַל הַתְּיָישָׁה וְיָלְדָה, אִי לְרַבָּנַן – לִשְׁחוֹט וְלִיכַסֵּי, אִי לְרַבִּי אֱלִיעֶזֶר – לִשְׁחוֹט וְלָא לִיכַסֵּי.</div>
+    <div class="trans" data-when="he">אלא בצבי על התיישה וילדה — אף זה קשה: אם כחכמים שחוששין לזרע האב, ישחוט ויכסה (שהוא מקצת חיה מצד אביו); ואם כר׳ אליעזר שאין חוששין, ישחוט ולא יכסה (שהוא בהמה גמורה כאמו). בשני הצדדים אין ספק, והמשנה נוקטת ספק.</div>
+    <div class="trans" data-when="en">Rather, we must be dealing with a case of a deer that mates with a female goat, and she gives birth. This, too, is difficult: If the mishna is in accordance with the opinion of the Rabbis that one needs to be concerned with paternity, let him slaughter this koy on the Festival ab initio and cover the blood, as it is partially an undomesticated animal due to its father. If the mishna holds in accordance with the opinion of Rabbi Eliezer that one need not be concerned with paternity, let him slaughter the koy on the Festival ab initio and not cover the blood, as it should be considered a domesticated animal, whose blood does not require covering due to its mother who is a goat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ע״ט ב — Chullin 79b:12</span></div>
+    <div class="orig">לְעוֹלָם בִּצְבִי הַבָּא עַל הַתְּיָישָׁה, וְרַבָּנַן סַפּוֹקֵי מְסַפְּקָא לְהוּ אִי חוֹשְׁשִׁין לְזֶרַע הָאָב אִי אֵין חוֹשְׁשִׁין.</div>
+    <div class="trans" data-when="he">תירוץ: לעולם המשנה בצבי על התיישה, ולשיטת חכמים — הם מסופקים אם חוששין לזרע האב או לא. מספק זה אין שוחטין לכתחילה, ואם שחט אין מכסין — כדי שלא יעבור על מלאכת יו״ט ספק.</div>
+    <div class="trans" data-when="en">The Gemara concludes that actually this mishna is in accordance with the opinion of the Rabbis, and it is referring to a case of a deer who mates with a female goat, and the Rabbis do not say with certainty that in determining the species of an animal one must be concerned with paternity, but rather the Rabbis are simply uncertain whether one needs to be concerned with its paternity or one need not be concerned. Therefore, they rule that one should not slaughter it on a Festival, ab initio, in order to avoid a possible prohibition, and if one did slaughter it, he should not cover the blood, to avoid violating a prohibition in order to perform an uncertain mitzva.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ע״ט ב — Chullin 79b:13</span></div>
+    <div class="orig">וּמִדִּלְרַבָּנַן מְסַפְּקָא לְהוּ, לְרַבִּי אֱלִיעֶזֶר פְּשִׁיטָא לֵיהּ.</div>
+    <div class="trans" data-when="he">דיוק: ומדהמשנה כחכמים שמסופקים — משמע שלר׳ אליעזר פשוט שאין חוששין כלל לזרע האב, ולכן הכוי (צבי על התיישה) בהמה גמורה, ולא נוהג בו ספק.</div>
+    <div class="trans" data-when="en">The Gemara infers: And from the fact that the Rabbis are uncertain, and therefore they rule that the prohibition of: Itself and its offspring, applies to a koy, it can be inferred that according to the opinion of Rabbi Eliezer, who rules that the prohibition of: Itself and its offspring, does not apply to a koy, it is obvious that, with regard to a koy resulting from a deer mating with a female goat, one need not be concerned with its paternity at all.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ע״ט ב — Chullin 79b:14</span></div>
+    <div class="orig">וְהָא דְּתַנְיָא: הַזְּרוֹעַ וְהַלְּחָיַיִם וְהַקֵּבָה נוֹהֲגִים בְּכוֹי וּבְכִלְאַיִם. רַבִּי אֱלִיעֶזֶר אוֹמֵר: כִּלְאַיִם הַבָּא מִן הָעֵז וּמִן הָרָחֵל – חַיָּיב בְּמַתָּנוֹת, מִן הַכּוֹי – פָּטוּר מִן הַמַּתָּנוֹת.</div>
+    <div class="trans" data-when="he">מיתיבי מברייתא: מתנות כהונה — הזרוע, הלחיים והקבה — נוהגות בכוי ובכלאים. ר׳ אליעזר חולק: בכלאי עז ורחל חייב במתנות, ובכוי פטור. שוב נברר באיזה כוי מדובר.</div>
+    <div class="trans" data-when="en">The Gemara asks: But according to this, that which is taught in a baraita (see Tosefta 9:1) presents a difficulty: The mitzva to give the foreleg, the jaw, and the maw of non-sacred animals to a priest applies both to a koy and to the offspring of diverse kinds of animals. Rabbi Eliezer says: A hybrid that results from the mating of a goat and a ewe is obligated to have gifts of the priesthood given from it; a hybrid that results from a koy is exempt from having gifts of the priesthood given from it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ע״ט ב — Chullin 79b:15-16</span></div>
+    <div class="orig">בְּמַאי עָסְקִינַן? אִילֵימָא בְּתַיִישׁ הַבָּא עַל הַצְּבִיָּיה וְיַלְדָּה, בִּשְׁלָמָא לְרַבִּי אֱלִיעֶזֶר דְּפָטַר, קָסָבַר ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״ לָא אָמְרִינַן. אֶלָּא לְרַבָּנַן, נְהִי דְּקָסָבְרִי ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״, בִּשְׁלָמָא פַּלְגָא לָא יָהֵיב לֵיהּ, אִידַּךְ פַּלְגָא לֵימָא לֵיהּ: אַיְיתִי רְאָיָיה דְּחוֹשְׁשִׁין לְזֶרַע הָאָב, וּשְׁקוֹל.</div>
+    <div class="trans" data-when="he">במאי עסקינן? אם בתיש על הצבייה וילדה — מובן ר׳ אליעזר שפוטר (שאינו דורש ״מקצת שה״); אך לחכמים, גם אם דורשים ״שה ואפילו מקצת שה״ — בחצי (מצד האם הצבייה) פטור, ועל החצי האחר יאמר הכהן ״הבא ראיה שחוששין לזרע האב, וטול״. נמצא אין ראיה ברורה לחיוב.</div>
+    <div class="trans" data-when="en">The Gemara analyzes the baraita: What type of koy are we dealing with? If we say that we are dealing with a goat who mates with a doe, and she gives birth, granted, this is consistent according to the opinion of Rabbi Eliezer, who deems it exempt from having gifts of the priesthood given from it. As he holds that we do not say that the word “sheep” (see Deuteronomy 18:3) means that even if it is partially a sheep one must give gifts of the priesthood from it, as paternity is ignored and this koy is considered solely the offspring of a doe, exempting it from having gifts given from it. But according to the opinion of the Rabbis, even if it is granted that they hold that the word “sheep” means that even if it is partially a sheep, or any other type of domesticated animal, one is obligated to give gifts of the priesthood from it, why should the owner of this koy be required to give the gifts to a priest? Granted, he does not give the priest half of the gifts, since half of the koy, i.e., the mother’s component, is an undomesticated animal; but with regard to the other half, as well, let him say to the priest: Bring proof that one needs to be concerned with its paternity and take that half; otherwise receive nothing.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ע״ט ב — Chullin 79b:17</span></div>
+    <div class="orig">אֶלָּא, בִּצְבִי הַבָּא עַל הַתְּיָישָׁה וְיָלְדָה. בִּשְׁלָמָא לְרַבָּנַן, מַאי ״חַיָּיב״ – בַּחֲצִי מַתָּנוֹת; אֶלָּא לְרַבִּי אֱלִיעֶזֶר, לִיחַיַּיב בְּכוּלְּהִי מַתָּנוֹת?</div>
+    <div class="trans" data-when="he">אלא בצבי על התיישה וילדה. מובן לחכמים: ״חייב״ — בחצי מתנות (מצד האם העז), ועל החצי האחר יביא הכהן ראיה. אבל לר׳ אליעזר (שאינו חושש לזרע האב, והכוי בהמה גמורה כאמו) — היה צריך להתחייב בכל המתנות, ולמה פטרוֹ?</div>
+    <div class="trans" data-when="en">Rather, we are dealing with the case of a deer who mates with a female goat and she gives birth. Granted, this is consistent according to the opinion of the Rabbis, who say that one is obligated to give gifts of the priesthood from it, as what is meant by: Obligated? It means: It is obligated in half of the gifts, since on its mother’s side the goat component is subject to the obligation to give the gifts, but with regard to the other half of the gifts he can tell the priest: Bring proof that one need not be concerned with paternity, and take it. But according to the opinion of Rabbi Eliezer, who says that one need not be concerned with paternity at all, such that this koy would be considered a domesticated animal like its mother, let the owner be obligated in all of the gifts. Why, then, does Rabbi Eliezer deem him exempt?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ע״ט ב — Chullin 79b:18</span></div>
+    <div class="orig">לְעוֹלָם בִּצְבִי הַבָּא עַל הַתְּיָישָׁה וְיָלְדָה, וְרַבִּי אֱלִיעֶזֶר נָמֵי סַפּוֹקֵי מְסַפְּקָא לֵיהּ אִי חוֹשְׁשִׁין לְזֶרַע הָאָב אוֹ לָא, וְכֵיוָן דִּלְרַבָּנַן מְסַפְּקָא לְהוּ וּלְרַבִּי אֱלִיעֶזֶר מְסַפְּקָא לֵיהּ, בְּמַאי פְּלִיגִי?</div>
+    <div class="trans" data-when="he">תירוץ: לעולם בצבי על התיישה, ואף ר׳ אליעזר מסופק אם חוששין לזרע האב או לא. וכיוון שגם חכמים מסופקים וגם ר׳ אליעזר מסופק — אם כן במה בעצם נחלקו?</div>
+    <div class="trans" data-when="en">The Gemara answers: Actually, it is referring to a deer who mates with a female goat, and she gives birth, and Rabbi Eliezer is also uncertain whether, in determining the species of an animal, one needs to be concerned with its paternity or not. The Gemara asks: But since the conclusion is that the Rabbis are uncertain and Rabbi Eliezer is uncertain, in what case do they disagree where Rabbi Eliezer deems the owner exempt from giving the gifts entirely?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין פ׳ א — Chullin 80a:1</span></div>
+    <div class="orig">בְּשֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה, רַבָּנַן סָבְרִי: ״שֶׂה״ – וַאֲפִילּוּ מִקְצָת שֶׂה, וְרַבִּי אֱלִיעֶזֶר סָבַר: ״שֶׂה״ – וְלֹא מִקְצָת שֶׂה.</div>
+    <div class="trans" data-when="he">מסקנה: נחלקו בדרשת ״שה ואפילו מקצת שה״. חכמים: ״שה״ — אפילו מקצת שה (ולכן הכוי בהמה לעניין המתנות); ר׳ אליעזר: ״שה״ — שלם, ולא מקצת שה (ולכן פטור).</div>
+    <div class="trans" data-when="en">They disagree concerning whether the word “sheep” mentioned in the verses indicates that even if it is partially a sheep, it is considered a domesticated animal. The Rabbis hold that the word “sheep” indicates that even if it is partially a sheep it is considered a domesticated animal, and Rabbi Eliezer holds that the word “sheep” indicates that it must be descended entirely from sheep or other domesticated animals, but not partially descended from sheep.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין פ׳ א — Chullin 80a:2-4</span></div>
+    <div class="orig">אָמַר רַב פָּפָּא: הִלְכָּךְ, לְעִנְיַן כִּסּוּי הַדָּם וּמַתָּנוֹת, לָא מַשְׁכַּחַתְּ אֶלָּא בִּצְבִי הַבָּא עַל הַתְּיָישָׁה. דְּבֵין לְרַבָּנַן, וּבֵין לְרַבִּי אֱלִיעֶזֶר, מְסַפְּקָא לְהוּ אִי חוֹשְׁשִׁין לְזֶרַע הָאָב אוֹ לָא. וְקָא מִיפַּלְגִי בְּ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״.</div>
+    <div class="trans" data-when="he">רב פפא ממפה: הלכך, לעניין כיסוי הדם ולעניין מתנות — אי אפשר להעמיד אלא בצבי על התיישה, שבו גם חכמים וגם ר׳ אליעזר מסופקים אם חוששין לזרע האב, ונחלקו רק בדרשת ״שה ואפילו מקצת שה״.</div>
+    <div class="trans" data-when="en">Rav Pappa says: Therefore, the cases relating to a koy must be interpreted in accordance with this understanding of the disagreement between Rabbi Eliezer and the Rabbis. With regard to the matter of covering the blood of a koy, which the mishna indicates is performed due to uncertainty as to whether a koy is an undomesticated animal, and with regard to the gifts of the priesthood, which the Rabbis require to be given from a koy as from a domesticated animal, but Rabbi Eliezer does not, you find a way to interpret the cases only if they are referring to a koy resulting from a deer who mates with a female goat. This is so because, according to the aforementioned conclusions about their opinions, both according to the opinion of the Rabbis and according to the opinion of Rabbi Eliezer it is uncertain whether one needs to be concerned with paternity, and the koy is considered partially an undomesticated animal, or one need not be concerned, and it is considered entirely domesticated. And they disagree as to whether the word “sheep” means that even if it is partially a sheep it is considered a domesticated animal. Therefore, the mishna, which requires one to cover the blood of a koy whose father is a deer due to uncertainty, is in accordance with the opinion of the Rabbis, because they, as opposed to Rabbi Eliezer, hold that if an animal has a domesticated component, it is considered a domesticated animal, and with regard to covering the blood if the animal has an undomesticated component, the animal is considered undomesticated. As for the gifts of the priesthood, the Rabbis require half of them to be given from this koy, as it has a domesticated component from its mother, while Rabbi Eliezer exempts one from giving them, as he holds that an animal’s parents must both be domesticated to qualify the animal as domesticated.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">19</span> <span class="ref">חולין פ׳ א — Chullin 80a:5-10</span></div>
+    <div class="orig">לְעִנְיַן אוֹתוֹ וְאֶת בְּנוֹ, מַשְׁכַּחַתְּ לַהּ בֵּין בְּתַיִישׁ הַבָּא עַל הַצְּבִיָּיה, וּבֵין בִּצְבִי הַבָּא עַל הַתְּיָישָׁה. בְּתַיִישׁ הַבָּא עַל הַצְּבִיָּיה, וּלְאִיסּוּרָא דְּרַבָּנַן סָבְרִי: דִּילְמָא חוֹשְׁשִׁין לְזֶרַע הָאָב, ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״ אָמְרִינַן, וְאָסוּר. וְרַבִּי אֱלִיעֶזֶר סָבַר: נְהִי נָמֵי דְּחוֹשְׁשִׁין לְזֶרַע הָאָב, ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״ לָא אָמְרִינַן. בִּצְבִי הַבָּא עַל הַתְּיָישָׁה, וּלְמַלְקוּת. רַבָּנַן סָבְרִי: נְהִי נָמֵי דְּחוֹשְׁשִׁין לְזֶרַע הָאָב, ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״ אָמְרִינַן, וּמַלְקֵינַן לֵיהּ. וְרַבִּי אֱלִיעֶזֶר סָבַר: אִיסּוּרָא אִיכָּא, מַלְקוּת לֵיכָּא. אִיסּוּרָא אִיכָּא, דִּלְמָא אֵין חוֹשְׁשִׁין לְזֶרַע הָאָב, וְהַאי שֶׂה מְעַלְּיָא הוּא. מַלְקוּת לֵיכָּא, דִּלְמָא חוֹשְׁשִׁין לְזֶרַע הָאָב. וְ״שֶׂה וַאֲפִילּוּ מִקְצָת שֶׂה״ לָא אָמְרִינַן.</div>
+    <div class="trans" data-when="he">ולעניין אותו ואת בנו, מוצאים את המחלוקת בשני הצירופים. בתיש על הצבייה — לעניין איסור (לכתחילה): חכמים — שמא חוששין לזרע האב, ודורשים ״מקצת שה״, ואסור; ר׳ אליעזר — אף אם חוששין, אין דורשים ״מקצת שה״. ובצבי על התיישה — לעניין מלקות: חכמים — אף אם חוששין, דורשים ״מקצת שה״ ומלקין; ר׳ אליעזר — איסור יש (שמא אין חוששין, והוא שה גמור כאמו), אך מלקות אין (שמא חוששין, ואין דורשים ״מקצת שה״).</div>
+    <div class="trans" data-when="en">Rav Pappa continues: With regard to the matter of the prohibition against slaughtering an animal itself and its offspring on the same day, which the Rabbis hold applies to a koy but Rabbi Eliezer does not, you find such a case either with regard to a koy who is the daughter of a goat who mates with a doe, or with regard to a koy who is the daughter of a deer who mates with a female goat. Rav Pappa explains: The case may be referring to a koy who is the daughter of a goat who mates with a doe, and it relates to a prohibition, i.e., whether slaughtering it and its offspring in one day is prohibited ab initio, as the Rabbis hold: Perhaps one needs to be concerned with its paternity, and this koy is therefore considered part domesticated, and we say that the word “sheep” means that even if it is partially a sheep this prohibition applies, and its slaughter on the same day as its daughter is prohibited ab initio, although one does not receive lashes for it as it is not a definite transgression. And Rabbi Eliezer holds: Though one indeed needs to be concerned with its paternity, and this koy is considered partially domesticated, we do not say that the word “sheep” means that even if it is partially a sheep the prohibition applies. Therefore, its slaughter on the same day as its offspring is permitted. Additionally, the case under dispute may be referring to a koy who is the daughter of a deer who mates with a female goat, and it relates to whether slaughtering it and its offspring in one day renders one liable to receive lashes. The Rabbis hold: Though one indeed needs to be concerned with its paternity, and this koy is considered partially undomesticated, we say that the word “sheep” means that the prohibition applies even if it is partially a sheep, such as this koy, and one who slaughters it and its offspring on one day is flogged. And Rabbi Eliezer holds: There is a prohibition against slaughtering this koy and its offspring on the same day, but if one slaughtered them there are no lashes. The Gemara explains: There is a prohibition in the case of this koy that is itself a mother, since perhaps one need not be concerned with its paternity, and therefore this koy is a full-fledged sheep, like its mother. Due to uncertainty, there are no lashes for violating the prohibition because perhaps one needs to be concerned with its paternity, in which case this koy is only a partial sheep. And according to Rabbi Eliezer, we do not say that the word “sheep” means that even if it is partially a sheep it is subject to the prohibition. Therefore, one is not flogged for slaughtering this koy on the same day as its offspring, as lashes are administered only when the witnesses give the transgressor a definite forewarning against violating the prohibition. Since the prohibition in this case is uncertain, any forewarning would be uncertain.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
