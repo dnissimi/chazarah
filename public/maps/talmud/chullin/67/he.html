@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ס״ז</title>
+<meta name="description" content="מפת הסוגיא של חולין ס״ז: דיני שרצים — מדרש ׳ריבה ומיעט׳ ב׳במים׳; מקרא סתום ומפורש; שיכר וצביתא; קישות שהתליעה באיביה; ספקות תיקו; קוקיאני ותולעי בשר ודגים; דרשת ׳הולך על גחון׳ ולויתן דג טהור.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="67">
+<meta name="gemara-map:sefaria-ref" content="Chullin 67">
+<meta name="gemara-map:topic-he" content="שרצים שבמים ובפירות — מותר ואסור">
+<meta name="gemara-map:topic-en" content="Creeping creatures in water and produce">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ס״ז">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 67">
+<meta name="gemara-map:blurb-he" content="שרץ המים שגדל במקום עצור (כלים, בורות) — מותר; קישות שהתליעה באיביה — אסורה; ׳רביתיה׳ קובע, וספקות נשארים בתיקו.">
+<meta name="gemara-map:blurb-en" content="A water creature grown in still water (vessels, pits) is permitted; a worm-infested cucumber attached to the ground is forbidden; ‘normal growth’ decides, and the edge cases stay unresolved.">
+<meta name="gemara-map:sugya-count" content="8">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ס״ז</span><span data-when="en">Sugya map — Chullin 67</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ס״ז א — ס״ז ב · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 67a–67b · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שמונה סוגיות בדיני שרצים: מדרש <b>״ריבה ומיעט״</b> ב״במים״ — דגים שבבורות שיחין ומערות (עצורים ככלים) מותרים, שבחריצין ונעיצין אסורים; איזה מקרא <b>סתום ומפורש</b>; אזהרת רב הונא ל<b>שיכר</b> בצביתא, וכלל <b>״רביתיה״</b> שמתיר את שגדל במקומו; <b>קישות שהתליעה באיביה</b> אסורה; ספקות <b>תיקו</b>; <b>קוקיאני</b> ותולעי בשר אסורים, ושל דגים מותרים; ודרשת <b>״הולך על גחון״</b> שלויתן דג טהור.</span>
+    <span data-when="en"><b>Bottom line:</b> Eight sugyot on creeping creatures: the <b>“amplify-restrict”</b> reading of “in the waters” — fish in pits, ditches and caves (still like vessels) are permitted, those in trenches and channels forbidden; which verse is <b>implicit vs. explicit</b>; Rav Huna’s warning about filtering <b>beer</b>, and the rule of <b>“normal growth,”</b> which permits a creature grown in place; an <b>infested cucumber</b> attached to the ground is forbidden; <b>unresolved</b> edge cases; <b>kukeyanei</b> and worms in meat are forbidden, those in fish permitted; and the verse “goes upon the belly,” teaching that the leviathan is a kosher fish.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ס״ז</span><span data-when="en">Overview — Chullin 67</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · ריבה ומיעט — בורות מותרים, חריצין אסורים"]:::statement
+  O2["2 · הי סתום והי מפורש"]:::statement
+  O3["3 · שיכר בצביתא — רביתיה"]:::statement
+  O4["4 · קישות שהתליעה באיביה"]:::statement
+  O5["5 · ספקות פרשה ומתה — תיקו"]:::statement
+  O6["6 · קוקיאני — בשר אסור, דגים מותר"]:::statement
+  O7["7 · הולך על גחון, ולויתן דג טהור"]:::statement
+  O8["8 · הדרן — ולד שהוציא ידו"]:::mishnah
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Amplify-restrict — pits permitted, trenches forbidden"]:::statement
+  O2["2 · Which verse implicit, which explicit"]:::statement
+  O3["3 · Beer through straw — normal growth"]:::statement
+  O4["4 · An infested cucumber on the ground"]:::statement
+  O5["5 · Emerged-and-died dilemmas — teiku"]:::statement
+  O6["6 · Kukeyanei — meat forbidden, fish permitted"]:::statement
+  O7["7 · Goes upon the belly, and leviathan is kosher"]:::statement
+  O8["8 · Hadran — a fetus that extended a limb"]:::mishnah
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">ריבה ומיעט ב״במים״ — בורות מול חריצין</span><span data-when="en">Amplify-restrict in “in the waters” — pits vs. trenches</span>
+      <span class="ref">Chullin 67a:5–7</span></h2>
+  <div class="lead"><span data-when="he">דבי ר׳ ישמעאל דורש ״במים… במים״ כריבה־מיעט־ריבה: חריצין ונעיצין אסורים, בורות שיחין ומערות מותרים. שתי דחיות, והכרעה כמתתיה בר יהודה.</span><span data-when="en">The school of R. Yishmael reads the repeated “in the waters” as amplify-restrict-amplify: trenches forbidden, pits permitted. Two objections, resolved by Mattitya bar Yehuda.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① דבי ר׳ ישמעאל: ׳במים׳ פעמיים — ריבה ומיעט וריבה, ריבה הכל"]:::statement
+  S2["① ריבה: חריצין ונעיצין לאיסור · מיעט: בורות שיחין ומערות להיתר"]:::statement
+  Q1{"② אימא להיפך — בורות לאיסור, ומיעט כלים?"}:::question
+  A1["② אם כן ׳תאכלו׳ מאי אהני? כלים ממילא יוצאים"]:::answer
+  Q2{"③ ואיפוך אנא — חריצין להיתר, בורות לאיסור?"}:::question
+  A2["③ כדמתתיה: בורות עצורים ככלים מרבה, חריצין שאינם עצורים מוציא"]:::answer
+  S1 --> S2
+  S2 -.->|דחייה| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|ואיפוך| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① School of R. Yishmael: ׳in the waters׳ twice — amplify, restrict, amplify; includes all"]:::statement
+  S2["① Amplifies: trenches and channels, forbidden · Restricts: pits, ditches, caves, permitted"]:::statement
+  Q1{"② Reverse it — pits forbidden, and it excludes only vessels?"}:::question
+  A1["② If so, what use is ׳you may eat׳? Vessels are excluded anyway"]:::answer
+  Q2{"③ But perhaps reverse — channels permitted, pits forbidden?"}:::question
+  A2["③ Per Mattitya: include pits, still like vessels; exclude channels, not still"]:::answer
+  S1 --> S2
+  S2 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|reverse it| Q2
+  Q2 -->|answer| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① דְּבֵי רַבִּי יִשְׁמָעֵאל תָּנָא … רִיבָּה וּמִיעֵט וְרִיבָּה – רִיבָּה הַכֹּל"]:::statement
+  S2["① חֲרִיצִין וּנְעִיצִין לְאִיסּוּרָא … בּוֹרוֹת שִׁיחִין וּמְעָרוֹת לְהֶתֵּירָא"]:::statement
+  Q1{"② אֵימָא … בּוֹרוֹת שִׁיחִין וּמְעָרוֹת לְאִיסּוּרָא, וּמַאי מַיעֵט? מַיעֵט כֵּלִים"}:::question
+  A1["② אִם כֵּן, ׳תֹּאכְלוּ׳ מַאי אַהֲנִי לֵיהּ?"]:::answer
+  Q2{"③ וְאֵיפוֹךְ אֲנָא … מַאי רָאִיתָ לְרַבּוֹת בּוֹרוֹת … לְהֶתֵּירָא?"}:::question
+  A2["③ מְרַבֶּה אֲנִי בּוֹרוֹת … שֶׁהֵן עֲצוּרִים כְּכֵלִים, וּמוֹצִיא … חֲרִיצִין … שֶׁאֵין עֲצוּרִין"]:::answer
+  S1 --> S2
+  S2 -.->|דחייה| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|ואיפוך| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז א — Chullin 67a:5</span></div>
+    <div class="orig">דְּבֵי רַבִּי יִשְׁמָעֵאל תָּנָא: ״בַּמָּיִם״ ״בַּמַּיִם״ שְׁתֵּי פְעָמִים, אֵין זֶה כְּלָל וּפְרָט, אֶלָּא רִיבָּה וּמִיעֵט. ״בַּמָּיִם״ – רִיבָּה, ״בַּיַּמִּים וּבַנְּחָלִים״ – מִיעֵט, ״בַּמַּיִם״ – חָזַר וְרִיבָּה. רִיבָּה וּמִיעֵט וְרִיבָּה – רִיבָּה הַכֹּל. מַאי רַבִּי? חֲרִיצִין וּנְעִיצִין לְאִיסּוּרָא, וּמַאי מַיעֵט? בּוֹרוֹת שִׁיחִין וּמְעָרוֹת לְהֶתֵּירָא.</div>
+    <div class="trans" data-when="he">דבי ר׳ ישמעאל דורש: הכתוב כפל ״במים… במים״, ואין זה כלל ופרט אלא ריבה ומיעט. ״במים״ הראשון ריבה, ״בימים ובנחלים״ מיעט, ״במים״ השני חזר וריבה. וכלל הדרשה: ריבה ומיעט וריבה — ריבה הכל חוץ ממה שמיעט. מה ריבה? חריצין ונעיצין (גומות מים זורמים) — שדגים שאין להם סנפיר וקשקשת שבהם אסורים. ומה מיעט? בורות שיחין ומערות — שדגים שבהם מותרים.</div>
+    <div class="trans" data-when="en">§ The tanna of the school of Rabbi Yishmael taught: The verse’s use of the phrase “in the waters,” “in the waters” twice is not to be interpreted as a generalization and a detail, but rather as an instance of amplification and restriction. By the first phrase “in the waters,” the verse amplifies, by the phrase “in the seas and in the rivers” it restricts, and by the second instance of “in the waters” it then amplifies again. According to a hermeneutical principle, when a verse amplified, and then restricted, and then amplified, it amplified the relevant category to include everything except for the specific matter excluded by the restriction, i.e., in the seas and in the rivers. What, then, does it include? It includes trenches and water channels, to prohibit fish without fins and scales found in them. And what does it exclude? It excludes fish found in pits, ditches, and caves, to permit them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ז א — Chullin 67a:6</span></div>
+    <div class="orig">אֵימָא: מַאי רַבִּי? בּוֹרוֹת שִׁיחִין וּמְעָרוֹת לְאִיסּוּרָא, וּמַאי מַיעֵט? מַיעֵט כֵּלִים. אִם כֵּן, ״תֹּאכְלוּ״ מַאי אַהֲנִי לֵיהּ?</div>
+    <div class="trans" data-when="he">דחייה: שמא הריבוי והמיעוט הפוכים — מה ריבה? בורות שיחין ומערות לאיסור; ומה מיעט? רק כלים. תירוץ: אם כן, ״תאכלו מכל אשר במים״ למה הוצרך? כלים ממילא אינם בכלל ׳מים׳; אלא ודאי המיעוט הוא להתיר בורות שיחין ומערות.</div>
+    <div class="trans" data-when="en">The Gemara objects: Why not say: What does it include? It includes fish found in pits, ditches, and caves, to prohibit them if they do not have fins and scales. And what does it exclude? It excludes only fish found in vessels. The Gemara responds: If so, what use is the phrase “These may you eat of all that are in the waters”? Even without it, vessels would be excluded. Rather, it indicates that pits, ditches and caves are excluded by the restriction, and all fish found in them are permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ז א — Chullin 67a:7</span></div>
+    <div class="orig">וְאֵיפוֹךְ אֲנָא, כִּדְתָנֵי מַתִּתְיָה, דְּתָנֵי מַתִּתְיָה בַּר יְהוּדָה: מַאי רָאִיתָ לְרַבּוֹת בּוֹרוֹת שִׁיחִין וּמְעָרוֹת לְהֶתֵּירָא, וּלְהוֹצִיא חֲרִיצִין וּנְעִיצִין לְאִיסּוּרָא? מְרַבֶּה אֲנִי בּוֹרוֹת שִׁיחִין וּמְעָרוֹת שֶׁהֵן עֲצוּרִים כְּכֵלִים, וּמוֹצִיא אֲנִי חֲרִיצִין וּנְעִיצִין שֶׁאֵין עֲצוּרִין כְּכֵלִים.</div>
+    <div class="trans" data-when="he">דחייה נוספת: ואיפוך — אולי להיפך, חריצין להיתר ובורות לאיסור? תירוץ כדתני מתתיה בר יהודה: מה ראית לרבות דווקא בורות שיחין ומערות להיתר? משום שמימיהם עומדים ועצורים ככלים; ולהוציא חריצין ונעיצין לאיסור — משום שמימיהם זורמים ואינם עצורים ככלים.</div>
+    <div class="trans" data-when="en">The Gemara objects: But perhaps l should reverse the statement and claim that fish without fins and scales in pits, ditches, and caves are prohibited, and those in trenches and water channels are permitted. The Gemara responds: One must say as Mattitya taught, as Mattitya bar Yehuda taught: What did you see that caused you to include pits, ditches, and caves, to permit them, and to exclude trenches and water channels, to prohibit them? I include pits, ditches, and caves, which contain still water like vessels, and I exclude trenches and water channels, which are not still like vessels, as water flows through them.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">הי סתום והי מפורש</span><span data-when="en">Which verse is implicit, which explicit</span>
+      <span class="ref">Chullin 67a:8–10</span></h2>
+  <div class="lead"><span data-when="he">היתר השרץ שבכלים נדרש משני מקראות — אחד מפורש ואחד סתום. רב אחא ורבינא נחלקו איזה מהם המפורש, וכל אחד נימוקו עמו.</span><span data-when="en">The permit for a creature in vessels is derived from two verses — one explicit, one implicit. Rav Aḥa and Ravina dispute which is which, each with his reason.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① הי סתום והי מפורש? פליגי רב אחא ורבינא"}:::question
+  S1["① חד: ׳יש לו׳ מפורש, ׳אין לו׳ סתום · וחד להיפך"]:::statement
+  A1["② טעם ׳יש לו מפורש׳: מיניה משתרו כלים"]:::answer
+  A2["③ טעם ׳אין לו מפורש׳: הוא דקא מוכח, דאי מהאיך הוה אמינא אף יש לו אסור בכלים"]:::answer
+  Q1 --> S1
+  S1 -->|טעם דעה א| A1
+  S1 -->|טעם דעה ב| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① Which is implicit, which explicit? Rav Aḥa and Ravina dispute"}:::question
+  S1["① One: ׳has fins/scales׳ explicit, ׳has not׳ implicit · the other, reversed"]:::statement
+  A1["② Reason for ׳has-fins is explicit׳: vessels are permitted from it"]:::answer
+  A2["③ Reason for ׳has-not is explicit׳: it proves the other; else I׳d forbid even finned fish in vessels"]:::answer
+  Q1 --> S1
+  S1 -->|reason, view A| A1
+  S1 -->|reason, view B| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① הֵי סָתוּם וְהֵי מְפוֹרָשׁ? פְּלִיגִי בַּהּ רַב אַחָא וְרָבִינָא"}:::question
+  S1["① חַד אָמַר: יֵשׁ לוֹ – מְפוֹרָשׁ, וְאֵין לוֹ – סָתוּם, וְחַד אָמַר: אֵין לוֹ – מְפוֹרָשׁ, וְיֵשׁ לוֹ – סָתוּם"]:::statement
+  A1["② מַאי טַעְמָא … יֵשׁ לוֹ מְפוֹרָשׁ? … מִינֵּיהּ הוּא דְּקָא מִשְׁתְּרוּ כֵּלִים"]:::answer
+  A2["③ … אֵין לוֹ מְפוֹרָשׁ? דְּהַאי הוּא דְּקָמוֹכַח אַהַאיְךְ … בְּכֵלִים, אַף עַל גַּב דְּאִית לֵיהּ – נָמֵי לָא תֵּיכוּל"]:::answer
+  Q1 --> S1
+  S1 -->|טעם דעה א| A1
+  S1 -->|טעם דעה ב| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז א — Chullin 67a:8</span></div>
+    <div class="orig">הֵי סָתוּם וְהֵי מְפוֹרָשׁ? פְּלִיגִי בַּהּ רַב אַחָא וְרָבִינָא: חַד אָמַר: יֵשׁ לוֹ – מְפוֹרָשׁ, וְאֵין לוֹ – סָתוּם, וְחַד אָמַר: אֵין לוֹ – מְפוֹרָשׁ, וְיֵשׁ לוֹ – סָתוּם.</div>
+    <div class="trans" data-when="he">הברייתא למדה שהיתר השרץ שבכלים בא משני מקראות — אחד מפורש ואחד סתום. הגמרא שואלת: איזה מקרא סתום ואיזה מפורש? נחלקו בכך רב אחא ורבינא: חד אמר — הפסוק המתיר ״יש לו (סנפיר וקשקשת)״ הוא המפורש, ו״אין לו״ הסתום; וחד אמר להיפך.</div>
+    <div class="trans" data-when="en">§ The baraita on the previous amud states that the Torah permits all fish without fins and scales in vessels both explicitly and implicitly. The Gemara asks: Which verse is the implicit source and which is the explicit source? Rav Aḥa and Ravina disagree with regard to it. One says: The verse permitting “whatever has fins and scales in the waters, in the seas, and in the rivers,” is the explicit source, and the verse prohibiting “all that have not fins and scales in the seas, and in the rivers,” is the implicit source. And one says the opposite, i.e., that the verse prohibiting “all that have not fins and scales” is the explicit source and the verse that permits “whatever has fins and scales” is the implicit source.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ז א — Chullin 67a:9</span></div>
+    <div class="orig">מַאי טַעְמָא דְּמַאן דְּאָמַר יֵשׁ לוֹ מְפוֹרָשׁ? אָמַר לָךְ: מִינֵּיהּ הוּא דְּקָא מִשְׁתְּרוּ כֵּלִים.</div>
+    <div class="trans" data-when="he">מה טעם הסובר ש״יש לו״ הוא המפורש? משום שמן הפסוק הזה עצמו (״יש לו… בימים ובנחלים״) נלמד בעמוד הקודם שהשרץ שבכלים מותר — ולכן הוא נחשב המקור המפורש להיתר.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the reasoning of the one who says that “whatever has fins and scales” is the explicit source? The Gemara responds: That Sage could have said to you: It is from this verse that the Gemara derives on the previous amud that fish without fins and scales found in vessels are permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ז א — Chullin 67a:10</span></div>
+    <div class="orig">מַאי טַעְמָא דְּמַאן דְּאָמַר אֵין לוֹ מְפוֹרָשׁ? דְּהַאי הוּא דְּקָמוֹכַח אַהַאיְךְ, דְּאִי מֵהַאיְךְ הֲוָה אָמֵינָא: בְּכֵלִים, אַף עַל גַּב דְּאִית לֵיהּ – נָמֵי לָא תֵּיכוּל.</div>
+    <div class="trans" data-when="he">ומה טעם הסובר ש״אין לו״ הוא המפורש? משום שדווקא פסוק זה מוכיח את כוונת חברו: אילו למדנו רק מן הפסוק ״יש לו… בימים ובנחלים״, הייתי אומר שדג מותר רק בימים ובנחלים, אבל בכלים — אף שיש לו סנפיר וקשקשת — אסור. הפסוק ״אין לו״ מלמד שההגבלה אינה אמורה אלא בימים ונחלים.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the reasoning of the one who says that “all that have not fins and scales” is the explicit source? The Gemara responds: The reasoning is that it is this verse that proves that the other verse permits all fish in vessels. As, if one attempted to derive whether fish in vessels are permitted from the other verse alone, I would say the opposite: The verse indicates that a fish with fins and scales is permitted only in the seas and rivers; but in vessels, even if it has fins and scales, you may still not eat it. The phrase in the verse “and all that have not fins and scales” indicates that these restrictions apply only to fish in the seas and rivers.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">שיכר בצביתא — וכלל ״רביתיה״</span><span data-when="en">Filtering beer — and the rule of “normal growth”</span>
+      <span class="ref">Chullin 67a:11–14</span></h2>
+  <div class="lead"><span data-when="he">רב הונא: אל יסנן שיכר בקש בלילה, שמא שרץ פירש וחזר ונפל. קושיא ויישוב ״רביתיה״; ראיה מברייתת בורות; וברייתא נוספת מסייעת.</span><span data-when="en">Rav Huna: do not filter beer through straw at night, lest a creature emerged and fell back. An objection resolved by “normal growth,” a proof, and a supporting baraita.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① רב הונא: אל יסנן שיכר בקש בלילה — שמא פירש השרץ ונפל, ועובר משום שרץ"]:::statement
+  Q1{"② אי הכי, אף בכלי! שמא פירש לדופן וחזר ונפל"}:::question
+  A1["② התם היינו רביתיה — דרכו לדבוק בדופן, אינו ׳פירש׳"]:::answer
+  P1["③ ומנא תימרא? ברייתא: בורות שוחה ושותה ואינו נמנע — היינו רביתיה"]:::proof
+  P2["④ רב חסדא: תניא דמסייע לך — ׳כל השרץ׳ לרבות יבחושין שסיננן, הא לא סיננן שרי"]:::proof
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|ראיה| P1
+  P1 -->|סיוע| P2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Rav Huna: don׳t filter beer through straw at night — a creature may emerge and fall, violating the prohibition"]:::statement
+  Q1{"② If so, even in a vessel! It may emerge onto the side and fall back"}:::question
+  A1["② There that is its normal growth — clinging to the side is not ׳emerging׳"]:::answer
+  P1["③ Whence? A baraita: at pits one bends and drinks freely — that is its normal growth"]:::proof
+  P2["④ Rav Ḥisda: a baraita supports you — ׳every swarming thing׳ includes filtered gnats; unfiltered are permitted"]:::proof
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -->|proof| P1
+  P1 -->|support| P2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① אָמַר רַב הוּנָא: לָא לִשְׁפֵּי אִינָשׁ שִׁיכְרָא בְּצִבְיָיתָא בְּאוּרְתָּא … עוֹבַר מִשּׁוּם ׳שֶׁרֶץ הַשֹּׁרֵץ עַל הָאָרֶץ׳"]:::statement
+  Q1{"② אִי הָכִי, בְּמָנָא נָמֵי, דִּלְמָא פָּרֵישׁ לְדַפְנָא דְּמָנָא וַהֲדַר נָפֵיל לְמָנָא?"}:::question
+  A1["② הָתָם הַיְינוּ רְבִיתֵיהּ"]:::answer
+  P1["③ וּמְנָא תֵּימְרַא, דְּתַנְיָא … בּוֹרוֹת … שֶׁשּׁוֹחֶה וְשׁוֹתֶה … אֶלָּא הַיְינוּ רְבִיתֵיהּ"]:::proof
+  P2["④ אֲמַר לֵיהּ רַב חִסְדָּא … תַּנְיָא דִּמְסַיַּיע לָךְ … לְרַבּוֹת יַבְחוּשִׁין שֶׁסִּינְּנָן … הָא לָא סִינְּנָן – שְׁרֵי"]:::proof
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|ראיה| P1
+  P1 -->|סיוע| P2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז א — Chullin 67a:11</span></div>
+    <div class="orig">אָמַר רַב הוּנָא: לָא לִשְׁפֵּי אִינָשׁ שִׁיכְרָא בְּצִבְיָיתָא בְּאוּרְתָּא, דִּילְמָא פָּרֵישׁ לְעֵיל מִצִּבְיָיתָא וַהֲדַר נָפֵיל לְכָסָא, (וְהָוֵי) [וְקָא] עוֹבַר מִשּׁוּם ״שֶׁרֶץ הַשֹּׁרֵץ עַל הָאָרֶץ״.</div>
+    <div class="trans" data-when="he">רב הונא: לא יסנן אדם שיכר דרך קש (צביתא) בלילה — שמא שרץ פירש מן השיכר ועלה למעלה מן הקש ושוב נפל לכוס. כיוון שסינן, יחשוב שכל מה שבכוס בא משם ומותר, וישתה את השרץ — ונמצא עובר על ״שרץ השורץ על הארץ״.</div>
+    <div class="trans" data-when="en">§ Rav Huna says: A person should not pour beer into a vessel through straw to filter it at night, lest a creeping animal emerge from the beer above the straw and then fall into the cup. Since the drinker poured the beer through a filter, he will assume that all creatures found in the vessel originated there and are permitted despite lacking fins and scales. He will therefore drink the beer along with the creature, and in doing so, he violates the prohibition: “Every swarming thing that swarms upon the earth is a detestable thing; it shall not be eaten” (Leviticus 11:41).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ז א — Chullin 67a:12</span></div>
+    <div class="orig">אִי הָכִי, בְּמָנָא נָמֵי, דִּלְמָא פָּרֵישׁ לְדַפְנָא דְּמָנָא וַהֲדַר נָפֵיל לְמָנָא? הָתָם הַיְינוּ רְבִיתֵיהּ.</div>
+    <div class="trans" data-when="he">קושיא: אם חוששים שפירש ונפל, יש לחשוש כן בכל כלי — שמא שרץ פירש מן המשקה לדופן הכלי (ונאסר) וחזר ונפל פנימה? תירוץ: שם זהו ״רביתיה״ — דרך גידולו של השרץ לדבוק בדופן הכלי, ואין זה נחשב שפירש מן המשקה.</div>
+    <div class="trans" data-when="en">The Gemara objects: If so, that one must be concerned that a creeping animal may have fallen from the straw into the cup, one should also be concerned about any beer found in a vessel, as perhaps some creature emerged from the beer onto the side of the vessel, thereby becoming forbidden, and then fell back into the vessel. The Gemara responds: There, that is the creature’s normal manner of growth, to attach itself to the sides of the vessel, and it is not considered to have emerged from the liquid.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ז א — Chullin 67a:13</span></div>
+    <div class="orig">וּמְנָא תֵּימְרַאּ, דְּתַנְיָא: מִנַּיִן לְרַבּוֹת בּוֹרוֹת שִׁיחִין וּמְעָרוֹת, שֶׁשּׁוֹחֶה וְשׁוֹתֶה מֵהֶן וְאֵינוֹ נִמְנָע? תַּלְמוּד לוֹמַר: ״תֹּאכְלוּ מִכֹּל אֲשֶׁר בַּמָּיִם״. וְלֵיחוּשׁ דִּלְמָא פָּרֵישׁ לְדַפְנָא וַהֲדַר נָפֵיל? אֶלָּא הַיְינוּ רְבִיתֵיהּ. הָכָא נָמֵי הַיְינוּ רְבִיתֵיהּ.</div>
+    <div class="trans" data-when="he">ראיה לכלל ״רביתיה״: ברייתא — מניין לרבות בורות שיחין ומערות, שאדם שוחה ושותה מהם ואינו נמנע מן השרצים שבהם? תלמוד לומר ״תאכלו מכל אשר במים״. ומקשה: וליחוש שמא פירש לדופן וחזר ונפל? אלא ודאי זהו ״רביתיה״ ואינו נאסר. הכא נמי — אף בשיכר שבכלי, זהו רביתיה.</div>
+    <div class="trans" data-when="en">And from where do you say that emerging in its normal manner of growth does not render it forbidden? As it is taught in a baraita: From where is it derived to include pits, ditches, and caves, that one may bend down and drink from them and need not refrain from drinking the creeping creatures inside them? The verse states: “These may you eat of all that are in the waters,” indicating that all fish in pits, ditches, and caves are permitted. And one might ask: Let one be concerned that perhaps a creature emerged from the water onto the side of the pit or cave, thereby becoming forbidden, and then fell back into it. Rather, one must say that since that is the creature’s normal manner of growth, it does not render it forbidden. Here too, with regard to beer in a vessel, that is the creature’s normal manner of growth and does not render it forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ז א — Chullin 67a:14</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב חִסְדָּא לְרַב הוּנָא: תַּנְיָא דִּמְסַיַּיע לָךְ, ״כׇּל הַשֶּׁרֶץ הַשֹּׁרֵץ עַל הָאָרֶץ״ – לְרַבּוֹת יַבְחוּשִׁין שֶׁסִּינְּנָן; טַעְמָא דְּסִינְּנָן, הָא לָא סִינְּנָן – שְׁרֵי.</div>
+    <div class="trans" data-when="he">רב חסדא לרב הונא: יש ברייתא המסייעת לדבריך, שרק שיכר מסונן יש לחשוש לו: ״כל השרץ השורץ על הארץ״ — לרבות יבחושין (יתושים קטנים) שסיננם. מדייקים: דווקא שסיננם אסורים, הא לא סיננם — מותרים, ואין חוששים שמא פירשו לדופן.</div>
+    <div class="trans" data-when="en">Rav Ḥisda said to Rav Huna: A baraita is taught that supports your statement that one need be concerned only about filtered beer: The verse: “Every swarming thing that swarms upon the earth is a detestable thing” (Leviticus 11:41), serves to include gnats found in liquid that one filtered. One may infer: The reason they are prohibited is because one filtered the liquids, but if one did not filter them, the gnats are permitted. Evidently, one need not be concerned that they emerged from the water onto the side of the vessel.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">קישות שהתליעה באיביה</span><span data-when="en">A worm-infested cucumber on the ground</span>
+      <span class="ref">Chullin 67a:15–67b:5</span></h2>
+  <div class="lead"><span data-when="he">שמואל: קישות שהתליעה בעודה מחוברת — אסורה. ניסיון לסייע משתי ברייתות (״על הארץ״); דחייה והכרעה: ההבחנה בין פרי לאילן עצמו.</span><span data-when="en">Shmuel: a cucumber infested while attached is forbidden. An attempt to support him from two baraitot is rejected; the distinction is fruit vs. the tree itself.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שמואל: קישות שהתליעה באיביה (מחוברת) — אסורה משום שרץ"]:::statement
+  P1["②③ סיוע: ברייתא א — ׳על הארץ׳ מוציא תולעי עדשים, תמרים, גרוגרות · ברייתא ב — ׳כל השרץ׳ מרבה תולעי עיקרי זיתים וגפנים"]:::proof
+  Q1{"③ מאי לאו — שתיהן בפרי, הא באיביה והא שלא באיביה?"}:::question
+  A1["④ לא: שתיהן באיביה — הא בפרי, הא באילן עצמו"]:::answer
+  C1["⑤ דייקא נמי: ׳עיקרי זיתים וגפנים׳ — באילן. שמע מינה"]:::conclusion
+  S1 -->|לימא מסייע| P1
+  P1 -->|מאי לאו| Q1
+  Q1 -.->|לא| A1
+  A1 -->|דיוק ומסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Shmuel: a cucumber infested while attached to the ground is forbidden"]:::statement
+  P1["②③ Support: baraita 1 — ׳on the earth׳ excludes worms in lentils, dates, figs · baraita 2 — ׳every swarming thing׳ includes worms in roots of olives and vines"]:::proof
+  Q1{"④ Is it not — both in fruit; one attached, one not attached?"}:::question
+  A1["④ No: both attached — one in the fruit, one in the tree itself"]:::answer
+  C1["⑤ Precise too: ׳roots of olives and vines׳ — the tree. Learn from it"]:::conclusion
+  S1 -->|let us support| P1
+  P1 -->|is it not| Q1
+  Q1 -.->|no| A1
+  A1 -->|inference, conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר שְׁמוּאֵל: קִישּׁוּת שֶׁהִתְלִיעָה בְּאִבֶּיהָ אֲסוּרָה מִשּׁוּם ׳הַשֶּׁרֶץ הַשֹּׁרֵץ עַל הָאָרֶץ׳"]:::statement
+  P1["②③ דְּתָנֵי חֲדָא: ׳עַל הָאָרֶץ׳ – לְהוֹצִיא … זִיזִין … תּוֹלַעַת שֶׁבַּתְּמָרִים וְשֶׁבַּגְּרוֹגְרוֹת · וְתַנְיָא אִידַּךְ … לְרַבּוֹת תּוֹלַעַת שֶׁבְּעִיקָּרֵי זֵיתִים וְשֶׁבְּעִיקָּרֵי גְפָנִים"]:::proof
+  Q1{"③ מַאי לָאו, אִידֵּי וְאִידֵּי בְּפֵירָא, וְהָא בְּאִבֵּיהּ, וְהָא שֶׁלָּא בְּאִבֵּיהּ?"}:::question
+  A1["④ לָא, אִידִי וְאִידִי בְּאִבֵּיהּ … הָא בְּפֵירָא, הָא בְּאִילָנָא גּוּפֵא"]:::answer
+  C1["⑤ דַּיְקָא נָמֵי, דְּקָתָנֵי ׳תּוֹלַעַת שֶׁבְּעִיקָּרֵי זֵיתִים וְשֶׁבְּעִיקָּרֵי גְפָנִים׳, שְׁמַע מִינַּהּ"]:::conclusion
+  S1 -->|לימא מסייע| P1
+  P1 -->|מאי לאו| Q1
+  Q1 -.->|לא| A1
+  A1 -->|דיוק ומסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז א — Chullin 67a:15</span></div>
+    <div class="orig">אָמַר שְׁמוּאֵל: קִישּׁוּת שֶׁהִתְלִיעָה</div>
+    <div class="trans" data-when="he">שמואל פותח דין חדש בשרצים: קישות (מין מלפפון) שהתליעה — נמשך בסעיף הבא.</div>
+    <div class="trans" data-when="en">§ With regard to the prohibition against consuming creeping animals, Shmuel says: A cucumber that became infested with worms</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז ב — Chullin 67b:1</span></div>
+    <div class="orig">בְּאִבֶּיהָ אֲסוּרָה מִשּׁוּם ״הַשֶּׁרֶץ הַשֹּׁרֵץ עַל הָאָרֶץ״.</div>
+    <div class="trans" data-when="he">(המשך דברי שמואל:) בעודה מחוברת לקרקע — אסורה משום ״השרץ השורץ על הארץ״, שכן בשעה שהתליעה נחשבת הקישות כחלק מן הארץ, והתולעת ׳שורצת על הארץ׳.</div>
+    <div class="trans" data-when="en">while attached to the ground is prohibited, due to the prohibition of: “Every swarming thing that swarms upon the earth,” because the cucumber was considered part of the earth when the worms infested it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ז ב — Chullin 67b:2</span></div>
+    <div class="orig">לֵימָא מְסַיַּיע לֵיהּ, דְּתָנֵי חֲדָא: ״עַל הָאָרֶץ״ – לְהוֹצִיא אֶת הַזִּיזִין שֶׁבָּעֲדָשִׁים, וְאֶת הַיַּתּוּשִׁים שֶׁבַּכַּלִּיסִים, וְתוֹלַעַת שֶׁבַּתְּמָרִים וְשֶׁבַּגְּרוֹגְרוֹת. וְתַנְיָא אִידַּךְ: ״כׇּל הַשֶּׁרֶץ הַשֹּׁרֵץ עַל הָאָרֶץ״ – לְרַבּוֹת תּוֹלַעַת שֶׁבְּעִיקָּרֵי זֵיתִים וְשֶׁבְּעִיקָּרֵי גְפָנִים.</div>
+    <div class="trans" data-when="he">נסיון לסייע לשמואל משתי ברייתות: ברייתא אחת — ״על הארץ״ ממעט (מתיר) זיזין שבעדשים, יתושים שבכליסים (מין קטנית), ותולעים שבתמרים ובגרוגרות (תאנים יבשות). ברייתא שנייה — ״כל השרץ השורץ על הארץ״ מרבה (אוסר) תולעים שבעיקרי זיתים ובעיקרי גפנים.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Let us say that a comparison of the following two baraitot supports Shmuel’s opinion. As it is taught in one baraita: “Every swarming thing that swarms upon the earth” serves to exclude zizin, a type of insect that is found in lentils, and mosquitoes that are in kelisim, a type of bean, and worms that are in dates and in dried figs. All of these are permitted for consumption because they do not swarm on the earth itself. And it is taught in another baraita that when the verse states: “Every swarming thing that swarms upon the earth,” the word “every” serves to include as non-kosher worms that are in the roots of olive trees and that are in the roots of vines.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ז ב — Chullin 67b:3</span></div>
+    <div class="orig">מַאי לָאו, אִידֵּי וְאִידֵּי בְּפֵירָא, וְהָא בְּאִבֵּיהּ, וְהָא שֶׁלָּא בְּאִבֵּיהּ?</div>
+    <div class="trans" data-when="he">הנחת המסייע: וכי לא נאמר ששתי הברייתות עוסקות בתולעים שבפרי, וההבדל ביניהן הוא: זו (האוסרת) בפרי המחובר לקרקע, וזו (המתירה) בפרי שאינו מחובר? אם כן זה מסייע לשמואל, שקישות מחוברת אסורה.</div>
+    <div class="trans" data-when="en">What, is it not that both this and that baraita are referring to insects that are found in the fruit, and this, the latter baraita, deems forbidden fruit that is attached to the ground, and that, the former baraita, deems permitted fruit that is not attached to the ground? This would support Shmuel’s statement that worms in a cucumber attached to the ground are forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ז ב — Chullin 67b:4</span></div>
+    <div class="orig">לָא, אִידִי וְאִידִי בְּאִבֵּיהּ, וְלָא קַשְׁיָא: הָא בְּפֵירָא, הָא בְּאִילָנָא גּוּפֵאּ.</div>
+    <div class="trans" data-when="he">דחייה: לא — אפשר ששתי הברייתות עוסקות במחובר לקרקע, ואין סתירה: זו (המתירה) בתולעים שבפרי עצמו, וזו (האוסרת) בתולעים שבאילן עצמו (העץ ולא הפרי). לפי זה אין סיוע לשמואל, שהרי גם פרי מחובר מותר.</div>
+    <div class="trans" data-when="en">The Gemara responds: No, it is possible that both this and that baraita are referring to insects found in vegetation attached to the ground; and the apparent contradiction between the two is not difficult. This, the former baraita, deems permitted insects found in the fruit, and that, the latter baraita, deems forbidden insects found in the tree itself. This interpretation contradicts Shmuel’s statement.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ז ב — Chullin 67b:5</span></div>
+    <div class="orig">דַּיְקָא נָמֵי, דְּקָתָנֵי ״תּוֹלַעַת שֶׁבְּעִיקָּרֵי זֵיתִים וְשֶׁבְּעִיקָּרֵי גְפָנִים״, שְׁמַע מִינַּהּ.</div>
+    <div class="trans" data-when="he">דיוק ומסקנה: אף לשון הברייתא מדויקת כדחייה — ששנתה ״תולעת שבעיקרי זיתים ובעיקרי גפנים״, היינו בעץ עצמו ולא בפרי. שמע מינה שההבחנה היא פרי מול אילן — ולא כשמואל.</div>
+    <div class="trans" data-when="en">The Gemara notes: The language of the latter baraita is also precise, as it teaches: Worms that are in the roots of olive trees and in the roots of vines, clearly referring to the tree itself rather than the fruit. The Gemara concludes: Learn from it that the second interpretation is correct.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">ספקות פרשה ומתה — תיקו</span><span data-when="en">Emerged-and-died dilemmas — left unresolved</span>
+      <span class="ref">Chullin 67b:6–7</span></h2>
+  <div class="lead"><span data-when="he">רב יוסף ורב אשי מעלים ספקות בתולעת שיצאה מן הפרי: פרשה ומתה, מקצתה, לאויר העולם, לגג התמרה — וכולם נשארים בתיקו.</span><span data-when="en">Rav Yosef and Rav Ashi raise dilemmas about a worm that left the produce — emerged and died, partly, into the air, onto the date’s roof — all left unresolved.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בעי רב יוסף: פרשה ומתה? מקצתה? לאויר העולם?"}:::question
+  Q2{"② בעי רב אשי: לגג תמרה? לגג גרעינתה? מתמרה לתמרה?"}:::question
+  C1["①② תיקו"]:::conclusion
+  Q1 -->|תיקו| C1
+  Q2 -->|תיקו| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Rav Yosef asks: emerged and died? partly? into the world׳s air?"}:::question
+  Q2{"② Rav Ashi asks: onto the date׳s roof? its pit׳s roof? date to date?"}:::question
+  C1["①② Teiku — unresolved"]:::conclusion
+  Q1 -->|teiku| C1
+  Q2 -->|teiku| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בָּעֵי רַב יוֹסֵף: פְּרָשָׁהּ וּמֵתָה, מַהוּ? מִקְצָתָהּ, מַהוּ? לַאֲוִיר הָעוֹלָם, מַהוּ?"}:::question
+  Q2{"② בָּעֵי רַב אָשֵׁי: לְגַג תְּמָרָה מַהוּ? לְגַג גַּרְעִינָתָהּ מַהוּ? מִתְּמָרָה לִתְמָרָה מַהוּ?"}:::question
+  C1["①② תֵּיקוּ"]:::conclusion
+  Q1 -->|תיקו| C1
+  Q2 -->|תיקו| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז ב — Chullin 67b:6</span></div>
+    <div class="orig">בָּעֵי רַב יוֹסֵף: פְּרָשָׁהּ וּמֵתָה, מַהוּ? מִקְצָתָהּ, מַהוּ? לַאֲוִיר הָעוֹלָם, מַהוּ? תֵּיקוּ.</div>
+    <div class="trans" data-when="he">תולעת שגדלה בפרי תלוש מותרת כל עוד לא פרשה ל׳ארץ׳. רב יוסף מסתפק: פרשה מן הפרי ומתה קודם שהגיעה לארץ — מהו (האם עצם הפרישה אוסרת)? פרשה רק מקצתה — מהו? פרשה לאויר העולם ולא נחה — מהו? בכל אלה: תיקו.</div>
+    <div class="trans" data-when="en">§ From the above discussion, it is clear that worms that grow in produce not attached to the ground, and have never emerged from the produce, do not fall under the prohibition of: “Every swarming thing that swarms upon the earth,” because they have never swarmed on the earth. Rav Yosef raises a dilemma: If a worm emerged from the produce but died before it reached the earth, what is the halakha? Is it considered to have swarmed on the earth simply by having emerged? If only part of it emerged, what is the halakha? If it emerged into the air of the world and flew away without landing, what is the halakha? The Gemara responds to all of the above: The dilemma shall stand unresolved.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ז ב — Chullin 67b:7</span></div>
+    <div class="orig">בָּעֵי רַב אָשֵׁי: לְגַג תְּמָרָה מַהוּ? לְגַג גַּרְעִינָתָהּ מַהוּ? מִתְּמָרָה לִתְמָרָה מַהוּ? תֵּיקוּ.</div>
+    <div class="trans" data-when="he">רב אשי מסתפק בתולעת שבתמר: עלתה לגג התמרה (חלקה העליון) — האם זהו רביתיה או יציאה ל׳ארץ׳? עלתה לגג הגרעין שבתוכה — מהו? יצאה מתמר אחד ונכנסה לתמר סמוך לו בלא להיחשף לאויר — מהו? בכל אלה: תיקו.</div>
+    <div class="trans" data-when="en">Rav Ashi raises a dilemma: If a worm was spawned in a date, and it emerges and climbs onto the roof of the date, i.e., its upper part, what is the halakha? Is this considered the normal manner of growth for the worm, in which case this does not render it forbidden, or is the roof of the date considered a separate entity such that crawling there constitutes swarming on the earth? And if it is considered a separate entity, what is the halakha if the worm climbed onto the roof of the date’s pit? Is this considered the normal manner of growth for the worm? If the worm emerged from a date and entered a date that was attached to it, without being exposed to the air, what then is the halakha? The Gemara responds to all of the above: The dilemma shall stand unresolved.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">קוקיאני — בשר אסור, דגים מותר</span><span data-when="en">Kukeyanei — worms in meat vs. in fish</span>
+      <span class="ref">Chullin 67b:8–13</span></h2>
+  <div class="lead"><span data-when="he">תולעי איברים פנימיים (קוקיאני): מחלוקת אם מבחוץ באו (אסורים) או מבפנים נוצרו (מותרים); הלכה — אסורים. ולסיום: תולעי בשר אסורות, ושל דגים מותרות, כי דג ניתר באסיפה.</span><span data-when="en">Worms in internal organs (kukeyanei): do they come from outside (forbidden) or form within (permitted)? Halakha: forbidden. And: worms in meat are forbidden, in fish permitted, since fish are permitted by mere gathering.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב ששת: קוקיאני אסירי — מעלמא אתו"]:::statement
+  Q1{"② מתקיף רב אשי: אי מעלמא אתו, לישתכחו דרך בית הריעי!"}:::question
+  S2["③ איכא דאמרי — רב שישא: קוקיאני שרו, מיניה גבלי; רב אשי: פשיטא"]:::statement
+  C1["④ והלכתא: קוקיאני אסירי — נכנסים באוסיה; דרני בשר אסירי, דכוורי שריין"]:::conclusion
+  Q2{"⑤ רבינא: אבלע לי ואיכול · רב משרשיא: מאי שנא מ׳נבלתם תשקצו׳ לרבות דרנים שבבהמה?"}:::question
+  A1["⑥ בהמה בשחיטה מישתרא, ותולעיה באיסור; דגים באסיפה — בהיתרא גבלן"]:::answer
+  S1 -.->|מתקיף| Q1
+  Q1 -->|איכא דאמרי| S2
+  S2 -->|מסקנה| C1
+  C1 -->|קושיא| Q2
+  Q2 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Sheshet: kukeyanei are forbidden — they come from outside"]:::statement
+  Q1{"② Rav Ashi objects: if from outside, they׳d be found in the digestive tract!"}:::question
+  S2["③ Some say — Rav Sheisha: kukeyanei permitted, they form within; Rav Ashi: obvious"]:::statement
+  C1["④ Halakha: kukeyanei forbidden — they enter through the snout; worms in meat forbidden, in fish permitted"]:::conclusion
+  Q2{"⑤ Ravina: hide them and I׳ll eat · Rav Mesharshiyya: how differ from ׳carcasses׳ including worms in animals?"}:::question
+  A1["⑥ An animal is permitted by slaughter, its worms forbidden; fish by gathering — formed in a permitted state"]:::answer
+  S1 -.->|objects| Q1
+  Q1 -->|some say| S2
+  S2 -->|conclusion| C1
+  C1 -->|objection| Q2
+  Q2 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב שֵׁשֶׁת בְּרֵיהּ דְּרַב אִידִי: קוּקְיָאנֵי אֲסִירִי, מַאי טַעְמָא? מֵעָלְמָא אָתוּ"]:::statement
+  Q1{"② מַתְקֵיף לַהּ רַב אָשֵׁי: אִי מֵעָלְמָא אָתוּ, לִישְׁתַּכְחוּ דֶּרֶךְ בֵּית הָרֶיעִי"}:::question
+  S2["③ אִיכָּא דְּאָמְרִי … רַב שִׁישָׁא … קוּקְיָאנֵי שְׁרוּ … מִינֵּיהּ גָּבְלִי. אָמַר רַב אָשֵׁי: פְּשִׁיטָא …"]:::statement
+  C1["④ וְהִלְכְתָא: קוּקְיָאנֵי אֲסִירִי … עָיְילִי לֵיהּ בְּאוּסְיֵיהּ תּוֹלָעִים. דַּרְנֵי דְּבִשְׂרָא – אֲסִירִי, דְּכַוְורֵי – שַׁרְיָין"]:::conclusion
+  Q2{"⑤ רָבִינָא … אַבְלַע לִי וַאֲנָא אֵיכוֹל · רַב מְשַׁרְשְׁיָא … מַאי שְׁנָא … ׳וְאֶת נִבְלָתָם תְּשַׁקֵּצוּ׳ לְרַבּוֹת אֶת הַדְּרָנִים שֶׁבַּבְּהֵמָה?"}:::question
+  A1["⑥ בְּהֵמָה בִּשְׁחִיטָה … מִישְׁתַּרְיָא … בְּאִיסּוּרַיְיהוּ קָיְימָן, אֲבָל דָּגִים בַּאֲסִיפָה … בְּהֶיתֵּרָא קָא גָבְלָן"]:::answer
+  S1 -.->|מתקיף| Q1
+  Q1 -->|איכא דאמרי| S2
+  S2 -->|מסקנה| C1
+  C1 -->|קושיא| Q2
+  Q2 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז ב — Chullin 67b:8</span></div>
+    <div class="orig">אָמַר רַב שֵׁשֶׁת בְּרֵיהּ דְּרַב אִידִי: קוּקְיָאנֵי אֲסִירִי, מַאי טַעְמָא? מֵעָלְמָא אָתוּ.</div>
+    <div class="trans" data-when="he">רב ששת בריה דרב אידי: קוקיאני (תולעים הנמצאות באיברים פנימיים, כריאה וכבד) אסורים. מה הטעם? מן החוץ באו — שהבהמה בלעתם עם מאכלה, ונמצא שכבר היו בכלל איסור ״שרץ השורץ על הארץ״.</div>
+    <div class="trans" data-when="en">§ Rav Sheshet, son of Rav Idi, says: Kukeyanei, worms found in the internal organs of animals, e.g., in the lung and liver, are forbidden. What is the reason for this? It is that they came from the outside world, i.e., the animal must have swallowed them along with vegetation, in which case these worms were already included in the prohibition: “Every swarming thing that swarms on the earth is a detestable thing; it shall not be eaten.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ז ב — Chullin 67b:9</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב אָשֵׁי: אִי מֵעָלְמָא אָתוּ, לִישְׁתַּכְחוּ דֶּרֶךְ בֵּית הָרֶיעִי.</div>
+    <div class="trans" data-when="he">מקשה רב אשי: אם מן החוץ באו (דרך מאכלה), היו צריכים להימצא גם בדרך מערכת העיכול (בית הרעי). מאחר שנמצאים רק באיברים שאינם בדרך העיכול, ודאי נוצרו בתוך הבהמה ואינם שרץ.</div>
+    <div class="trans" data-when="en">Rav Ashi objects to this: If they came from the outside world, they should be found in the digestive tract as well. Since they are found only in non-digestive organs, they must have originated in the animal and should not be considered creeping animals that swarm on the earth.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ז ב — Chullin 67b:10</span></div>
+    <div class="orig">אִיכָּא דְּאָמְרִי, אָמַר רַב שִׁישָׁא בְּרֵיהּ דְּרַב אִידִי: קוּקְיָאנֵי שְׁרוּ. מַאי טַעְמָא? מִינֵּיהּ גָּבְלִי. אָמַר רַב אָשֵׁי: פְּשִׁיטָא, דְּאִי מֵעָלְמָא קָא אָתוּ – לִישְׁתַּכְחוּ דֶּרֶךְ בֵּית הָרֶיעִי!</div>
+    <div class="trans" data-when="he">לישנא אחרינא: רב שישא בריה דרב אידי אמר להיפך — קוקיאני מותרים, משום שמגוף הבהמה עצמה נוצרו (״מיניה גבלי״). רב אשי: פשיטא! שהרי אילו מן החוץ באו, היו נמצאים בדרך בית הרעי.</div>
+    <div class="trans" data-when="en">Some state the exchange differently: Rav Sheisha, son of Rav Idi, says: Kukeyanei are permitted. What is the reason for this? It is that they originate from inside the animal. Rav Ashi said: This is obvious, as if they came from the outside world, they should be found in the digestive tract.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ז ב — Chullin 67b:11</span></div>
+    <div class="orig">וְהִלְכְתָא: קוּקְיָאנֵי אֲסִירִי, מַאי טַעְמָא? מֵינָם נָיֵים וְעָיְילִי לֵיהּ בְּאוּסְיֵיהּ תּוֹלָעִים. דַּרְנֵי דְּבִשְׂרָא – אֲסִירִי, דְּכַוְורֵי – שַׁרְיָין.</div>
+    <div class="trans" data-when="he">מסקנת ההלכה: קוקיאני אסורים. מה הטעם? הבהמה ישנה ותולעים נכנסות לתוכה דרך נחיריה (אוסיה), ומשם לאיברים הפנימיים בלא לעבור בדרך העיכול — ולכן ׳מעלמא אתו׳. דרני (תולעים) שבבשר — אסורים, ואלו שבדגים — מותרים.</div>
+    <div class="trans" data-when="en">The Gemara concludes: And the halakha is: Kukeyanei are forbidden. What is the reason for this? It is that the animal sleeps, and worms enter it through its snout. From there they travel to the internal organs without passing through the digestive tract. Worms found in meat between the skin and the flesh are forbidden; those found in fish are permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ז ב — Chullin 67b:12</span></div>
+    <div class="orig">אֲמַר לַהּ רָבִינָא לְאִימֵּיהּ: אַבְלַע לִי וַאֲנָא אֵיכוֹל, אֲמַר לֵיהּ רַב מְשַׁרְשְׁיָא בְּרֵיהּ דְּרַב אַחָא לְרָבִינָא: מַאי שְׁנָא מֵהָא דְּתַנְיָא ״וְאֶת נִבְלָתָם תְּשַׁקֵּצוּ״ לְרַבּוֹת אֶת הַדְּרָנִים שֶׁבַּבְּהֵמָה?</div>
+    <div class="trans" data-when="he">רבינא ביקש מאמו: הסתירי לי את תולעי הדג בתוכו כדי שלא אראה אותן, ואוכל את הדג. הקשה לו רב משרשיא בריה דרב אחא: מה שונה היתר תולעי הדג מן הברייתא ״ואת נבלתם תשקצו״ — שבאה לרבות את הדרנים (תולעים) שבבהמה לאיסור?</div>
+    <div class="trans" data-when="en">The Gemara recounts: Ravina said to his mother: Conceal the fish’s worms inside it so I cannot see them, and I will eat the fish. Rav Mesharshiyya, son of Rav Aḥa, said to Ravina: What is different in this case from that which is taught in a baraita, that the verse: “Their carcasses you shall have in detestation” (Leviticus 11:11), serves to include worms that are in animals as forbidden? Why are worms in fish permitted?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ז ב — Chullin 67b:13</span></div>
+    <div class="orig">אֲמַר לֵיהּ: הָכִי הַשְׁתָּא? בְּהֵמָה בִּשְׁחִיטָה הוּא דְּמִשְׁתַּרְיָא, וְהָנֵי מִדְּלָא קָא מַהְנְיָא לְהוּ שְׁחִיטָה – בְּאִיסּוּרַיְיהוּ קָיְימָן, אֲבָל דָּגִים בַּאֲסִיפָה בְּעָלְמָא מִישְׁתְּרוּ, וְהָנֵי כִּי קָא גָבְלָן – בְּהֶיתֵּרָא קָא גָבְלָן.</div>
+    <div class="trans" data-when="he">תירוץ רבינא: אין להשוות — בהמה ניתרת באכילה רק על ידי שחיטה, וכל עוד לא נשחטה היא ותכולתה אסורות כאבר מן החי; וכיוון שאין השחיטה מועילה לתולעים שבה, נשארות באיסורן. אבל דגים ניתרים באסיפה בעלמא (בלא שחיטה), ולכן התולעים שנוצרו בתוכם — בהיתר נוצרו.</div>
+    <div class="trans" data-when="en">Ravina said to him: How can these cases be compared? An animal is rendered permitted for consumption only by slaughter. Before it is slaughtered, it and all its contents are considered part of a living animal and prohibited by the Torah. And since the animal’s slaughter is not effective for these worms, they retain their forbidden status. But fish are rendered permitted by merely gathering them; they are not included in the prohibition against eating a limb from a living animal. And therefore, when these worms originate inside the fish, they originate in a permitted state.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">דרשת ״הולך על גחון״, ולויתן דג טהור</span><span data-when="en">“Goes upon the belly,” and the kosher leviathan</span>
+      <span class="ref">Chullin 67b:14–15</span></h2>
+  <div class="lead"><span data-when="he">ברייתא דורשת את פסוק השרצים — ״הולך על גחון״ נחש, ״על ארבע״ עקרב, ״מרבה רגלים״ נדל, וריבויים לדומים. וברייתא: לויתן דג טהור — יש לו קשקשים וסנפירים.</span><span data-when="en">A baraita expounds the verse on creatures — “belly” the snake, “fours” the scorpion, “many feet” the centipede, with inclusions for look-alikes. And: the leviathan is a kosher fish — it has scales and fins.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① ת״ר: ׳הולך על גחון׳ נחש · ׳על ארבע׳ עקרב · ׳מרבה רגלים׳ נדל — וריבויים לדומה ולדומה לדומה"]:::statement
+  S2["② ר׳ יוסי בן דורמסקית: לויתן דג טהור — ׳אפיקי מגינים׳ קשקשיו, ׳חדודי חרש׳ סנפיריו"]:::statement
+  S1 --> S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Sages: ׳on the belly׳ the snake · ׳on fours׳ the scorpion · ׳many feet׳ the centipede — and inclusions for look-alikes"]:::statement
+  S2["② R. Yosei ben Durmaskit: leviathan is a kosher fish — ׳armor׳ its scales, ׳potsherds׳ its fins"]:::statement
+  S1 --> S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: ׳הוֹלֵךְ עַל גָּחוֹן׳ – זֶה נָחָשׁ … ׳עַל אַרְבַּע׳ – זֶה עַקְרָב … ׳מַרְבֵּה רַגְלַיִם׳ – זֶה נָדָל … לְרַבּוֹת אֶת הַדּוֹמֶה וְאֶת הַדּוֹמֶה לַדּוֹמֶה"]:::statement
+  S2["② רַבִּי יוֹסֵי בֶּן דּוֹרְמַסְקִית אוֹמֵר: לִוְיָתָן דָּג טָהוֹר הוּא … ׳אֲפִיקֵי מָגִנִּים׳ – אֵלּוּ קַשְׂקַשִּׂים שֶׁבּוֹ, ׳תַּחְתָּיו חַדּוּדֵי חֶרֶשׂ׳ – אֵלּוּ סְנַפִּירִין"]:::statement
+  S1 --> S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז ב — Chullin 67b:14</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״הוֹלֵךְ עַל גָּחוֹן״ – זֶה נָחָשׁ, ״כֹּל״ – לְרַבּוֹת הַשִּׁילְשׁוּל וְאֶת הַדּוֹמֶה לְשִׁילְשׁוּל, ״עַל אַרְבַּע״ – זֶה עַקְרָב, ״כֹּל הוֹלֵךְ״ – לְרַבּוֹת אֶת הַחִיפּוּשִׁית וְאֶת הַדּוֹמֶה לְחִיפּוּשִׁית, ״מַרְבֵּה רַגְלַיִם״ – זֶה נָדָל, ״עַד כׇּל״ – לְרַבּוֹת אֶת הַדּוֹמֶה וְאֶת הַדּוֹמֶה לַדּוֹמֶה.</div>
+    <div class="trans" data-when="he">ברייתא הדורשת את פסוק השרצים (ויקרא יא, מב): ״הולך על גחון״ — זה הנחש; ״כל״ — לרבות השילשול (תולעת ארץ) ואת הדומה לו; ״על ארבע״ — זה העקרב; ״כל הולך״ — לרבות החיפושית והדומה לה; ״מרבה רגלים״ — זה הנדל (מרבה־רגליים); ״עד כל״ — לרבות את הדומה ואת הדומה לדומה.</div>
+    <div class="trans" data-when="en">§ The verse states: “Whatever goes upon the belly, and whatever goes upon all fours, or whatever has many feet, even all swarming things that swarm upon the earth, them you shall not eat” (Leviticus 11:42). The Sages taught in a baraita that the phrase “goes upon the belly” is referring to the snake. The preceding word “whatever” serves to include the earthworm and animals similar to an earthworm. The phrase “upon all fours” is referring to the scorpion. The preceding phrase “whatever goes” serves to include the beetle and animals similar to a beetle. The phrase “has many feet” is referring to the centipede. The preceding phrase “or whatever” serves to include animals similar to a centipede and animals similar to those similar to it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ז ב — Chullin 67b:15</span></div>
+    <div class="orig">תַּנְיָא, רַבִּי יוֹסֵי בֶּן דּוֹרְמַסְקִית אוֹמֵר: לִוְיָתָן דָּג טָהוֹר הוּא, שֶׁנֶּאֱמַר: ״גַּאֲוָה אֲפִיקֵי מָגִנִּים״, ״תַּחְתָּיו חַדּוּדֵי חֶרֶשׂ״; ״אֲפִיקֵי מָגִנִּים״ – אֵלּוּ קַשְׂקַשִּׂים שֶׁבּוֹ, ״תַּחְתָּיו חַדּוּדֵי חֶרֶשׂ״ – אֵלּוּ סְנַפִּירִין שֶׁפּוֹרֵחַ בָּהֶן.</div>
+    <div class="trans" data-when="he">ברייתא: ר׳ יוסי בן דורמסקית אומר — הלויתן הוא דג טהור, שכן יש לו סנפיר וקשקשת. ראיה מן הכתוב באיוב: ״גאוה אפיקי מגינים״, ״תחתיו חדודי חרש״ — ״אפיקי מגינים״ אלו הקשקשים שעליו (המגינים עליו כשריון), ״חדודי חרש״ אלו הסנפירים החדים שבהם הוא שט.</div>
+    <div class="trans" data-when="en">It is taught in a baraita: Rabbi Yosei ben Durmaskit says: The leviathan mentioned in the Bible is a kosher fish, as it is stated: “His armor is his pride” (Job 41:7), and: “Sharpest potsherds are under him” (Job 41:22). The phrase “his armor” is referring to his scales, which protect him like armor. The phrase “sharpest potsherds are under him” is referring to fins with which he swims, which are sharp and project from his underside.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-8">
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">הדרן — פתיחת בהמה המקשה</span><span data-when="en">Hadran — opening of the next chapter</span>
+      <span class="ref">Chullin 67b:16</span></h2>
+  <div class="lead"><span data-when="he">סיום פרק ״אלו טריפות״ ופתיחת המשנה הבאה: שחיטת האם מתירה את העובר; הוציא העובר ידו וחזר — מותר, אך הוציא ראשו — כילוד וטעון שחיטה.</span><span data-when="en">The chapter “these are tereifot” concludes; the next Mishna opens: the mother’s slaughter permits the fetus — a withdrawn foreleg is permitted, but an extended head makes it like a newborn.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① הדרן עלך אלו טריפות — שחיטת האם מתירה העובר; הוציא ראשו, כילוד"]):::mishnah
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Hadran on ׳these are tereifot׳ — the mother׳s slaughter permits the fetus; an extended head is like a newborn"]):::mishnah
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① הֲדַרַן עֲלָךְ אֵלּוּ טְרֵפוֹת"]):::mishnah
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ז ב — Chullin 67b:16</span></div>
+    <div class="orig">הֲדַרַן עֲלָךְ אֵלּוּ טְרֵפוֹת.</div>
+    <div class="trans" data-when="he">חתימת הפרק (״הדרן עלך אלו טריפות״) ופתיחת המשנה הבאה (פרק ״בהמה המקשה״): שחיטת האם מתירה גם את עוברה. אף אם הקשתה האם בלידה והוציא העובר את ידו והחזירה ואחר נשחטה האם — מותר העובר בשחיטת אמו. אך אם הוציא ראשו — אף שהחזירו — הרי הוא כילוד, ושחיטת האם אינה מתירתו, אלא טעון שחיטה לעצמו.</div>
+    <div class="trans" data-when="en">(הדרן — chapter division; no Davidson translation)</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
