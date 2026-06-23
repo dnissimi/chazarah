@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ס״ב</title>
+<meta name="description" content="מפת הסוגיא של חולין ס״ב: הסנונית הלבנה הכשרה לטהרת מצורע ומחלוקת ר׳ אליעזר וחכמים, ואחריה סוגיה ארוכה בזיהוי עופות טהורים וטמאים — סימני קורקבן, שמונה ספקות, וסימנים לזכירה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="62">
+<meta name="gemara-map:sefaria-ref" content="Chullin 62">
+<meta name="gemara-map:topic-he" content="זיהוי עופות טהורים וטמאים">
+<meta name="gemara-map:topic-en" content="Identifying kosher and non-kosher birds">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ס״ב">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 62">
+<meta name="gemara-map:blurb-he" content="הסנונית הלבנה כשרה לטהרת מצורע, ונחלקו אם המחלוקת בלבנת־כרס או צהובת־כרס; ואז סדרה ארוכה של זיהויי עופות — סימני טהרה, שמונה ספקות, וסימני־זכירה לכשר ולאסור.">
+<meta name="gemara-map:blurb-en" content="The white senunit is kosher for a leper's purification; whether the dispute is over the white- or yellow-bellied kind is itself disputed. Then a long run of bird identifications — signs of kashrut, eight doubtful cases, and mnemonics for permitted vs forbidden.">
+<meta name="gemara-map:sugya-count" content="2">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ס״ב</span><span data-when="en">Sugya map — Chullin 62</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ס״ב א — ס״ג א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 62a–63a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> ״עוף המסרט״ הוא הסנונית הלבנה הכשרה לטהרת מצורע, ונחלקו אמימר ומר זוטרא אם מחלוקת ר׳ אליעזר וחכמים היא בסנונית לבנת־הכרס או צהובת־הכרס. משם עוברת הגמרא ל<b>זיהוי עופות</b>: אילו דומים ליונה או לתור, סימני קורקבן הנקלף, שמונה ספקות, שורת סימני־זכירה (מותר/אסור), ולבסוף דרשות על שמות העופות הטמאים שבתורה.</span>
+    <span data-when="en"><b>Bottom line:</b> The "scratching bird" is the white senunit, kosher for a leper's purification; Ameimar and Mar Zutra dispute whether Rabbi Eliezer and the Rabbis argue about the white-bellied or the yellow-bellied kind. The sugya then turns to <b>bird identification</b>: which resemble doves or pigeons, the peelable-gizzard sign, eight doubtful cases, a string of mnemonics (permitted/forbidden), and finally midrashic readings of the Torah's non-kosher bird names.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ס״ב</span><span data-when="en">Overview — Chullin 62</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · הסנונית הלבנה — טהרת מצורע"]:::statement
+  O2["2 · זיהוי עופות טהורים וטמאים"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · The white senunit — leper purification"]:::statement
+  O2["2 · Identifying kosher and non-kosher birds"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">הסנונית הלבנה — טהרת מצורע</span><span data-when="en">The white senunit — leper purification</span>
+      <span class="ref">Chullin 62a:5–8</span></h2>
+  <div class="lead"><span data-when="he">״עוף המסרט״ כשר לטהרת מצורע — וזו הסנונית הלבנה שנחלקו בה; ונחלקו אמימר ומר זוטרא במה בדיוק נחלקו ר׳ אליעזר וחכמים.</span><span data-when="en">The "scratching bird" is kosher for a leper's purification — the white senunit of the baraita; Ameimar and Mar Zutra dispute exactly what Rabbi Eliezer and the Rabbis argued about.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רב יהודה: עוף המסרט כשר לטהרת מצורע — היא הסנונית הלבנה"]:::statement
+  S2["② אמימר: לבנת־כרס מותרת לכל; מחלוקתם בצהובת־כרס — ר׳ אליעזר אוסר, הלכה כמותו"]:::statement
+  S3["③ מר זוטרא: צהובת־כרס אסורה לכל; מחלוקתם בלבנת־כרס — חכמים מתירים, הלכה כמותם"]:::statement
+  Q1{"④ קושיא: לדעת מי שנחלקו בצהובה — מהו ׳זו היא סנונית לבנה׳?"}:::question
+  A1["④ תירוץ: ׳לבנה׳ — להוציא סנונית הבית שהיא שחורה"]:::answer
+  S1 -->|פירוט המחלוקת| S2
+  S1 -->|לישנא אחרינא| S3
+  S3 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Rav Yehuda: the scratching bird is kosher for leper purification — it is the white senunit"]:::statement
+  S2["② Ameimar: white-bellied permitted to all; they dispute the yellow-bellied — R. Eliezer forbids, halakha like him"]:::statement
+  S3["③ Mar Zutra: yellow-bellied forbidden to all; they dispute the white-bellied — Rabbis permit, halakha like them"]:::statement
+  Q1{"④ Question: per the view they dispute the yellow — what is ׳this is the white senunit׳?"}:::question
+  A1["④ Answer: ׳white׳ — to exclude the house senunit, which is black"]:::answer
+  S1 -->|spelling out the dispute| S2
+  S1 -->|alternate version| S3
+  S3 -->|question| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① עוֹף הַמְסָרֵט – כָּשֵׁר לְטׇהֳרַת מְצוֹרָע, וְזוֹ הִיא סְנוּנִית לְבָנָה"]:::statement
+  S2["② בְּחִיוָּרָא כְּרֵסַהּ … לָא פְּלִיגִי דְּשַׁרְיָא, כִּי פְּלִיגִי בְּדִירוּקָּא … וְהִלְכְתָא כְּרַבִּי אֱלִיעֶזֶר"]:::statement
+  S3["③ בְּדִירוּקָּא כְּרֵסַהּ … לָא פְּלִיגִי דַּאֲסִיר. כִּי פְּלִיגִי בִּדְחִיוָּרָא … וְהִלְכְתָא כְּרַבָּנַן דְּשָׁרוּ"]:::statement
+  Q1{"④ לְמַאן דְּאָמַר בְּדִירוּקָּא פְּלִיגִי, מַאי ׳זוֹ הִיא סְנוּנִית לְבָנָה׳?"}:::question
+  A1["④ לְאַפּוֹקֵי דְּבָתֵּי דְּאוּכַּמְתִּי"]:::answer
+  S1 -->|פירוט המחלוקת| S2
+  S1 -->|לישנא אחרינא| S3
+  S3 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ב א — Chullin 62a:5</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: עוֹף הַמְסָרֵט – כָּשֵׁר לְטׇהֳרַת מְצוֹרָע, וְזוֹ הִיא סְנוּנִית לְבָנָה שֶׁנֶּחְלְקוּ בָּהּ רַבִּי אֱלִיעֶזֶר וַחֲכָמִים.</div>
+    <div class="trans" data-when="he">רב יהודה: ״עוף המסרט״ (המשרט בציפורניו) כשר לטהרת מצורע — שרק עוף טהור כשר לכך; והוא הסנונית הלבנה שנחלקו בה ר׳ אליעזר וחכמים בברייתא.</div>
+    <div class="trans" data-when="en">§ Rav Yehuda says: The bird known as the scratching bird is fit for use in the purification of a leper, i.e., it is kosher. Only kosher birds are fit for this rite, as the verse states: “Then shall the priest command to take for him that is to be purified two living pure birds” (Leviticus 14:4). And this is the white senunit about which Rabbi Eliezer and the Rabbis disagreed in the baraita.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ב א — Chullin 62a:6</span></div>
+    <div class="orig">אָמַר אַמֵּימָר: בְּחִיוָּרָא כְּרֵסַהּ – כּוּלֵּי עָלְמָא לָא פְּלִיגִי דְּשַׁרְיָא, כִּי פְּלִיגִי – בְּדִירוּקָּא כְּרֵסַהּ, רַבִּי אֱלִיעֶזֶר אָסַר וְרַבָּנַן שָׁרוּ, וְהִלְכְתָא כְּרַבִּי אֱלִיעֶזֶר.</div>
+    <div class="trans" data-when="he">אמימר: יש שני מיני סנונית לבנה. בלבנת־הכרס — הכל מודים שמותרת. מחלוקתם בצהובת־הכרס: ר׳ אליעזר אוסר וחכמים מתירים, והלכה כר׳ אליעזר (לאיסור).</div>
+    <div class="trans" data-when="en">Ameimar said: There are two kinds of white senunit. With regard to the senunit with a white belly, everyone agrees that it is permitted for consumption. They disagree when discussing the kind with a yellow belly. Rabbi Eliezer prohibits it, and the Rabbis permit it. And the halakha is in accordance with the opinion of Rabbi Eliezer.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ב א — Chullin 62a:7</span></div>
+    <div class="orig">מָר זוּטְרָא מַתְנֵי הָכִי: בְּדִירוּקָּא כְּרֵסַהּ, כּוּלֵּי עָלְמָא לָא פְּלִיגִי דַּאֲסִיר. כִּי פְּלִיגִי בִּדְחִיוָּרָא כְּרֵסַהּ, רַבִּי אֱלִיעֶזֶר אָסַר וְרַבָּנַן שָׁרוּ, וְהִלְכְתָא כְּרַבָּנַן דְּשָׁרוּ.</div>
+    <div class="trans" data-when="he">מר זוטרא שונה להפך: בצהובת־הכרס הכל מודים שאסורה; מחלוקתם בלבנת־הכרס — ר׳ אליעזר אוסר וחכמים מתירים, והלכה כחכמים (להיתר).</div>
+    <div class="trans" data-when="en">Mar Zutra teaches the statement of Ameimar in this manner: With regard to the senunit with a yellow belly, everyone agrees that it is prohibited. They disagree when discussing the kind with a white belly. Rabbi Eliezer deems it prohibited, and the Rabbis deem it permitted. And the halakha is in accordance with the opinion of the Rabbis, who deem it permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ב א — Chullin 62a:8</span></div>
+    <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר בְּחִיוָּרָא כְּרֵסַהּ פְּלִיגִי – הַיְינוּ דְּקָתָנֵי ״זוֹ הִיא סְנוּנִית לְבָנָה״, אֶלָּא לְמַאן דְּאָמַר בְּדִירוּקָּא פְּלִיגִי, מַאי ״זוֹ הִיא סְנוּנִית לְבָנָה״? לְאַפּוֹקֵי דְּבָתֵּי דְּאוּכַּמְתִּי.</div>
+    <div class="trans" data-when="he">קושיא: למר זוטרא, שמחלוקתם בלבנת־הכרס, מובן לשון ״זו היא סנונית לבנה״. אבל לאמימר, שמחלוקתם בצהובה — מהו ״זו היא סנונית לבנה״? תירוץ: ״לבנה״ נאמר רק להוציא את סנונית הבית, שהיא שחורה.</div>
+    <div class="trans" data-when="en">The Gemara asks: Granted, according to the one who says that they disagree with regard to the kind with a white belly, this explanation is consistent with that which Rav Yehuda teaches: This is the white senunit about which Rabbi Eliezer and the Rabbis disagreed. But according to the one who says that they disagree with regard to the kind with a yellow belly, what is the meaning of the phrase: This is the white senunit? The Gemara responds: The phrase: White senunit, is used only to exclude the house senunit, which is black.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">זיהוי עופות טהורים וטמאים</span><span data-when="en">Identifying kosher and non-kosher birds</span>
+      <span class="ref">Chullin 62a:9–63a:16</span></h2>
+  <div class="lead"><span data-when="he">תור או יונה? סימני הקורקבן, שמונה ספקות, שורת סימני־זכירה לכשר ולאסור, ולבסוף דרשות על שמות העופות הטמאים שבתורה.</span><span data-when="en">Dove or pigeon? The gizzard sign, eight doubtful cases, a string of permitted/forbidden mnemonics, and finally midrashic readings of the Torah's non-kosher bird names.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① רחבה בשם ר׳ יהודה: תסיל — תור או יונה? סוגי קרבן"]:::statement
+  Q1{"② מיתיבי: כל העופות פוסלים מי חטאת חוץ מיונה — אם תסיל יונה, ישנה אותו!"}:::question
+  A1["② תירוץ: תסיל מוצץ ומקיא, יונה מוצץ ואינו מקיא"]:::answer
+  S2["③ רב יהודה: כופשני צוצייני כשרים — הם תורי רחבה"]:::statement
+  Q2{"④ מיתיבי: ׳אזוב׳ — לא אזוב שיש לו שם לוואי; אף צוצייני שם לוואי!"}:::question
+  A2["⑤ אביי/רבא: לא נשתנה שמם קודם מתן תורה / סתם קרו להו"]:::answer
+  S3["⑦ סימן הקורקבן: טהורים נקלף, טמאים אינו נקלף"]:::statement
+  S4["⑧ רב אסי: שמונה ספקות — קורקבנן נקלף רק בסכין"]:::statement
+  S5["⑩ שורת סימני־זכירה: מותר מול אסור בכל זוג עופות"]:::statement
+  S6["⑰ דרשות התורה: תנשמת, קאת, רחם — בעוף ובשרץ"]:::statement
+  S7["⑳ עורב, הנץ, חסידה ואנפה — דרשות השמות"]:::statement
+  S1 -->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  S1 -->|המשך| S2
+  S2 -->|מיתיבי| Q2
+  Q2 -->|תירוץ| A2
+  S2 -->|המשך| S3
+  S3 -->|הרחבה| S4
+  S4 -->|המשך| S5
+  S5 -->|דרשות| S6
+  S6 -->|המשך| S7
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Raḥava in R. Yehuda's name: tasil — dove or pigeon? offering categories"]:::statement
+  Q1{"② Objection: all birds disqualify purification-water except the pigeon — if tasil is a pigeon, teach it too!"}:::question
+  A1["② Answer: the tasil sips and spits, the pigeon sips and does not spit"]:::answer
+  S2["③ Rav Yehuda: tzutzeyanei doves are fit — they are Reḥava's doves"]:::statement
+  Q2{"④ Objection: ׳hyssop׳ — not one with a modifier; tzutzeyanei is a modifier!"}:::question
+  A2["⑤ Abaye/Rava: their name was not modified before Sinai / called plainly at home"]:::answer
+  S3["⑦ The gizzard sign: kosher peels, non-kosher does not peel"]:::statement
+  S4["⑧ Rav Asi: eight doubtful cases — gizzard peels only with a knife"]:::statement
+  S5["⑩ String of mnemonics: permitted vs forbidden in each bird-pair"]:::statement
+  S6["⑰ Torah midrashim: tinshemet, ka'at, raḥam — among birds and creepers"]:::statement
+  S7["⑳ Orev, netz, ḥasida and anafa — readings of the names"]:::statement
+  S1 -->|objection| Q1
+  Q1 -->|answer| A1
+  S1 -->|continues| S2
+  S2 -->|objection| Q2
+  Q2 -->|answer| A2
+  S2 -->|continues| S3
+  S3 -->|expanded| S4
+  S4 -->|continues| S5
+  S5 -->|midrashim| S6
+  S6 -->|continues| S7
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① תָּסִיל פָּסוּל מִשּׁוּם תּוֹרִין, וְכָשֵׁר מִשּׁוּם בְּנֵי יוֹנָה … תּוֹרִין שֶׁל רְחָבָה"]:::statement
+  Q1{"② כָּל הָעוֹפוֹת פּוֹסְלִין בְּמֵי חַטָּאת חוּץ מִן הַיּוֹנָה … לִיתְנֵי חוּץ מִיּוֹנָה וְתָסִיל!"}:::question
+  A1["② זֶה מוֹצֵץ וּמֵקִיא, וְזֶה מוֹצֵץ וְאֵינוֹ מֵקִיא"]:::answer
+  S2["③ הָנֵי כּוּפְשָׁנֵי צוּצְיָינֵי כְּשֵׁרִים לְגַבֵּי מִזְבֵּחַ, וְהֵן הֵן תּוֹרִין שֶׁל רְחָבָה"]:::statement
+  Q2{"④ ׳אֵזוֹב׳ … וְלֹא כׇּל אֵזוֹב שֶׁיֵּשׁ לוֹ שֵׁם לְוַוי"}:::question
+  A2["⑤ לֹא נִשְׁתַּנָּה שְׁמָן קוֹדֶם מַתַּן תּוֹרָה … בְּאַתְרַיְיהוּ סְתָמָא קָרֵי לְהוּ"]:::answer
+  S3["⑦ עוֹפוֹת טְהוֹרִים קוּרְקְבָנָן נִקְלָף, וּטְמֵאִין אֵין קוּרְקְבָנָן נִקְלָף"]:::statement
+  S4["⑧ שְׁמוֹנָה סְפֵיקוֹת הֵן … וְהָנֵי קוּרְקְבָנָן נִקְלָף בְּסַכִּינָא"]:::statement
+  S5["⑩ צְרָדָא שְׁרֵי, בַּרְדָּא אֲסִיר … וְסִימָנָיךְ"]:::statement
+  S6["⑰ ׳תִּנְשֶׁמֶת׳ בָּאוָת שֶׁבָּעוֹפוֹת … ׳קָאָת׳ זוֹ הַקּוּק, ׳רָחָם׳ זוֹ שְׁרַקְרַק"]:::statement
+  S7["⑳ ׳עוֹרֵב׳ זֶה עוֹרֵב … ׳הַנֵּץ׳ זֶה הַנֵּץ … ׳הַחֲסִידָה׳ זוֹ דַּיָּה לְבָנָה"]:::statement
+  S1 -->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  S1 -->|המשך| S2
+  S2 -->|מיתיבי| Q2
+  Q2 -->|תירוץ| A2
+  S2 -->|המשך| S3
+  S3 -->|הרחבה| S4
+  S4 -->|המשך| S5
+  S5 -->|דרשות| S6
+  S6 -->|המשך| S7
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ב א — Chullin 62a:9</span></div>
+    <div class="orig">אָמַר רַחֲבָה, אָמַר רַבִּי יְהוּדָה: תָּסִיל פָּסוּל מִשּׁוּם תּוֹרִין, וְכָשֵׁר מִשּׁוּם בְּנֵי יוֹנָה, דָּאצִיפִי וְתוֹרִין שֶׁל רְחָבָה כְּשֵׁרִין מִשּׁוּם תּוֹרִין, וּפְסוּלִין מִשּׁוּם בְּנֵי יוֹנָה. מֵתִיב רַב דָּנִיאֵל בַּר רַב קַטִּינָא: כָּל הָעוֹפוֹת</div>
+    <div class="trans" data-when="he">רחבה בשם ר׳ יהודה: התסיל פסול להקרבה כ״תור״ (הכשר רק כשבוגר) אך כשר כ״בן יונה״ (הכשר רק כשצעיר) — נמצא שהוא ממין יונה. ולעומתו הדאציפי ותורי רחבה כשרים כתורים ופסולים כבני יונה. רב דניאל בר רב קטינא הקשה ממשנה: ״כל העופות…״</div>
+    <div class="trans" data-when="en">§ Raḥava says that Rabbi Yehuda says: A young tasil, which is similar to a dove, is unfit for sacrifice as a dove, which is fit only when mature, but it is fit for sacrifice as a pigeon, which is fit only when immature. In other words, the tasil is considered a type of pigeon, not a dove. A mature datzifi bird, and mature doves of Reḥava, are fit as doves, but are unfit as pigeons, since they are types of doves. Rav Daniel bar Rav Ketina raises an objection from a mishna (Para 9:3): All birds</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ב ב — Chullin 62b:1</span></div>
+    <div class="orig">פּוֹסְלִין בְּמֵי חַטָּאת חוּץ מִן הַיּוֹנָה מִפְּנֵי שֶׁמּוֹצֶצֶת, וְאִם אִיתָא לִיתְנֵי חוּץ מִיּוֹנָה וְתָסִיל! אָמַר רַבִּי זֵירָא: זֶה מוֹצֵץ וּמֵקִיא, וְזֶה מוֹצֵץ וְאֵינוֹ מֵקִיא.</div>
+    <div class="trans" data-when="he">— כל העופות פוסלים מי חטאת (כשהם שותים, מקצת המים חוזרים ופוסלים), חוץ מן היונה שמוצצת ואינה מחזירה. ואם התסיל ממין יונה, היה למשנה לשנות ״חוץ מיונה ותסיל״! ר׳ זירא: התסיל מוצץ ומקיא (ולכן פוסל), והיונה מוצצת ואינה מקיאה.</div>
+    <div class="trans" data-when="en">disqualify the water of purification, i.e., water in which ashes of the red heifer have been placed, by drinking from it. The water that entered the bird’s mouth is disqualified, and some of it drips back into the container, disqualifying the rest. This applies to all birds except for the pigeon, because it sips the water from the container and none falls back in from its mouth. But if it is so that the tasil is a type of pigeon, let the mishna teach: Except for the pigeon and the tasil. Rabbi Zeira said: Although the tasil is a type of pigeon and sips the water as well, this, the tasil, sips the water and spits part of it back, and therefore disqualifies the water of purification, and that, the pigeon, sips but does not spit.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ב ב — Chullin 62b:2</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: הָנֵי כּוּפְשָׁנֵי צוּצְיָינֵי כְּשֵׁרִים לְגַבֵּי מִזְבֵּחַ, וְהֵן הֵן תּוֹרִין שֶׁל רְחָבָה. מֵיתִיבִי: ״אֵזוֹב״, וְלֹא אֵזוֹב יוֹן, וְלֹא אֵזוֹב כּוֹחֳלִי, וְלֹא אֵזוֹב רוֹמִי, וְלֹא מִדְבָּרִי, וְלֹא כׇּל אֵזוֹב שֶׁיֵּשׁ לוֹ שֵׁם לְוַוי.</div>
+    <div class="trans" data-when="he">רב יהודה: יונים מסוג ״צוצייני״ כשרות למזבח, והן הן ״תורי רחבה״. מיתיבי מברייתא: התורה דרשה ״אזוב״ — ולא אזוב יוֹן, כוֹחֳלי, רומי, מדברי, ולא כל אזוב שיש לו שם לוואי; ומכאן שאף ה״צוצייני״ פסולות, שיש להן שם לוואי.</div>
+    <div class="trans" data-when="en">Rav Yehuda says: The tzutzeyanei doves are fit for sacrifice on the altar, and they are the doves of Reḥava mentioned earlier. The Gemara raises an objection from a mishna (Nega’im 14:6): The Torah requires hyssop for the purification of a leper. It must be standard hyssop, and neither a hyssop of Greece, nor stibium hyssop, nor Roman hyssop, nor desert hyssop, nor any other kind of hyssop whose name is accompanied by a modifier. Likewise, tzutzeyanei doves should be unfit for sacrifice, because they have a modifier in their name.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ב ב — Chullin 62b:3</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: כֹּל שֶׁנִּשְׁתַּנָּה שְׁמוֹ קוֹדֶם מַתַּן תּוֹרָה, וְהִקְפִּידָה תּוֹרָה עָלָיו, יֵשׁ לוֹ שֵׁם לְוַוי – פָּסוּל. וְהָנֵי לֹא נִשְׁתַּנָּה שְׁמָן קוֹדֶם מַתַּן תּוֹרָה. רָבָא אָמַר: הָנֵי כּוּפְשָׁנֵי צוּצְיָינֵי, בְּאַתְרַיְיהוּ סְתָמָא קָרֵי לְהוּ.</div>
+    <div class="trans" data-when="he">אביי: רק דבר ששמו השתנה כבר קודם מתן תורה, והתורה הקפידה עליו — אם יש לו שם לוואי הוא פסול; אבל שם הצוצייני לא נשתנה קודם מתן תורה, ולכן כשרות. רבא: באמת במקומן קוראים להן ״צוצייני״ סתם, בלי שם לוואי.</div>
+    <div class="trans" data-when="en">Abaye said: Any item whose name was modified before the giving of the Torah, and concerning which the Torah was particular when naming it, is unfit if its name is accompanied by a modifier, since the language of the Torah was formulated to exclude it. But the name of these tzutzeyanei doves was not modified, i.e., the modifier tzutzeyanei was not applied to them, before the giving of the Torah. Even though it was applied to them later, they are still fit for sacrifice. Alternatively, Rava said: The tzutzeyanei doves are called simply doves in their place of habitation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ב ב — Chullin 62b:4</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: הָנֵי כְּרָזֵי דְּבֵי חִילְפֵי שָׁרוּ, וּדְבֵי כְּרָבֵי אֲסִירִי. אָמַר רָבִינָא: וּמַלְקִינַן עֲלַיְיהוּ מִשּׁוּם שֶׁרֶץ הָעוֹף. וְאָמַר רַב יְהוּדָה: צְרָדָא – שְׁרֵי, בַּרְדָּא – אֲסִיר, וְסִימָנָיךְ ״בַּר מִינֵּיהּ״, מַרְדָּא – סְפֵקָא.</div>
+    <div class="trans" data-when="he">רב יהודה: ה״כרזי״ של בית חילפי (שיחים) מותרים, ושל בית כרבי (כרוב) אסורים. רבינא: ומלקים את האוכלם משום ״שרץ העוף״. ועוד רב יהודה: ה״צרדא״ מותר, ה״ברדא״ אסור, וסימנך ״בַּר (=חוץ) מינֵיהּ״; וה״מרדא״ — ספק.</div>
+    <div class="trans" data-when="en">Similarly, Rav Yehuda says: These grasshoppers found among the shrubs are kosher and permitted for consumption. And those found among the cabbages are forbidden. Ravina said: And we flog those who eat them on their account, due to the prohibition: “And all winged swarming things are impure unto you” (Deuteronomy 14:19). And Rav Yehuda says: The bird called tzarda is permitted for consumption, and the barda is prohibited. And your mnemonic to remember which is which is this: Eat any bird except [bar] for it. As for the marda, it is uncertain whether it is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ב ב — Chullin 62b:5</span></div>
+    <div class="orig">אָמַר רַב אַסִּי: שְׁמוֹנָה סְפֵיקוֹת הֵן: חוֹבָא, חוּגָא, סוּגָא, וְהַרְנוּגָא, תּוּשְׁלְמִי, וּמַרְדָּא, כּוֹחִילְנָא, וּבַר נַפָּחָא. מַאי סְפֵיקַיְיהוּ? עוֹפוֹת טְהוֹרִים קוּרְקְבָנָן נִקְלָף, וּטְמֵאִין אֵין קוּרְקְבָנָן נִקְלָף, וְהָנֵי קוּרְקְבָנָן נִקְלָף בְּסַכִּינָא.</div>
+    <div class="trans" data-when="he">רב אסי: שמונה עופות הם ספק: חובא, חוגא, סוגא, הרנוגא, תושלמי, מרדא, כוחילנא, ובר נפחא. ומהו ספקם? סימן טהרה הוא שהקורקבן נקלף ביד; של טמאים אינו נקלף; ואצל אלו הוא נקלף רק בסכין — ומכאן הספק.</div>
+    <div class="trans" data-when="en">Rav Asi says: There are eight uncertain cases: The ḥuva, ḥuga, suga, and harnuga, tushelemi, and marda, kuḥilna, and bar nappaḥa. The Gemara explains: What is their uncertainty? The gizzard of kosher birds can be peeled, as mentioned in the mishna, and the gizzard of non-kosher birds cannot be peeled, but the gizzard of these birds can be peeled only with a knife.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״ב ב — Chullin 62b:6</span></div>
+    <div class="orig">וְהָא הָהִיא בַּר אֲוָוזָא דַּהֲוָה בֵּי מָר שְׁמוּאֵל, דְּלָא הֲוָה קָא מִקְּלֵף קוּרְקְבָנֵיהּ, וְאוֹתְבֵיהּ בְּשִׁימְשָׁא, וְכֵיוָן דְּרָפֵי אִיקְּלֵיף! הָתָם, כִּי רָפֵי אִיקְּלֵיף בִּידָא. הָכָא, אַף עַל גַּב דְּרָפֵי, לָא מִקְּלֵיף אֶלָּא בְּסַכִּינָא.</div>
+    <div class="trans" data-when="he">קושיא: והרי אווז של מר שמואל שלא נקלף קורקבנו, ולאחר שהניחוהו בשמש ורופף — נקלף, וכשר! תירוץ: שם משרופף נקלף ביד; אבל כאן, אף לאחר שרופף, אינו נקלף אלא בסכין — ולכן נשאר ספק.</div>
+    <div class="trans" data-when="en">The Gemara asks: But why should these not be kosher? Wasn’t there a certain duck in the house of Mar Shmuel whose gizzard could not be peeled, and they set the gizzard in the sun, and once it softened it could be peeled? The Gemara responds: There, when it softened it could be peeled by hand. Here, in these eight cases, even when it softened it could be peeled only with a knife.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס״ב ב — Chullin 62b:7</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: תַּרְנְגוֹלָא דְּאַגְמָא חַד מִשְּׁמוֹנָה סְפֵיקוֹת הוּא, וְהַיְינוּ מַרְדּוּ. אָמַר רַב פָּפָּא: תַּרְנְגוֹלָא דְּאַגְמָא אֲסִירא, תַּרְנְגוֹלְתָּא דְּאַגְמָא שַׁרְיָא, וְסִימָנָיךְ – ״עַמּוֹנִי וְלֹא עַמּוֹנִית״. דְּרַשׁ מָרִימָר: תַּרְנְגוֹלְתָּא דְּאַגְמָא אֲסִירָא, חַזְיוּהָ דְּדָרְסָה וְאָכְלָה, וְהַיְינוּ גֵּירוּתָא.</div>
+    <div class="trans" data-when="he">אביי: ״תרנגול הביצה״ (תרנגולא דאגמא) הוא אחד משמונה הספקות, והוא ה״מרדו״. רב פפא: התרנגול אסור והתרנגולת מותרת, וסימנך ״עמוני ולא עמונית״. מרימר דרש: אף התרנגולת אסורה, שראו אותה דורסת בציפורניה ואוכלת — והיא ה״גירותא״ הטמאה.</div>
+    <div class="trans" data-when="en">Abaye says: The swamp rooster is one of the eight uncertain cases, and this is the mardu, i.e., the marda mentioned earlier. Rav Pappa says: The swamp rooster is forbidden, but the swamphen is permitted. And your mnemonic to remember this is the statement of the Sages with regard to the verse: “An Ammonite or a Moabite shall not enter into the assembly of the Lord” (Deuteronomy 23:4), that an Ammonite man is unfit to enter the assembly, but not an Ammonite woman. Mareimar taught: The swamphen is forbidden, because the Sages saw that it claws its prey and eats it. And this is the giruta, a non-kosher bird (see 109b).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס״ב ב — Chullin 62b:8</span></div>
+    <div class="orig">אָמַר רַב: שַׁבּוּר אַנַדַּרְפַּטָּא – שְׁרֵי, פֵּירוּז אַנַדַּרְפַּטָּא – אֲסִיר, וְסִימָנָיךְ – פֵּירוּז רַשִּׁיעָא. אָמַר רַב הוּנָא: בּוּנְיָא – שְׁרֵי, פַּרְוָא – אֲסִיר, וְסִימָנָיךְ – פַּרְוָאָה אַמְגּוּשָׁא.</div>
+    <div class="trans" data-when="he">רב: ה״שבור אנדרפטא״ מותר, וה״פירוז אנדרפטא״ אסור, וסימנך ״פירוז הרשע״ (שם אדם רע). רב הונא: ה״בוניא״ מותר, ה״פרוא״ אסור, וסימנך ״פרואה המכשף״.</div>
+    <div class="trans" data-when="en">Rav says: The bird called the shavor anderafta is permitted, but the piruz anderafta is forbidden. And your mnemonic to remember this is the known personality Piruz the Evil. Rav Huna says: The bird called the bunya is permitted. The parva is forbidden. And your mnemonic to remember this is the known personality Parva’a the Sorcerer.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ס״ב ב — Chullin 62b:9</span></div>
+    <div class="orig">אָמַר רַב פָּפָּא: מַרְדּוּ זָגֵיד וְאָכֵיל – שְׁרֵי, סָגֵיד וְאָכֵיל – אֲסִיר, וְסִימָנָיךְ ״לֹא תִשְׁתַּחֲוֶה לְאֵל אַחֵר״. אָמַר שְׁמוּאֵל: שָׁתְיָא חַמְרָא – אֲסִירָא, וְסִימָנָיךְ ״שְׁתוּיֵי יַיִן פְּסוּלִין לַעֲבוֹדָה״. וְאָמַר שְׁמוּאֵל: מָזְגָא חַמְרָא – אֲסִירָא,</div>
+    <div class="trans" data-when="he">רב פפא: ה״מרדו״ המטה ראשו (זגיד) ואוכל — מותר, והמשתחווה (סגיד) ואוכל — אסור, וסימנך ״לא תשתחוה לאל אחר״. שמואל: ״שותה־יין״ אסורה, וסימנך ״שתויי יין פסולין לעבודה״. ועוד שמואל: ״מוזגת־יין״ אסורה,</div>
+    <div class="trans" data-when="en">Rav Pappa says: The bird known as the reclining and eating mardu is permitted, while the bowing and eating mardu is forbidden. And your mnemonic to remember this is the verse: “You shall bow down to no other god” (Exodus 34:14). Shmuel says: The bird called the wine drinker is forbidden. And your mnemonic to remember this is the halakha: Those who drank wine are unfit for service in the Temple. And Shmuel says: The bird called the wine pourer is forbidden.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ס״ג א — Chullin 63a:1</span></div>
+    <div class="orig">בַּת מָזְגָא חַמְרָא – שַׁרְיָא, וְסִימָנָיךְ ״יָפֶה כֹּחַ הַבֵּן מִכֹּחַ הָאָב״.</div>
+    <div class="trans" data-when="he">— אבל ״בת־מוזגת־יין״ (הקטנה) מותרת, וסימנך ״יפה כח הבן מכח האב״: הגדולה אסורה והקטנה מותרת.</div>
+    <div class="trans" data-when="en">But the bird called the little wine pourer is permitted. And your mnemonic to remember this is the idiom of the Sages: The power of the son is greater than the power of the father, i.e., the larger is forbidden while the smaller is permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ס״ג א — Chullin 63a:2</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: שְׁקִיטָנָא, אֲרִיכֵי שָׁקֵי וְסוּמָּקֵי – שַׁרְיָא, וְסִימָנָיךְ מוּרְזְמָא. גּוּצֵי וְסוּמָּקֵי – אֲסִירִי, וְסִימָנָיךְ ״נָנוּס פָּסוּל״. אֲרִיכֵי שָׁקֵי וִירוּקֵּי – אֲסִירִי, וְסִימָנָיךְ ״יְרוּקִּין פְּסוּלִין״.</div>
+    <div class="trans" data-when="he">רב יהודה: מיני ה״שקיטנא״ — ארוכי־השוקיים והאדומים מותרים, וסימנך עוף ה״מורזמא״ (הדומה להם וכשר). הנמוכים האדומים אסורים, וסימנך ״ננס פסול״ (לעבודה). וארוכי־השוקיים הירוקים אסורים, וסימנך ״ירוקין פסולין״.</div>
+    <div class="trans" data-when="en">Rav Yehuda says: There are several types of shekitena. The long-shanked red ones are permitted. And your mnemonic to remember this is the murzema bird, which is similar in appearance and known to be kosher. The little red ones are forbidden, and your mnemonic for this is the halakha that a dwarf priest is unfit for Temple service. The long-shanked green, i.e., yellow, ones are forbidden, and your mnemonic for this is the mishna (56a): Innards that have turned green render an animal a tereifa and unfit for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ס״ג א — Chullin 63a:3</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: ״שָׁלָךְ״, זֶה הַשּׁוֹלֶה דָּגִים מִן הַיָּם. ״דּוּכִיפַת״, שֶׁהוֹדוֹ כָּפוּת. תַּנְיָא נָמֵי הָכִי: דּוּכִיפַת, שֶׁהוֹדוֹ כָּפוּת, וְזֶהוּ שֶׁהֵבִיא שָׁמִיר לְבֵית הַמִּקְדָּשׁ.</div>
+    <div class="trans" data-when="he">רב יהודה: ״שָׁלָך״ (עוף טמא) — הוא העוף השולה (מוציא) דגים מן הים. ״דוכיפת״ — שכרבולתו (הודו) כפותה ועבה. וכך אף בברייתא: דוכיפת שהודו כפות, והוא שהביא את ה״שמיר״ לבניין המקדש.</div>
+    <div class="trans" data-when="en">Rav Yehuda says: As for the shalakh, listed as a non-kosher bird (see Leviticus 11:17), this is the bird that scoops [sholeh] fish out of the sea. The dukhifat (see Leviticus 11:19) is the bird whose comb seems bent [hodo kafut] due to its thickness. The Gemara notes: This is also taught in a baraita: The dukhifat is the bird whose comb seems bent, and this is the bird that brought the shamir to the Temple. As recounted in tractate Gittin (68b), King Solomon required a unique worm called the shamir to carve stones of the Temple, as the verse states: “There was neither hammer nor ax nor any tool of iron heard in the house, while it was in building” (I Kings 6:7).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ס״ג א — Chullin 63a:4</span></div>
+    <div class="orig">רַבִּי יוֹחָנָן, כִּי הֲוָה חָזֵי שָׁלָךְ, אָמַר: ״מִשְׁפָּטֶיךָ תְּהוֹם רַבָּה״. כִּי הֲוָה חָזֵי נְמָלָה, אָמַר: ״צִדְקָתְךָ כְּהַרְרֵי אֵל״.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן, כשהיה רואה ״שלך״ (התופס דגים מן התהום) אומר ״משפטיך תהום רבה״ — שה׳ נפרע אף מן הדגים. וכשהיה רואה נמלה אומר ״צדקתך כהררי אל״ — שה׳ מפרנס אף את הקטן שבברואים.</div>
+    <div class="trans" data-when="en">The Gemara recounts: When Rabbi Yoḥanan would see a shalakh, he would say: “Your judgments are like the great deep” (Psalms 36:7), as God exacts retribution even upon the fish in the sea. When he would see an ant, he would say the first half of the same verse: “Your righteousness is like the mighty mountains,” as God provides sustenance for the tiny ant just as He does for the largest creatures.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ס״ג א — Chullin 63a:5</span></div>
+    <div class="orig">אָמַר אַמֵּימָר: לַקְנִי וּבָטְנִי – שַׁרְיָין, שַׁקְנַאי וּבָטְנַאי – מְקוֹם שֶׁנָּהֲגוּ לֶאֱכוֹל אוֹכְלִין, מְקוֹם שֶׁנָּהֲגוּ שֶׁלֹּא לֶאֱכוֹל אֵין אוֹכְלִין. אַטּוּ בְּמִנְהֲגָא תַּלְיָא מִילְּתָא? אִין, וְלָא קַשְׁיָא: הָא בְּאַתְרָא דִּשְׁכִיחִי פֶּרֶס וְעׇזְנִיָּה, הָא בְּאַתְרָא דְּלָא שְׁכִיחִי פֶּרֶס וְעׇזְנִיָּה.</div>
+    <div class="trans" data-when="he">אמימר: ה״לקני״ וה״בטני״ מותרים. ה״שקנאי״ וה״בטנאי״ — מקום שנהגו לאוכלם אוכלים, ומקום שנהגו שלא לאכול אין אוכלים. וכי במנהג תלוי הדבר? כן, ואין קושי: במקום שמצויים פרס ועזנייה (טמאים הדומים להם) — נמנעים מחשש בלבול; ובמקום שאינם מצויים — מותרים.</div>
+    <div class="trans" data-when="en">Ameimar says: The laknei and batnei birds are permitted. As for the sakna’ei and batna’ei birds, in any place that it is customary to eat them, one may eat them; in any place that it is customary not to eat them, one may not eat them. The Gemara asks: Is that to say that the matter of whether it is permitted depends on custom? The Gemara responds: Yes, but it is not difficult: This place where they are forbidden is a place where the peres and ozniyya are found. Since they are similar to these birds, one must be concerned that people will confuse them, even though the sakna’ei and batna’ei are themselves kosher. That place where they are permitted is a place where the peres and ozniyya are not found.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ס״ג א — Chullin 63a:6</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: קוּאֵי וְקָקוֹאֵי אֲסִירִי, קָקוֹאֲתָא שַׁרְיָא. בְּמַעְרְבָא מַלְקוּ עִילָּוַהּ, וְקָרוּ לַהּ תַּחְוָותָא.</div>
+    <div class="trans" data-when="he">אביי: ה״קואי״ וה״קקואי״ אסורים, וה״קקואתא״ מותרת; ובכל זאת בארץ ישראל מלקים את אוכלהּ, וקוראים לה ״תחווָתא״.</div>
+    <div class="trans" data-when="en">Abaye says: The birds called kevai and kakvai are forbidden, but the kakvata is permitted. Still, in the West, Eretz Yisrael, they flog one who eats it on its account, and they call it taḥveta.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין ס״ג א — Chullin 63a:7</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״תִּנְשֶׁמֶת״ בָּאוָת שֶׁבָּעוֹפוֹת. אַתָּה אוֹמֵר בָּאוָת שֶׁבָּעוֹפוֹת, אוֹ אֵינוֹ אֶלָּא בָּאוָת שֶׁבַּשְּׁרָצִים? אָמַרְתָּ: צֵא וּלְמַד מִשְּׁלֹשׁ עֶשְׂרֵה מִדּוֹת שֶׁהַתּוֹרָה נִדְרֶשֶׁת בָּהֶן, דָּבָר הַלָּמֵד מֵעִנְיָנוֹ. בְּמָה הַכָּתוּב מְדַבֵּר? בְּעוֹפוֹת, אַף כָּאן בְּעוֹפוֹת.</div>
+    <div class="trans" data-when="he">ברייתא: ה״תנשמת״ שבפסוקי העופות היא ה״באוָת״. שמא היא ה״באוָת״ שבשרצים? אמרת: למד מן הכלל ״דבר הלמד מעניינו״ (אחת מי״ג מידות): הואיל והכתוב שלידה מדבר בעופות, אף ה״תנשמת״ כאן בעוף.</div>
+    <div class="trans" data-when="en">The Sages taught in a baraita: The tinshemet, listed in the Torah as non-kosher (see Leviticus 11:18), is the ba’ut among birds. One might ask: Do you say that it is the ba’ut among birds, or is it only the ba’ut among creeping animals? The tinshemet is also listed among the creeping animals (see Leviticus 11:30). Say: Go out and learn from the thirteen hermeneutical principles, of which one is: A matter derived from its context. What are the adjacent verses speaking about? They are speaking about birds. So too here, the word tinshemet is referring to birds.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין ס״ג א — Chullin 63a:8</span></div>
+    <div class="orig">תַּנְיָא נָמֵי גַּבֵּי שְׁרָצִים כְּהַאי גַּוְונָא: ״תִּנְשֶׁמֶת״ בָּאוָת שֶׁבַּשְּׁרָצִים. אַתָּה אוֹמֵר בָּאוָת שֶׁבַּשְּׁרָצִים, אוֹ אֵינוֹ אֶלָּא בָּאוָת שֶׁבָּעוֹפוֹת? אָמַרְתָּ: צֵא וּלְמַד מִשְּׁלֹשׁ עֶשְׂרֵה מִדּוֹת שֶׁהַתּוֹרָה נִדְרֶשֶׁת בָּהֶן, דָּבָר הַלָּמֵד מֵעִנְיָנוֹ – בְּמָה הַכָּתוּב מְדַבֵּר? בִּשְׁרָצִים, אַף כָּאן בִּשְׁרָצִים.</div>
+    <div class="trans" data-when="he">וכך אף בברייתא בשרצים: ה״תנשמת״ שבפסוקי השרצים היא ה״באוָת״ שבשרצים. שמא שבעופות? אמרת: ״דבר הלמד מעניינו״ — הכתוב שלידה בשרצים, אף ה״תנשמת״ כאן בשרץ.</div>
+    <div class="trans" data-when="en">The Gemara notes: It is also taught in a baraita in this way with regard to the tinshemet listed among the creeping animals: The tinshemet here is the ba’ut among creeping animals. One might ask: Do you say that it is the ba’ut among creeping animals, or it is only the ba’ut among birds? Say: Go out and learn from the thirteen hermeneutical principles, of which one is: A matter derived from its context. What are the adjacent verses speaking about? They are speaking about creeping animals. So too here, the word tinshemet is referring to creeping animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">19</span> <span class="ref">חולין ס״ג א — Chullin 63a:9</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: בָּאוָת שֶׁבָּעוֹפוֹת – קִיפוֹף, בָּאוָת שֶׁבַּשְּׁרָצִים – קוּרְפְּדַאי. אָמַר רַב יְהוּדָה: ״קָאָת״ – זוֹ הַקּוּק, ״רָחָם״ – זוֹ שְׁרַקְרַק.</div>
+    <div class="trans" data-when="he">אביי: ה״באוָת״ שבעופות היא ה״קיפוף״, וה״באוָת״ שבשרצים היא ה״קורפדאי״. רב יהודה: ה״קאת״ — היא ה״קוק״, וה״רחם״ — היא ה״שרקרק״.</div>
+    <div class="trans" data-when="en">Abaye says: The ba’ut among birds is commonly called the kifof. The ba’ut among creeping animals is commonly called the kurpedai. Rav Yehuda says: As for the ka’at listed in the Torah as non-kosher (see Leviticus 11:18), this is the bird called a kuk. As for the raḥam, this is the sherakrak.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">20</span> <span class="ref">חולין ס״ג א — Chullin 63a:10</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹחָנָן: לָמָּה נִקְרָא שְׁמוֹ רָחָם? כֵּיוָן שֶׁבָּא רָחָם בָּאוּ רַחֲמִים לְעוֹלָם. אָמַר רַב בִּיבִי בַּר אַבָּיֵי: וְהוּא דְּיָתֵיב אַמִּידֵּי וְעָבֵיד ״שְׁרַקְרַק״, וּגְמִירִי דְּאִי יָתֵיב אַאַרְעָא וְשָׁרֵיק – אֲתָא מְשִׁיחָא, שֶׁנֶּאֱמַר: ״אֶשְׁרְקָה לָהֶם וַאֲקַבְּצֵם״.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן: למה נקרא ״רחם״? שכשבא הרחם באו רחמים לעולם (בתחילת עונת הגשמים). רב ביבי בר אביי: ודווקא כשהוא יושב על דבר ומשמיע ״שרקרק״; ומסורת בידנו, שאם ישב על הארץ ושרק — בא משיח, שנאמר ״אשרקה להם ואקבצם״.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan says: Why is it called the raḥam? Because when the raḥam comes to Eretz Yisrael, mercy [raḥamim] comes to the world, as it appears at the beginning of the rainy season. Rav Beivai bar Abaye said: And it is a sign of rain only when it sits on something and makes a sherakrak sound. And it is learned as a tradition that if it sits on the ground and hisses [veshareik], this is a sign that the Messiah is coming, as it is stated: “I will hiss [eshreka] for them, and gather them” (Zechariah 10:8).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">21</span> <span class="ref">חולין ס״ג א — Chullin 63a:11</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אַדָּא בַּר שִׁימִי לְמָר בַּר רַב אִידַאי: וְהָא הָהוּא דְּיָתֵיב בֵּי כְרָבָא וּשְׁרַק, וַאֲתָא גָּלָל אַפְסְקֵיהּ לְמוֹחֵיהּ! אֲמַר לֵיהּ: הָהוּא בַּיָּידָא הֲוָה.</div>
+    <div class="trans" data-when="he">רב אדא בר שימי למר בר רב אידאי: והרי רחם אחד שישב בשדה חרושה ושרק, ובא גלל (אבן) ושיבר את מוחו — ולא בא משיח! ענה לו: אותו רחם שקרן היה (נביא שקר), ונענש.</div>
+    <div class="trans" data-when="en">Rav Adda bar Shimi said to Mar bar Rav Idai: But wasn’t there a certain raḥam that sat on a plowed field and hissed, and a stone came and broke its head? Mar bar Rav Idai said to him: That raḥam was a liar and was punished for prophesying falsely.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">22</span> <span class="ref">חולין ס״ג א — Chullin 63a:12</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״עוֹרֵב״ – זֶה עוֹרֵב, ״אֶת כׇּל עוֹרֵב״ – לְהָבִיא עוֹרֵב הָעִמְקִי, ״לְמִינוֹ״ – לְהָבִיא עוֹרֵב הָבֵא בְּרָאשֵׁי יוֹנִים.</div>
+    <div class="trans" data-when="he">ברייתא על ״עורב למינו״: ״עורב״ — זה העורב המוכר; ״את כל עורב״ — לרבות עורב העמקי; ״למינו״ — לרבות עורב הבא בראשי יונים (שראשו דומה ליונה).</div>
+    <div class="trans" data-when="en">With regard to the verse: “Every orev after its kinds” (Leviticus 11:15), the Sages taught in a baraita: As for the orev, this is the crow. When the verse states: “Every orev,” this serves to include the valley crow as non-kosher. And the verse states: “After its kinds,” to include the crow that comes at the heads of pigeons.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">23</span> <span class="ref">חולין ס״ג א — Chullin 63a:13</span></div>
+    <div class="orig">אָמַר מָר: ״עוֹרֵב״ – זֶה עוֹרֵב. אַטּוּ קַמַּן קָאֵי? אֶלָּא אֵימָא: ״עוֹרֵב״ – זֶה עוֹרֵב אוּכָּמָא, וְכֵן הוּא אוֹמֵר: ״קְוֻצּוֹתָיו תַּלְתַּלִּים שְׁחֹרוֹת כָּעוֹרֵב״. הָעִמְקִי – חִיוָּורָא, וְכֵן הוּא אוֹמֵר: ״וּמַרְאֵהוּ עָמֹק מִן הָעוֹר״, כְּמַרְאֵה חַמָּה הָעֲמוּקָּה מִן הַצֵּל.</div>
+    <div class="trans" data-when="he">דיוק בברייתא: ״עורב — זה עורב״ — וכי עומד לפנינו שנדע מיהו? אלא ״עורב״ הוא העורב השחור, שנאמר ״קווצותיו… שחורות כעורב״. ו״עורב העמקי״ — הוא לבן, שנאמר על נגע ״ומראהו עמוק מן העור״ — כמראה חמה העמוקה מן הצל; הרי ש״עמוק״ קשור ללובן.</div>
+    <div class="trans" data-when="en">The Gemara explains: The Master said: As for the orev, this is the crow. Is that to say that the particular crow stands before us, such that one immediately knows which one it is? Rather, say: As for the orev, this is the black crow, and so the verse states: “His locks are curled, and black as a crow” (Song of Songs 5:11). The Gemara continues to explain the baraita: The valley crow [ha’amaki] is the white crow. And so the verse states with regard to leprosy: “If the appearance thereof be deeper [amok] than the skin” (Leviticus 13:30), and the Sages explained: As the appearance of an area lit by the sun, which seems deeper than the shade, which appears to cover it. There is therefore an association between a valley and the color white.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">24</span> <span class="ref">חולין ס״ג א — Chullin 63a:14</span></div>
+    <div class="orig">וְעוֹרֵב הַבָּא בְּרָאשֵׁי יוֹנִים, אָמַר רַב פָּפָּא: לָא תֵּימָא דְּאָתֵי בְּרֵישׁ יוֹנֵי, אֶלָּא דְּדָמֵי רֵישֵׁיהּ לִדְיוֹנָה.</div>
+    <div class="trans" data-when="he">״עורב הבא בראשי יונים״ — רב פפא: אל תאמר שהוא בא ושוכן בראש היונים, אלא שראשו דומה לראש יונה.</div>
+    <div class="trans" data-when="en">And with regard to the crow that comes at the heads of pigeons, Rav Pappa said: Do not say that the baraita means that it comes at the head of pigeons, i.e., it dwells with them; rather, it means that this crow’s head resembles that of a pigeon.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">25</span> <span class="ref">חולין ס״ג א — Chullin 63a:15</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״הַנֵּץ״ – זֶה הַנֵּץ, ״לְמִינֵהוּ״ – לְהָבִיא אֶת בַּר חִירְיָא. מַאי בַּר חִירְיָא? אָמַר אַבָּיֵי: שׁוּרִינְקָא.</div>
+    <div class="trans" data-when="he">ברייתא על ״הנץ למינהו״: ״הנץ״ — זה הנץ המוכר; ״למינהו״ — לרבות את ה״בר חיריא״. ומהו בר חיריא? אביי: ה״שורינקא״.</div>
+    <div class="trans" data-when="en">With regard to the verse: “And the netz after its kinds” (Leviticus 11:16), the Sages taught: As for the netz, this is the hawk. The verse states: “After its kinds,” to include the bird called bar ḥireya. The Gemara asks: What is the bar ḥireya? Abaye said: It is the bird commonly called the shurineka.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">26</span> <span class="ref">חולין ס״ג א — Chullin 63a:16</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: ״הַחֲסִידָה״ – זוֹ דַּיָּה לְבָנָה. לָמָּה נִקְרָא שְׁמָהּ חֲסִידָה? שֶׁעוֹשָׂה חֲסִידוּת עִם חַבְרוֹתֶיהָ. ״הָאֲנָפָה״ – זוֹ דַּיָּה רַגְזָנִית. לָמָּה נִקְרָא שְׁמָהּ אֲנָפָה? שֶׁמְּנָאָפֶת עִם חַבְרוֹתֶיהָ.</div>
+    <div class="trans" data-when="he">רב יהודה: ה״חסידה״ — זו ה״דיה הלבנה״; ולמה נקראת חסידה? שעושה חסד עם חברותיה (מאכילתן). ה״אנפה״ — זו ה״דיה הרגזנית״; ולמה נקראת אנפה? שמתקוטטת (מנאפת) עם חברותיה.</div>
+    <div class="trans" data-when="en">With regard to the verse: “And the ḥasida, and the anafa after its kinds” (Leviticus 11:19), Rav Yehuda says: As for the ḥasida, this is the white dayya. And why is it called ḥasida? Since it performs charity [ḥasidut] for its fellows, giving them from its own food. As for the anafa, this is the irritable dayya. And why is it called anafa? Since it quarrels [mena’efet] with its fellows.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
