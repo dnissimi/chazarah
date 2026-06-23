@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ע״ג</title>
+<meta name="description" content="מפת הסוגיא של חולין ע״ג: מחלוקת ר׳ מאיר וחכמים אם שחיטת האם מטהרת אבר עובר שיצא; ׳חסורי מחסרא׳ של רבא; מחלוקת ר׳ יוחנן וריש לקיש אם הדין שווה באבר בהמה המדולדל; ומסקנת ׳מיתה עושה ניפול ואין שחיטה עושה ניפול׳.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="73">
+<meta name="gemara-map:sefaria-ref" content="Chullin 73">
+<meta name="gemara-map:topic-he" content="שחיטה מטהרת אבר עובר ואבר מדולדל">
+<meta name="gemara-map:topic-en" content="Slaughter purifying a fetal or hanging limb">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ע״ג">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 73">
+<meta name="gemara-map:blurb-he" content="האם שחיטת האם מטהרת אבר העובר שיצא מטומאת נבלה? מחלוקת ר׳ מאיר וחכמים, ומחלוקת ר׳ יוחנן וריש לקיש אם דין זה שווה באבר בהמה המדולדל; ומסקנה: מיתה עושה ניפול, שחיטה אינה עושה ניפול.">
+<meta name="gemara-map:blurb-en" content="Does the mother's slaughter shield a fetal limb that emerged from carcass impurity? R. Meir vs. the Rabbis, and R. Yoḥanan vs. Reish Lakish on whether the same applies to a hanging limb; the upshot: death makes a limb 'fallen,' slaughter does not.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ע״ג</span><span data-when="en">Sugya map — Chullin 73</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ע״ג א — ע״ד א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 73a–74a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשך מחלוקת אבר עובר שיצא: חכמים לומדים מטריפה ששחיטתה מטהרת — אף שחיטת האם תטהר את אבר העובר מטומאת נבלה. ר׳ מאיר חולק, ורבא משלים את הברייתא ב<b>״חסורי מחסרא״</b>. ריש לקיש: <b>כמחלוקת בעוברין כך באיברין</b> (אבר בהמה מדולדל); ר׳ יוחנן: רק בעובר נחלקו. ולבסוף: <b>מיתה עושה ניפול ואין שחיטה עושה ניפול</b>, ואין באבר המדולדל אלא מצות פרוש מדרבנן.</span>
+    <span data-when="en"><b>Bottom line:</b> The fetal-limb dispute continues: the Rabbis argue from a tereifa, whose slaughter purifies it, that the mother's slaughter should likewise shield the emerged fetal limb from carcass impurity. R. Meir disagrees, and Rava completes the baraita by <b>"it is incomplete."</b> Reish Lakish: <b>the dispute over fetuses applies equally to hanging limbs;</b> R. Yoḥanan limits it to the fetus. The upshot: <b>death makes a limb "fallen," slaughter does not,</b> and a hanging limb carries only a rabbinic duty to abstain.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ע״ג</span><span data-when="en">Overview — Chullin 73</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · טעם חכמים — טריפה ששחיטתה מטהרת"]:::statement
+  O2["2 · ר׳ מאיר וחכמים — חסורי מחסרא"]:::statement
+  O3["3 · ריש לקיש ור׳ יוחנן — עובר או גם אברין"]:::statement
+  O4["4 · מיתה עושה ניפול, שחיטה לא"]:::statement
+  O5["5 · נקוט דרב יצחק — מצות פרוש"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · The Rabbis' reason — a tereifa purified by slaughter"]:::statement
+  O2["2 · R. Meir and the Rabbis — the baraita is incomplete"]:::statement
+  O3["3 · Reish Lakish and R. Yoḥanan — fetus only or limbs too"]:::statement
+  O4["4 · Death makes 'fallen,' slaughter does not"]:::statement
+  O5["5 · Hold R. Yitzḥak's view — duty to abstain"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">טעם חכמים — טריפה ששחיטתה מטהרת</span><span data-when="en">The Rabbis' reason — a tereifa purified by slaughter</span>
+      <span class="ref">Chullin 73a:6</span></h2>
+  <div class="lead"><span data-when="he">חכמים נימקו: כשם ששחיטת טריפה מטהרת אותה מטומאת נבלה (אף שאינה מתירתה), כך שחיטת האם תטהר את אבר העובר שיצא.</span><span data-when="en">The Rabbis reason: just as the slaughter of a tereifa purifies it from carcass impurity (though it stays forbidden), so the mother's slaughter purifies the emerged fetal limb.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① חכמים: מגע טריפה שחוטה — מטמאת"]:::statement
+  Q1{"① טריפה שחוטה מי מטמיא?"}:::question
+  A1["① אין — טריפה ששחטה מטמאה במוקדשין"]:::answer
+  S2["① קל וחומר: שחיטת בהמה תטהר את העובר"]:::statement
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|בניין אב| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Rabbis: contact with a slaughtered tereifa — imparts impurity"]:::statement
+  Q1{"① Does a slaughtered tereifa impart impurity?"}:::question
+  A1["① Yes — a slaughtered tereifa imparts impurity to consecrated items"]:::answer
+  S2["① A fortiori: the animal's slaughter purifies the fetus"]:::statement
+  S1 -->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -->|inference| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① וַחֲכָמִים אוֹמְרִים: מַגַּע טְרֵפָה שְׁחוּטָה"]:::statement
+  Q1{"① טְרֵפָה שְׁחוּטָה מִי מְטַמְּיָא?"}:::question
+  A1["① אִין, כְּדַאֲבוּהּ דִּשְׁמוּאֵל … מְטַמְּאָה בְּמוּקְדָּשִׁין"]:::answer
+  S2["① מָה מָצִינוּ בִּטְרֵפָה … אַף שְׁחִיטַת בְּהֵמָה תְּטַהֵר אֶת הָעוּבָּר"]:::statement
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|בניין אב| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ג א — Chullin 73a:6</span></div>
+    <div class="orig">וַחֲכָמִים אוֹמְרִים: מַגַּע טְרֵפָה שְׁחוּטָה. טְרֵפָה שְׁחוּטָה מִי מְטַמְּיָא? אִין, כְּדַאֲבוּהּ דִּשְׁמוּאֵל, דְּאָמַר אֲבוּהּ דִּשְׁמוּאֵל: טְרֵפָה שֶׁשְּׁחָטָהּ מְטַמְּאָה בְּמוּקְדָּשִׁין.</div>
+    <div class="trans" data-when="he">חכמים נימקו את שיטתם (במשנה ס״ח): כשם שמצינו בטריפה ששחיטתה מטהרת אותה מטומאת נבלה, אף ששחיטה זו אינה מתירתה באכילה — כך תטהר שחיטת האם את אבר העובר שיצא מן הרחם, אף שהוא אסור באכילה.</div>
+    <div class="trans" data-when="en">§ The mishna states: And the Rabbis say: The flesh of a fetus that extended its foreleg outside the mother’s womb and whose mother was subsequently slaughtered has ritual impurity due to having been in contact with a tereifa that was slaughtered. The Gemara asks: Does a slaughtered tereifa impart impurity? The Gemara answers: Yes, and this is in accordance with the statement of Shmuel’s father, as Shmuel’s father says: The Sages decreed that a tereifa that one slaughtered imparts impurity to sacrificial animals, i.e., it will disqualify them if it comes in contact with them.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">ר׳ מאיר וחכמים — חסורי מחסרא</span><span data-when="en">R. Meir and the Rabbis — the baraita is incomplete</span>
+      <span class="ref">Chullin 73a:7–14</span></h2>
+  <div class="lead"><span data-when="he">ר׳ מאיר: אם שחיטה מטהרת — תתיר באכילה! חכמים: הרבה מצלת על שאינו גופה. רבא משלים את הברייתא ב״חסורי מחסרא״, ומביא ברייתא נוספת המסייעת.</span><span data-when="en">R. Meir: if slaughter purifies, let it permit eating! The Rabbis: slaughter shields what is not its body more. Rava reconstructs the baraita as "incomplete," and a further baraita supports it.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S0["① מה מצינו בטריפה ששחיטתה מטהרת — אף תטהר את העובר"]:::statement
+  S1["② ר׳ מאיר: מי טיהרו לאבר זה? שחיטת אמו — אם כן תתיר באכילה!"]:::statement
+  S2["③ חכמים: הרבה מצלת על שאינו גופה — חותך מן העובר מותר"]:::statement
+  A1["④ רבא: חסורי מחסרא — טריפה תוכיח, מטהרת ואינה מתירה"]:::answer
+  S3["⑤ ר׳ מאיר: לא! טיהרה גופה — תטהר אבר שאינו גופה?"]:::statement
+  P1["⑥ תניא נמי הכי: ר׳ מאיר, אמרו לו טריפה תוכיח"]:::proof
+  S5["⑦ ר׳ מאיר: אותה ואת האבר המדולדל — תטהר את העובר?"]:::statement
+  S6["⑧ חכמים: הרבה מצלת על שאינו גופה"]:::statement
+  S0 -->|קושיא| S1
+  S1 -->|מענה| S2
+  S2 -->|חסורי מחסרא| A1
+  A1 -->|תשובת ר׳ מאיר| S3
+  S3 -->|ברייתא מקבילה| P1
+  P1 -->|המשך| S5
+  S5 -->|מענה| S6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S0["① Just as a tereifa's slaughter purifies it — so it purifies the fetus"]:::statement
+  S1["② R. Meir: what purified this limb? The mother's slaughter — then let it permit eating!"]:::statement
+  S2["③ Rabbis: slaughter shields the non-body more — a fetal piece is permitted"]:::statement
+  A1["④ Rava: the baraita is incomplete — let a tereifa prove it, purified yet not permitted"]:::answer
+  S3["⑤ R. Meir: no! purified its own body — shall it purify a non-body limb?"]:::statement
+  P1["⑥ A baraita too: R. Meir; they said, let a tereifa prove it"]:::proof
+  S5["⑦ R. Meir: it and its hanging limb — shall it purify the fetus?"]:::statement
+  S6["⑧ Rabbis: slaughter shields what is not its body more"]:::statement
+  S0 -->|objection| S1
+  S1 -->|response| S2
+  S2 -->|incomplete| A1
+  A1 -->|R. Meir's reply| S3
+  S3 -->|parallel baraita| P1
+  P1 -->|continues| S5
+  S5 -->|response| S6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S0["① מָה מָצִינוּ בִּטְרֵפָה שֶׁשְּׁחִיטָתָהּ מְטַהַרְתָּהּ … תְּטַהֵר אֶת הָעוּבָּר"]:::statement
+  S1["② וְכִי מִי טִיהֲרוֹ לְאֵבֶר זֶה … שְׁחִיטַת אִמּוֹ! אִם כֵּן, תַּתִּירֶנּוּ בַּאֲכִילָה!"]:::statement
+  S2["③ הַרְבֵּה מַצֶּלֶת עַל שֶׁאֵינוֹ גּוּפָהּ … חוֹתֵךְ מִן הָעוּבָּר … מוּתָּר בַּאֲכִילָה"]:::statement
+  A1["④ אָמַר רָבָא … חַסּוֹרֵי מְחַסְּרָא … טְרֵפָה תּוֹכִיחַ … וְאֵינָהּ מַתִּירָתָהּ"]:::answer
+  S3["⑤ לֹא, אִם טִיהֲרָה … גּוּפָהּ, תְּטַהֵר אֶת הָאֵבֶר דָּבָר שֶׁאֵינוֹ גּוּפָהּ?"]:::statement
+  P1["⑥ תַּנְיָא נָמֵי הָכִי … אָמְרוּ לוֹ: טְרֵפָה תּוֹכִיחַ … וְאֵינָהּ מַתִּירָתָהּ"]:::proof
+  S5["⑦ אִם טִיהֲרָה … אוֹתָהּ וְאֶת הָאֵבֶר הַמְדוּלְדָּל בָּהּ … תְּטַהֵר אֶת הָעוּבָּר?"]:::statement
+  S6["⑧ הַרְבֵּה מַצֶּלֶת עַל שֶׁאֵינוֹ גּוּפָהּ יוֹתֵר מִגּוּפָהּ"]:::statement
+  S0 -->|קושיא| S1
+  S1 -->|מענה| S2
+  S2 -->|חסורי מחסרא| A1
+  A1 -->|תשובת ר׳ מאיר| S3
+  S3 -->|ברייתא מקבילה| P1
+  P1 -->|המשך| S5
+  S5 -->|מענה| S6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ג א — Chullin 73a:7</span></div>
+    <div class="orig">מָה מָצִינוּ בִּטְרֵפָה שֶׁשְּׁחִיטָתָהּ מְטַהַרְתָּהּ, אַף שְׁחִיטַת בְּהֵמָה תְּטַהֵר אֶת הָעוּבָּר.</div>
+    <div class="trans" data-when="he">סיום נימוק חכמים: כשם שמצינו בטריפה ששחיטתה מטהרת אותה מטומאת נבלה — אף שחיטת הבהמה תטהר את אבר העובר שיצא.</div>
+    <div class="trans" data-when="en">§ The mishna cites the Rabbis’ rationale for their opinion: Just as we found in the case of a tereifa that its slaughter renders it ritually pure according to Torah law, i.e., it prevents it from having the ritual impurity of a carcass, despite not rendering the animal permitted for consumption, so too, the slaughter of the mother animal should render the limb of its fetus that left the womb ritually pure, despite the fact that it is prohibited for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ג א — Chullin 73a:8</span></div>
+    <div class="orig">תַּנְיָא, אָמַר לָהֶן רַבִּי מֵאִיר: וְכִי מִי טִיהֲרוֹ לְאֵבֶר זֶה מִידֵי נְבֵלָה? שְׁחִיטַת אִמּוֹ! אִם כֵּן, תַּתִּירֶנּוּ בַּאֲכִילָה!</div>
+    <div class="trans" data-when="he">בברייתא נשנתה תשובת ר׳ מאיר: וכי מי טיהר אבר זה מטומאת נבלה? שחיטת אמו! ואם שחיטה זו פועלת — אם כן תתיר אותו אף באכילה!</div>
+    <div class="trans" data-when="en">The mishna itself proceeds to cite Rabbi’s Meir’s response to this claim. The Gemara here cites a different version of his response based on that which is taught in a baraita: Rabbi Meir said to the Rabbis: But what renders this limb pure from the impurity of a carcass? You might say it is the slaughter of its mother, but if so, the act of slaughter should also permit it even for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ג א — Chullin 73a:9</span></div>
+    <div class="orig">אָמְרוּ לוֹ: הַרְבֵּה מַצֶּלֶת עַל שֶׁאֵינוֹ גּוּפָהּ יוֹתֵר מִגּוּפָהּ, שֶׁהֲרֵי שָׁנִינוּ: חוֹתֵךְ מִן הָעוּבָּר שֶׁבְּמֵעֶיהָ – מוּתָּר בַּאֲכִילָה, מִן הַטְּחוֹל וּמִן הַכְּלָיוֹת – אָסוּר בַּאֲכִילָה.</div>
+    <div class="trans" data-when="he">השיבו לו חכמים: שחיטה מצלת (מגינה) יותר על מה שאינו גוף הבהמה מאשר על גופה — שהרי שנינו: החותך מן העובר שבמעיה ושחט — מותר באכילה; אך חתך מן הטחול ומן הכליות ושחט — אסור באכילה.</div>
+    <div class="trans" data-when="en">The Rabbis said to him: The slaughter of an animal has a greater effect in shielding that which is not part of its body from having the ritual impurity of a carcass than that which is part of its body, as is apparent from that which we learned in the mishna (68a): If, prior to slaughtering an animal, one severs pieces from a fetus that is in its womb, leaving those pieces in the womb, their consumption is permitted by virtue of the slaughter of the mother animal. By contrast, if one severs pieces of the spleen or of the kidneys of an animal and then slaughtered it, then even if those pieces were left inside the animal, their consumption is prohibited.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ג א — Chullin 73a:10</span></div>
+    <div class="orig">מַאי קָאָמַר? אָמַר רָבָא, וְאָמְרִי לַהּ כְּדִי: חַסּוֹרֵי מְחַסְּרָא וְהָכִי קָתָנֵי, אָמַר לָהֶן רַבִּי מֵאִיר: וְכִי מִי טִהֲרוֹ לְאֵבֶר זֶה מִידֵּי נְבֵלָה? שְׁחִיטַת אִמּוֹ, אִם כֵּן תַּתִּירֶנּוּ בַּאֲכִילָה! אָמְרוּ לוֹ: טְרֵפָה תּוֹכִיחַ, שֶׁשְּׁחִיטָתָהּ מְטַהַרְתָּהּ מִידֵי נְבֵלָה וְאֵינָהּ מַתִּירָתָהּ בַּאֲכִילָה.</div>
+    <div class="trans" data-when="he">מה כוונת הברייתא? אמר רבא (ויש אומרים בלא שם): הברייתא חסרה, וכך יש לשנותה — ר׳ מאיר: מי טיהר אבר זה מנבלה? שחיטת אמו, ואם כן תתירנו באכילה! השיבו חכמים: טריפה תוכיח — ששחיטתה מטהרתה מטומאת נבלה ואינה מתירתה באכילה.</div>
+    <div class="trans" data-when="en">The Gemara clarifies the response of the Rabbis: What are the Rabbis saying? Rava said, and some say it unattributed [kedi] to any particular Sage, that the baraita is incomplete, and this is what it is teaching: Rabbi Meir said to the Rabbis: But what renders this limb pure from the impurity of a carcass? You might say it is the slaughter of its mother, but if so, it should also permit it even for consumption. In response the Rabbis said to him: Let the halakha of a tereifa prove the point, as its slaughter renders it pure from the impurity of a carcass but it does not permit it for consumption. Similarly, the slaughter of the mother animal should render pure even the foreleg of its fetus, even if it does not permit it for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ג א — Chullin 73a:11</span></div>
+    <div class="orig">אָמַר לָהֶן: לֹא, אִם טִיהֲרָה שְׁחִיטַת טְרֵפָה אוֹתָהּ, דָּבָר שֶׁהִיא גּוּפָהּ, תְּטַהֵר אֶת הָאֵבֶר דָּבָר שֶׁאֵינוֹ גּוּפָהּ? אָמְרוּ לוֹ: הַרְבֵּה מַצֶּלֶת עַל שֶׁאֵינוֹ גּוּפָהּ יוֹתֵר מִגּוּפָהּ, שֶׁהֲרֵי שָׁנִינוּ: חוֹתֵךְ מִן הָעוּבָּר שֶׁבְּמֵעֶיהָ – מוּתָּר בַּאֲכִילָה, מִן הַטְּחוֹל וּמִן הַכְּלָיוֹת – אָסוּר בַּאֲכִילָה.</div>
+    <div class="trans" data-when="he">השיב ר׳ מאיר: לא! אם טיהרה שחיטת הטריפה אותה — דבר שהוא גופה — וכי תטהר אף את האבר שאינו גופה? חזרו חכמים: שחיטה מצלת יותר על שאינו גופה, שהרי שנינו: החותך מן העובר שבמעיה — מותר; מן הטחול ומן הכליות — אסור.</div>
+    <div class="trans" data-when="en">Rabbi Meir said to them: No, even if the slaughter of a tereifa renders the animal itself pure from having the impurity of a carcass, that is true with regard to something that is part of its own body. Does it necessarily follow that it should also render pure the limb of its fetus, which is something that is not part of its own body? The Rabbis said to him: The slaughter of an animal has a greater effect in shielding that which is not part of its body from having the impurity of a carcass than that which is part of its body, as is apparent from that which we learned in the mishna at the beginning of the chapter: If one severs pieces from a fetus that is in an animal’s womb and then slaughters the mother animal, their consumption is permitted. By contrast, if one severs pieces of the spleen or of the kidneys of an animal and then slaughters it, their consumption is prohibited.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ג א — Chullin 73a:12</span></div>
+    <div class="orig">תַּנְיָא נָמֵי הָכִי: אָמַר לָהֶן רַבִּי מֵאִיר: וְכִי מִי טִיהֲרוֹ לְאֵבֶר זֶה מִידֵּי נְבֵלָה? אָמְרוּ לוֹ: שְׁחִיטַת אִמּוֹ. אִם כֵּן, תַּתִּירֶנּוּ בַּאֲכִילָה! אָמְרוּ לוֹ: טְרֵפָה תּוֹכִיחַ, שֶׁשְּׁחִיטָתָהּ מְטַהַרְתָּהּ מִידֵי נְבֵלָה וְאֵינָהּ מַתִּירָתָהּ בַּאֲכִילָה.</div>
+    <div class="trans" data-when="he">וכן שנינו בברייתא: אמר ר׳ מאיר: מי טיהר אבר זה מנבלה? אמרו לו: שחיטת אמו. אם כן תתירנו באכילה! אמרו לו: טריפה תוכיח — ששחיטתה מטהרתה מנבלה ואינה מתירתה באכילה.</div>
+    <div class="trans" data-when="en">The Gemara notes that this clarification of Rava is also taught explicitly in a baraita: Rabbi Meir said to the Rabbis: But what renders this limb pure from the impurity of a carcass? The Rabbis said to him: It is the slaughter of its mother. Rabbi Meir responded: But if so, it should also permit it even for consumption. In response the Rabbis said to him: Let the halakha of a tereifa prove the point, as its slaughter renders it pure from the impurity of a carcass but it does not permit it for consumption. Similarly, the slaughter of the mother animal should render pure even the foreleg of its fetus, even if it does not permit it for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ג א — Chullin 73a:13</span></div>
+    <div class="orig">אָמַר לָהֶן: אִם טִיהֲרָה שְׁחִיטַת טְרֵפָה אוֹתָהּ וְאֶת הָאֵבֶר הַמְדוּלְדָּל בָּהּ, דָּבָר שֶׁגּוּפָהּ, תְּטַהֵר אֶת הָעוּבָּר שֶׁאֵינוֹ גּוּפָהּ?</div>
+    <div class="trans" data-when="he">הוסיף ר׳ מאיר: אם טיהרה שחיטת הטריפה אותה ואת האבר המדולדל בה — דבר שהוא גופה — וכי תטהר את העובר, שאינו גופה?</div>
+    <div class="trans" data-when="en">Rabbi Meir said to them: Even if the slaughter of a tereifa renders the animal itself pure, and likewise the slaughter of any animal renders the limb that was partially cut from it but still hangs from it pure from imparting the impurity of a carcass despite being prohibited for consumption, that is the halakha with regard to something that is part of its own body. Does it necessarily follow that it should also render pure the limb of its fetus, which is something that is not part of its own body?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ג א — Chullin 73a:14</span></div>
+    <div class="orig">אָמְרוּ לוֹ: הַרְבֵּה מַצֶּלֶת עַל שֶׁאֵינוֹ גּוּפָהּ יוֹתֵר מִגּוּפָהּ, שֶׁהֲרֵי שָׁנִינוּ: חוֹתֵךְ מִן הָעוּבָּר שֶׁבְּמֵעֶיהָ – מוּתָּר בַּאֲכִילָה, מִן הַטְּחוֹל וּמִן הַכְּלָיוֹת – אָסוּר בַּאֲכִילָה.</div>
+    <div class="trans" data-when="he">חזרו חכמים: שחיטה מצלת יותר על מה שאינו גופה — שהרי שנינו: החותך מן העובר שבמעיה — מותר באכילה; מן הטחול ומן הכליות — אסור באכילה.</div>
+    <div class="trans" data-when="en">The Rabbis said to him: The slaughter of an animal has a greater effect in shielding that which is not part of its body from imparting the ritual impurity of a carcass than that which is part of its body, as is apparent from that which we have learned in the mishna above: If one severed pieces from a fetus that was in an animal’s womb and then slaughtered the mother animal, their consumption is permitted. But if one severed pieces of the spleen or of the kidneys of an animal and then slaughtered it, their consumption is prohibited.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">ריש לקיש ור׳ יוחנן — עובר או גם איברין</span><span data-when="en">Reish Lakish and R. Yoḥanan — fetus only, or limbs too</span>
+      <span class="ref">Chullin 73a:15–73b:4</span></h2>
+  <div class="lead"><span data-when="he">ריש לקיש: כמחלוקת בעוברין כך באיברין; ר׳ יוחנן: רק בעובר נחלקו, אך באבר בהמה הכל מודים. מיתיבי, ויישוב מחדש את גרסת ר׳ יוחנן.</span><span data-when="en">Reish Lakish: the dispute over fetuses applies to hanging limbs too; R. Yoḥanan: only fetuses are disputed. An objection forces a reformulation of R. Yoḥanan's version.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ריש לקיש: כמחלוקת בעוברין כך באיברין"]:::statement
+  S2["② ר׳ יוחנן: רק בעובר; באבר בהמה — הכל, שחיטה עושה ניפול"]:::statement
+  Q1{"③ ר׳ יוסי ב״ר חנינא: טעם ר׳ יוחנן — האי יש תקנה בחזרה"}:::question
+  Q2{"④ מיתיבי: ר׳ מאיר — אותה ואת האבר המדולדל, תטהר העובר?"}:::question
+  A1["⑤ בשלמא לריש לקיש: לדבריהם קאמר — שווים הם"]:::answer
+  Q3{"⑥ אלא לר׳ יוחנן — קשיא"}:::question
+  C1["⑦ אלא אי אתמר הכי: ר׳ יוחנן — אין שחיטה עושה ניפול"]:::conclusion
+  S3["⑧ ר׳ יוסי ב״ר חנינא: טעם ר׳ יוחנן אליבא דר׳ מאיר — האי גופה"]:::statement
+  S1 -->|מחלוקת| S2
+  S2 -->|טעם| Q1
+  Q1 -.->|מיתיבי| Q2
+  Q2 -->|בשלמא| A1
+  A1 -.->|אלא| Q3
+  Q3 -->|תיקון הגרסה| C1
+  C1 -->|טעם| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Reish Lakish: as for fetuses, so for hanging limbs"]:::statement
+  S2["② R. Yoḥanan: only fetuses; for a limb all agree slaughter makes it 'fallen'"]:::statement
+  Q1{"③ R. Yosei b. Ḥanina: R. Yoḥanan's reason — this one can be rectified by returning"}:::question
+  Q2{"④ Objection: R. Meir — it and its hanging limb, shall it purify the fetus?"}:::question
+  A1["⑤ Fine for Reish Lakish: he spoke per them — the two are alike"]:::answer
+  Q3{"⑥ But for R. Yoḥanan — it is difficult"}:::question
+  C1["⑦ Rather it was stated thus: R. Yoḥanan — slaughter does not make 'fallen'"]:::conclusion
+  S3["⑧ R. Yosei b. Ḥanina: R. Yoḥanan's reason per R. Meir — this is body"]:::statement
+  S1 -->|dispute| S2
+  S2 -->|reason| Q1
+  Q1 -.->|objection| Q2
+  Q2 -->|fine| A1
+  A1 -.->|but| Q3
+  Q3 -->|reformulated| C1
+  C1 -->|reason| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רֵישׁ לָקִישׁ: כְּמַחְלוֹקֶת בְּעוּבָּרִין, כָּךְ מַחְלוֹקֶת בְּאֵיבָרִין"]:::statement
+  S2["② וְרַבִּי יוֹחָנָן: מַחְלוֹקֶת בְּאֵבֶר דְּעוּבָּר … דִּבְרֵי הַכֹּל שְׁחִיטָה עוֹשָׂה נִיפּוּל"]:::statement
+  Q1{"③ מַאי טַעְמָא דְּרַבִּי יוֹחָנָן … הַאי אִית לֵיהּ תַּקַּנְתָּא בַּחֲזָרָה"}:::question
+  Q2{"④ מֵיתִיבִי … אוֹתָהּ וְאֶת הָאֵבֶר הַמְדוּלְדָּל בָּהּ … תְּטַהֵר אֶת הָעוּבָּר?"}:::question
+  A1["⑤ בִּשְׁלָמָא לְרֵישׁ לָקִישׁ, לְדִבְרֵיהֶם קָאָמַר … כִּי הֲדָדֵי נִינְהוּ"]:::answer
+  Q3{"⑥ אֶלָּא לְרַבִּי יוֹחָנָן, קַשְׁיָא"}:::question
+  C1["⑦ אֶלָּא, אִי אִתְּמַר הָכִי אִתְּמַר … דִּבְרֵי הַכֹּל אֵין שְׁחִיטָה עוֹשָׂה נִיפּוּל"]:::conclusion
+  S3["⑧ מַאי טַעְמָא דְּרַבִּי יוֹחָנָן אַלִּיבָּא דְּרַבִּי מֵאִיר? הַאי גּוּפָהּ, וְהַאי לָאו גּוּפָהּ"]:::statement
+  S1 -->|מחלוקת| S2
+  S2 -->|טעם| Q1
+  Q1 -.->|מיתיבי| Q2
+  Q2 -->|בשלמא| A1
+  A1 -.->|אלא| Q3
+  Q3 -->|תיקון הגרסה| C1
+  C1 -->|טעם| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ג א — Chullin 73a:15</span></div>
+    <div class="orig">אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: כְּמַחְלוֹקֶת בְּעוּבָּרִין, כָּךְ מַחְלוֹקֶת בְּאֵיבָרִין.</div>
+    <div class="trans" data-when="he">ריש לקיש: כשם שנחלקו ר׳ מאיר וחכמים באבר עובר שיצא (אם שחיטת האם מצילתו מטומאת נבלה), כך נחלקו באבר בהמה המדולדל (אם שחיטת הבהמה מצילתו).</div>
+    <div class="trans" data-when="en">§ Rabbi Shimon ben Lakish said: Just as there is a dispute between Rabbi Meir and the Rabbis with regard to fetuses, concerning whether the slaughter of the mother prevents a limb that emerged from the womb from having the impurity of a carcass, so too, they have a parallel dispute with regard to limbs of an animal that were partially cut from it but still hanging from it, whether the slaughter of the animal prevents such limbs from having the impurity of a carcass.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ג א — Chullin 73a:16</span></div>
+    <div class="orig">וְרַבִּי יוֹחָנָן אָמַר: מַחְלוֹקֶת בְּאֵבֶר דְּעוּבָּר, אֲבָל בְּאֵבֶר דִּבְהֵמָה – דִּבְרֵי הַכֹּל שְׁחִיטָה עוֹשָׂה נִיפּוּל.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן חולק: המחלוקת היא רק באבר העובר; אבל באבר בהמה המדולדל — דברי הכל ששחיטה ״עושה ניפול״ (רואים את האבר כאילו נפל קודם השחיטה), ולכן אינה מצילתו מטומאת נבלה.</div>
+    <div class="trans" data-when="en">And Rabbi Yoḥanan said: Their dispute is only with regard to a limb of a fetus that emerged from the womb, but with regard to a limb hanging from an animal, everyone agrees that the slaughter of the animal renders such a limb as though it had already fallen off prior to the slaughter, and the slaughter does not prevent the limb from having the impurity of a carcass.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ג א — Chullin 73a:17</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: מַאי טַעְמָא דְּרַבִּי יוֹחָנָן אַלִּיבָּא דְּרַבָּנַן? הַאי אִית לֵיהּ תַּקַּנְתָּא בַּחֲזָרָה, וְהָא לֵית לֵיהּ תַּקַּנְתָּא בַּחֲזָרָה.</div>
+    <div class="trans" data-when="he">ר׳ יוסי ב״ר חנינא ביאר את טעם ר׳ יוחנן לשיטת חכמים: אבר העובר יש לו תקנה בחזרה (אפשר להחזירו לרחם וייכשר בשחיטת האם), ולכן השחיטה מצילתו; אבל אבר בהמה מדולדל אין לו תקנה בחזרה.</div>
+    <div class="trans" data-when="en">Rabbi Yosei, son of Rabbi Ḥanina, said: What is the reason for the distinction made by Rabbi Yoḥanan concerning the opinion of the Rabbis that the slaughter of an animal renders pure the limb of its fetus, but does not render pure a limb hanging from the animal itself? The reason is that this limb of the fetus that emerged from its womb has a means of rectification by returning back inside the womb, in accordance with the opinion that it will then be permitted for consumption by virtue of the slaughter of the mother animal. But this hanging limb does not have a means of rectification by returning, as it cannot be reattached to the animal’s body.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ג א — Chullin 73a:18</span></div>
+    <div class="orig">מֵיתִיבִי: אָמַר לָהֶם רַבִּי מֵאִיר: לֹא, אִם טִיהֲרָה שְׁחִיטַת טְרֵפָה אוֹתָהּ וְאֶת הָאֵבֶר הַמְדוּלְדָּל בָּהּ – דָּבָר שֶׁגּוּפָהּ, תְּטַהֵר אֶת הָעוּבָּר – דָּבָר שֶׁאֵינוֹ גּוּפָהּ?</div>
+    <div class="trans" data-when="he">מיתיבי לר׳ יוחנן מן הברייתא: ר׳ מאיר אמר — אם טיהרה שחיטת הטריפה אותה ואת האבר המדולדל בה (דבר שהוא גופה), וכי תטהר את העובר שאינו גופה? משמע שר׳ מאיר עצמו סובר ששחיטה מטהרת אבר מדולדל — וזה כנגד גרסת ר׳ יוחנן.</div>
+    <div class="trans" data-when="en">The Gemara raises an objection to Rabbi Yoḥanan’s opinion from the baraita cited above: Rabbi Meir said to them: No, even if the slaughter of a tereifa renders pure the animal itself and similarly the slaughter of any animal renders pure the limb that is hanging from it from having the impurity of a carcass, this is true with regard to something that is part of its own body. Does it necessarily follow that it should also render pure the limb of its fetus, which is something that is not part of its own body?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ג ב — Chullin 73b:1</span></div>
+    <div class="orig">בִּשְׁלָמָא לְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, לְדִבְרֵיהֶם קָאָמַר לְהוּ: לְדִידִי לָא שְׁנָא אֵבֶר דְּעוּבָּר וְלָא שְׁנָא אֵבֶר דִּבְהֵמָה, כִּי הֲדָדֵי נִינְהוּ.</div>
+    <div class="trans" data-when="he">בשלמא לריש לקיש (שגם באיברין נחלקו): ר׳ מאיר אמר לחכמים ״לדבריכם״ — לדידי אין הבדל בין אבר עובר לאבר בהמה, שניהם שווים (שחיטה אינה מצילה); ולכן דבריו מתיישבים.</div>
+    <div class="trans" data-when="en">Rabbi Meir’s statement appears inconsistent with his opinion, as he holds that a hanging limb is not rendered pure by slaughtering the animal. The Gemara suggests that this difficulty can be resolved only according to Rabbi Shimon ben Lakish’s version of the Rabbis’ opinion, but not according to Rabbi Yoḥanan’s version. Granted, according to Rabbi Shimon ben Lakish, one can explain that Rabbi Meir was speaking in accordance with the statement of the Rabbis, as follows: According to my own opinion, there is no difference with regard to the limb of a fetus, and there is no difference with regard to a limb hanging from an animal; they are the same in that the slaughter of the animal does not render either of them pure. Accordingly, Rabbi Meir must have been speaking in accordance with the opinion of the Rabbis that a limb hanging from an animal is rendered pure by the animal’s slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ג ב — Chullin 73b:2</span></div>
+    <div class="orig">אֶלָּא לְרַבִּי יוֹחָנָן, קַשְׁיָא.</div>
+    <div class="trans" data-when="he">אלא לר׳ יוחנן (שבאיברין הכל מודים) — קשה, שהרי לפי דבריו ר׳ מאיר היה צריך לומר ששחיטה אינה מצילה אף אבר מדולדל.</div>
+    <div class="trans" data-when="en">But according to Rabbi Yoḥanan, who holds that both the Rabbis and Rabbi Meir agree that a limb hanging from an animal is not rendered pure by the animal’s slaughter, Rabbi Meir’s statement is difficult, as it is inconsistent with both his opinion and the Rabbis’ opinion. The Gemara concedes the challenge.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ג ב — Chullin 73b:3</span></div>
+    <div class="orig">אֶלָּא, אִי אִתְּמַר הָכִי אִתְּמַר: אָמַר רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: כְּמַחְלוֹקֶת בְּעוּבָּרִים, כָּךְ מַחֲלוֹקֶת בְּאֵיבָרִין, וְרַבִּי יוֹחָנָן אָמַר: מַחְלוֹקֶת בְּאֵבֶר דְּעוּבָּר, אֲבָל בְּאֵבֶר דִּבְהֵמָה – דִּבְרֵי הַכֹּל אֵין שְׁחִיטָה עוֹשָׂה נִיפּוּל.</div>
+    <div class="trans" data-when="he">אלא אם נאמרה המחלוקת — כך נאמרה: ריש לקיש — כמחלוקת בעוברין כך באיברין; ור׳ יוחנן — המחלוקת רק באבר עובר, אבל באבר בהמה דברי הכל ש<b>אין</b> שחיטה עושה ניפול (היפך הגרסה הראשונה) — ולכן דברי ר׳ מאיר מתיישבים.</div>
+    <div class="trans" data-when="en">Rather, if such a dispute was stated, it was stated like this: Rabbi Shimon ben Lakish said: Just as there is a dispute between Rabbi Meir and the Rabbis with regard to fetuses whose limbs emerged from the womb, so too, they have a parallel dispute with regard to limbs hanging from an animal. And Rabbi Yoḥanan said: Their dispute is only with regard to the limb of a fetus that emerged from the womb; but with regard to a limb hanging from an animal, everyone agrees that the slaughter of the animal does not render such a limb as though it had already fallen off prior to the slaughter, and does not impart the impurity of a carcass. According to this version of Rabbi Yoḥanan’s understanding of the dispute, Rabbi Meir’s statement is consistent even with his own opinion.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ג ב — Chullin 73b:4</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: מַאי טַעְמָא דְּרַבִּי יוֹחָנָן אַלִּיבָּא דְּרַבִּי מֵאִיר? הַאי גּוּפָהּ, וְהַאי לָאו גּוּפָהּ.</div>
+    <div class="trans" data-when="he">ר׳ יוסי ב״ר חנינא ביאר את טעם ר׳ יוחנן לשיטת ר׳ מאיר (בגרסה החדשה): אבר בהמה מדולדל הוא גופה (חלק מן הבהמה), ולכן שחיטה מצילתו; אבל אבר העובר אינו גופה.</div>
+    <div class="trans" data-when="en">Rabbi Yosei, son of Rabbi Ḥanina, said: What is the reason for the distinction made by Rabbi Yoḥanan concerning the opinion of Rabbi Meir, that the slaughter of an animal does not render pure the limb of its fetus, but it does render pure a limb hanging from the animal itself? It is that this hanging limb is part of the animal’s body, but that, the limb of the fetus, is not part of its body.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">מיתה עושה ניפול, שחיטה אינה עושה ניפול</span><span data-when="en">Death makes 'fallen,' slaughter does not</span>
+      <span class="ref">Chullin 73b:5–11</span></h2>
+  <div class="lead"><span data-when="he">רב יצחק בר יוסף בשם ר׳ יוחנן: הכל מודים שמיתה עושה ניפול ואין שחיטה עושה ניפול. הגמרא מבררת מדוע נצרכה אמירתו, אף שהמשנה כבר שנתה מיתה ושחיטה.</span><span data-when="en">Rav Yitzḥak bar Yosef in R. Yoḥanan's name: all agree death makes a limb 'fallen' and slaughter does not. The Gemara asks why his ruling was needed, given that the mishna already taught both.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① רב יצחק בר יוסף בשם ר׳ יוחנן: מיתה עושה ניפול, שחיטה אינה"]:::statement
+  Q1{"② במאי עסקינן? אבר עובר — פליגי! אלא אבר בהמה — מיתה ושחיטה תנינא"}:::question
+  P1["③ מיתה תנינא: מתה הבהמה — האבר מטמא משום אבר מן החי"]:::proof
+  P2["④ שחיטה תנינא: נשחטה — הוכשרו בדמיה; ר׳ שמעון: לא הוכשרו"]:::proof
+  A1["⑤ אי מההיא — הוה אמינא: ׳הוכשרו׳ — אבשר"]:::answer
+  Q2{"⑥ והא ׳הוכשרו׳ קתני — חד לבשר מן הבהמה וחד מן האבר"}:::question
+  A2["⑦ ומאי אולמיה? סד״א טומאה חמורה אגב אביו — קמ״ל"]:::answer
+  S1 -->|בירור| Q1
+  Q1 -->|מיתה| P1
+  P1 -->|שחיטה| P2
+  P2 -.->|אי מההיא| A1
+  A1 -->|קושיא| Q2
+  Q2 -->|יישוב| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Rav Yitzḥak in R. Yoḥanan's name: death makes 'fallen,' slaughter does not"]:::statement
+  Q1{"② What case? A fetal limb — they dispute! Rather a limb — death and slaughter are taught"}:::question
+  P1["③ Death is taught: the animal died — the limb imparts impurity as a limb from a living animal"]:::proof
+  P2["④ Slaughter is taught: slaughtered — made fit by its blood; R. Shimon: not made fit"]:::proof
+  A1["⑤ From that alone I'd say 'made fit' refers to the flesh"]:::answer
+  Q2{"⑥ But it teaches 'they were made fit' — one for flesh from the body, one from the limb"}:::question
+  A2["⑦ What is more compelling? I'd think severe impurity via its parent — it teaches us otherwise"]:::answer
+  S1 -->|clarify| Q1
+  Q1 -->|death| P1
+  P1 -->|slaughter| P2
+  P2 -.->|from that| A1
+  A1 -->|objection| Q2
+  Q2 -->|resolved| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① אָמַר רַב יִצְחָק בַּר יוֹסֵף … הַכֹּל מוֹדִים שֶׁמִּיתָה עוֹשָׂה נִיפּוּל, וְאֵין שְׁחִיטָה עוֹשָׂה נִיפּוּל"]:::statement
+  Q1{"② בְּמַאי עָסְקִינַן? … בְּאֵבֶר דְּעוּבָּר – מִיפְלָג פְּלִיגִי! אֶלָּא בְּאֵבֶר דִּבְהֵמָה – מִיתָה תְּנֵינָא, שְׁחִיטָה תְּנֵינָא"}:::question
+  P1["③ מִיתָה תְּנֵינָא: מֵתָה הַבְּהֵמָה … וְהָאֵבֶר מְטַמֵּא מִשּׁוּם אֵבֶר מִן הַחַי"]:::proof
+  P2["④ שְׁחִיטָה נָמֵי תְּנֵינָא: נִשְׁחֲטָה בְּהֵמָה – הוּכְשְׁרוּ בְּדָמֶיהָ … רַבִּי שִׁמְעוֹן: לֹא הוּכְשְׁרוּ"]:::proof
+  A1["⑤ אִי מֵהַהִיא, הֲוָה אָמֵינָא: מַאי ׳הוּכְשְׁרוּ׳ – אַבָּשָׂר"]:::answer
+  Q2{"⑥ וְהָא ׳הוּכְשְׁרוּ׳ קָתָנֵי … חַד לְבָשָׂר הַפּוֹרֵשׁ מִן הַבְּהֵמָה, וְחַד … מִן הָאֵבֶר"}:::question
+  A2["⑦ וּמַאי אוּלְמֵיהּ … סָלְקָא דַּעְתָּךְ … טוּמְאָה חֲמוּרָה אַגַּב אָבִיו … קָמַשְׁמַע לַן"]:::answer
+  S1 -->|בירור| Q1
+  Q1 -->|מיתה| P1
+  P1 -->|שחיטה| P2
+  P2 -.->|אי מההיא| A1
+  A1 -->|קושיא| Q2
+  Q2 -->|יישוב| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ג ב — Chullin 73b:5</span></div>
+    <div class="orig">אָמַר רַב יִצְחָק בַּר יוֹסֵף אָמַר רַבִּי יוֹחָנָן: הַכֹּל מוֹדִים שֶׁמִּיתָה עוֹשָׂה נִיפּוּל, וְאֵין שְׁחִיטָה עוֹשָׂה נִיפּוּל.</div>
+    <div class="trans" data-when="he">רב יצחק בר יוסף בשם ר׳ יוחנן: הכל מודים שמיתת הבהמה (שלא בשחיטה) ״עושה ניפול״ — רואים את האבר המדולדל כאילו נפל קודם המיתה, ולכן יטמא משום אבר מן החי ולא משום נבלה; ואין שחיטה עושה ניפול.</div>
+    <div class="trans" data-when="en">§ The Gemara continues to elucidate the dispute between Rabbi Meir and the Rabbis. Rav Yitzḥak bar Yosef says that Rabbi Yoḥanan says: Everyone agrees that the death of an animal by means other than slaughter renders a limb as though it had already fallen off prior to the animal’s death. Therefore, it will not have the impurity of a carcass, but it will have the impurity of a limb taken from a living animal. And likewise, everyone agrees that the slaughter of the animal does not render a limb as though it had already fallen off prior to the slaughter, and therefore it will not have the impurity of a carcass.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ג ב — Chullin 73b:6</span></div>
+    <div class="orig">בְּמַאי עָסְקִינַן? אִילֵימָא בְּאֵבֶר דְּעוּבָּר – מִיפְלָג פְּלִיגִי! אֶלָּא בְּאֵבֶר דִּבְהֵמָה – מִיתָה תְּנֵינָא, שְׁחִיטָה תְּנֵינָא.</div>
+    <div class="trans" data-when="he">במה עוסקת אמירת ר׳ יוחנן? אם באבר עובר — הרי ר׳ מאיר וחכמים נחלקו בו בפירוש! אלא באבר בהמה מדולדל — אך גם דין מיתה כבר שנינו, וגם דין שחיטה כבר שנינו; אם כן מה חידש?</div>
+    <div class="trans" data-when="en">The Gemara clarifies: What are we dealing with here? If we say we are dealing with a limb of its fetus that emerged from its womb, Rabbi Meir and the Rabbis explicitly disagree with regard to this case. Rather, we are dealing with a limb hanging from an animal. But if so, Rabbi Yoḥanan’s statement is unnecessary. With regard to a hanging limb, we already learn about the effect of the death of the animal in a mishna elsewhere, and we already learn about the effect of the slaughter of the animal in a mishna elsewhere.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ג ב — Chullin 73b:7</span></div>
+    <div class="orig">מִיתָה תְּנֵינָא: מֵתָה הַבְּהֵמָה – הַבָּשָׂר צָרִיךְ הֶכְשֵׁר, וְהָאֵבֶר מְטַמֵּא מִשּׁוּם אֵבֶר מִן הַחַי, וְאֵינוֹ מְטַמֵּא מִשּׁוּם אֵבֶר מִן הַנְּבֵלָה; דִּבְרֵי רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">דין מיתה שנינו (במשנה קכ״ז): מתה הבהמה — הבשר התלוי צריך הכשר (מגע משקה) כדי לקבל טומאה, והאבר המדולדל מטמא משום אבר מן החי ואינו מטמא משום אבר מן הנבלה; דברי ר׳ מאיר — משמע שמיתה עושה ניפול.</div>
+    <div class="trans" data-when="en">The Gemara elaborates: We already learn about the effect of the death of an animal in the mishna (127b): If the animal died without slaughter, any hanging flesh needs to be rendered susceptible to contracting ritual impurity in order to become impure. This is accomplished by coming in contact with liquid, with the owner’s approval. The reason is that its halakhic status is that of flesh severed from a living animal, which is ritually pure and does not have the status of an unslaughtered carcass. And a hanging limb imparts impurity as a limb severed from a living animal, but does not impart impurity as a limb from a carcass; this is the statement of Rabbi Meir. Evidently, Rabbi Meir holds that upon the animal’s death, anything hanging from the animal is considered as though it had already fallen off before the animal’s death. Since the mishna does not record that the Rabbis disagree, it would appear that they agree.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ג ב — Chullin 73b:8</span></div>
+    <div class="orig">שְׁחִיטָה נָמֵי תְּנֵינָא: נִשְׁחֲטָה בְּהֵמָה – הוּכְשְׁרוּ בְּדָמֶיהָ, דִּבְרֵי רַבִּי מֵאִיר. רַבִּי שִׁמְעוֹן אוֹמֵר: לֹא הוּכְשְׁרוּ.</div>
+    <div class="trans" data-when="he">אף דין שחיטה שנינו (שם): נשחטה הבהמה — האבר והבשר התלויים הוכשרו לקבל טומאה בדמיה; דברי ר׳ מאיר. ר׳ שמעון אומר: לא הוכשרו בדם אלא במשקה אחר. ומכאן שאין שחיטה עושה ניפול.</div>
+    <div class="trans" data-when="en">Likewise, we already learn about the effect of the slaughter of an animal in the same mishna: If the animal is slaughtered, they, the limb and the flesh hanging from it, are thereby rendered susceptible to impurity, by coming in contact with its blood. Blood is one of the seven liquids that render foods susceptible to impurity and its presence is considered to be with the approval of the owner, as it makes the meat look redder and fresher; this is the statement of Rabbi Meir. Rabbi Shimon says: They were not rendered susceptible to impurity through the animal’s own blood, but only once they were wet with another liquid, with the owner’s approval. It is apparent that both opinions in that mishna agree that the limb does not have the impurity of a limb severed from a living animal. Evidently, they hold that the slaughter does not render the hanging limb as though it had already fallen off beforehand.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ג ב — Chullin 73b:9</span></div>
+    <div class="orig">אִי מֵהַהִיא, הֲוָה אָמֵינָא: מַאי ״הוּכְשְׁרוּ״ – אַבָּשָׂר.</div>
+    <div class="trans" data-when="he">תשובת הגמרא: אילו רק מן המשנה ההיא, היינו אומרים שאמנם שחיטה כן עושה ניפול; ומה ש״הוכשרו בדמיה״ מוסב על הבשר בלבד (שאין לו טומאה עצמית), ולא על האבר — לכן הוצרך ר׳ יוחנן לחדש שאין שחיטה עושה ניפול.</div>
+    <div class="trans" data-when="en">Given that the mishna has already taught both halakhot, what was the necessity of Rabbi Yoḥanan’s statement? The Gemara answers: If these halakhot were derived only from that mishna, I would say that actually, slaughter does render a hanging limb as though it had already fallen off beforehand, and such a limb would have the impurity of a limb severed from a live animal. If so, what does the mishna mean when it states: They are rendered susceptible to impurity by coming in contact with its blood? Ostensibly, the intention is that both the limb and the flesh must be rendered susceptible to impurity, which indicates that the limb does not have any impurity of its own. The Gemara explains: One would have explained that the need to be rendered susceptible to impurity is referring only to the flesh, as flesh severed from a living animal does not have any impurity of its own.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ג ב — Chullin 73b:10</span></div>
+    <div class="orig">וְהָא ״הוּכְשְׁרוּ״ קָתָנֵי, מַהוּ דְּתֵימָא: חַד לְבָשָׂר הַפּוֹרֵשׁ מִן הַבְּהֵמָה, וְחַד לְבָשָׂר הַפּוֹרֵשׁ מִן הָאֵבֶר.</div>
+    <div class="trans" data-when="he">קושיא: והרי שנינו ״הוכשרו״ בלשון רבים, המשמע אף על האבר! יישוב: לשון הרבים בא לשני סוגי בשר — אחד הבשר הפורש מן הבהמה, ואחד הבשר הפורש מן האבר המדולדל; שניהם צריכים הכשר, ולא בא ללמד על האבר עצמו.</div>
+    <div class="trans" data-when="en">The Gemara objects: But the mishna teaches: They are rendered susceptible, in the plural, which is apparently referring to both the flesh and the limb, which were mentioned previously in the mishna. The Gemara explains: You might say that the plural is used because the statement is referring to two types of hanging flesh that upon slaughter are considered to have been separated from a living animal: One is for flesh that separates from the body of the animal, and the other one is for flesh that separates from the hanging limb. Neither type has its own impurity, so they must be rendered susceptible to impurity by coming in contact with liquid.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ג ב — Chullin 73b:11</span></div>
+    <div class="orig">וּמַאי אוּלְמֵיהּ דְּהַאי מֵהַאי? סָלְקָא דַּעְתָּךְ אָמֵינָא, הוֹאִיל וּמְטַמֵּא טוּמְאָה חֲמוּרָה אַגַּב אָבִיו, אֵימָא לָא לִיבְעֵי הֶכְשֵׁר, קָמַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">ומה כוחו של בשר זה (הפורש מן האבר) על האחר, שהוצרך ללמדו? סלקא דעתך אמינא: הואיל ובהיותו מחובר לאבר היה מטמא טומאה חמורה ״אגב אביו״ (האבר), אֵימא שאינו צריך הכשר — לכך קמ״ל שאף הוא צריך הכשר.</div>
+    <div class="trans" data-when="en">The Gemara asks: But in what way is it more compelling to apply the halakha to this type of flesh than to that type, making it necessary to state the halakha with regard to both? The Gemara answers: It might enter your mind to say that since flesh that is attached to a limb severed from a living animal imparts the same severe form of ritual impurity as the limb on account of being a part of it, one might say that once the flesh is separated from the limb it does not need to then be rendered susceptible to impurity. To reject this possibility, the mishna uses the plural form to teach us that this type of flesh does need to be rendered susceptible to impurity.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">נקוט דרב יצחק בידך — מצות פרוש בלבד</span><span data-when="en">Hold R. Yitzḥak's view — only a duty to abstain</span>
+      <span class="ref">Chullin 73b:12–74a:1</span></h2>
+  <div class="lead"><span data-when="he">רב יוסף: אחוז בדברי רב יצחק בר יוסף, שאף רבה בר בר חנה סובר כמותו. הברייתא הדורשת ״ובשר בשדה טריפה״ אינה אלא אסמכתא — אין באבר ובשר המדולדלים אלא מצות פרוש מדרבנן.</span><span data-when="en">Rav Yosef: hold R. Yitzḥak bar Yosef's view, since Rabba bar bar Ḥana agrees. The baraita on "torn flesh in the field" is only an asmakhta — a hanging limb carries only a rabbinic duty to abstain.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב יוסף: נקוט דרב יצחק בידך — רבה בר בר חנה כוותיה"]:::statement
+  P1["① דתניא: ובשר בשדה טריפה — להביא אבר ובשר המדולדלין, ושחטן, שאסורין"]:::proof
+  C1["② רבה בב״ח בשם ר׳ יוחנן: אין בהן אלא מצות פרוש בלבד"]:::conclusion
+  S1 -->|ברייתא| P1
+  P1 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Yosef: hold R. Yitzḥak's view — Rabba bar bar Ḥana concurs"]:::statement
+  P1["① A baraita: 'torn flesh in the field' includes a hanging limb and flesh, slaughtered — forbidden"]:::proof
+  C1["② Rabba bar bar Ḥana in R. Yoḥanan's name: they carry only a duty to abstain"]:::conclusion
+  S1 -->|baraita| P1
+  P1 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב יוֹסֵף: נְקוֹט דְּרַב יִצְחָק בַּר יוֹסֵף בִּידָךְ, דְּרַבָּה בַּר בַּר חָנָה קָאֵי כְּוָותֵיהּ"]:::statement
+  P1["① דְּתַנְיָא: ׳וּבָשָׂר בַּשָּׂדֶה טְרֵפָה לֹא תֹאכֵלוּ׳ – לְהָבִיא הָאֵבֶר וְהַבָּשָׂר הַמְדוּלְדָּלִין … וּשְׁחָטָן, שֶׁהֵן אֲסוּרִין"]:::proof
+  C1["② וְאָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: אֵין בָּהֶן אֶלָּא מִצְוַת פְּרוֹשׁ בִּלְבָד"]:::conclusion
+  S1 -->|ברייתא| P1
+  P1 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ג ב — Chullin 73b:12</span></div>
+    <div class="orig">אָמַר רַב יוֹסֵף: נְקוֹט דְּרַב יִצְחָק בַּר יוֹסֵף בִּידָךְ, דְּרַבָּה בַּר בַּר חָנָה קָאֵי כְּוָותֵיהּ. דְּתַנְיָא: ״וּבָשָׂר בַּשָּׂדֶה טְרֵפָה לֹא תֹאכֵלוּ״ – לְהָבִיא הָאֵבֶר וְהַבָּשָׂר הַמְדוּלְדָּלִין בִּבְהֵמָה וּבְחַיָּה וּבְעוֹף, וּשְׁחָטָן, שֶׁהֵן אֲסוּרִין. וְאָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן:</div>
+    <div class="trans" data-when="he">רב יוסף: אחוז בדברי רב יצחק בר יוסף (שאין שחיטה עושה ניפול), שאף רבה בר בר חנה סובר כמותו. שכן שנינו בברייתא: ״ובשר בשדה טריפה לא תאכלו״ — לרבות האבר והבשר המדולדלים בבהמה, בחיה ובעוף, ושחטן, שהם אסורים; ואמר רבה בר בר חנה בשם ר׳ יוחנן:</div>
+    <div class="trans" data-when="en">§ Rav Yosef said: Take the statement that Rav Yitzḥak bar Yosef says that Rabbi Yoḥanan says, i.e., that the slaughter of an animal does not render a hanging limb as though it had already fallen off prior to the slaughter, in your hand, i.e., accept it as correct, as Rabba bar bar Ḥana also holds in accordance with this opinion. As it is taught in a baraita: “And flesh that is torn in the field, you shall not eat” (Exodus 22:30). This serves to include the case of the limb or the flesh that was partially cut off but was still hanging on a domesticated animal or on an undomesticated animal or on a bird, and one slaughtered them; it is derived that they are prohibited as limbs severed from a living animal. And Rabba bar bar Ḥana says that Rabbi Yoḥanan says with regard to the ruling of this baraita:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ד א — Chullin 74a:1</span></div>
+    <div class="orig">אֵין בָּהֶן אֶלָּא מִצְוַת פְּרוֹשׁ בִּלְבָד.</div>
+    <div class="trans" data-when="he">המשך דברי רבה בר בר חנה בשם ר׳ יוחנן: אין באבר ובבשר המדולדלים אלא מצות ״פרוש״ בלבד — איסור מדרבנן להיפרש מאכילתם, ולא איסור תורה; שכן הדרשה מן הפסוק אינה אלא אסמכתא.</div>
+    <div class="trans" data-when="en">In fact, such limbs and flesh are not prohibited by Torah law, as the slaughter does not render them as though they had already fallen off prior to the slaughter, and the verse cited in the baraita is not a true derivation but a mere support. Accordingly, with regard to them, there is nothing other than a rabbinic mitzva to separate oneself from consuming them.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
