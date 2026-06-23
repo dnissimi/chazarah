@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין פ׳</title>
+<meta name="description" content="מפת הסוגיא של חולין פ׳: זהותו של הכוי — מחלוקת אמוראים ותנאים; עיזי דבאלא — האם כשרות למזבח כמין עז; כל המשנה דלא כר׳ שמעון משום שחיטה שאינה ראויה; ולמה אין לוקין גם משום מחוסר זמן.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="80">
+<meta name="gemara-map:sefaria-ref" content="Chullin 80">
+<meta name="gemara-map:topic-he" content="כוי, עיזי דבאלא, דלא כר׳ שמעון, מחוסר זמן">
+<meta name="gemara-map:topic-en" content="The koy, forest goats, not like R. Shimon, time not arrived">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין פ׳">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 80">
+<meta name="gemara-map:blurb-he" content="זהות הכוי במחלוקת; עיזי דבאלא למזבח; המשנה דלא כר׳ שמעון; ולמה אין מוסיפים לאו דמחוסר זמן.">
+<meta name="gemara-map:blurb-en" content="The koy’s identity disputed; forest goats on the altar; the mishna not like R. Shimon; and why ‘time not yet arrived’ is not added.">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין פ׳</span><span data-when="en">Sugya map — Chullin 80</span></h1>
+    <div class="subtitle"><span data-when="he">חולין פ׳ א — פ״א א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 80a–81a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> ארבעה דיונים: <b>זהות הכוי</b> — בריה בפני עצמה, איל הבר, או הכלאה — מחלוקת אמוראים שהיא כמחלוקת תנאים; <b>עיזי דבאלא</b> (עזי יער) — האם כשרות למזבח כמין עז, או שמא מין חיה, בבירור הפסוקים על עשר הבהמות; ר׳ אושעיא: <b>כל המשנה דלא כר׳ שמעון</b>, שלשיטתו ׳שחיטה שאינה ראויה לא שמה שחיטה׳; וקושיא <b>למה אין לוקין גם משום מחוסר זמן</b> — לפי שאין מונים לאוין נוכראין, ולר׳ זירא משום שהכתוב ניתקו לעשה.</span>
+    <span data-when="en"><b>Bottom line:</b> Four discussions: the <b>koy’s identity</b> — a distinct entity, a wild ram, or a crossbreed — an amoraic dispute mirroring a tannaitic one; <b>forest goats</b> (izei devala) — fit for the altar as a kind of goat, or perhaps an undomesticated species, probed through the verse listing ten kosher animals; Rabbi Oshaya: <b>the whole mishna is not like R. Shimon</b>, who holds “unfit slaughter is not slaughter”; and the question <b>why one is not also flogged for ‘time not yet arrived’</b> — because the mishna omits unrelated prohibitions, and per R. Zeira because the verse turned it into a positive mitzva.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין פ׳</span><span data-when="en">Overview — Chullin 80</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · זהות הכוי — מחלוקת אמוראים ותנאים"]:::statement
+  O2["2 · עיזי דבאלא — כשרות למזבח כמין עז"]:::statement
+  O3["3 · כל המשנה דלא כר׳ שמעון"]:::statement
+  O4["4 · למה אין לוקין משום מחוסר זמן"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · The koy’s identity — amoraim and tannaim"]:::statement
+  O2["2 · Forest goats — fit for the altar as a goat"]:::statement
+  O3["3 · The whole mishna is not like R. Shimon"]:::statement
+  O4["4 · Why no lashes for ׳time not yet arrived׳"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">זהות הכוי — מחלוקת אמוראים כמחלוקת תנאים</span><span data-when="en">The koy’s identity — amoraim mirror tannaim</span>
+      <span class="ref">Chullin 80a:11–12</span></h2>
+  <div class="lead"><span data-when="he">עד כה הניחה הגמרא שהכוי הוא הכלאת צבי ועז. כעת מובאות דעות אחרות בזהותו: רב יהודה ורב נחמן נחלקו, וזו כמחלוקת תנאים.</span><span data-when="en">Until now the Gemara assumed the koy is a deer-goat crossbreed. Now other views of its identity emerge: Rav Yehuda and Rav Naḥman differ, mirroring a tannaitic dispute.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① רב יהודה: כוי — בריה בפני עצמה, לא הוכרע אם בהמה אם חיה · רב נחמן: כוי — איל הבר"]:::statement
+  P1["② כתנאי: איל הבר, וי״א הבא מן התיש והצביה · ר׳ יוסי: בריה בפני עצמה · רשב״ג: מין בהמה, ומגדלים מהן עדרים"]:::proof
+  S1 -->|כתנאי| P1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Rav Yehuda: a koy is a distinct entity, undecided whether domesticated or wild · Rav Naḥman: a koy is the wild ram"]:::statement
+  P1["② Like tannaim: the wild ram, others say goat-doe offspring · R. Yosei: a distinct entity · RSbG: domesticated, raised in flocks"]:::proof
+  S1 -->|like tannaim| P1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① אָמַר רַב יְהוּדָה: כּוֹי – בְּרִיָּה בִּפְנֵי עַצְמָהּ הִיא … רַב נַחְמָן אָמַר: כּוֹי – זֶה אֵיל הַבָּר"]:::statement
+  P1["② כְּתַנָּאֵי … זֶה הַבָּא מִן הַתַּיִישׁ וּמִן הַצְּבִיָּיה … רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל אוֹמֵר: מִין בְּהֵמָה הִיא … מְגַדְּלִין מֵהֶן עֲדָרִים עֲדָרִים"]:::proof
+  S1 -->|כתנאי| P1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ׳ א — Chullin 80a:11</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה: כּוֹי – בְּרִיָּה בִּפְנֵי עַצְמָהּ הִיא, וְלֹא הִכְרִיעוּ בָּהּ חֲכָמִים אִם מִין בְּהֵמָה הִיא אִם מִין חַיָּה הִיא. רַב נַחְמָן אָמַר: כּוֹי – זֶה אֵיל הַבָּר.</div>
+    <div class="trans" data-when="he">עד כה הניחה הגמרא שהכוי הוא תוצאת הכלאה של צבי ועז. כעת מביאה דעות אחרות בזהותו: רב יהודה — הכוי בריה בפני עצמה, ולא הכריעו בה חכמים אם מין בהמה הוא אם מין חיה. רב נחמן — הכוי הוא איל הבר.</div>
+    <div class="trans" data-when="en">§ Until this point, the Gemara considered the koy to be the result of interbreeding a deer and a goat. The Gemara now cites other opinions as to its identity: Rav Yehuda says: A koy is a distinct entity, and the Sages did not determine whether it is a species of domesticated animal or a species of undomesticated animal. Rav Naḥman says: The koy is the wild ram.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ׳ א — Chullin 80a:12</span></div>
+    <div class="orig">כְּתַנָּאֵי: כּוֹי – זֶה אַיִל הַבָּר, וְיֵשׁ אוֹמְרִים: זֶה הַבָּא מִן הַתַּיִישׁ וּמִן הַצְּבִיָּיה. רַבִּי יוֹסֵי אוֹמֵר: כּוֹי בְּרִיָּה בִּפְנֵי עַצְמָהּ הִיא, וְלֹא הִכְרִיעוּ בָּהּ חֲכָמִים אִם מִין חַיָּה אִם מִין בְּהֵמָה. רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל אוֹמֵר: מִין בְּהֵמָה הִיא, וְשֶׁל בֵּית דּוּשַׁאי הָיוּ מְגַדְּלִין מֵהֶן עֲדָרִים עֲדָרִים.</div>
+    <div class="trans" data-when="he">מחלוקת האמוראים היא כמחלוקת תנאים בברייתא: הכוי — איל הבר, ויש אומרים: הוא הבא מן התיש והצביה (כדעה שהוא הכלאה). ר׳ יוסי: כוי בריה בפני עצמה, ולא הכריעו בה חכמים אם מין חיה אם מין בהמה. רשב״ג: מין בהמה הוא, ואנשי בית דושאי היו מגדלים מהם עדרים עדרים, כשאר בהמה.</div>
+    <div class="trans" data-when="en">The Gemara notes that this dispute is like a dispute between tanna’im cited in a baraita: The koy is the wild ram, and there are those who say: It is that which results from the mating of a goat with a doe. Rabbi Yosei says: A koy is a distinct entity, and the Sages did not determine whether it is a species of undomesticated animal or a species of domesticated animal. Rabban Shimon ben Gamliel says: It is a species of domesticated animal, and the members of the house of Dushai would raise flocks and flocks of them, as with other domesticated animals.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">עיזי דבאלא — האם כשרות למזבח כמין עז</span><span data-when="en">Forest goats — fit for the altar as a goat?</span>
+      <span class="ref">Chullin 80a:13–20</span></h2>
+  <div class="lead"><span data-when="he">רב המנונא: עזי יער כשרות למזבח, כי הכתוב מנה עשר בהמות בלבד והן אינן בכלל החיות. סדרת התקפות מנסה לזהותן כמין חיה, ולבסוף שאלת אבא והשוואה לשור הבר.</span><span data-when="en">Rav Hamnuna: forest goats are fit for the altar, since the verse lists only ten animals and these are not among the wild ones. A series of objections tries to recast them as undomesticated; then Abba’s inquiry and the wild-ox comparison.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① רב המנונא: עיזי דבאלא כשרות למזבח · כר׳ יצחק: עשר בהמות מנה הכתוב ותו לא"]:::statement
+  S2["② מדלא חשיב להו בהדי חיות — שמע מינה עז נינהו · מתקיף רב אחא: ׳איל וצבי׳ פרט, ׳כל בהמה׳ כלל"]:::statement
+  S3["③ פרט וכלל — נעשה כלל מוסף על הפרט, איכא טובא"]:::statement
+  Q1{"④ אם כן כל הני פרטי למה לי? · מתקיף רב אחא בריה דרב איקא: ודלמא מינא דאקו"}:::question
+  Q2{"⑤ ודלמא מינא דתאו או דזמר? · רב חנן: אמימר שרי תרבייהו"}:::question
+  Q3{"⑥ בעא אבא: עיזי דבאלא מהו לגבי מזבח? · עד כאן לא פליגי ר׳ יוסי ורבנן אלא בשור הבר"}:::question
+  P1["⑦ דתנן: שור הבר — רבנן מין בהמה, ר׳ יוסי מין חיה · אבל הני דברי הכל מינא דעז"]:::proof
+  Q4{"⑧ מתקיף רב אחא: ודלמא מינא דאקו · רבינא: דתאו או דזמר · רב נחמן: אמימר שרי תרבייהו"}:::question
+  S1 -->|ראיה| S2
+  S2 -->|פרט וכלל| S3
+  S3 -.->|קושיא| Q1
+  Q1 -->|וכן| Q2
+  Q2 -->|שאלה חדשה| Q3
+  Q3 -->|דתנן| P1
+  P1 -.->|אותן קושיות| Q4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Rav Hamnuna: forest goats are fit for the altar · per R. Yitzḥak: the verse lists ten animals, no more"]:::statement
+  S2["② Not reckoned among the wild ones — hence a goat · R. Aḥa objects: ׳deer and gazelle׳ a detail, ׳any animal׳ a generalization"]:::statement
+  S3["③ Detail then generalization — it expands the detail, there are many more"]:::statement
+  Q1{"④ If so, why all these details? · R. Aḥa son of R. Ika objects: perhaps a kind of oryx"}:::question
+  Q2{"⑤ Or a kind of aurochs or wild sheep? · Rav Ḥanan: Ameimar permits their fat"}:::question
+  Q3{"⑥ Abba asked: are forest goats fit for the altar? · R. Yosei and Rabbis differ only on the wild ox"}:::question
+  P1["⑦ Mishna: wild ox — Rabbis say domesticated, R. Yosei wild · but these all agree are a kind of goat"]:::proof
+  Q4{"⑧ R. Aḥa objects: perhaps an oryx · Ravina: aurochs or wild sheep · Rav Naḥman: Ameimar permits their fat"}:::question
+  S1 -->|proof| S2
+  S2 -->|detail and generalization| S3
+  S3 -.->|objection| Q1
+  Q1 -->|likewise| Q2
+  Q2 -->|new question| Q3
+  Q3 -->|mishna| P1
+  P1 -.->|same objections| Q4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① הָנֵי עִזֵּי דְּבָאלָא כְּשֵׁרוֹת לְגַבֵּי מִזְבֵּחַ … עֶשֶׂר בְּהֵמוֹת מָנָה הַכָּתוּב, וְתוּ לָא"]:::statement
+  S2["② מִדְּלָא קָחָשֵׁיב לְהוּ בַּהֲדֵי חַיּוֹת – שְׁמַע מִינַּהּ דְּעֵז נִינְהוּ … ׳אַיָּל וּצְבִי׳ פָּרַט, ׳כׇּל בְּהֵמָה׳ כָּלַל"]:::statement
+  S3["③ פָּרַט וְכָלַל – נַעֲשֶׂה כְּלָל מוּסָף עַל הַפְּרָט, אִיכָּא טוּבָא"]:::statement
+  Q1{"④ אִם כֵּן, כֹּל הָנֵי פְּרָטֵי לְמָה לִי? … וְדִלְמָא מִינָא דְּאַקּוֹ נִינְהוּ"}:::question
+  Q2{"⑤ דִּלְמָא מִינָא דִּתְאוֹ אוֹ מִינָא דְּזֶמֶר … אַמֵּימָר שָׁרֵי תַּרְבַּיְיהוּ"}:::question
+  Q3{"⑥ הָנֵי עִזֵּי דְּבָאלָא מַהוּ לְגַבֵּי מִזְבֵּחַ? … עַד כָּאן לָא פְּלִיגִי רַבִּי יוֹסֵי וְרַבָּנַן אֶלָּא בְּשׁוֹר הַבָּר"}:::question
+  P1["⑦ שׁוֹר הַבָּר מִין בְּהֵמָה הוּא, רַבִּי יוֹסֵי אוֹמֵר: מִין חַיָּה … אֲבָל הָנֵי, דִּבְרֵי הַכֹּל מִינָא דְּעֵז נִינְהוּ"]:::proof
+  Q4{"⑧ וְדִלְמָא מִינָא דְּאַקּוֹ … וְדִלְמָא מִינָא דְּתָאוֹ אוֹ דְּזֶמֶר … אַמֵּימָר שָׁרֵי תַּרְבַּיְיהוּ"}:::question
+  S1 -->|ראיה| S2
+  S2 -->|פרט וכלל| S3
+  S3 -.->|קושיא| Q1
+  Q1 -->|וכן| Q2
+  Q2 -->|שאלה חדשה| Q3
+  Q3 -->|דתנן| P1
+  P1 -.->|אותן קושיות| Q4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ׳ א — Chullin 80a:13</span></div>
+    <div class="orig">אָמַר רַבִּי זֵירָא אָמַר רַב סָפְרָא אָמַר רַב הַמְנוּנָא: הָנֵי עִזֵּי דְּבָאלָא כְּשֵׁרוֹת לְגַבֵּי מִזְבֵּחַ, סָבַר לַהּ כִּי הָא דְּאָמַר רַבִּי יִצְחָק: עֶשֶׂר בְּהֵמוֹת מָנָה הַכָּתוּב, וְתוּ לָא.</div>
+    <div class="trans" data-when="he">ר׳ זירא בשם רב ספרא בשם רב המנונא: עזי היער (עיזי דבאלא) כשרות לקרבן על המזבח, שכן הן נחשבות מין עז. הוא סובר כר׳ יצחק: הכתוב מנה עשר בהמות כשרות בלבד (שלוש בהמות ושבע חיות), ולא יותר.</div>
+    <div class="trans" data-when="en">§ The Gemara cites a statement with regard to goats: Rabbi Zeira says that Rav Safra says that Rav Hamnuna says that these forest goats, i.e., wild goats, are fit to be sacrificed on the altar, as they are considered a type of goat. The Gemara comments that Rav Hamnuna holds in accordance with that which Rabbi Yitzḥak says: The verse lists ten kosher animals, and no more. He is referring to the verses: “These are the animals that you may eat: An ox, a seh of sheep, and a seh of goats, a deer, and a gazelle, and a fallow deer, and a wild goat, and an oryx, and an aurochs, and a wild sheep” (Deuteronomy 14:4–5). The first three are domesticated animals, while the other seven are undomesticated animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ׳ א — Chullin 80a:14</span></div>
+    <div class="orig">וְהָנֵי מִדְּלָא קָחָשֵׁיב לְהוּ בַּהֲדֵי חַיּוֹת – שְׁמַע מִינַּהּ דְּעֵז נִינְהוּ. מַתְקֵיף לַהּ רַב אַחָא בַּר יַעֲקֹב: וְאֵימָא ״אַיָּל וּצְבִי״ – פָּרַט, ״כׇּל בְּהֵמָה״ – כָּלַל.</div>
+    <div class="trans" data-when="he">ומאחר שעזי היער אינן נמנות בכלל החיות שבפסוק — שמע מינה שהן מין עז (בהמה). מתקיף רב אחא בר יעקב: שמא הן מין חיה שלא נמנה במפורש, שהרי ״אַיָּל וּצְבִי״ הוא פרט, ו״כל בהמה״ שבפסוק הבא הוא כלל.</div>
+    <div class="trans" data-when="en">And with regard to these forest goats, since they are not reckoned among the undomesticated animals, learn from it that they are a type of goat, as they are also called goats and have a goat-like appearance. Rav Aḥa bar Yaakov objects to this: Perhaps wild goats are a different species of undomesticated animal not explicitly mentioned in the verse, as the next verse provides a more general description, and I will say that the verse: “A deer and a gazelle, etc.,” is a list of undomesticated animals, each of which is a specific detail. The next verse: “And any animal,” is a generalization.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ׳ א — Chullin 80a:15</span></div>
+    <div class="orig">פָּרַט וְכָלַל – נַעֲשֶׂה כְּלָל מוּסָף עַל הַפְּרָט, אִיכָּא טוּבָא.</div>
+    <div class="trans" data-when="he">לפי כללי הדרשה, פרט ואחריו כלל — נעשה הכלל מוסף על הפרט, להרבות. לכן יש מינים רבים של חיות כשרות מעבר לנמנים בפסוק, ואחד מהם עשוי להיות עזי היער.</div>
+    <div class="trans" data-when="en">According to the principles for explicating verses, when there is a detail and then a generalization, the generalization was made to expand beyond the detail. Therefore, there are more species of kosher undomesticated animals than the verse lists, one of which may be forest goats.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ׳ א — Chullin 80a:16</span></div>
+    <div class="orig">אִם כֵּן, כֹּל הָנֵי פְּרָטֵי לְמָה לִי? מַתְקֵיף לַהּ רַב אַחָא בְּרֵיהּ דְּרַב אִיקָא: וְדִלְמָא מִינָא דְּאַקּוֹ נִינְהוּ!</div>
+    <div class="trans" data-when="he">דחייה: אם כן, למה לי כל הפרטים? די בפרט אחד וכלל כדי לדרוש ׳פרט וכלל׳; אלא אלו הן החיות הכשרות בלבד, ועזי היער הן מין עז בהמה. מתקיף רב אחא בריה דרב איקא: ושמא הן מין אַקּוֹ (עז בר), אחת החיות שבפסוק, ולא עז בהמה?</div>
+    <div class="trans" data-when="en">The Gemara responds: If so, why do I need all of these details? The mention of a single undomesticated animal and then the generalization should suffice for applying the principle of: A detail and a generalization. Rather, these are the only kosher undomesticated animals, and the forest goat must therefore be a type of domesticated goat. Rav Aḥa, son of Rav Ika, objects to this: But even if forest goats are not a different type of undomesticated animal from those mentioned in the verse, perhaps they are a type of wild goat, one of the undomesticated animals mentioned in the verse, rather than a type of domesticated goat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ׳ א — Chullin 80a:17</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אַחָא בְּרֵיהּ דְּרָבָא לְרַב אָשֵׁי, וְאָמְרִי לַהּ רַב אַחָא בְּרֵיהּ דְּרַב אַוְיָא לְרַב אָשֵׁי: דִּלְמָא מִינָא דִּתְאוֹ אוֹ מִינָא דְּזֶמֶר נִינְהוּ? אֲמַר לֵיהּ רַב חָנָן לְרַב אָשֵׁי: אַמֵּימָר שָׁרֵי תַּרְבַּיְיהוּ.</div>
+    <div class="trans" data-when="he">רב אחא בריה דרבא (ואמרי לה רב אחא בריה דרב אויא) לרב אשי: שמא הן מין תְּאוֹ או מין זֶמֶר, שאף הן חיות? רב חנן לרב אשי: בניגוד לרב המנונא, אמימר התיר את חֶלבן — דבר האסור בבהמה — ומכאן שסבר שעזי היער מין חיה.</div>
+    <div class="trans" data-when="en">With regard to this topic, Rav Aḥa, son of Rava, said to Rav Ashi, and some say it was Rav Aḥa, son of Rav Avya, who said to Rav Ashi: Perhaps they are a type of aurochs [te’o], or a type of wild sheep, which are also undomesticated animals. Rav Ḥanan said to Rav Ashi: Differing from Rav Hamnuna’s opinion, Ameimar deems the consumption of their fat permitted, which is prohibited with regard to domesticated animals, indicating that he considers forest goats a species of undomesticated animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ׳ א — Chullin 80a:18</span></div>
+    <div class="orig">בְּעָא מִינֵּיהּ אַבָּא בְּרֵיהּ דְּרַב מִנְיָמִין בַּר חִיָּיא מֵרַב הוּנָא בַּר חִיָּיא: הָנֵי עִזֵּי דְּבָאלָא מַהוּ לְגַבֵּי מִזְבֵּחַ? אֲמַר לֵיהּ: עַד כָּאן לָא פְּלִיגִי רַבִּי יוֹסֵי וְרַבָּנַן אֶלָּא בְּשׁוֹר הַבָּר.</div>
+    <div class="trans" data-when="he">שאל אבא בריה דרב מנימין בר חייא את רב הונא בר חייא: עזי היער — מה דינן לקרבן על המזבח? האם בהמה הן וכשרות? השיב לו: עד כאן לא נחלקו ר׳ יוסי ורבנן אלא בשור הבר.</div>
+    <div class="trans" data-when="en">Abba, son of Rav Minyamin bar Ḥiyya, inquired of Rav Huna bar Ḥiyya: What is the halakha with regard to offering these forest goats [izei devala] on the altar? Are they domesticated animals that may be sacrificed? Rav Huna bar Ḥiyya said to him: Rabbi Yosei and the Rabbis disagree only with regard to the wild ox.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין פ׳ א — Chullin 80a:19</span></div>
+    <div class="orig">דִּתְנַן: שׁוֹר הַבָּר מִין בְּהֵמָה הוּא, רַבִּי יוֹסֵי אוֹמֵר: מִין חַיָּה. דְּרַבָּנַן סָבְרִי: מִדִּמְתַרְגְּמִינַן ״תּוֹרְבָּלָא״, מִינָא דִּבְהֵמָה הוּא, וְרַבִּי יוֹסֵי סָבַר: מִדְּקָא חָשֵׁיב לֵיהּ בַּהֲדֵי חַיּוֹת, מִינָא דְּחַיָּה הוּא. אֲבָל הָנֵי, דִּבְרֵי הַכֹּל מִינָא דְּעֵז נִינְהוּ.</div>
+    <div class="trans" data-when="he">כפי ששנינו (כלאים): שור הבר מין בהמה הוא, ר׳ יוסי אומר מין חיה. רבנן: מאחר שמתרגמים ״תורבלא״ (שור היער) — מין בהמה. ר׳ יוסי: מאחר שנמנה עם החיות בפסוק — מין חיה. אבל עזי היער, מאחר שאינן נמנות עם החיות, דברי הכל מין עז הן וכשרות למזבח.</div>
+    <div class="trans" data-when="en">As we learned in a mishna (Kilayim 8:6): The wild ox is a species of domesticated animal. Rabbi Yosei says: It is a species of undomesticated animal. As the Rabbis hold that from the fact that “aurochs” (Deuteronomy 14:5) is translated into Aramaic as: Forest ox [turbala], it can be understood that the wild ox is a species of domesticated animal, and Rabbi Yosei holds: From the fact that it is reckoned among the undomesticated animals, it can be derived that it is a species of undomesticated animal. But with regard to these forest goats, which are not reckoned among the undomesticated animals, all agree that they are a type of goat and are fit to be sacrificed upon the altar.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין פ׳ א — Chullin 80a:20</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב אַחָא בְּרֵיהּ דְּרַב אִיקָא: וְדִלְמָא מִינָא דְּאַקּוֹ נִינְהוּ! אֲמַר לֵיהּ רָבִינָא לְרַב אָשֵׁי: וְדִלְמָא מִינָא דְּתָאוֹ, אוֹ מִינָא דְּזֶמֶר נִינְהוּ! אֲמַר לֵיהּ רַב נַחְמָן לְרַב אָשֵׁי: אַמֵּימָר שָׁרֵי תַּרְבַּיְיהוּ.</div>
+    <div class="trans" data-when="he">אותן קושיות חוזרות כאן: מתקיף רב אחא בריה דרב איקא — ושמא מין אַקּוֹ הן? רבינא לרב אשי — ושמא מין תְּאוֹ או מין זֶמֶר? רב נחמן לרב אשי — אמימר התיר את חלבן, ומכאן שסבר שהן מין חיה.</div>
+    <div class="trans" data-when="en">Rav Aḥa, son of Rav Ika, objects to this: But perhaps they are a type of wild goat. Similarly, Ravina said to Rav Ashi: But perhaps they are a type of aurochs, or a type of wild sheep. Additionally, Rav Naḥman said to Rav Ashi: Ameimar deems the consumption of their fat permitted, which is prohibited with regard to domesticated animals, as he considers them undomesticated animals.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">כל המשנה דלא כר׳ שמעון — שחיטה שאינה ראויה</span><span data-when="en">The whole mishna is not like R. Shimon — unfit slaughter</span>
+      <span class="ref">Chullin 80a:21–80b:5</span></h2>
+  <div class="lead"><span data-when="he">ר׳ אושעיא: כל משנת ׳כיצד השוחט׳ אינה כר׳ שמעון, הסובר ׳שחיטה שאינה ראויה לא שמה שחיטה׳. הוכחה מן הקדשים בחוץ, חולין בפנים וקדשים בפנים; ולמה הוצרך לומר זאת.</span><span data-when="en">Rabbi Oshaya: the entire mishna “how so, one who slaughters” is not like R. Shimon, who holds “unfit slaughter is not slaughter.” Proof from sacrifices outside, non-sacred inside, and sacrifices inside; and why this needed saying.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ אושעיא: כל המתניתין דלא כר׳ שמעון · קדשים בחוץ — ראשון כרת, שניהם פסולים וסופגים ארבעים"]:::statement
+  Q1{"② ולר׳ שמעון: קמא מיקטל קטליה, שני מתקבל בפנים — כרת נמי ליחייב!"}:::question
+  Q2{"③ חולין בפנים — שניהם פסולים, והשני סופג ארבעים · ולר׳ שמעון: שני אמאי סופג?"}:::question
+  Q3{"④ קדשים בפנים — ראשון כשר ופטור, שני סופג ופסול · ולר׳ שמעון: שחיטת קדשים אף היא שאינה ראויה, שני אמאי סופג? אלא שמע מינה דלא כר׳ שמעון"}:::question
+  Q4{"⑤ פשיטא דהכי איתא?"}:::question
+  A1["⑥ שחיטת קדשים איצטריכא ליה: ס״ד אמינא שחיטה ראויה היא — קא משמע לן דלא"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 -->|וכן| Q2
+  Q2 -->|וכן| Q3
+  Q3 -.->|פשיטא| Q4
+  Q4 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Oshaya: the whole mishna is not like R. Shimon · sacrifices outside — first liable to karet, both disqualified and flogged"]:::statement
+  Q1{"② Per R. Shimon: the first is mere killing, the second was acceptable inside — let him also be liable to karet!"}:::question
+  Q2{"③ Non-sacred inside — both unfit, the second flogged · per R. Shimon: why is the second flogged?"}:::question
+  Q3{"④ Sacrifices inside — first fit and exempt, second flogged and unfit · per R. Shimon: their slaughter too is unfit, why flog the second? So conclude: not like R. Shimon"}:::question
+  Q4{"⑤ Isn’t it obvious that this is so?"}:::question
+  A1["⑥ The sacrifices-inside case was needed: you might think it is fit slaughter — he teaches us it is not"]:::answer
+  S1 -.->|objection| Q1
+  Q1 -->|likewise| Q2
+  Q2 -->|likewise| Q3
+  Q3 -.->|obvious?| Q4
+  Q4 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① כּוּלַּהּ מַתְנִיתִין דְּלָא כְּרַבִּי שִׁמְעוֹן … קָדָשִׁים בַּחוּץ הָרִאשׁוֹן חַיָּיב כָּרֵת, וּשְׁנֵיהֶם פְּסוּלִים, וּשְׁנֵיהֶם סוֹפְגִים אֶת הָאַרְבָּעִים"]:::statement
+  Q1{"② קַמָּא מִיקְטָל קַטְלֵיהּ, שֵׁנִי מִתְקַבֵּל בִּפְנִים הוּא, כָּרֵת נָמֵי לִיחַיַּיב"}:::question
+  Q2{"③ חוּלִּין בִּפְנִים – שְׁנֵיהֶם פְּסוּלִין, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים … שֵׁנִי אַמַּאי סוֹפֵג"}:::question
+  Q3{"④ קָדָשִׁים בִּפְנִים – הָרִאשׁוֹן כָּשֵׁר וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג … שְׁחִיטַת קֳדָשִׁים נָמֵי שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה הִיא … אֶלָּא שְׁמַע מִינַּהּ דְּלָא כְּרַבִּי שִׁמְעוֹן"}:::question
+  Q4{"⑤ פְּשִׁיטָא דְּהָכִי אִיתַהּ?"}:::question
+  A1["⑥ שְׁחִיטַת קָדָשִׁים אִיצְטְרִיכָא לֵיהּ, סָלְקָא דַּעְתָּךְ אָמֵינָא: שְׁחִיטָה רְאוּיָה הִיא … קָא מַשְׁמַע לַן"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 -->|וכן| Q2
+  Q2 -->|וכן| Q3
+  Q3 -.->|פשיטא| Q4
+  Q4 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ׳ א — Chullin 80a:21</span></div>
+    <div class="orig">כֵּיצַד הַשּׁוֹחֵט וְכוּ׳. אָמַר רַבִּי אוֹשַׁעְיָא: כּוּלַּהּ מַתְנִיתִין דְּלָא כְּרַבִּי שִׁמְעוֹן, מִמַּאי? מִדְּקָא תָנֵי: קָדָשִׁים בַּחוּץ הָרִאשׁוֹן חַיָּיב כָּרֵת, וּשְׁנֵיהֶם פְּסוּלִים, וּשְׁנֵיהֶם סוֹפְגִים אֶת הָאַרְבָּעִים. מִכְּדִי שָׁמְעִינַן לֵיהּ לְרַבִּי שִׁמְעוֹן דְּאָמַר: שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה – לֹא שְׁמָהּ שְׁחִיטָה,</div>
+    <div class="trans" data-when="he">המשנה: ״כיצד? השוחט אותו ואת בנו...״. ר׳ אושעיא: כל המשנה אינה כשיטת ר׳ שמעון. מניין? מכך ששנינו: קדשים שנשחטו בחוץ — על הראשון חייב כרת, ושניהם פסולים, ושניהם סופגים ארבעים. והרי שמענו לר׳ שמעון שאמר: שחיטה שאינה ראויה — לא שמה שחיטה.</div>
+    <div class="trans" data-when="en">§ The mishna teaches: How so? One who slaughters an animal itself and its offspring, etc. Rabbi Oshaya says: The entire mishna is not in accordance with the opinion of Rabbi Shimon. From where is this derived? It is derived from that which the mishna teaches: If both animals were sacrificial animals slaughtered outside the Temple courtyard, then for slaughtering the first animal, one is liable to receive karet. And both animals are disqualified for use as offerings, and for the slaughter of both of them, one incurs forty lashes. Since we have heard that Rabbi Shimon says: An act of slaughter that is unfit to permit consumption of the meat is not considered to have the halakhic status of an act of slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ׳ ב — Chullin 80b:1</span></div>
+    <div class="orig">קַמָּא מִיקְטָל קַטְלֵיהּ, שֵׁנִי מִתְקַבֵּל בִּפְנִים הוּא, כָּרֵת נָמֵי לִיחַיַּיב.</div>
+    <div class="trans" data-when="he">לכן בשוחט אם ובנה קדשים בחוץ — הראשון כמי שרק הרגו בלא שחיטה, שהשחיטה בחוץ פוסלתו. נמצא שהשני היה ראוי להתקבל בפנים, ולא היה איסור אותו ואת בנו; ואם כן כששחטו בחוץ — מדוע רק מלקות? יתחייב גם כרת.</div>
+    <div class="trans" data-when="en">Therefore, when one slaughters a mother and its offspring that are both sacrificial animals outside the Temple courtyard, with regard to the first, it is as if he has simply killed it without ritual slaughter, since being slaughtered outside the Temple courtyard renders it unfit. Accordingly, the second would have been fit to be accepted within the Temple, and there would have been no prohibition against slaughtering it on that day. If so, when he slaughtered it outside the courtyard, why is he liable only to receive lashes? Let him also be liable to receive karet.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ׳ ב — Chullin 80b:2</span></div>
+    <div class="orig">חוּלִּין בִּפְנִים – שְׁנֵיהֶם פְּסוּלִין, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים. מִכְּדֵי שָׁמְעִינַן לֵיהּ לְרַבִּי שִׁמְעוֹן דְּאָמַר: שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה – לֹא שְׁמָהּ שְׁחִיטָה, קַמָּא מִיקְטָל קַטְלֵיהּ, שֵׁנִי אַמַּאי סוֹפֵג אֶת הָאַרְבָּעִים?</div>
+    <div class="trans" data-when="he">כיוצא בזה במה ששנינו: חולין שנשחטו בפנים — שניהם פסולים, והשני סופג ארבעים. ולר׳ שמעון שאמר שחיטה שאינה ראויה לא שמה שחיטה — הראשון כמי שרק הרגו (שחולין שנשחטו בעזרה אסורים בהנאה ופסולים), ואם כן השני מדוע סופג ארבעים?</div>
+    <div class="trans" data-when="en">Likewise, the same question may be asked with regard to what is taught in the mishna: If both animals were non-sacred and they were slaughtered inside the Temple courtyard, both of them are unfit for sacrifice. And for the slaughter of the second animal, one incurs the forty lashes. Since we have heard that Rabbi Shimon says: An act of slaughter that is unfit is not considered to have the halakhic status of an act of slaughter, with regard to the first animal, it is as if he has simply killed it without ritual slaughter, since a non-sacred animal slaughtered in the Temple courtyard is rendered unfit, as deriving benefit from it is prohibited. If so, why, for the slaughter of the second animal, does one incur the forty lashes?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ׳ ב — Chullin 80b:3</span></div>
+    <div class="orig">קָדָשִׁים בִּפְנִים – הָרִאשׁוֹן כָּשֵׁר וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים, וּפָסוּל.</div>
+    <div class="trans" data-when="he">וכן ששנינו: קדשים שנשחטו בפנים — הראשון כשר והשוחטו פטור, והשני סופג ארבעים (משום אותו ואת בנו) ופסול.</div>
+    <div class="trans" data-when="en">Similarly, the mishna teaches: If both animals were sacrificial animals slaughtered inside the Temple courtyard, the first is fit for sacrifice, and one who slaughters it is exempt from any punishment. But for the slaughter of the second animal, one incurs the forty lashes for the slaughter of an animal and its offspring on a single day, and it is unfit for sacrifice.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ׳ ב — Chullin 80b:4</span></div>
+    <div class="orig">מִכְּדֵי שָׁמְעִינַן לֵיהּ לְרַבִּי שִׁמְעוֹן דְּאָמַר: שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה לֹא שְׁמָהּ שְׁחִיטָה, שְׁחִיטַת קֳדָשִׁים נָמֵי שְׁחִיטָה שֶׁאֵינָהּ רְאוּיָה הִיא, דְּכַמָּה דְּלָא זָרֵיק דָּם – לָא מִישְׁתְּרֵי בָּשָׂר. שֵׁנִי אַמַּאי סוֹפֵג אֶת הָאַרְבָּעִים, וּפָסוּל? אֶלָּא שְׁמַע מִינַּהּ דְּלָא כְּרַבִּי שִׁמְעוֹן.</div>
+    <div class="trans" data-when="he">ולר׳ שמעון: אף שחיטת קדשים שחיטה שאינה ראויה היא, שכל זמן שלא נזרק הדם לא הותר הבשר. אם כן הראשון כמי שרק הרגו, והשני מדוע סופג ארבעים ופסול? אלא שמע מינה שכל המשנה אינה כר׳ שמעון.</div>
+    <div class="trans" data-when="en">Since we have heard that Rabbi Shimon says: An act of slaughter that is unfit to permit consumption of the animal is not considered to have the halakhic status of an act of slaughter. One can then raise the question: An act of slaughter of sacrificial animals is also considered an act of slaughter that is unfit, because as long as one has not sprinkled the blood, the meat is not permitted to be burned on the altar or eaten. Since slaughtering the first animal is not considered slaughtering, why, for slaughtering the second animal, does one incur the forty lashes for slaughtering an animal and its offspring on a single day, and why is it unfit? Rather, conclude from this analysis that the mishna is not in accordance with the opinion of Rabbi Shimon.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ׳ ב — Chullin 80b:5</span></div>
+    <div class="orig">פְּשִׁיטָא דְּהָכִי אִיתַהּ? שְׁחִיטַת קָדָשִׁים אִיצְטְרִיכָא לֵיהּ, סָלְקָא דַּעְתָּךְ אָמֵינָא: שְׁחִיטַת קָדָשִׁים שְׁחִיטָה רְאוּיָה הִיא, דְּהָא אִי נָחַר וְזָרֵיק דָּם – לָא מִישְׁתְּרֵי בָּשָׂר, וְכִי שָׁחַט – מִישְׁתְּרֵי בָּשָׂר, וּשְׁחִיטָה רְאוּיָה הִיא; קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">שואלת הגמרא: פשיטא שכך הוא, ולמה הוצרך ר׳ אושעיא לאריכות זו? תשובה: הוצרך משום מקרה שחיטת קדשים בפנים, שהיה עולה בדעתך לומר ששחיטת קדשים שחיטה ראויה היא — שאם נחר (המית בלא שחיטה) וזרק דם לא הותר הבשר, וכששחט הותר הבשר, הרי שחיטה ראויה היא. לכן השמיענו שאינה ראויה.</div>
+    <div class="trans" data-when="en">The Gemara asks: Isn’t it obvious that this is so? There is no need for this long analysis. The Gemara answers: It was necessary for Rabbi Oshaya to mention that the mishna is not in accordance with the opinion of Rabbi Shimon due to the case of slaughtering an animal and its offspring that are sacrificial animals inside the Temple courtyard. This is because it may enter your mind to say that slaughtering sacrificial animals is considered an act of slaughtering that is fit, because if he stabbed the animal to death and sprinkled its blood, the meat is not permitted, but if he slaughtered it, the meat is permitted and it is considered slaughtering that is fit according to Rabbi Shimon. Therefore, he teaches us that it is not fit.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">למה אין לוקין משום מחוסר זמן — לאוין נוכראין</span><span data-when="en">Why no lashes for ‘time not yet arrived’ — unrelated prohibitions</span>
+      <span class="ref">Chullin 80b:6–81a:3</span></h2>
+  <div class="lead"><span data-when="he">בשוחט אם ובנה קדשים בפנים, מדוע לא ילקה גם משום ׳מחוסר זמן׳? תשובה: המשנה אינה מונה לאוין שאינם מעניין אותו ואת בנו; ר׳ זירא: הכתוב ניתקו לעשה.</span><span data-when="en">For one who slaughters mother and offspring sacrifices inside, why not also flog for ‘time not yet arrived’? Answer: the mishna omits prohibitions unrelated to the offspring rule; R. Zeira: the verse turned it into a positive mitzva.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① ולילקי נמי משום לאו דמחוסר זמן! מניין לכל הפסולין שבשור ושבשה שהוא ב׳לא ירצה׳"}:::question
+  P1["② תלמוד לומר ׳ושור ושה שרוע וקלוט׳ — לימד על הפסולין שהוא ב׳לא ירצה׳"]:::proof
+  A1["③ כי חשיב לאוי ד׳אותו ואת בנו׳ — לאוי נוכראי לא קא חשיב"]:::answer
+  Q2{"④ ולא? והא קדשים בחוץ, דלאוי נוכראי נינהו, וקא חשיב!"}:::question
+  Q3{"⑤ בשלמא שני משום אותו ואת בנו, אלא ראשון אמאי סופג? לאו משום שחוטי חוץ?"}:::question
+  A2["⑥ כל היכא דליכא לאו דאותו ואת בנו — חשיב לאוי נוכראי, וכל היכא דאיכא — לא חשיב"]:::answer
+  S1["⑦ ר׳ זירא: הנח למחוסר זמן, דהכתוב ניתקו לעשה · ׳מיום השמיני יֵרצה׳ — לאו הבא מכלל עשה עשה"]:::statement
+  Q4{"⑧ והא מיבעיא ליה לכדר׳ אפטוריקי, דרמי: ׳שבעת ימים תחת אמו׳ — הא לילה חזי, ׳מיום השמיני יֵרצה׳ — לילה לא!"}:::question
+  C1["⑨ הא כיצד? לילה לקדושה, יום להרצאה · כתיב קרא אחרינא: ׳כן תעשה לשורך לצאנך׳"]:::conclusion
+  Q1 -->|תלמוד לומר| P1
+  P1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|בשלמא| Q3
+  Q3 -->|כלל| A2
+  A2 -->|ר׳ זירא| S1
+  S1 -.->|קושיא| Q4
+  Q4 -->|יישוב ומסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Let him be flogged also for ׳time not yet arrived׳! Whence that all disqualifications of bull and lamb fall under ׳it shall not be accepted׳"}:::question
+  P1["② Scripture: ׳either a bull or a lamb too long or too short׳ — teaching the disqualifications fall under ׳it shall not be accepted׳"]:::proof
+  A1["③ When listing prohibitions of ׳itself and its offspring׳, it does not list unrelated prohibitions"]:::answer
+  Q2{"④ Really? But sacrifices outside are unrelated prohibitions, and it lists them!"}:::question
+  Q3{"⑤ Granted the second is for ׳itself and its offspring׳, but why is the first flogged? Isn’t it for slaughter outside?"}:::question
+  A2["⑥ Where there is no ׳itself and its offspring׳ it lists unrelated prohibitions; where there is, it does not"]:::answer
+  S1["⑦ R. Zeira: set aside ׳time not yet arrived׳ — the verse turned it into a positive mitzva · ׳from the eighth day it may be accepted׳ — a prohibition from a positive mitzva"]:::statement
+  Q4{"⑧ But that verse is needed for R. Aptoriki, who contrasts: ׳seven days with its mother׳ — the night is fit; ׳from the eighth day it is accepted׳ — the night is not!"}:::question
+  C1["⑨ How so? Night for consecration, day for acceptance · another verse: ׳so shall you do for your ox and your sheep׳"]:::conclusion
+  Q1 -->|Scripture teaches| P1
+  P1 -->|answer| A1
+  A1 -.->|objection| Q2
+  Q2 -->|granted| Q3
+  Q3 -->|the rule| A2
+  A2 -->|R. Zeira| S1
+  S1 -.->|objection| Q4
+  Q4 -->|resolution, conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① וְלִילְקֵי נָמֵי מִשּׁוּם לָאו דִּמְחוּסַּר זְמַן … מִנַּיִן לְכׇל הַפְּסוּלִין שֶׁבַּשּׁוֹר וְשֶׁבַּשֶּׂה שֶׁהוּא בְּ׳לֹא יֵרָצֶה׳"}:::question
+  P1["② תַּלְמוּד לוֹמַר: ׳וְשׁוֹר וָשֶׂה שָׂרוּעַ וְקָלוּט׳ … לִימֵּד עַל הַפְּסוּלִין … שֶׁהוּא בְּ׳לֹא יֵרָצֶה׳"]:::proof
+  A1["③ כִּי קָא חָשֵׁיב לָאוֵי דְּ׳אוֹתוֹ וְאֶת בְּנוֹ׳ – לָאוֵי נוּכְרָאֵי לָא קָא חָשֵׁיב"]:::answer
+  Q2{"④ וְלָא? וְהָא קָדָשִׁים בַּחוּץ, דְּלָאוֵי נוּכְרָאֵי נִינְהוּ, וְקָא חָשֵׁיב"}:::question
+  Q3{"⑤ בִּשְׁלָמָא שֵׁנִי, מִשּׁוּם לָאו דְּ׳אוֹתוֹ וְאֶת בְּנוֹ׳, אֶלָּא רִאשׁוֹן אַמַּאי סוֹפֵג? לָאו מִשּׁוּם לָאו דִּשְׁחוּטֵי חוּץ"}:::question
+  A2["⑥ כֹּל הֵיכָא דְּלֵיכָּא לָאו דְּ׳אוֹתוֹ וְאֶת בְּנוֹ׳ – חָשֵׁיב … וְכֹל הֵיכָא דְּאִיכָּא – לָא חָשֵׁיב"]:::answer
+  S1["⑦ רַבִּי זֵירָא אָמַר: הַנַּח לִמְחוּסַּר זְמַן, דְּהַכָּתוּב נִתְּקוֹ לַעֲשֵׂה … לָאו הַבָּא מִכְּלַל עֲשֵׂה – עֲשֵׂה"]:::statement
+  Q4{"⑧ וְהָא מִיבַּעְיָא לֵיהּ לְכִדְרַבִּי אַפְטוֹרִיקִי … ׳שִׁבְעַת יָמִים תַּחַת אִמּוֹ׳, הָא לַיְלָה חֲזֵי … ׳מִיּוֹם הַשְּׁמִינִי יֵרָצֶה׳ – לַיְלָה לָא"}:::question
+  C1["⑨ הָא כֵּיצַד? לַיְלָה לִקְדוּשָּׁה, יוֹם לְהַרְצָאָה … ׳כֵּן תַּעֲשֶׂה לְשֹׁרְךָ לְצֹאנֶךָ׳"]:::conclusion
+  Q1 -->|תלמוד לומר| P1
+  P1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|בשלמא| Q3
+  Q3 -->|כלל| A2
+  A2 -->|ר׳ זירא| S1
+  S1 -.->|קושיא| Q4
+  Q4 -->|יישוב ומסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין פ׳ ב — Chullin 80b:6</span></div>
+    <div class="orig">וְלִילְקֵי נָמֵי מִשּׁוּם לָאו דִּמְחוּסַּר זְמַן, דְּתַנְיָא: מִנַּיִן לְכׇל הַפְּסוּלִין שֶׁבַּשּׁוֹר וְשֶׁבַּשֶּׂה שֶׁהוּא בְּ״לֹא יֵרָצֶה״?</div>
+    <div class="trans" data-when="he">בשוחט אם ובנה קדשים בפנים, שלוקה משום ׳אותו ואת בנו׳ על השני — מקשה הגמרא: ילקה גם משום הלאו של מחוסר זמן, שהרי אסור להקריבו עד למחר. כדתניא: מניין לכל הפסולין שבשור ושבשה — כל מום הפוסל — שהוא בכלל ׳לא ירצה׳ ולוקין עליו?</div>
+    <div class="trans" data-when="en">§ With regard to the ruling that one who slaughters an animal and its offspring that are sacrificial animals inside the Temple courtyard receives lashes for violating the prohibition of: Itself and its offspring, when slaughtering the second animal, the Gemara suggests: And let him be flogged also for violating the prohibition against sacrificing an animal whose time has not yet arrived, since it is forbidden to sacrifice it until the next day. As it is taught in a baraita: From where is it derived with regard to all of the disqualifications of the bull, i.e., any feature that disqualifies cattle brought as offerings, and of the lamb, i.e., sheep brought as offerings, that if one consecrates, slaughters, or burns on the altar an animal so disqualified, he violates the prohibition of: It shall not be accepted, and is flogged?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין פ׳ ב — Chullin 80b:7</span></div>
+    <div class="orig">תַּלְמוּד לוֹמַר: ״וְשׁוֹר וָשֶׂה שָׂרוּעַ וְקָלוּט וְגוֹ׳״, לִימֵּד עַל הַפְּסוּלִין שֶׁבַּשּׁוֹר וְשֶׁבַּשֶּׂה, שֶׁהוּא בְּ״לֹא יֵרָצֶה״!</div>
+    <div class="trans" data-when="he">תלמוד לומר: ״וְשׁוֹר וָשֶׂה שָׂרוּעַ וְקָלוּט וגו׳״ (ויקרא כב). מאחר שכבר עוסק בשור ושה, מיותר להזכירם — אלא לימד על כל הפסולין שבשור ושבשה, ובכללם מחוסר זמן, שהמקריבם בכלל ׳לא ירצה׳.</div>
+    <div class="trans" data-when="en">It is derived from the fact that, in the middle of the passage prohibiting blemished animals from being sacrificed upon the altar, the verse states: “Either a bull or a lamb that has anything too long or too short…but for a vow it shall not be accepted” (Leviticus 22:23). Since this passage is already discussing a bull and lamb, it is unnecessary to mention them. Rather, this verse taught about all of the disqualifications of the bull and of the lamb, including that of an animal whose time has not yet arrived, that if one offers an animal with one of those disqualifications, he violates the prohibition of: It shall not be accepted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין פ׳ ב — Chullin 80b:8</span></div>
+    <div class="orig">כִּי קָא חָשֵׁיב לָאוֵי דְּ״אוֹתוֹ וְאֶת בְּנוֹ״ – לָאוֵי נוּכְרָאֵי לָא קָא חָשֵׁיב.</div>
+    <div class="trans" data-when="he">תירוץ: אכן לוקה גם משום מחוסר זמן, אלא שכשהמשנה מונה את הלאוין הנעברים — מונה רק לאוין השייכים לעניין ׳אותו ואת בנו׳, ואינה מונה לאוין נוכראין (זרים, שאינם מענייני הפרק).</div>
+    <div class="trans" data-when="en">The Gemara answers: He receives lashes for violating that prohibition as well, but when the mishna lists the prohibitions violated by the actions described, it lists only prohibitions related to the prohibition of: Itself and its offspring, but it does not list unrelated prohibitions.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין פ׳ ב — Chullin 80b:9</span></div>
+    <div class="orig">וְלָא? וְהָא קָדָשִׁים בַּחוּץ, דְּלָאוֵי נוּכְרָאֵי נִינְהוּ, וְקָא חָשֵׁיב, דְּקָתָנֵי: קָדָשִׁים בַּחוּץ – הָרִאשׁוֹן חַיָּיב כָּרֵת, וּשְׁנֵיהֶם סוֹפְגִין אֶת הָאַרְבָּעִים.</div>
+    <div class="trans" data-when="he">קושיא: וכי אינה מונה לאוין נוכראין? והרי קדשים בחוץ — איסור שחוטי חוץ הוא לאו נוכראי, ובכל זאת מנאתו, ששנינו: קדשים בחוץ, הראשון חייב כרת ושניהם סופגים ארבעים.</div>
+    <div class="trans" data-when="en">The Gemara asks: And does the mishna not list unrelated prohibitions? But there are prohibitions with regard to sacrificial animals slaughtered outside the Temple courtyard, which are unrelated prohibitions, and it lists them. As it teaches: If both animals were sacrificial animals slaughtered outside the Temple courtyard, then for slaughtering the first animal, one is liable to receive karet. And both animals are disqualified for use as offerings, and for the slaughter of both of them one incurs forty lashes apiece.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין פ׳ ב — Chullin 80b:10</span></div>
+    <div class="orig">בִּשְׁלָמָא שֵׁנִי, מִשּׁוּם לָאו דְּ״אוֹתוֹ וְאֶת בְּנוֹ״, אֶלָּא רִאשׁוֹן אַמַּאי סוֹפֵג? לָאו מִשּׁוּם לָאו דִּשְׁחוּטֵי חוּץ?</div>
+    <div class="trans" data-when="he">ביאור הקושיא: בשלמא השני סופג ארבעים משום לאו דאותו ואת בנו, אלא הראשון — מדוע סופג? בהכרח משום הלאו של שחוטי חוץ, שהוא לאו נוכראי שנמנה; ואם כן גם בקדשים בפנים היה לה למנות את הלאו הנוכראי של ׳לא ירצה׳.</div>
+    <div class="trans" data-when="en">Granted, with regard to the second animal one is flogged due to the prohibition of: Itself and its offspring. But with regard to the first animal, why does he incur the forty lashes? Isn’t it due to the prohibition of consecrated animals slaughtered outside the Temple courtyard? Therefore, with regard to the case of sacrificial animals slaughtered inside the Temple courtyard, the mishna should also have mentioned the unrelated prohibition of: It shall not be accepted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין פ׳ ב — Chullin 80b:11</span></div>
+    <div class="orig">כֹּל הֵיכָא דְּלֵיכָּא לָאו דְּ״אוֹתוֹ וְאֶת בְּנוֹ״ – חָשֵׁיב לָאוֵי נוּכְרָאֵי, וְכֹל הֵיכָא דְּאִיכָּא לָאו דְּ״אוֹתוֹ וְאֶת בְּנוֹ״ – לָא חָשֵׁיב לָאוֵי נוּכְרָאֵי.</div>
+    <div class="trans" data-when="he">תירוץ מחודד: כל מקום שאין בו לאו דאותו ואת בנו (כקדשים בחוץ, שם אין איסור אותו ואת בנו בראשון) — מונה לאוין נוכראין; וכל מקום שיש בו לאו דאותו ואת בנו — אינו מונה לאוין נוכראין אלא רק את לאו אותו ואת בנו.</div>
+    <div class="trans" data-when="en">The Gemara answers: Wherever there is no violation of the prohibition of: Itself and its offspring, for slaughtering an animal, the mishna lists unrelated prohibitions, but wherever there is a violation of the prohibition of: Itself and its offspring, the mishna does not list unrelated prohibitions, but only the prohibition of: Itself and its offspring.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין פ׳ ב — Chullin 80b:12</span></div>
+    <div class="orig">רַבִּי זֵירָא אָמַר: הַנַּח לִמְחוּסַּר זְמַן, דְּהַכָּתוּב</div>
+    <div class="trans" data-when="he">ר׳ זירא נותן תירוץ אחר: הנח (אין מקום כלל) לקושיית מחוסר זמן, שכן הכתוב —</div>
+    <div class="trans" data-when="en">Rabbi Zeira said: Leave the prohibition against sacrificing an animal whose time has not yet arrived, as the verse</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין פ״א א — Chullin 81a:1</span></div>
+    <div class="orig">נִתְּקוֹ לַעֲשֵׂה. מַאי טַעְמָא? דְּאָמַר קְרָא: ״מִיּוֹם הַשְּׁמִינִי וָהָלְאָה יֵרָצֶה״ – מִיּוֹם הַשְׁמִינִי אִין, מֵעִיקָּרָא לָא. לָאו הַבָּא מִכְּלַל עֲשֵׂה – עֲשֵׂה.</div>
+    <div class="trans" data-when="he">— ניתקו (העתיק את הלאו) לעשה. מאי טעמא? שאמר הכתוב: ״מִיּוֹם הַשְּׁמִינִי וָהָלְאָה יֵרָצֶה״ — מיום השמיני אין, קודם לכן לא. ולאו הבא מכלל עשה דינו כעשה, ואין לוקין עליו אלא הוא מצות עשה.</div>
+    <div class="trans" data-when="en">transmuted it from the standard prohibition of: It shall not be accepted, which is violated in the case of the other disqualifications, into a prohibition that stems from a positive mitzva. What is the reasoning by which this is derived? It is derived from that which the verse states: “From the eighth day and forward it may be accepted for an offering” (Leviticus 22:27), which teaches that from the eighth day after its birth, yes, it may be sacrificed as an offering, but initially, before the eighth day, no, it may not be sacrificed. Therefore, this is a prohibition that stems from a positive mitzva, which is not considered a negative prohibition for which one is flogged, but rather a positive mitzva.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין פ״א א — Chullin 81a:2</span></div>
+    <div class="orig">וְהָא מִיבַּעְיָא לֵיהּ לְכִדְרַבִּי אַפְטוֹרִיקִי, דְּרַבִּי אַפְטוֹרִיקִי רָמֵי: כְּתִיב ״וְהָיָה שִׁבְעַת יָמִים תַּחַת אִמּוֹ״, הָא לַיְלָה חֲזֵי, וּכְתִיב ״מִיּוֹם הַשְּׁמִינִי וָהָלְאָה יֵרָצֶה״ – מִיּוֹם הַשְּׁמִינִי וָהָלְאָה אִין, לַיְלָה לָא!</div>
+    <div class="trans" data-when="he">קושיא: והרי פסוק זה דרוש לדרשת ר׳ אפטוריקי, שהקשה סתירה: כתוב ״וְהָיָה שִׁבְעַת יָמִים תַּחַת אִמּוֹ״ — משמע שבליל השמיני כבר ראוי להקרבה, וכתוב ״מִיּוֹם הַשְּׁמִינִי וָהָלְאָה יֵרָצֶה״ — משמע מיום השמיני אין, אבל בלילה שלפניו לא!</div>
+    <div class="trans" data-when="en">The Gemara asks: But this verse is required for the statement of Rabbi Aptoriki, as Rabbi Aptoriki raises a contradiction: It is written: “Then it shall be seven days with its mother” (Leviticus 22:27), indicating that on the night after the seventh day it is already fit to be sacrificed. But it is also written in that verse: “From the eighth day and forward it may be accepted,” indicating that from the eighth day forward, yes, it is fit, but on the night before it is not.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין פ״א א — Chullin 81a:3</span></div>
+    <div class="orig">הָא כֵּיצַד? לַיְלָה לִקְדוּשָּׁה, יוֹם לְהַרְצָאָה. כְּתִיב קְרָא אַחֲרִינָא: ״כֵּן תַּעֲשֶׂה לְשֹׁרְךָ לְצֹאנֶךָ״.</div>
+    <div class="trans" data-when="he">יישוב הסתירה: ליל השמיני ראוי לקדושה (להקדישו), והיום השמיני ראוי להרצאה (להקריבו). וכן מובא פסוק אחר המלמד את העשה: ״כֵּן תַּעֲשֶׂה לְשֹׁרְךָ לְצֹאנֶךָ״ — ומכאן שמחוסר זמן ניתקו לעשה.</div>
+    <div class="trans" data-when="en">How can these texts be reconciled? The night after the seventh day is fit for consecration, which is permitted at that time, while the eighth day is fit for effecting acceptance, and only then may it be sacrificed on the altar. The Gemara answers that another verse is also written that specifies this positive mitzva: “So shall you do with your ox and with your sheep; seven days shall it be with its mother; on the eighth day you shall give it to Me” (Exodus 22:29).</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
