@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין נ״ט</title>
+<meta name="description" content="מפת הסוגיא של חולין נ״ט: צבי שנחתכו רגליו וחשש ניקור נחש, ואחריו סימני הטהרה — בהמה, חיה, עוף, חגבים ודגים — ובירור סימני הבהמה והחיה והקרש שאינו אלא קרן אחת.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="59">
+<meta name="gemara-map:sefaria-ref" content="Chullin 59">
+<meta name="gemara-map:topic-he" content="סימני טהרה בבהמה חיה ועוף">
+<meta name="gemara-map:topic-en" content="Signs of kosher animals and birds">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין נ״ט">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 59">
+<meta name="gemara-map:blurb-he" content="סימני הבהמה והחיה נאמרו בתורה וסימני העוף מדברי חכמים; הגמרא מבררת כל סימן וסימן, ואת החיה שחלבה מותר.">
+<meta name="gemara-map:blurb-en" content="The signs of kosher animals are in the Torah and the bird-signs are rabbinic; the Gemara works through each sign and what marks an animal as undomesticated.">
+<meta name="gemara-map:sugya-count" content="6">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין נ״ט</span><span data-when="en">Sugya map — Chullin 59</span></h1>
+    <div class="subtitle"><span data-when="he">חולין נ״ט א — ס׳ א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 59a–60a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> פותח בצבי שנחתכו רגליו — רב הכשירו בצומת הגידין, ושמואל חשש לניקור נחש, ומבחן התנור הוכיח את שמואל. משם עוברת המשנה ל<b>סימני הטהרה</b>: סימני בהמה וחיה מן התורה, וסימני עוף, חגבים ודגים מדברי חכמים. הגמרא מבררת את סימן ״מעלה גרה / אין לו שיניים למעלה״, את חריגי הגמל החזיר והערוד, ואת סימני החיה (קרניים כרוכות חדורות חרוקות מפוצלות) שחלבה מותר — ובכללן הקרש שאין לו אלא קרן אחת. ובסוף שתי אגדות על אריא דבי עילאי ועל בקשת הקיסר לראות את ה׳.</span>
+    <span data-when="en"><b>Bottom line:</b> It opens with a young deer whose legs were cut — Rav inspected the sinews and permitted it, but Shmuel feared a snakebite, and the oven test proved Shmuel right. The Mishna then gives the <b>signs of kosher creatures</b>: animals and beasts from the Torah, birds, grasshoppers and fish from the Sages. The Gemara works through "chews the cud / no upper teeth," the camel-pig-wild-donkey exceptions, and the horn-signs (layered, rounded, grooved, branched) that mark an undomesticated beast whose fat is permitted — including the one-horned keresh. It closes with two aggadot: the lion of Bei Ila'ei and the emperor's wish to see God.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין נ״ט</span><span data-when="en">Overview — Chullin 59</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · צבי שנחתכו רגליו — חשש ניקור"]:::statement
+  O2(["2 · משנה: סימני טהרה"]):::mishnah
+  O3["3 · סימני בהמה — שיניים ופרסה"]:::statement
+  O4["4 · סימני חיה — להתיר חלבה"]:::statement
+  O5["5 · הקרש ואריא דבי עילאי"]:::statement
+  O6["6 · הקיסר מבקש לראות את ה׳"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Deer with cut legs — snakebite fear"]:::statement
+  O2(["2 · Mishna: signs of kosher creatures"]):::mishnah
+  O3["3 · Animal signs — teeth and hooves"]:::statement
+  O4["4 · Beast signs — to permit its fat"]:::statement
+  O5["5 · The keresh and the lion of Bei Ila'ei"]:::statement
+  O6["6 · The emperor asks to see God"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">צבי שנחתכו רגליו — חשש ניקור נחש</span><span data-when="en">A deer with cut legs — fear of snakebite</span>
+      <span class="ref">Chullin 59a:4–5</span></h2>
+  <div class="lead"><span data-when="he">רב הכשיר צבי שנחתכו רגליו, ושמואל חשש שמא נשכו נחש — ומבחן התנור הוכיח את שמואל.</span><span data-when="en">Rav permitted a deer whose legs were cut; Shmuel feared a snakebite — and the oven test proved Shmuel right.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב בדק צבי בצומת הגידין והכשירו, ורצה לאוכלו צלי"]:::statement
+  Q1{"① שמואל: לא חשש מר לניקור נחש?"}:::question
+  A1["② מבחן: ניתנהו בתנור והוא יבדוק עצמו"]:::answer
+  C1["② מסקנה: נפל הבשר לחתיכות — אכן ניקור, ושמואל צדק"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|תקנה| A1
+  A1 -->|הוכחה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav checked the deer's sinews, permitted it, meant to eat it rare"]:::statement
+  Q1{"① Shmuel: are you not concerned for a snakebite?"}:::question
+  A1["② Test: set it in a hot oven and let it inspect itself"]:::answer
+  C1["② Outcome: the meat fell off in bits — it was bitten, Shmuel was right"]:::conclusion
+  S1 -->|objection| Q1
+  Q1 -->|remedy| A1
+  A1 -->|proof| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בַּדְקֵיהּ רַב בְּצוֹמֶת הַגִּידִין וְאַכְשְׁרֵיהּ … סְבַר לְמֵיכַל מִינֵּיהּ בְּאוּמְצָא"]:::statement
+  Q1{"① אֲמַר לֵיהּ שְׁמוּאֵל: לָא חָיֵישׁ מָר לְנִיקּוּרֵי?"}:::question
+  A1["② נוֹתְבֵיהּ בְּתַנּוּרָא דְּאִיהוּ בָּדֵיק נַפְשֵׁיהּ"]:::answer
+  C1["② אוֹתְבֵיהּ, נְפַל תִּילְחֵי תִּילְחֵי … ׳לֹא יְאֻנֶּה לַצַּדִּיק כׇּל אָוֶן׳"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|תקנה| A1
+  A1 -->|הוכחה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ט א — Chullin 59a:4</span></div>
+    <div class="orig">הָהוּא בַּר טַבְיָא דַּאֲתָא לְבֵי רֵישׁ גָּלוּתָא, דַּהֲוָה (מפסק) [מְפַסְּקָן] כַּרְעִן בָּתְרָיָיתָא, בַּדְקֵיהּ רַב בְּצוֹמֶת הַגִּידִין וְאַכְשְׁרֵיהּ. סְבַר לְמֵיכַל מִינֵּיהּ בְּאוּמְצָא, אֲמַר לֵיהּ שְׁמוּאֵל: לָא חָיֵישׁ מָר לְנִיקּוּרֵי?</div>
+    <div class="trans" data-when="he">צבי צעיר שהובא לבית ראש הגולה לאחר שחיטה, ורגליו האחוריות היו חתוכות. רב בדק את צומת הגידין שבירך ומצאן שלמים, והכשירו. רב רצה לאוכלו צלי כל שהוא (אוּמצא), ואמר לו שמואל: וכי אין אדוני חושש שמא נשכו נחש (ניקור)?</div>
+    <div class="trans" data-when="en">§ The mishna states that if an animal is bitten by a poisonous snake, it is not a tereifa, but it is nevertheless prohibited for consumption due to the hazard it poses. The Gemara recounts the case of a certain young deer that was brought to the house of the Exilarch after slaughter whose hind legs had been cut. Rav inspected it at the convergence of sinews in the thigh and found them intact, and he deemed it kosher. He thought to eat it rare, i.e., lightly roasted. Shmuel said to him: Is the Master not concerned for the possibility that it may have a snakebite?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ט א — Chullin 59a:5</span></div>
+    <div class="orig">אֲמַר לֵיהּ: מַאי תַּקַּנְתָּא? נוֹתְבֵיהּ בְּתַנּוּרָא דְּאִיהוּ בָּדֵיק נַפְשֵׁיהּ. אוֹתְבֵיהּ, נְפַל תִּילְחֵי תִּילְחֵי. קָרֵי שְׁמוּאֵל עֲלֵיהּ דְּרַב: ״לֹא יְאֻנֶּה לַצַּדִּיק כׇּל אָוֶן״. קָרֵי רַב עֲלֵיהּ דִּשְׁמוּאֵל: ״כׇּל רָז לָא אָנֵס לָךְ״.</div>
+    <div class="trans" data-when="he">רב: מה התקנה לברר ספק זה? שמואל: נניחנו בתנור חם והוא יבדוק את עצמו. הניחוהו, ונפל הבשר חתיכות חתיכות — סימן שאכן ניקרו נחש. שמואל קרא על רב ״לא יאונה לצדיק כל אוון״ — שניצל בזכותו; ורב קרא על שמואל ״כל רז לא אָנֵס לך״ — שידע אף עניין זה.</div>
+    <div class="trans" data-when="en">Rav said to him: What is the rectification for such an uncertainty? Shmuel said to him: We shall set it in a hot oven, as it will then inspect itself. Shmuel set it in the oven on a spit, and the meat fell off the bone bit by bit, a sign that a snake had bitten the young deer. Shmuel recited about Rav the verse: “There shall no mischief befall the righteous” (Proverbs 12:21), since he was saved due to his righteousness. Rav recited about Shmuel the verse: “And no secret causes you trouble” (Daniel 4:6), since he was learned even with regard to such matters.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">משנה: סימני טהרה</span><span data-when="en">Mishna: the signs of kosher creatures</span>
+      <span class="ref">Chullin 59a:6–7</span></h2>
+  <div class="lead"><span data-when="he">סימני בהמה וחיה מן התורה; סימני עוף, חגבים ודגים מדברי חכמים.</span><span data-when="en">Animals and beasts from the Torah; birds, grasshoppers and fish from the Sages.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① משנה: סימני בהמה וחיה מן התורה, וסימני עוף לא נאמרו"]):::mishnah
+  M2(["① עוף: כל הדורס טמא; אצבע יתירה, זפק, וקורקבן נקלף — טהור"]):::mishnah
+  M3(["② חגבים: ד׳ רגליים, ד׳ כנפיים, קרצוליים, וכנפיו חופין רובו; דגים: סנפיר וקשקשת"]):::mishnah
+  M1 -->|סימני העוף| M2
+  M2 -->|חגבים ודגים| M3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Mishna: animal and beast signs are from the Torah, bird signs were not stated"]):::mishnah
+  M2(["① Bird: a clawing bird is non-kosher; extra digit, crop, peelable gizzard — kosher"]):::mishnah
+  M3(["② Grasshopper: 4 legs, 4 wings, jumping-legs, wings cover most; fish: fin and scale"]):::mishnah
+  M1 -->|bird signs| M2
+  M2 -->|grasshoppers and fish| M3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① סִימָנֵי בְּהֵמָה וְחַיָּה נֶאֶמְרוּ מִן הַתּוֹרָה, וְסִימָנֵי הָעוֹף לֹא נֶאֶמְרוּ"]):::mishnah
+  M2(["① כׇּל עוֹף הַדּוֹרֵס – טָמֵא, כֹּל שֶׁיֵּשׁ לוֹ אֶצְבַּע יְתֵירָה וְזֶפֶק וְקוּרְקְבָנוֹ נִקְלָף – טָהוֹר"]):::mishnah
+  M3(["② חֲגָבִים … אַרְבַּע רַגְלַיִם … וּכְנָפָיו חוֹפִין אֶת רוּבּוֹ … דָּגִים … סְנַפִּיר וְקַשְׁקֶשֶׁת"]):::mishnah
+  M1 -->|סימני העוף| M2
+  M2 -->|חגבים ודגים| M3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ט א — Chullin 59a:6</span></div>
+    <div class="orig">מַתְנִי׳ סִימָנֵי בְּהֵמָה וְחַיָּה נֶאֶמְרוּ מִן הַתּוֹרָה, וְסִימָנֵי הָעוֹף לֹא נֶאֶמְרוּ, אֲבָל אָמְרוּ חֲכָמִים: כׇּל עוֹף הַדּוֹרֵס – טָמֵא, כֹּל שֶׁיֵּשׁ לוֹ אֶצְבַּע יְתֵירָה וְזֶפֶק וְקוּרְקְבָנוֹ נִקְלָף – טָהוֹר. רַבִּי אֶלְעָזָר בְּרַבִּי צָדוֹק אוֹמֵר: כׇּל עוֹף הַחוֹלֵק אֶת רַגְלָיו – טָמֵא.</div>
+    <div class="trans" data-when="he">המשנה: סימני הטהרה של בהמה וחיה נאמרו במפורש בתורה, אבל סימני העוף הטהור לא נאמרו בתורה. אלא חכמים מסרו סימנים: כל עוף דורס (חוטף טרפו באצבעותיו) — טמא; וכל שיש בו שלושה סימני טהרה — אצבע יתירה אחורית, זפק, וקורקבן שאפשר לקלף את עורו הפנימי — טהור. רבי אלעזר ברבי צדוק: כל עוף החולק את רגליו (שתיים מכאן ושתיים מכאן על חוט) — טמא.</div>
+    <div class="trans" data-when="en">MISHNA: The signs that indicate that a domesticated animal and an undomesticated animal are kosher were stated in the Torah, and the signs of a kosher bird were not explicitly stated. But the Sages stated certain signs in a bird: Any bird that claws its prey and eats it is non-kosher. Any bird that has an extra digit behind the leg slightly elevated above the other digits, and a crop, which is a sack alongside the gullet in which food is stored prior to digestion, and for which the yellowish membrane inside its gizzard can be peeled, is kosher. Rabbi Elazar, son of Rabbi Tzadok, says: Any bird that splits the digits of its feet when standing on a string, placing two digits on one side of the string and two on the other, is non-kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ט א — Chullin 59a:7</span></div>
+    <div class="orig">וּבַחֲגָבִים, כֹּל שֶׁיֵּשׁ לוֹ אַרְבַּע רַגְלַיִם, וְאַרְבַּע כְּנָפַיִם, וְקַרְצוּלַּיִם, וּכְנָפָיו חוֹפִין אֶת רוּבּוֹ. רַבִּי יוֹסֵי אוֹמֵר: וּשְׁמוֹ חָגָב. וּבַדָּגִים, כֹּל שֶׁיֵּשׁ לוֹ סְנַפִּיר וְקַשְׁקֶשֶׁת. רַבִּי יְהוּדָה אוֹמֵר: שְׁנֵי קַשְׂקַשִּׂין וּסְנַפִּיר אֶחָד. וְאֵלּוּ הֵן קַשְׂקַשִּׂין – הַקְּבוּעִין בּוֹ, וּסְנַפִּירִים – הַפּוֹרֵחַ בָּהֶן.</div>
+    <div class="trans" data-when="he">ובחגבים: כל שיש לו ארבע רגליים, וארבע כנפיים, וקרצוליים (רגלי דילוג סמוך לצוואר), וכנפיו חופות את רוב גופו — טהור. רבי יוסי מוסיף תנאי: ושמו ״חגב״. ובדגים: כל שיש לו סנפיר וקשקשת — טהור. רבי יהודה: צריך שני קשקשים וסנפיר אחד. ואלו הם קשקשים — הקבועים בגופו; וסנפירים — שבהם הוא שט.</div>
+    <div class="trans" data-when="en">And with regard to grasshoppers, whose signs were also not stated in the Torah, the Sages stated: Any grasshopper that has four legs, and four wings, and two additional jumping legs, and whose wings cover most of its body, is kosher. Rabbi Yosei says: And this applies only if the name of its species is grasshopper. And with regard to fish, the signs are explicitly stated in the Torah: Any fish that has a fin and a scale is kosher; Rabbi Yehuda says: Two scales and one fin. And these are scales: Those that are fixed to its body; and fins are those with which the fish swims.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">סימני בהמה — שיניים ופרסה</span><span data-when="en">Animal signs — teeth and hooves</span>
+      <span class="ref">Chullin 59a:8–16</span></h2>
+  <div class="lead"><span data-when="he">״מעלה גרה — אין לו שיניים למעלה״; הגמרא מקשה מן הגמל, ומבררת כיצד בודקים בהמה אבודת־סימן.</span><span data-when="en">"Chews the cud — no upper teeth"; the Gemara objects from the camel and works out how to inspect an animal whose signs are unclear.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: כל מעלה גרה — אין לו שיניים למעלה, וטהורה"]:::statement
+  Q1{"② קושיא: והרי גמל מעלה גרה ואין לו שיניים — וטמא!"}:::question
+  A1["② תירוץ: גמל ניבי אית ליה; וניסוח מתוקן: אין לו שיניים למעלה — טהורה"]:::answer
+  Q2{"③ ולמה בשיניים — יבדוק בפרסה?"}:::question
+  A2["④ רב חסדא: פרסותיה חתוכות — בודק בפיה, ובלבד שיכיר בן גמל"]:::answer
+  Q3{"⑤ שמא יש מין אחר כבן גמל?"}:::question
+  A3["⑤ דבי ר׳ ישמעאל: ׳הוא׳ — אין מעלה גרה וטמא אלא גמל"]:::answer
+  S2["⑥ פיה גמום — בודק בפרסה, ובלבד שיכיר חזיר; ׳הוא׳ — אין מפריס וטמא אלא חזיר"]:::statement
+  C1["⑦ פיה גמום ופרסותיה חתוכות — בודק בבשרה (שתי וערב), ובלבד שיכיר ערוד; בכנפי העוקץ"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|המשך| Q2
+  Q2 -->|תשובה| A2
+  A2 -->|חשש| Q3
+  Q3 -->|תירוץ| A3
+  A3 -->|ועוד| S2
+  S2 -->|ועוד| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: whatever chews the cud has no upper teeth, and is kosher"]:::statement
+  Q1{"② Objection: but the camel chews the cud, has no upper teeth — yet is non-kosher!"}:::question
+  A1["② Answer: a camel has cuspids; reworded: no upper teeth — kosher"]:::answer
+  Q2{"③ Why teeth — let one inspect the hooves?"}:::question
+  A2["④ Rav Ḥisda: hooves cut — inspect the mouth, if one recognizes a young camel"]:::answer
+  Q3{"⑤ Perhaps another species is like a young camel?"}:::question
+  A3["⑤ School of R. Yishmael: ׳it׳ — only the camel chews cud and is non-kosher"]:::answer
+  S2["⑥ Mouth mutilated — inspect hooves, recognizing a pig; ׳it׳ — only the pig parts hoof and is non-kosher"]:::statement
+  C1["⑦ Mouth and hooves both gone — inspect the flesh (warp and woof), recognizing a wild donkey; at the tailbone"]:::conclusion
+  S1 -->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -->|further| Q2
+  Q2 -->|answer| A2
+  A2 -->|concern| Q3
+  Q3 -->|answer| A3
+  A3 -->|further| S2
+  S2 -->|further| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אֵלּוּ הֵן סִימָנֵי בְּהֵמָה … כׇּל בְּהֵמָה שֶׁמַּעֲלַת גֵּרָה … אֵין לָהּ שִׁינַּיִם לְמַעְלָה, וּטְהוֹרָה"]:::statement
+  Q1{"② וַהֲרֵי גָּמָל, דְּמַעֲלֵה גֵרָה הוּא, וְאֵין לוֹ שִׁינַּיִם לְמַעְלָה, וְטָמֵא!"}:::question
+  A1["② גָּמָל נִיבֵי אִית לֵיהּ … כׇּל בְּהֵמָה שֶׁאֵין לָהּ שִׁינַּיִם לְמַעְלָה … וּטְהוֹרָה"]:::answer
+  Q2{"③ וְלִיבְדּוֹק בְּפַרְסוֹתֶיהָ!"}:::question
+  A2["④ מָצָא בְּהֵמָה שֶׁפַּרְסוֹתֶיהָ חֲתוּכוֹת – בּוֹדֵק בְּפִיהָ … וּבִלְבַד שֶׁיַּכִּיר בֶּן גָּמָל"]:::answer
+  Q3{"⑤ אִיכָּא נָמֵי מִינָא אַחֲרִינָא דְּדָמֵי לְבֶן גָּמָל!"}:::question
+  A3["⑤ דְּתָנֵי דְּבֵי רַבִּי יִשְׁמָעֵאל … לְפִיכָךְ פָּרַט בּוֹ הַכָּתוּב ׳הוּא׳"]:::answer
+  S2["⑥ שֶׁפִּיהָ גָּמוּם, בּוֹדֵק בְּפַרְסוֹתֶיהָ … וּבִלְבַד שֶׁיַּכִּיר חֲזִיר … פָּרַט בּוֹ הַכָּתוּב ׳הוּא׳"]:::statement
+  C1["⑦ שֶׁפִּיהָ גָּמוּם וּפַרְסוֹתֶיהָ חֲתוּכוֹת – בּוֹדֵק בִּבְשָׂרָהּ … שְׁתִי וָעֵרֶב … וְהֵיכָא בּוֹדֵק … בְּכַנְפֵי הָעוֹקֶץ"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|המשך| Q2
+  Q2 -->|תשובה| A2
+  A2 -->|חשש| Q3
+  Q3 -->|תירוץ| A3
+  A3 -->|ועוד| S2
+  S2 -->|ועוד| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ט א — Chullin 59a:8</span></div>
+    <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן: אֵלּוּ הֵן סִימָנֵי בְּהֵמָה – ״כׇּל בְּהֵמָה מַפְרֶסֶת פַּרְסָה וְגוֹ׳״, כׇּל בְּהֵמָה שֶׁמַּעֲלַת גֵּרָה – בְּיָדוּעַ שֶׁאֵין לָהּ שִׁינַּיִם לְמַעְלָה, וּטְהוֹרָה.</div>
+    <div class="trans" data-when="he">הגמרא. ברייתא: אלו הם סימני הבהמה הטהורה — ״כל בהמה מפרסת פרסה…״; וכלל נוסף: כל בהמה המעלה גרה — בידוע שאין לה שיניים בלסת העליונה הקדמית, והיא טהורה.</div>
+    <div class="trans" data-when="en">GEMARA: The mishna states that the signs of a kosher domesticated animal are stated in the Torah. With regard to this, the Sages taught in a baraita: These are the signs of a kosher domesticated animal: “Whatsoever parts the hoof, and is wholly cloven-footed, and chews the cud, among the animals, that may you eat” (Leviticus 11:3). Any animal that chews the cud certainly has no upper front teeth, i.e., incisors, and is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ט א — Chullin 59a:9</span></div>
+    <div class="orig">וּכְלָלָא הוּא? וַהֲרֵי גָּמָל, דְּמַעֲלֵה גֵרָה הוּא, וְאֵין לוֹ שִׁינַּיִם לְמַעְלָה, וְטָמֵא! גָּמָל נִיבֵי אִית לֵיהּ.</div>
+    <div class="trans" data-when="he">קושיא: וכי זה כלל גמור? והרי הגמל מעלה גרה ואין לו שיניים בלסת העליונה — ואף על פי כן טמא! תירוץ: לגמל יש ניבים (שיני ניב) למעלה, ולכן אינו סתירה לכלל.</div>
+    <div class="trans" data-when="en">The Gemara asks: And is this an established principle? But isn’t there a camel, which chews the cud, and has no upper front teeth, and it is still non-kosher (see Leviticus 11:4)? The Gemara responds: A camel has cuspid-like upper incisors, one on each side.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ט א — Chullin 59a:10</span></div>
+    <div class="orig">וַהֲרֵי בֶּן גָּמָל, דְּנִיבֵי נָמֵי לֵית לֵיהּ, וְתוּ, הֲרֵי שָׁפָן וְאַרְנֶבֶת דְּמַעֲלַת גֵּרָה הֵן וְיֵשׁ לָהֶן שִׁינַּיִם לְמַעְלָה, וּטְמֵאִין! וְעוֹד, שִׁינַּיִם מִי כְּתִיבִי בְּאוֹרָיְיתָא? אֶלָּא הָכִי קָאָמַר: כׇּל בְּהֵמָה שֶׁאֵין לָהּ שִׁינַּיִם לְמַעְלָה – בְּיָדוּעַ שֶׁהִיא מַעֲלַת גֵּרָה וּמַפְרֶסֶת פַּרְסָה, וּטְהוֹרָה.</div>
+    <div class="trans" data-when="he">המשך הקושיא: והרי בן גמל (גמל צעיר) שאין לו אפילו ניבים, וטמא! ועוד, שפן וארנבת מעלים גרה ויש להם שיניים למעלה, ואף הם טמאים! ובכלל, וכי שיניים נכתבו בתורה כסימן? אלא כך כוונת הברייתא: כל בהמה שאין לה שיניים למעלה — בידוע שהיא מעלת גרה ומפרסת פרסה, וטהורה.</div>
+    <div class="trans" data-when="en">The Gemara asks: But isn’t there a young camel, which does not even have cuspid-like upper incisors and is still non-kosher? And furthermore, aren’t there the hyrax and the hare, which chew the cud, and yet they have upper front teeth, and are non-kosher? And furthermore, one might ask: Are teeth written in the Torah with regard to the kosher status of an animal? Rather, this is what the tanna is saying: Any animal that does not have upper front teeth certainly chews the cud and parts the hoof and is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ט א — Chullin 59a:11</span></div>
+    <div class="orig">וְלִיבְדּוֹק בְּפַרְסוֹתֶיהָ! כְּגוֹן שֶׁהָיוּ פַּרְסוֹתֶיהָ חֲתוּכוֹת, וְכִדְרַב חִסְדָּא, דְּאָמַר רַב חִסְדָּא: הָיָה מְהַלֵּךְ בַּמִּדְבָּר וּמָצָא בְּהֵמָה שֶׁפַּרְסוֹתֶיהָ חֲתוּכוֹת – בּוֹדֵק בְּפִיהָ, אִם אֵין לָהּ שִׁינַּיִם לְמַעְלָה – בְּיָדוּעַ שֶׁהִיא טְהוֹרָה, אִם לָאו – בְּיָדוּעַ שֶׁהִיא טְמֵאָה, וּבִלְבַד שֶׁיַּכִּיר גָּמָל. גָּמָל נִיבֵי אִית לֵיהּ! אֶלָּא, וּבִלְבַד שֶׁיַּכִּיר בֶּן גָּמָל.</div>
+    <div class="trans" data-when="he">קושיא: ולמה לבדוק בשיניים — יבדוק בפרסות אם הן סדוקות? תירוץ: בודקים בשיניים כשהפרסות חתוכות ואי אפשר להבחין בהן, כדברי רב חסדא: ההולך במדבר ומצא בהמה שפרסותיה חתוכות — בודק בפיה; אין לה שיניים למעלה — טהורה, יש לה — טמאה, ובלבד שיכיר שאינה גמל. ומקשים: והרי לגמל יש ניבים? אלא ובלבד שיכיר שאינה בן גמל (שאין לו אף ניבים).</div>
+    <div class="trans" data-when="en">The Gemara asks: But why should one inspect the teeth? Let him simply inspect whether the hooves are cloven. The Gemara responds: One inspects the teeth in a case where its hooves were cut and one cannot tell whether they are cloven. And this is in accordance with the statement of Rav Ḥisda, as Rav Ḥisda says: If one was walking in the wilderness, and he found an animal whose hooves were cut, he may inspect its mouth. If it has no upper front teeth, it is certainly kosher; if that is not the case, it is certainly non-kosher, provided that he recognizes that this animal is not a camel, which is non-kosher even though it has no upper incisors. The Gemara asks: Why must one recognize that this is not a camel? A camel has cuspid-like upper incisors. Rather, say: Provided that one recognizes that it is not a young camel, which has no cuspid-like upper incisors.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ט א — Chullin 59a:12</span></div>
+    <div class="orig">לָאו אָמְרַתְּ אִיכָּא בֶּן גָּמָל? אִיכָּא נָמֵי מִינָא אַחֲרִינָא דְּדָמֵי לְבֶן גָּמָל! לָא סָלְקָא דַּעְתָּךְ, דְּתָנֵי דְּבֵי רַבִּי יִשְׁמָעֵאל: ״וְאֶת הַגָּמָל כִּי מַעֲלֵה גֵרָה הוּא״, שַׁלִּיט בְּעוֹלָמוֹ יוֹדֵעַ שֶׁאֵין לְךָ דָּבָר מַעֲלֵה גֵרָה וְטָמֵא אֶלָּא גָּמָל, לְפִיכָךְ פָּרַט בּוֹ הַכָּתוּב ״הוּא״.</div>
+    <div class="trans" data-when="he">חשש: כשם שאמרת שיש בן גמל (היוצא מן הכלל), אולי יש מין נוסף הדומה לבן גמל — שמעלה גרה אך טמא? תירוץ: אל יעלה בדעתך, שכן שנו בבית רבי ישמעאל: ״ואת הגמל כי מעלה גרה הוא״ — שליט בעולמו יודע שאין דבר שמעלה גרה וטמא אלא הגמל, ולכן ריבה הכתוב ״הוא״ למעט כל מין אחר.</div>
+    <div class="trans" data-when="en">The Gemara asks: How can one rely only on an inspection of the mouth? Did you not say that there is a young camel, which has no upper incisors but is still non-kosher? If so, perhaps there is also another species that is similar to a young camel and is non-kosher despite having no upper incisors. The Gemara responds that this possibility should not enter your mind, as the school of Rabbi Yishmael taught: The verse states: “The camel, because it chews the cud but parts not the hoof, it is unclean” (Leviticus 11:4). The Ruler of His world knows that nothing other than the camel chews the cud and is still non-kosher. Therefore, the verse singles it out with the word “it,” i.e., it and no other.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ט א — Chullin 59a:13–14</span></div>
+    <div class="orig">וְאָמַר רַב חִסְדָּא: הָיָה מְהַלֵּךְ בַּדֶּרֶךְ וּמָצָא בְּהֵמָה שֶׁפִּיהָ גָּמוּם, בּוֹדֵק בְּפַרְסוֹתֶיהָ: אִם פַּרְסוֹתֶיהָ סְדוּקוֹת – בְּיָדוּעַ שֶׁהִיא טְהוֹרָה, אִם לָאו – בְּיָדוּעַ שֶׁהִיא טְמֵאָה, וּבִלְבַד שֶׁיַּכִּיר חֲזִיר. לָאו אָמְרַתְּ אִיכָּא חֲזִיר? אִיכָּא נָמֵי מִינָא אַחֲרִינָא דְּדָמְיָא לַחֲזִיר! לָא סָלְקָא דַּעְתָּךְ, דְּתָנָא דְּבֵי רַבִּי יִשְׁמָעֵאל: ״וְאֶת הַחֲזִיר כִּי מַפְרִיס פַּרְסָה הוּא״ – שַׁלִּיט בְּעוֹלָמוֹ יוֹדֵעַ שֶׁאֵין לְךָ דָּבָר שֶׁמַּפְרִיס פַּרְסָה וְטָמֵא אֶלָּא חֲזִיר, לְפִיכָךְ פָּרַט בּוֹ הַכָּתוּב ״הוּא״.</div>
+    <div class="trans" data-when="he">ועוד רב חסדא: מצא בהמה שפיה גמום (חתוך, ואי אפשר לבדוק שיניים) — בודק בפרסותיה; סדוקות — טהורה, שאינן סדוקות — טמאה, ובלבד שיכיר שאינה חזיר (מפריס פרסה וטמא). וכאן אותו חשש: שמא יש מין נוסף הדומה לחזיר? תירוץ: שנו בבית רבי ישמעאל ״ואת החזיר כי מפריס פרסה הוא״ — שאין דבר שמפריס פרסה וטמא אלא חזיר, ולכן ריבה ״הוא״.</div>
+    <div class="trans" data-when="en">And Rav Ḥisda says: If one was walking on the road, and he found an animal whose mouth was mutilated, he may inspect its hooves. If its hooves are cloven, it is certainly kosher. If not, it is certainly non-kosher. This applies provided that he recognizes that it is not a pig, which is non-kosher even though it has cloven hooves. The Gemara asks: But didn’t you say that there is a pig, which has cloven hooves but is still non-kosher? If so, perhaps there is also another species that is similar to a pig. The Gemara responds that this possibility should not enter your mind, as the school of Rabbi Yishmael taught: The verse states: “And the pig, because it parts the hoof, and is cloven-footed, but chews not the cud, it is unclean” (Leviticus 11:7). The Ruler of His world knows that nothing other than the pig parts the hoof and is still non-kosher. Therefore, the verse singles it out with the word “it.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ט א — Chullin 59a:15–16</span></div>
+    <div class="orig">וְאָמַר רַב חִסְדָּא: הָיָה מְהַלֵּךְ בַּמִּדְבָּר, וּמָצָא בְּהֵמָה שֶׁפִּיהָ גָּמוּם וּפַרְסוֹתֶיהָ חֲתוּכוֹת – בּוֹדֵק בִּבְשָׂרָהּ, אִם מְהַלֵּךְ שְׁתִי וָעֵרֶב – בְּיָדוּעַ שֶׁהִיא טְהוֹרָה, וְאִם לָאו – בְּיָדוּעַ שֶׁהִיא טְמֵאָה, וּבִלְבַד שֶׁיַּכִּיר עַרְוָד. לָאו אָמְרַתְּ אִיכָּא עַרְוָד? אִיכָּא נָמֵי מִינָא אַחֲרִינָא דְּדָמֵיא לְעַרְוָד! גְּמִירִי דְּלֵיכָּא. וְהֵיכָא בּוֹדֵק? אָמַר אַבָּיֵי, וְאִיתֵּימָא רַב חִסְדָּא: בְּכַנְפֵי הָעוֹקֶץ.</div>
+    <div class="trans" data-when="he">ועוד רב חסדא: מצא בהמה שפיה גמום וגם פרסותיה חתוכות — בודק בבשרה; אם הבשר מהלך ״שתי וערב״ (קצתו לאורך וקצתו לרוחב) — טהורה, ואם לאו — טמאה, ובלבד שיכיר שאינה ערוד (חמור בר). וכאן: שמא יש מין הדומה לערוד? תשובה: מסורת היא שאין מין כזה. ושואלים: והיכן בודק את הבשר? אביי, ויש אומרים רב חסדא: בכנפי העוקץ (סמוך לעצם הזנב, על הירכיים).</div>
+    <div class="trans" data-when="en">And Rav Ḥisda says: If one was walking in the wilderness, and he found an animal whose mouth was mutilated and whose hooves were cut, he may inspect its flesh. If it runs like warp and woof, i.e., part of it stretches vertically and part of it horizontally, it is certainly kosher; and if not, it is certainly non-kosher, provided that one recognizes that this animal is not a wild donkey, which is non-kosher even though its flesh runs like warp and woof. The Gemara asks: Didn’t you say that there is a wild donkey, whose flesh runs like warp and woof but who is still non-kosher? If so, perhaps there is also another species that is similar to a wild donkey. The Gemara responds: It is learned as a tradition that there are no similar species. The Gemara asks: And where does one inspect the flesh? Abaye said, and some say that Rav Ḥisda said: At the edges of the tailbone, on the upper thighs.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">סימני חיה — להתיר חלבה</span><span data-when="en">Beast signs — to permit its fat</span>
+      <span class="ref">Chullin 59a:17–59b:7</span></h2>
+  <div class="lead"><span data-when="he">סימני החיה ניתנו להתיר חלבה; הגמרא מבררת אילו קרניים מכריעות שהבהמה חיה.</span><span data-when="en">The signs of a beast are given to permit its fat; the Gemara works out which horns mark it as undomesticated.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① קושיא: למה סימני חיה — והרי חיה בכלל בהמה לסימנים?"}:::question
+  A1["① ר׳ זירא: להתיר חלבה — קרניים וטלפיים"]:::answer
+  S1["② ר׳ דוסא: קרניים — אין צריך טלפיים; וקרש בקרן אחת — מותר"]:::statement
+  Q2{"③ עז שור צבי — קושיות זו אחר זו על הכלל"}:::question
+  C1["④ מסקנה: מפוצלות ודאי חיה; ואם לא — כרוכות חדורות חרוקות מובלעות"]:::conclusion
+  S2["⑤ ספק עיזא כרכוז: רב אחאי אסר, רב שמואל אכל"]:::statement
+  C2["⑥ שלחו מתם: הלכה כרב שמואל, והיזהרו בכבוד רב אחאי"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 -->|דעה| S1
+  S1 -->|קושיא| Q2
+  Q2 -->|מסקנה| C1
+  C1 -->|למעשה| S2
+  S2 -->|הלכה| C2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Why signs for a beast — it is included in animal for signs?"}:::question
+  A1["① R. Zeira: to permit its fat — horns and cloven hooves"]:::answer
+  S1["② R. Dosa: horns — no need for hooves; the one-horned keresh is permitted"]:::statement
+  Q2{"③ Goat, bull, gazelle — successive objections to the rule"}:::question
+  C1["④ Conclusion: branched = surely a beast; else layered, rounded, grooved, absorbed"]:::conclusion
+  S2["⑤ The karkoz-goat doubt: Rav Aḥai forbade, Rav Shmuel ate"]:::statement
+  C2["⑥ Sent from there: halakha like Rav Shmuel, but honor Rav Aḥai"]:::conclusion
+  Q1 -->|answer| A1
+  A1 -->|opinion| S1
+  S1 -->|objection| Q2
+  Q2 -->|conclusion| C1
+  C1 -->|in practice| S2
+  S2 -->|halakha| C2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① חַיָּה בִּכְלַל בְּהֵמָה הִיא לְסִימָנִין!"}:::question
+  A1["① אָמַר רַבִּי זֵירָא: לְהַתִּיר חֶלְבָּהּ … כֹּל שֶׁיֵּשׁ לָהּ קַרְנַיִם וּטְלָפַיִם"]:::answer
+  S1["② רַבִּי דּוֹסָא … יֵשׁ לָהּ קַרְנַיִם – אִי אַתָּה צָרִיךְ לַחֲזוֹר עַל טְלָפַיִם … וְקֶרֶשׁ … מוּתָּר"]:::statement
+  Q2{"③ וַהֲרֵי עֵז … וַהֲרֵי שׁוֹר … וַהֲרֵי צְבִי …?"}:::question
+  C1["④ הֵיכָא דְּמִיפַּצְלָא – לָא דִּינָא … בָּעֵינַן כְּרוּכוֹת, חֲדוּרוֹת, וַחֲרוּקוֹת, וְהוּא דְּמִיבְּלַע חִירְקַיְיהוּ"]:::conclusion
+  S2["⑤ סְפֵיקָא דְּעִיזָּא כַּרְכּוּז … רַב אַחַאי אָסַר, רַב שְׁמוּאֵל … אֲכַל מִינֵּיהּ"]:::statement
+  C2["⑥ שְׁלַחוּ מִתָּם: הִלְכְתָא כְּוָותֵיהּ דִּשְׁמוּאֵל … וְהִזָּהֲרוּ בְּרַבֵּינוּ אַחַאי"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 -->|דעה| S1
+  S1 -->|קושיא| Q2
+  Q2 -->|מסקנה| C1
+  C1 -->|למעשה| S2
+  S2 -->|הלכה| C2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ט א — Chullin 59a:17</span></div>
+    <div class="orig">סִימָנֵי חַיָּה. תָּנוּ רַבָּנַן: אֵלּוּ הֵן סִימָנֵי חַיָּה. חַיָּה בִּכְלַל בְּהֵמָה הִיא לְסִימָנִין! אָמַר רַבִּי זֵירָא:</div>
+    <div class="trans" data-when="he">המשנה: ״סימני חיה נאמרו מן התורה״. ברייתא: אלו הם סימני חיה. ומקשים: חיה כלולה בבהמה לעניין הסימנים — שהרי הכתוב מנה את שתיהן יחד — ולמה אפוא צריך סימנים נפרדים לחיה? אמר רבי זירא:</div>
+    <div class="trans" data-when="en">§ The mishna states: The signs of an undomesticated animal were stated in the Torah. With regard to this, the Sages taught in a baraita: These are the signs of an undomesticated animal. The Gemara interjects: Why does one need signs for an undomesticated animal? An undomesticated animal [ḥayya] is included in the category of a domesticated animal [behema] with regard to signs, as the verse states: “These are the living things [ḥayya] which you may eat among all the animals [behema] that are on the earth. Whatsoever parts the hoof” (Leviticus 11:2–3). Rabbi Zeira said:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ט ב — Chullin 59b:1–2</span></div>
+    <div class="orig">לְהַתִּיר חֶלְבָּהּ, וְהָכִי קָאָמַר: אֵלּוּ הֵן סִימָנֵי חַיָּה שֶׁחֶלְבָּהּ מוּתָּר – כֹּל שֶׁיֵּשׁ לָהּ קַרְנַיִם וּטְלָפַיִם. רַבִּי דּוֹסָא אוֹמֵר: יֵשׁ לָהּ קַרְנַיִם – אִי אַתָּה צָרִיךְ לַחֲזוֹר עַל טְלָפַיִם, יֵשׁ לָהּ טְלָפַיִם – צָרִיךְ אַתָּה לַחֲזוֹר עַל קַרְנַיִם, וְקֶרֶשׁ, אַף עַל פִּי שֶׁאֵין לוֹ אֶלָּא קֶרֶן אַחַת – מוּתָּר.</div>
+    <div class="trans" data-when="he">ר׳ זירא: הסימנים ניתנו להתיר את חלבה — שחלב בהמה אסור, וחלב חיה מותר; וכך כוונת הברייתא: אלו סימני חיה שחלבה מותר — כל שיש לה קרניים וטלפיים (פרסות סדוקות). רבי דוסא: יש לה קרניים — אינך צריך לחזר אחר טלפיים; יש לה טלפיים בלבד — עליך לחזר אחר קרניים. והקרש, אף שאין לו אלא קרן אחת — חלבו מותר.</div>
+    <div class="trans" data-when="en">The signs are given to permit its forbidden fat, i.e., to deem the animal undomesticated. Fat that is forbidden for consumption in domesticated animals is permitted in undomesticated animals. And this is what the tanna is saying: These are the signs of a kosher undomesticated animal, so that one will know that its fat is permitted: Any animal that has horns and cloven hooves is an undomesticated animal. Rabbi Dosa says: If it has horns, it is certainly a kosher undomesticated animal, and you need not search for cloven hooves. But if it has cloven hooves, you must still search for horns. And with regard to the animal called a keresh, even though it has only one horn, its fat is permitted for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ט ב — Chullin 59b:3–4</span></div>
+    <div class="orig">כְּלָלָא הוּא? וַהֲרֵי עֵז, דְּיֵשׁ לוֹ קַרְנַיִם וּטְלָפַיִם, וְחֶלְבּוֹ אָסוּר! כְּרוּכוֹת בָּעֵינַן. וַהֲרֵי שׁוֹר, דִּכְרוּכוֹת, וְחֶלְבּוֹ אָסוּר! חֲרוּקוֹת בָּעֵינַן. וַהֲרֵי עֵז, דַּחֲרוּקוֹת, וְחֶלְבּוֹ אָסוּר? מְפוּצָּלוֹת בָּעֵינַן! וַהֲרֵי צְבִי, דְּאֵין מְפוּצָּלוֹת, וְחֶלְבּוֹ מוּתָּר? חֲדוּרוֹת בָּעֵינַן.</div>
+    <div class="trans" data-when="he">קושיות זו אחר זו על הכלל ״קרניים״: והרי עז יש לה קרניים וטלפיים וחלבה אסור! תשובה: בעינן קרניים כרוכות (שדרות זו על זו), ולעז אין. והרי שור שקרניו כרוכות וחלבו אסור! בעינן חרוקות (מחורצות). והרי עז שקרניה חרוקות וחלבה אסור! בעינן מפוצלות (מסועפות). והרי צבי שאין קרניו מפוצלות וחלבו מותר! בעינן חדורות (עגולות, לא רחבות).</div>
+    <div class="trans" data-when="en">The Gemara asks: Is this an established principle? But isn’t there a goat, which has horns and cloven hooves, and still its fat is forbidden, as it is a domesticated animal? The Gemara responds: We require horns that are layered to designate a kosher animal as undomesticated; a goat’s horns are not layered. The Gemara asks: But isn’t there a bull, which has layered horns, and still its fat is forbidden since it is domesticated? The Gemara responds: We require horns that are grooved; a bull’s horns are not grooved. The Gemara persists: But isn’t there a goat, which has grooved horns, and still its fat is forbidden? The Gemara responds: We require horns that are branched; a goat’s horns are not branched. The Gemara asks: But isn’t there a gazelle [tzevi], whose horns are not branched, and still its fat is permitted? The Gemara responds: We require horns that are rounded and not broad like those of a sheep.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ט ב — Chullin 59b:5</span></div>
+    <div class="orig">הִלְכָּךְ, הֵיכָא דְּמִיפַּצְלָא – לָא דִּינָא וְלָא דַּיָּינָא; הֵיכָא דְּלָא מִיפַּצְלָא – בָּעֵינַן כְּרוּכוֹת, חֲדוּרוֹת, וַחֲרוּקוֹת, וְהוּא דְּמִיבְּלַע חִירְקַיְיהוּ.</div>
+    <div class="trans" data-when="he">מסקנה: לפיכך, מקום שקרניו מפוצלות — אין דין ואין דיין, והרי היא ודאי חיה; ומקום שאין מפוצלות — צריך שיהיו כרוכות, חדורות וחרוקות, ובלבד שיהיו החריצים מובלעים זה בזה.</div>
+    <div class="trans" data-when="en">The Gemara concludes: Therefore, where an animal’s horns are branched, there is neither judgment nor judge, and the animal is without a doubt undomesticated. Where they are not branched, we require that they be layered, rounded, and grooved. And it must be grooved in a pattern such that its grooves are absorbed into one another.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ט ב — Chullin 59b:6</span></div>
+    <div class="orig">וְהַיְינוּ סְפֵיקָא דְּעִיזָּא כַּרְכּוּז. הָהִיא עִיזָּא כַּרְכּוּז דַּהֲוַאי בֵּי רֵישׁ גָּלוּתָא, דַּעֲקוּר מְלָא צַנָּא דְּתַרְבָּא מִינַּהּ. רַב אַחַאי אָסַר, רַב שְׁמוּאֵל בְּרֵיהּ דְּרַבִּי אֲבָהוּ אֲכַל מִינֵּיהּ, קָרֵי אַנַּפְשֵׁיהּ: ״מִפְּרִי פִי אִישׁ תִּשְׂבַּע בִּטְנוֹ״.</div>
+    <div class="trans" data-when="he">וזהו ספק ״עיזא כרכוז״ — אם דינו כבהמה (וחלבו אסור) או כחיה. עז כרכוז כזו הייתה בבית ראש הגולה, ושלפו ממנה מלוא סל חֵלב. רב אחאי אסר (סבר שהיא בהמה), ורב שמואל בנו של רבי אבהו אכל ממנה, וקרא על עצמו ״מפרי פי איש תשבע בטנו״ — שמכוח לימודו ידע שהיא חיה ומותרת.</div>
+    <div class="trans" data-when="en">And this is the uncertainty that arose concerning the karkoz goat, i.e., whether it is considered a domesticated animal. As there was a certain karkoz goat that was in the house of the Exilarch, from which they removed a full basket of fat after slaughtering it. Rav Aḥai deemed the fat forbidden, because he considered it a domesticated animal. But Rav Shmuel, son of Rabbi Abbahu, ate of it. He read the verse about himself: “A man’s belly shall be filled with the fruit of his mouth” (Proverbs 18:20). In other words, due to his learning, he knew it was permitted to eat the fat of the karkoz goat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ט ב — Chullin 59b:7</span></div>
+    <div class="orig">שְׁלַחוּ מִתָּם: הִלְכְתָא כְּוָותֵיהּ דִּשְׁמוּאֵל בְּרֵיהּ דְּרַבִּי אֲבָהוּ, וְהִזָּהֲרוּ בְּרַבֵּינוּ אַחַאי, שֶׁמֵּאִיר עֵינֵי גּוֹלָה הוּא.</div>
+    <div class="trans" data-when="he">שלחו מארץ ישראל: ההלכה כרב שמואל בנו של רבי אבהו — שעיזא כרכוז חיה היא וחלבה מותר; ואף על פי כן היזהרו בכבוד רבנו אחאי, שלא לאכול חֵלב בפניו, כי הוא מאיר עיני הגולה.</div>
+    <div class="trans" data-when="en">The Sages sent a message from there, Eretz Yisrael: The halakha is in accordance with the opinion of Rav Shmuel, son of Rabbi Abbahu, that a karkoz goat is an undomesticated animal and its fat is permitted; but nevertheless, be mindful of the honor of our teacher Aḥai who deems it forbidden, and do not partake of the fat in his presence, as he enlightens the eyes of the exile.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">הקרש ואריא דבי עילאי</span><span data-when="en">The keresh and the lion of Bei Ila'ei</span>
+      <span class="ref">Chullin 59b:8–10</span></h2>
+  <div class="lead"><span data-when="he">זיהוי הקרש ובריות בי עילאי, ואגדה: הקיסר מבקש לראות את אריה ה׳.</span><span data-when="en">Identifying the keresh and the creatures of Bei Ila'ei, and an aggada: the emperor asks to see God's lion.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב יהודה: קרש — טביא דבי עילאי; טיגריס — אריה דבי עילאי; ומידותיהם"]:::statement
+  Q1{"② הקיסר: אלוהיכם נמשל לאריה — ופרש הורג אריה, מה גבורתו?"}:::question
+  S2["② ר׳ יהושע: לא כאריה זה — אלא כאריה דבי עילאי; בקש הקיסר לראותו"]:::statement
+  C1["③ נהם מרחוק — נפלו חומות רומי, נשרו שיני אנשים, ונפל הקיסר; ושב למקומו"]:::conclusion
+  S1 -->|מעשה| Q1
+  Q1 -->|תשובה| S2
+  S2 -->|הוכחה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Yehuda: the keresh is the gazelle of Bei Ila'ei; the tagras its lion; and their measures"]:::statement
+  Q1{"② The emperor: your God is likened to a lion — a horseman kills a lion, what greatness?"}:::question
+  S2["② R. Yehoshua: not that lion — but the lion of Bei Ila'ei; the emperor asks to see it"]:::statement
+  C1["③ Its roar from afar — Rome's walls fell, men's teeth dropped, the emperor fell; then it returned"]:::conclusion
+  S1 -->|incident| Q1
+  Q1 -->|answer| S2
+  S2 -->|proof| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב יְהוּדָה: קֶרֶשׁ טַבְיָא דְּבֵי עִילַּאי, טִגְרִיס אַרְיָא דְּבֵי עִילַּאי …"]:::statement
+  Q1{"② אֱלֹהֵיכֶם כְּאַרְיָה מְתִיל … מַאי רְבוּתֵיהּ? פָּרָשָׁא קָטֵיל אַרְיָא!"}:::question
+  S2["② לָאו כְּהַאי אַרְיָא מְתִיל, כְּאַרְיָא דְּבֵי עִילַּאי מְתִיל … בָּעֵינָא דְּמַיחֲזֵית לֵיהּ"]:::statement
+  C1["③ נַיהֵם … וְשׁוּרָא דְּרוֹמִי נְפַל … נְתוּר כַּכֵּי וְשִׁינֵּי … וְאַהְדַּר לֵיהּ לְאַתְרֵיהּ"]:::conclusion
+  S1 -->|מעשה| Q1
+  Q1 -->|תשובה| S2
+  S2 -->|הוכחה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ט ב — Chullin 59b:8</span></div>
+    <div class="orig">וְקֶרֶשׁ, אַף עַל פִּי שֶׁאֵין לוֹ אֶלָּא קֶרֶן אַחַת, מוּתָּר. אָמַר רַב יְהוּדָה: קֶרֶשׁ טַבְיָא דְּבֵי עִילַּאי, טִגְרִיס אַרְיָא דְּבֵי עִילַּאי. אָמַר רַב כָּהֲנָא: תְּשַׁע אַמְּהָתָא הָוֵי בֵּין אוּנָּא לְאוּנָּא דְּאַרְיָא דְּבֵי עִילַּאי. אָמַר רַב יוֹסֵף: שִׁיתְּסַר אַמְּהָתָא הָוֵי מַשְׁכֵיהּ דְּטַבְיָא דְּבֵי עִילַּאי.</div>
+    <div class="trans" data-when="he">הברייתא: ״והקרש, אף שאין לו אלא קרן אחת — מותר״. רב יהודה מזהה: הקרש הוא הצבי (טביא) שבמקום בי עילאי, והטיגריס הוא האריה שבבי עילאי. רב כהנא: תשע אמות בין אוזן לאוזן של אריה דבי עילאי. רב יוסף: עורו (אורכו) של הצבי דבי עילאי שש עשרה אמה.</div>
+    <div class="trans" data-when="en">§ The baraita states: And with regard to the animal called a keresh, even though it has only one horn, its fat is permitted for consumption. Rav Yehuda says: The keresh is the gazelle that is native to the area of Bei Ila’ei. The tagras mentioned by the Sages is the lion of Bei Ila’ei. Rav Kahana says: There are nine cubits between the ears of the lion of Bei Ila’ei. Rav Yosef says: The length of the gazelle of Bei Ila’ei is sixteen cubits.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ט ב — Chullin 59b:9</span></div>
+    <div class="orig">אֲמַר לֵיהּ קֵיסָר לְרַבִּי יְהוֹשֻׁעַ בֶּן חֲנַנְיָה: אֱלֹהֵיכֶם כְּאַרְיָה מְתִיל, דִּכְתִיב ״אַרְיֵה שָׁאָג מִי לֹא יִירָא״, מַאי רְבוּתֵיהּ? פָּרָשָׁא קָטֵיל אַרְיָא! אֲמַר לֵיהּ: לָאו כְּהַאי אַרְיָא מְתִיל, כְּאַרְיָא דְּבֵי עִילַּאי מְתִיל. אֲמַר לֵיהּ: בָּעֵינָא דְּמַיחֲזֵית לֵיהּ נִיהֲלִי. אֲמַר לֵיהּ: לָא מָצֵית חָזֵית לֵיהּ. אֲמַר לֵיהּ: אִיבְרָא, חָזֵינָא לֵיהּ! בְּעָא רַחֲמֵי, אִתְעֲקַר מִדּוּכְתֵּיהּ,</div>
+    <div class="trans" data-when="he">הקיסר לרבי יהושע בן חנניה: אלוהיכם נמשל לאריה, ככתוב ״אריה שאג מי לא יירא״ — ומה גדולתו, הרי אף פרש פשוט הורג אריה? ר׳ יהושע: לא לאריה רגיל נמשל, אלא לאריה דבי עילאי. הקיסר: רצוני שתראהו לי. ר׳ יהושע: אינך יכול לראותו. הקיסר: ובכל זאת אראהו! ביקש ר׳ יהושע רחמים, והאריה נעקר ממקומו ויצא לדרך.</div>
+    <div class="trans" data-when="en">The Gemara recounts: The Roman emperor said to Rabbi Yehoshua ben Ḥananya: Your God is compared to a lion, as it is written: “The lion has roared, who will not fear” (Amos 3:8). But if so, what is His greatness? A cavalryman can kill a lion. Rabbi Yehoshua said to him: God is not compared to that lion which a cavalryman can kill. Rather, God is compared to the lion of Bei Ila’ei. The emperor said to him: I ask that you show it to me. Rabbi Yehoshua said to him: You cannot see it. The emperor said to him: Truly, I wish to see it. Rabbi Yehoshua prayed for mercy, and the lion of Bei Ila’ei set off from its place of origin toward Rome.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ט ב — Chullin 59b:10</span></div>
+    <div class="orig">כִּי הֲוָה מְרַחַיק אַרְבַּע מְאָה פַּרְסֵי, נַיהֵם חַד קָלָא, אַפִּילוּ כֹּל מְעַבְּרָתָא, וְשׁוּרָא דְּרוֹמִי נְפַל. אַדִּמְרַחַק תְּלָת מְאָה פַּרְסֵי, נַיהֵם קָלָא אַחֲרִינָא, נְתוּר כַּכֵּי וְשִׁינֵּי דְּגַבְרֵי, וְאַף הוּא נְפַל מִכּוּרְסְיָיא לְאַרְעָא. אֲמַר לֵיהּ: בְּמָטוּתָא מִינָּךְ, בְּעֵי רַחֲמֵי עֲלֵיהּ דְּלֶהְדַּר לְדוּכְתֵּיהּ. בְּעָא רַחֲמֵי עֲלֵיהּ, וְאַהְדַּר לֵיהּ לְאַתְרֵיהּ.</div>
+    <div class="trans" data-when="he">כשהיה רחוק ארבע מאות פרסה מרומי, שאג שאגה אחת — והפילו כל המעוברות את עובריהן, וחומת רומי נפלה. כשהתקרב לשלוש מאות פרסה, שאג שאגה נוספת — נשרו השיניים הקדמיות והאחוריות של האנשים, ואף הקיסר נפל מכיסאו לארץ. אמר הקיסר: בבקשה, בקש רחמים שיחזור למקומו. ביקש ר׳ יהושע רחמים, והשיבו למקומו.</div>
+    <div class="trans" data-when="en">When it was four hundred parasangs away from Rome, it roared once, and all the pregnant women miscarried, and the wall of Rome fell. When it was three hundred parasangs away, it roared another time, and all the men’s front and back teeth fell out from fear. And even he, the emperor, fell from his throne to the ground. The emperor said to Rabbi Yehoshua: I beg you, pray for mercy with regard to it, that it should go back to the place from which it came. Rabbi Yehoshua prayed for mercy with regard to it, and it returned to the place from which it came.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">הקיסר מבקש לראות את ה׳</span><span data-when="en">The emperor asks to see God</span>
+      <span class="ref">Chullin 59b:11–60a:1</span></h2>
+  <div class="lead"><span data-when="he">הקיסר מבקש לראות את ה׳; ר׳ יהושע מראה לו שאף בשמש אינו יכול להביט.</span><span data-when="en">The emperor asks to see God; R. Yehoshua shows him he cannot even gaze at the sun.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① הקיסר: רצוני לראות את אלוהיכם!"}:::question
+  A1["② ר׳ יהושע: הביט בשמש שבתקופת תמוז"]:::answer
+  C1["② מסקנה: אם בשמש — אחד משמשי המקום — אינך יכול להביט, שכינה לא כל שכן"]:::conclusion
+  Q1 -->|תשובה| A1
+  A1 -->|קל וחומר| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① The emperor: I wish to see your God!"}:::question
+  A1["② R. Yehoshua: gaze at the sun in midsummer"]:::answer
+  C1["② Conclusion: if you cannot look at the sun — one of His servants — all the more so the Divine Presence"]:::conclusion
+  Q1 -->|answer| A1
+  A1 -->|a fortiori| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בָּעֵינָא דְּאִיחְזֵי לֵאלָהַיְכוּ … אִיבְרָא חָזֵינָא לֵיהּ"}:::question
+  A1["② אֲזַל אוֹקְמֵיהּ לַהֲדֵי יוֹמָא בִּתְקוּפַת תַּמּוּז … אִיסְתַּכַּל בֵּיהּ"]:::answer
+  C1["② יוֹמָא, דְּחַד מִשַּׁמָּשֵׁי … אָמְרַתְּ לָא מָצֵינָא … שְׁכִינָה לֹא כׇּל שֶׁכֵּן"]:::conclusion
+  Q1 -->|תשובה| A1
+  A1 -->|קל וחומר| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ט ב — Chullin 59b:11</span></div>
+    <div class="orig">אֲמַר לֵיהּ קֵיסָר לְרַבִּי יְהוֹשֻׁעַ בֶּן חֲנַנְיָה: בָּעֵינָא דְּאִיחְזֵי לֵאלָהַיְכוּ. אֲמַר לֵיהּ: לָא מָצֵית חָזֵית לֵיהּ. אֲמַר לֵיהּ: אִיבְרָא</div>
+    <div class="trans" data-when="he">הקיסר לרבי יהושע בן חנניה: רצוני לראות את אלוהיכם. ר׳ יהושע: אינך יכול לראותו. הקיסר: ובכל זאת —</div>
+    <div class="trans" data-when="en">§ The Gemara recounts: The emperor said to Rabbi Yehoshua ben Ḥananya: I wish to see your God. Rabbi Yehoshua said to him: You cannot see Him. The emperor said to him: Truly,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס׳ א — Chullin 60a:1</span></div>
+    <div class="orig">חָזֵינָא לֵיהּ. אֲזַל אוֹקְמֵיהּ לַהֲדֵי יוֹמָא בִּתְקוּפַת תַּמּוּז, אֲמַר לֵיהּ: אִיסְתַּכַּל בֵּיהּ. אֲמַר לֵיהּ: לָא מָצֵינָא. אֲמַר לֵיהּ: יוֹמָא, דְּחַד מִשַּׁמָּשֵׁי דְּקָיְימִי קַמֵּי דְּקוּדְשָׁא בְּרִיךְ הוּא אָמְרַתְּ לָא מָצֵינָא לְאִיסְתַּכָּלָא בֵּיהּ, שְׁכִינָה לֹא כׇּל שֶׁכֵּן.</div>
+    <div class="trans" data-when="he">— אראהו. הלך ר׳ יהושע והעמיד את הקיסר נוכח השמש בתקופת תמוז (קיץ), ואמר לו: הסתכל בה. הקיסר: איני יכול. ר׳ יהושע: ומה השמש, שהיא רק אחד ממשמשיו של הקדוש ברוך הוא — ואמרת שאינך יכול להביט בה, שכינה על אחת כמה וכמה.</div>
+    <div class="trans" data-when="en">I wish to see Him. Rabbi Yehoshua went and stood the emperor facing the sun in the season of Tammuz, i.e., summer. Rabbi Yehoshua said to him: Look at it. The emperor said to him: I cannot. Rabbi Yehoshua said to him: Now, if with regard to the sun, which is only one of the servants that stand before the Holy One, Blessed be He, you say: I cannot look at it, is it not all the more so with regard to the Divine Presence?</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
