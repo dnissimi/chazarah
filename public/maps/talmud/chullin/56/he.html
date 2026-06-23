@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין נ״ו</title>
+<meta name="description" content="מפת הסוגיא של חולין נ״ו: טריפות בעוף — בדיקת קרום המוח לאחר נשיכת חולדה, סימני נפילה לאור (ירוקין/אדומין), והכשרות בעוף — זפק, יציאת בני מעיים והכלל ׳הוא עשך ויכוננך׳.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="56">
+<meta name="gemara-map:sefaria-ref" content="Chullin 56">
+<meta name="gemara-map:topic-he" content="טריפות וכשרות בעוף">
+<meta name="gemara-map:topic-en" content="Tereifot and kosher signs in birds">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין נ״ו">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 56">
+<meta name="gemara-map:blurb-he" content="טריפות בעוף: בדיקת קרום המוח לאחר נשיכת חולדה, מבחן הירוקין/אדומין בנפילה לאור, וגדרי הכשרות בעוף — זפק ובני מעיים שיצאו.">
+<meta name="gemara-map:blurb-en" content="Tereifot in a bird: inspecting the brain membrane after a weasel bite, the green-vs-red test for a bird that fell into fire, and the kosher cases — crop and emerged intestines.">
+<meta name="gemara-map:sugya-count" content="7">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין נ״ו</span><span data-when="en">Sugya map — Chullin 56</span></h1>
+    <div class="subtitle"><span data-when="he">חולין נ״ו א — נ״ז א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 56a–57a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשנה מונה <b>טריפות בעוף</b>, והגמרא דנה כיצד בודקים את קרום המוח לאחר שחולדה הכתה על הראש — ביד, במסמר, בשמש או במים — ומתי אין בדיקה. אחר כך: <b>נפילה לאור</b> — בני מעיים שהוריקו טריפה, שהאדימו כשרים, והכל לפי הקורקבן, הלב והכבד. ולבסוף משנה שנייה — <b>הכשרות בעוף</b>: נקב הגרגרת, הזפק, ובני מעיים שיצאו ולא ניקבו — ובלבד שלא היפך בהם.</span>
+    <span data-when="en"><b>Bottom line:</b> The Mishna lists the <b>tereifot in a bird</b>, and the Gemara works out how to inspect the brain membrane after a weasel struck the head — by hand, by nail, by sunlight or by water — and when no inspection helps. Then: a bird that <b>fell into fire</b> — innards that turned green are treifa, red are kosher, judged by the gizzard, heart and liver. Finally a second Mishna — the <b>kosher</b> cases in a bird: a pierced windpipe, the crop, and intestines that emerged without being perforated — provided they were not jumbled.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין נ״ו</span><span data-when="en">Overview — Chullin 56</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · משנה: אלו טריפות בעוף"]):::mishnah
+  O2["2 · נשיכת חולדה — בדיקת קרום המוח"]:::statement
+  O3["3 · נפלה לאור — ירוקין ואדומין"]:::statement
+  O4["4 · דרסה — צריכה בדיקה"]:::statement
+  O5(["5 · משנה: אלו כשרות בעוף"]):::mishnah
+  O6["6 · זפק וטרפחת — מעשה והוראה"]:::statement
+  O7["7 · יצאו בני מעיים — הוא עשך ויכוננך"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · Mishna: these are tereifot in a bird"]):::mishnah
+  O2["2 · Weasel bite — inspecting the brain membrane"]:::statement
+  O3["3 · Fell into fire — green and red innards"]:::statement
+  O4["4 · Trampled — requires inspection"]:::statement
+  O5(["5 · Mishna: these are kosher in a bird"]):::mishnah
+  O6["6 · Crop and womb — an incident and ruling"]:::statement
+  O7["7 · Intestines emerged — He made you and established you"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">משנה: אלו טריפות בעוף</span><span data-when="en">Mishna: these are tereifot in a bird</span>
+      <span class="ref">Chullin 56a:2</span></h2>
+  <div class="lead"><span data-when="he">רשימת הטריפות בעוף — נקב, פסיקה, נשיכת חולדה, נפילה לאור ודריסה — שכל הפרק יפרש.</span><span data-when="en">The list of bird tereifot — perforation, severing, a weasel bite, a fire and a crushing — that the chapter goes on to unpack.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: ואלו טריפות בעוף"]):::mishnah
+  S1["① נקב הוושט, פסיקת הגרגרת, נקב הקורקבן והדקין"]:::statement
+  S2["① חולדה הכתה במקום העושה טריפה — חשש נקב קרום המוח"]:::statement
+  S3["① נפלה לאור — בני מעיים: ירוקים פסולים, אדומים כשרים"]:::statement
+  S4["① דרסה או ריצצתה — שהתה מעת לעת ושחטה, כשרה"]:::statement
+  M1 --> S1
+  M1 --> S2
+  M1 --> S3
+  M1 --> S4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: and these are tereifot in a bird"]):::mishnah
+  S1["① Perforated gullet, cut windpipe, pierced gizzard or intestines"]:::statement
+  S2["① Weasel struck a fatal spot — fear the brain membrane was perforated"]:::statement
+  S3["① Fell into fire — innards: green unfit, red kosher"]:::statement
+  S4["① Trampled or crushed — if it lasted 24h and was slaughtered, kosher"]:::statement
+  M1 --> S1
+  M1 --> S2
+  M1 --> S3
+  M1 --> S4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① וְאֵלּוּ טְרֵפוֹת בָּעוֹף"]):::mishnah
+  S1["① נְקוּבַת הַוֶּושֶׁט, וּפְסוּקַת הַגַּרְגֶּרֶת … נִיקַּב הַקּוּרְקְבָן, נִיקְּבוּ הַדַּקִּין"]:::statement
+  S2["① הִכְּתָה חוּלְדָּה עַל רֹאשָׁהּ מָקוֹם שֶׁעוֹשֶׂה אוֹתָהּ טְרֵפָה"]:::statement
+  S3["① נָפְלָה לָאוּר … אִם יְרוּקִּים – פְּסוּלִים, אִם אֲדוּמִּים – כְּשֵׁרִים"]:::statement
+  S4["① דְּרָסָהּ … וְשָׁהֲתָה מֵעֵת לְעֵת וּשְׁחָטָהּ – כְּשֵׁרָה"]:::statement
+  M1 --> S1
+  M1 --> S2
+  M1 --> S3
+  M1 --> S4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ו א — Chullin 56a:2</span></div>
+    <div class="orig">מַתְנִי׳ וְאֵלּוּ טְרֵפוֹת בָּעוֹף: נְקוּבַת הַוֶּושֶׁט, וּפְסוּקַת הַגַּרְגֶּרֶת, הִכְּתָה חוּלְדָּה עַל רֹאשָׁהּ מָקוֹם שֶׁעוֹשֶׂה אוֹתָהּ טְרֵפָה, נִיקַּב הַקּוּרְקְבָן, נִיקְּבוּ הַדַּקִּין, נָפְלָה לָאוּר וְנֶחְמְרוּ בְּנֵי מֵעֶיהָ, אִם יְרוּקִּים – פְּסוּלִים, אִם אֲדוּמִּים – כְּשֵׁרִים. דְּרָסָהּ וּטְרָפָהּ בַּכּוֹתֶל אוֹ שֶׁרִיצְּצַתָּה בְּהֵמָה וּמְפַרְכֶּסֶת, וְשָׁהֲתָה מֵעֵת לְעֵת וּשְׁחָטָהּ – כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">המשנה מונה את הטריפות בעוף: נקב הוושט, פסיקת הגרגרת (קנה הנשימה לרוחבו), מכת חולדה על הראש במקום שעלול לנקב את קרום המוח, נקב הקורקבן או הדקין; ועוף שנפל לאור ונחמרו בני מעיו — אם הוריקו פסול, אם נשארו אדומים כשר. ואם דרסוהּ או ריצצוהּ — אם שהתה מעת לעת ואז נשחטה, כשרה.</div>
+    <div class="trans" data-when="en">MISHNA: And these are tereifot in a bird: One with a perforated gullet, or with a cut windpipe that was cut across its width; or if a weasel struck the bird on its head in a place that renders it a tereifa, as one must be concerned that the membrane of the brain was perforated; or if the gizzard was perforated; or if the small intestines were perforated. In a case where a bird fell into the fire and its innards were singed [neḥmeru], if they turned green they are unfit, and the bird is a tereifa, but if they are red the bird is kosher. If a person trampled the bird, or slammed it against a wall, or if an animal crushed it and it is twitching, it is a tereifa because its limbs were shattered. But if the bird lasted for a twenty-four-hour period, and then one slaughtered it, it is kosher.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">נשיכת חולדה — בדיקת קרום המוח</span><span data-when="en">Weasel bite — inspecting the brain membrane</span>
+      <span class="ref">Chullin 56a:3–56b:2</span></h2>
+  <div class="lead"><span data-when="he">כיצד בודקים שלא ניקב קרום המוח אחר נשיכת חולדה — ביד או במסמר, ומתי אין בדיקה כלל.</span><span data-when="en">How to verify the brain membrane was not perforated after a weasel bite — by hand or by nail, and when no inspection works.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב ושמואל ולוי: מכניס ידו ובודק — מבצבץ ועולה, טריפה"]:::statement
+  Q1{"② קושיא: שמא ניקב העליון בלבד?"}:::question
+  A1["② תירוץ: אם ניקב העליון — התחתון נפקע מרכותו"]:::answer
+  S2["③ זעירי: אין בדיקה לחולדה — שיניה דקות; רב אושעיא: דקות ועקומות"]:::statement
+  S3["④ זעירי חזר בו: ריש לקיש — ביד ולא במסמר; ר׳ יוחנן — אף במסמר"]:::statement
+  S4["⑤ פלוגתת ר׳ יהודה ור׳ נחמיה: ביד או במחט"]:::statement
+  Q2{"⑥ עד מתי תכלה ממון ישראל? / עד מתי תאכיל נבלות?"}:::question
+  C1["⑦ נבלות? שחוטה היא! אלא טריפות — שמא ניקב קרום המוח"]:::conclusion
+  S5["⑧ תסתיים: ר׳ יהודה בודק ביד; ונשבר העצם — טריפה אף בלי נקב"]:::statement
+  Q3{"⑨ הא גופא קשיא: יש בדיקה אך נשבר העצם טריפה?"}:::question
+  A2["⑩ סיפא בעוף של מים, שקרומו רך"]:::answer
+  Q4{"⑪ רב נחמן לרב ענן: רב ושמואל מכשירים, ולוי מטריף!"}:::question
+  A3["⑪ ההוא בעוף של מים, הואיל וקרומו רך"]:::answer
+  S6["⑫ מעשה בתרנגולת דרב חנא — אוקמה כעוף של מים"]:::statement
+  S7["⑪ דרכי בדיקה: בשמש, במים, בגילא דחיטתא"]:::statement
+  C2["⑬ רב שיזבי: אווזים שלנו כעוף של מים דמו"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> Q2
+  Q2 -->|דיוק| C1
+  C1 --> S5
+  S5 -->|קושיא| Q3
+  Q3 -->|תירוץ| A2
+  S5 --> Q4
+  Q4 -->|תירוץ| A3
+  A3 --> S6
+  S6 --> S7
+  S7 --> C2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav, Shmuel and Levi: insert the hand and check — if it bubbles up, treifa"]:::statement
+  Q1{"② Question: perhaps only the outer membrane was pierced?"}:::question
+  A1["② Answer: if the outer is pierced, the inner bursts from its softness"]:::answer
+  S2["③ Ze'eiri: no inspection for a weasel — its teeth are thin; Rav Oshaya: thin and crooked"]:::statement
+  S3["④ Ze'eiri retracts: Reish Lakish — by hand not by nail; R. Yoḥanan — even by nail"]:::statement
+  S4["⑤ Dispute of R. Yehuda and R. Neḥemya: by hand or by needle"]:::statement
+  Q2{"⑥ Until when waste Israel's money? / Until when feed them carcasses?"}:::question
+  C1["⑦ Carcasses? It is slaughtered! Rather treifot — perhaps the membrane was pierced"]:::conclusion
+  S5["⑧ Conclude: R. Yehuda checks by hand; a broken skull — treifa even without a hole"]:::statement
+  Q3{"⑨ This itself is hard: there is inspection yet a broken bone is treifa?"}:::question
+  A2["⑩ The latter clause is a water bird, whose membrane is fragile"]:::answer
+  Q4{"⑪ Rav Naḥman to Rav Anan: Rav and Shmuel permit, yet Levi forbids!"}:::question
+  A3["⑪ That is a water bird, since its membrane is fragile"]:::answer
+  S6["⑫ Incident: Rav Ḥana's hen — settled as a water bird"]:::statement
+  S7["⑪ Inspection methods: by sunlight, by water, by a wheat straw"]:::statement
+  C2["⑬ Rav Sheizvi: our geese are like water birds"]:::conclusion
+  S1 -->|question| Q1
+  Q1 -->|answer| A1
+  A1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> Q2
+  Q2 -->|inference| C1
+  C1 --> S5
+  S5 -->|question| Q3
+  Q3 -->|answer| A2
+  S5 --> Q4
+  Q4 -->|answer| A3
+  A3 --> S6
+  S6 --> S7
+  S7 --> C2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מַכְנִיס יָדוֹ לִפְנִים וּבוֹדֵק, אִם מְבַצְבֵּץ וְעוֹלֶה – טְרֵפָה"]:::statement
+  Q1{"② נֵיחוּשׁ דִּלְמָא עִילָּאָה אִינְּקִיב תַּתָּאָה לָא אִינְּקִיב?"}:::question
+  A1["② אִי אִיתָא דְּאִינְּקִיב עִילָּאָה, תַּתָּאָה אַגַּב רוּכְּכֵיהּ מִיפְקָע פָּקַע"]:::answer
+  S2["③ אֵין בְּדִיקָה לְחוּלְדָּה … מִפְּנֵי שֶׁשִּׁינֶּיהָ דַּקּוֹת וַעֲקוּמּוֹת"]:::statement
+  S3["④ בּוֹדְקִין לְחוּלְדָּה בַּיָּד, אֲבָל לֹא בְּמַסְמֵר, וְרַבִּי יוֹחָנָן … אַף בְּמַסְמֵר"]:::statement
+  S4["⑤ פְּלוּגְתָּא דְּרַבִּי יְהוּדָה וְרַבִּי נְחֶמְיָה, חַד בָּדֵיק בִּידָא, וְחַד בָּדֵיק בְּמַחְטָא"]:::statement
+  Q2{"⑥ עַד מָתַי אַתָּה מְכַלֶּה מָמוֹנָן … עַד מָתַי אַתָּה מַאֲכִיל … נְבֵלוֹת?"}:::question
+  C1["⑦ נְבֵלוֹת? וְהָא שְׁחוּטָה הִיא! אֶלָּא טְרֵפוֹת, שֶׁמָּא נִיקַּב קְרוּם שֶׁל מוֹחַ"]:::conclusion
+  S5["⑧ תִּסְתַּיֵּים … בִּידָא … נִשְׁבַּר הָעֶצֶם, אַף עַל פִּי שֶׁלֹּא נִיקַּב קְרוּם שֶׁל מוֹחַ"]:::statement
+  Q3{"⑨ הָא גוּפַאּ קַשְׁיָא … אַלְמָא אִית לֵיהּ בְּדִיקוּתָא … אַלְמָא לֵית לֵיהּ בְּדִיקוּתָא!"}:::question
+  A2["⑩ סֵיפָא אֲתָאן לְעוֹף שֶׁל מַיִם … הוֹאִיל וּקְרוּמוֹ רַךְ"]:::answer
+  Q4{"⑪ וְהָתָנֵי לֵוִי … יָתֵר עֲלֵיהֶן עוֹף – נִשְׁבַּר הָעֶצֶם אַף עַל פִּי שֶׁלֹּא נִיקַּב"}:::question
+  A3["⑪ הָהוּא בְּעוֹף שֶׁל מַיִם, הוֹאִיל וּקְרוּמוֹ רַךְ"]:::answer
+  S6["⑫ הָהִיא תַּרְנְגוֹלְתָּא דַּהֲוַאי בֵּי רַב חָנָא … הָתָם בְּעוֹף שֶׁל מַיִם"]:::statement
+  S7["⑪ בָּדֵיק בְּשִׁימְשָׁא … בָּדֵיק בְּמַיָּא … בָּדֵיק בְּגִילָא דְּחִיטְּתָא"]:::statement
+  C2["⑬ הָנֵי אֲוָוזֵי דִּידַן כְּעוֹף שֶׁל מַיִם דָּמְיָין"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> Q2
+  Q2 -->|דיוק| C1
+  C1 --> S5
+  S5 -->|קושיא| Q3
+  Q3 -->|תירוץ| A2
+  S5 --> Q4
+  Q4 -->|תירוץ| A3
+  A3 --> S6
+  S6 --> S7
+  S7 --> C2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ו א — Chullin 56a:3</span></div>
+    <div class="orig">גְּמָ׳ רַב וּשְׁמוּאֵל וְלֵוִי דְּאָמְרִי: מַכְנִיס יָדוֹ לִפְנִים וּבוֹדֵק, אִם מְבַצְבֵּץ וְעוֹלֶה – טְרֵפָה, וְאִם לָאו – כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">הגמרא על נשיכת חולדה: כיצד בודקים את הקרום? רב, שמואל ולוי: לאחר שחיטה מכניס ידו לתוך הפה ודוחק את החוט שבמוח — אם הוא מבצבץ ועולה דרך הנקב שבגולגולת, טריפה (שהקרום ניקב), ואם לאו, כשרה.</div>
+    <div class="trans" data-when="en">GEMARA: The mishna states: If a weasel struck the bird on its head in a place that renders it a tereifa, one must be concerned that the membrane of the brain was perforated. Rav and Shmuel and Levi say: How does one inspect the membrane? After slaughter, one inserts his hand into the mouth of the bird and pushes the nerve tissue with his finger and inspects it. If the nerve tissue emerges and rises out through the hole in the skull, the animal is a tereifa, because this proves that the membrane has been perforated, allowing the nerve tissue through. And if not, the animal is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ו א — Chullin 56a:4</span></div>
+    <div class="orig">הָנִיחָא לְמַאן דְּאָמַר עַד דְּמִנְּקִיב קְרָמָא תַּתָּאָה, אֶלָּא לְמַאן דְּאָמַר אִינְּקִיב עִילָּאָה אַף עַל גַּב דְּלָא אִינְּקִיב תַּתָּאָה, נֵיחוּשׁ דִּלְמָא עִילָּאָה אִינְּקִיב תַּתָּאָה לָא אִינְּקִיב? אִי אִיתָא דְּאִינְּקִיב עִילָּאָה, תַּתָּאָה אַגַּב רוּכְּכֵיהּ מִיפְקָע פָּקַע.</div>
+    <div class="trans" data-when="he">קושיא: בדיקה זו טובה לסובר שאינו טריפה עד שייקב גם הקרום התחתון; אבל לסובר שדי בנקב הקרום העליון — נחוש שמא ניקב העליון לבדו והחוט אינו עולה? תירוץ: אם ניקב העליון, ממילא נפקע גם התחתון מחמת רכותו, והחוט יעלה. לא עלה — סימן ששניהם שלמים.</div>
+    <div class="trans" data-when="en">The Gemara asks: This works out well according to the one who says (45a) that an animal is not a tereifa unless the inner membrane is perforated as well. But according to the one who says that the animal is rendered a tereifa if the outer membrane was perforated, even if the inner membrane was not perforated, how can one rely on this inspection? Let us be concerned that perhaps the outer membrane was perforated but the inner membrane was not perforated, in which case the animal is a tereifa even if the nerve tissue does not emerge through the hole. The Gemara responds: If it is the case that the outer membrane was perforated, the inner membrane will inevitably burst due to its fragility, allowing the nerve tissue to emerge. If it does not emerge, it is certain that the outer membrane is intact as well.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ו א — Chullin 56a:5</span></div>
+    <div class="orig">אָמַר זְעֵירִי: אֵין בְּדִיקָה לְחוּלְדָּה, מִפְּנֵי שֶׁשִּׁינֶּיהָ דַּקּוֹת. וְכִי שִׁינֶּיהָ דַּקּוֹת מַאי הָוֵי? אָמַר רַב אוֹשַׁעְיָא: מִפְּנֵי שֶׁשִּׁינֶּיהָ דַּקּוֹת וַעֲקוּמּוֹת.</div>
+    <div class="trans" data-when="he">זעירי: אין בדיקה מועילה בנשיכת חולדה, מפני ששיניה דקות, ואף שניקבו הקרום לא יבצבץ החוט. הגמרא: ומה בכך שהן דקות? רב אושעיא: לא רק דקות אלא גם עקומות — והנקב שבגולגולת אינו מכוון כנגד הנקב שבקרום, ולכן אין החוט עולה.</div>
+    <div class="trans" data-when="en">Ze’eiri says: There is no effective inspection for a bird bitten on the head by a weasel, because the weasel’s teeth are so thin that even if they perforate the membrane, the nerve tissue will not emerge through the perforations. The Gemara asks: And if its teeth are thin, what of it? Certainly a small amount will emerge through the perforation. Rav Oshaya said: There is no inspection because its teeth are fine and crooked. The hole in the skull does not overlap the perforation in the membrane, and nothing will be able to escape.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ו א — Chullin 56a:6</span></div>
+    <div class="orig">כִּי סְלֵיק לִנְהַרְדְּעָא, שְׁלַח לְהוּ: דְּבָרִים שֶׁאָמַרְתִּי לִפְנֵיכֶם טָעוּת הֵן בְּיָדִי, בְּרַם כָּךְ אָמְרוּ מִשְּׁמֵיהּ דְּרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ: בּוֹדְקִין לְחוּלְדָּה בַּיָּד, אֲבָל לֹא בְּמַסְמֵר, וְרַבִּי יוֹחָנָן אָמַר: אַף בְּמַסְמֵר.</div>
+    <div class="trans" data-when="he">כשעלה זעירי לנהרדעא חזר בו ושלח: מה שאמרתי שאין בדיקה — טעות בידי; אלא כך אמרו משם ריש לקיש: בודקים נשיכת חולדה ביד (דוחקים את הקרום לבדוק אם הוא ניקב), אבל לא במסמר — שמא המסמר עצמו ינקבנו. ורבי יוחנן: אף במסמר מותר לבדוק.</div>
+    <div class="trans" data-when="en">The Gemara recounts: When Ze’eiri went up to Neharde’a, he sent a message to the Sages: The matters that I stated before you are an error on my part. In fact, they said this in the name of Rabbi Shimon ben Lakish: One inspects a bird bitten on the head by a weasel with one’s hand, pressing against the nerve tissue to see if it emerges through the hole, but not with a nail. One may not inspect it by dragging the tip of a nail over the surface of the membrane to see if it catches on a perforation, since the nail itself may perforate the membrane. And Rabbi Yoḥanan says: One may even inspect it with a nail.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ו א — Chullin 56a:7</span></div>
+    <div class="orig">וּבִפְלוּגְתָּא דְּרַבִּי יְהוּדָה וְרַבִּי נְחֶמְיָה, חַד בָּדֵיק בִּידָא, וְחַד בָּדֵיק בְּמַחְטָא. מַאן דְּבָדֵיק בִּידָא אָמַר לֵיהּ לְמַאן דְּבָדֵיק בְּמַחְטָא: עַד מָתַי אַתָּה מְכַלֶּה מָמוֹנָן שֶׁל יִשְׂרָאֵל? אָמַר לֵיהּ מַאן דְּבָדֵיק בְּמַחְטָא לְמַאן דְּבָדֵיק בִּידָא: עַד מָתַי אַתָּה מַאֲכִיל לְיִשְׂרָאֵל נְבֵלוֹת?</div>
+    <div class="trans" data-when="he">מחלוקת זו כבר נשנתה בין רבי יהודה ורבי נחמיה: אחד בדק ביד והשני במחט. הבודק ביד אמר לבודק במחט: עד מתי תכלה ממונם של ישראל, שהמחט תנקב קרום שלם ותפסיל בשר כשר? והבודק במחט השיב: עד מתי תאכיל לישראל נבלות, בהיתר עוף שמא ניקב קרומו?</div>
+    <div class="trans" data-when="en">The Gemara notes: And this disagreement is also reflected in the dispute of Rabbi Yehuda and Rabbi Neḥemya, wherein one inspected the bird by hand, and one inspected it with a needle. The one who inspected it by hand said to the one who inspected it with a needle: Until when will you waste the money of the Jewish people by causing them to discard kosher meat? Sometimes the needle itself will perforate a membrane that was initially whole. The one who inspected it with a needle said to the one who inspected it by hand: Until when will you feed carcasses to the Jewish people, as you permit for consumption a bird that might well be forbidden?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ו א — Chullin 56a:8</span></div>
+    <div class="orig">נְבֵלוֹת? וְהָא שְׁחוּטָה הִיא! אֶלָּא טְרֵפוֹת, שֶׁמָּא נִיקַּב קְרוּם שֶׁל מוֹחַ.</div>
+    <div class="trans" data-when="he">הגמרא מדייקת בלשון: ״נבלות״? והרי שחוטה היא, ואין זו נבלה! אלא כוונתו ״טריפות״ — שמא ניקב קרום המוח והעוף טריפה, ובדיקת היד אינה מספקת.</div>
+    <div class="trans" data-when="en">The Gemara asks: Carcasses? But this is a slaughtered animal; even if it is forbidden, it is a tereifa, not a carcass. Rather, he must have said: Until when will you feed tereifot to the Jewish people; perhaps the membrane of the brain was perforated. Inspection by hand is not reliable, since the teeth of the weasel are thin and crooked and the nerve tissue may not escape even if the membrane is perforated.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ו א — Chullin 56a:9</span></div>
+    <div class="orig">תִּסְתַּיֵּים דְּרַבִּי יְהוּדָה הוּא דְּבָדֵיק בִּידָא, דְּתַנְיָא: רַבִּי שִׁמְעוֹן בֶּן אֶלְעָזָר אוֹמֵר מִשּׁוּם רַבִּי יְהוּדָה: בּוֹדְקִין לְחוּלְדָּה בַּיָּד, אֲבָל לֹא בְּמַסְמֵר. נִשְׁבַּר הָעֶצֶם, אַף עַל פִּי שֶׁלֹּא נִיקַּב קְרוּם שֶׁל מוֹחַ – תִּסְתַּיֵּים.</div>
+    <div class="trans" data-when="he">הגמרא מבררת מי הבודק ביד: יש להוכיח שזהו רבי יהודה, שכן שנינו בברייתא — רבי שמעון בן אלעזר משום רבי יהודה: בודקים חולדה ביד אבל לא במסמר; ועוד שנינו שם: נשבר עצם הגולגולת — טריפה אף שלא ניקב הקרום. מסקנה: אכן רבי יהודה הוא הבודק ביד.</div>
+    <div class="trans" data-when="en">The Gemara notes: It may be concluded that it is Rabbi Yehuda who inspected it by hand, as it is taught in a baraita: Rabbi Shimon ben Elazar says in the name of Rabbi Yehuda that one may inspect a bird bitten on the head by a weasel with one’s hand, but not with a nail. The baraita continues: If the bone of the skull was broken, even if the membrane of the brain was not perforated, the animal is a tereifa. The Gemara affirms: Indeed, it may be concluded that Rabbi Yehuda permits inspection only by hand.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין נ״ו א — Chullin 56a:10</span></div>
+    <div class="orig">הָא גוּפַאּ קַשְׁיָא, אָמְרַתְּ: בּוֹדְקִין לְחוּלְדָּה בַּיָּד אֲבָל לֹא בְּמַסְמֵר. אַלְמָא אִית לֵיהּ בְּדִיקוּתָא, וַהֲדַר תָּנֵי: נִשְׁבַּר הָעֶצֶם אַף עַל פִּי שֶׁלֹּא נִיקַּב קְרוּם שֶׁל מוֹחַ. אַלְמָא לֵית לֵיהּ בְּדִיקוּתָא! סֵיפָא אֲתָאן לְעוֹף שֶׁל מַיִם, הוֹאִיל וְאֵין לוֹ קְרוּם. אֵין לוֹ קְרוּם סָלְקָא דַּעְתָּךְ? אֶלָּא, הוֹאִיל וּקְרוּמוֹ רַךְ.</div>
+    <div class="trans" data-when="he">הברייתא עצמה קשה: רישא אמרה ״בודקים ביד״ — משמע שיש בדיקה מועילה; וסיפא אמרה ״נשבר העצם טריפה אף בלי נקב״ — משמע שאין בדיקה. תירוץ: הסיפא עוסקת בעוף של מים שאין לו קרום — כלומר שקרומו רך, וכשנשבר העצם בידוע שנקרע הקרום, ואין מה לבדוק.</div>
+    <div class="trans" data-when="en">The Gemara objects: This itself is difficult. You said in the baraita: One may inspect a bird injured by a weasel with one’s hand, but not with a nail; apparently, it has an option of inspection. But you then teach: If the bone of the skull was broken, even if the membrane of the brain was not perforated, the animal is a tereifa; apparently it has no inspection, because inspecting for a perforation would be pointless. The Gemara responds: In the latter clause, we come to discuss a water bird, which cannot be inspected, since it has no membrane. The Gemara clarifies: Can it enter your mind that it has no membrane? One can see that it does. Rather, the response is: Since its membrane is fragile, it must have ruptured when the skull was broken.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין נ״ו א — Chullin 56a:11</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב נַחְמָן לְרַב עָנָן: מָר אָמַר שְׁמוּאֵל בָּדֵיק בִּידָא וּמַכְשַׁר, וְהוּנָא חַבְרִין אָמַר רַב בָּדֵיק בִּידָא וּמַכְשַׁר. וְהָתָנֵי לֵוִי: טְרֵפוֹת שֶׁמָּנוּ חֲכָמִים בִּבְהֵמָה – כְּנֶגְדָּן בָּעוֹף, יָתֵר עֲלֵיהֶן עוֹף – נִשְׁבַּר הָעֶצֶם אַף עַל פִּי שֶׁלֹּא נִיקַּב קְרוּם שֶׁל מוֹחַ? אֲמַר לֵיהּ: הָהוּא בְּעוֹף שֶׁל מַיִם, הוֹאִיל וְאֵין לוֹ קְרוּם. אֵין לוֹ קְרוּם סָלְקָא דַּעְתָּךְ? אֶלָּא, הוֹאִיל וּקְרוּמוֹ רַךְ.</div>
+    <div class="trans" data-when="he">רב נחמן הקשה לרב ענן: אמרת שרב ושמואל בודקים ביד ומכשירים; אך לוי שנה שעוף נוסף על טריפות הבהמה — אם נשבר עצם הראש טריפה אף בלי נקב הקרום, ואין מועילה בדיקה! תירוץ: דברי לוי בעוף של מים, שקרומו רך ונקרע מאליו בשבירת העצם; אבל בעוף יבשה הבדיקה מועילה.</div>
+    <div class="trans" data-when="en">Similarly, the Gemara relates that Rav Naḥman said to Rav Anan: The Master says that Shmuel inspects a bird bitten on the head by a weasel with his hand and deems it kosher if the membrane is not perforated, and our colleague Rav Huna also says that Rav inspects it by hand and deems it kosher. But doesn’t Levi teach: Those tereifot that the Sages enumerated in an animal apply likewise in a bird, and in addition to those, a bird is a tereifa if the bone of the skull was broken, even if the membrane of the brain was not perforated? If so, how can a bird be permitted through inspection? Rav Anan said to him: That baraita is referring to a water bird, which cannot be inspected since it has no membrane. The Gemara clarifies: Can it enter your mind that it has no membrane? Rather, the response is: Since its membrane is fragile.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין נ״ו א — Chullin 56a:12</span></div>
+    <div class="orig">הָהִיא תַּרְנְגוֹלְתָּא דַּהֲוַאי בֵּי רַב חָנָא, שַׁדְּרַהּ לְקַמֵּיהּ דְּרַב מַתְנָא. נִשְׁבַּר הָעֶצֶם וְלֹא נִיקַּב קְרוּם שֶׁל מוֹחַ הֲוַאי, וְאַכְשְׁרַהּ. אֲמַר לֵיהּ: וְהָתָנֵי לֵוִי: טְרֵפוֹת שֶׁמָּנוּ חֲכָמִים בִּבְהֵמָה כְּנֶגְדָּן בָּעוֹף, יָתֵר עֲלֵיהֶן עוֹף – נִשְׁבַּר הָעֶצֶם אַף עַל פִּי שֶׁלֹּא נִיקַּב קְרוּם שֶׁל מוֹחַ! אֲמַר לֵיהּ: הָתָם בְּעוֹף שֶׁל מַיִם, הוֹאִיל וְאֵין לוֹ קְרוּם. אֵין לוֹ קְרוּם סָלְקָא דַּעְתָּךְ? אֶלָּא אֵימָא: הוֹאִיל וּקְרוּמוֹ רַךְ.</div>
+    <div class="trans" data-when="he">מעשה בתרנגולת בבית רב חנא ששלחה לרב מתנא; נשבר עצם הגולגולת אך לא ניקב הקרום, והכשירהּ. הקשה לו רב חנא מברייתת לוי שעוף בשבירת עצם טריפה אף בלי נקב. השיב: ברייתא זו בעוף של מים שקרומו רך — אבל בתרנגולת שקרומה קשה, מכשירים אם הקרום שלם.</div>
+    <div class="trans" data-when="en">Similarly, the Gemara relates: There was a certain hen that was in the house of Rav Ḥana whose skull was injured. He sent it before Rav Mattana, who inspected it and found that the bone of the skull was broken but the membrane of the brain was not perforated, and he deemed it kosher. Rav Ḥana said to Rav Mattana: But doesn’t Levi teach: Those tereifot that the Sages enumerated in an animal hold likewise in a bird, and in addition to those, a bird is a tereifa if the bone of the skull was broken, even if the membrane of the brain was not perforated? Rav Mattana said to him: That baraita is referring to a water bird, which cannot be inspected since it has no membrane. The Gemara clarifies: Can it enter your mind that it has no membrane? Rather, say that his response was: Since its membrane is fragile.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין נ״ו א — Chullin 56a:13</span></div>
+    <div class="orig">רַב שֵׁיזְבִי בָּדֵיק בְּשִׁימְשָׁא, רַב יֵימַר בָּדֵיק בְּמַיָּא, רַב אַחָא בַּר יַעֲקֹב בָּדֵיק</div>
+    <div class="trans" data-when="he">חכמים מסרו דרכי בדיקה מעשיות לקרום המוח: רב שיזבי היה בודק לאור השמש; רב יימר היה יוצק מים דרך הנקב ובודק אם יצאו מעורבים בחוט המוח; רב אחא בר יעקב היה בודק…</div>
+    <div class="trans" data-when="en">The Gemara notes that Rav Sheizvi would inspect the membrane of the brain by the light of the sun. Rav Yeimar would inspect it by pouring water into the skull through the hole, to see if it emerges mixed with nerve tissue. Rav Aḥa bar Ya’akov would inspect it</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין נ״ו ב — Chullin 56b:1</span></div>
+    <div class="orig">בְּגִילָא דְּחִיטְּתָא.</div>
+    <div class="trans" data-when="he">…בקש של חיטה: היה מעביר קש דק על פני הקרום לראות אם ייתפס בנקב.</div>
+    <div class="trans" data-when="en">by dragging a wheat straw over the membrane to see if it would catch on a perforation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין נ״ו ב — Chullin 56b:2</span></div>
+    <div class="orig">אָמַר רַב שֵׁיזְבִי: הָנֵי אֲוָוזֵי דִּידַן כְּעוֹף שֶׁל מַיִם דָּמְיָין.</div>
+    <div class="trans" data-when="he">רב שיזבי: האווזים שלנו דינם כעוף של מים — שאם נשבר עצם ראשם, טריפה אף בלא נקב הקרום, מפני שקרומם רך.</div>
+    <div class="trans" data-when="en">Rav Sheizvi said: Our geese are considered like water birds. If the skull of a goose is broken, even if the membrane is not perforated, it is a tereifa.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">נפלה לאור — ירוקין ואדומין</span><span data-when="en">Fell into fire — green and red innards</span>
+      <span class="ref">Chullin 56b:3–7</span></h2>
+  <div class="lead"><span data-when="he">עוף שנפל לאור: בני מעיים שהוריקו טריפה, שהאדימו כשרים — והכל לפי הקורקבן, הלב והכבד.</span><span data-when="en">A bird that fell into fire: innards that turned green are treifa, those that stayed red are kosher — measured by the gizzard, heart and liver.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ יוחנן: שיעור ירוקתן כשיעור נקובתן — במשהו"]:::statement
+  Q1{"② הוריקה כבד כנגד בני מעיים מהו? והלא ניטלה כשרה!"}:::question
+  A1["② רבא: ירקות הכבד מוכיחה שנפלה לאור ונחמרו המעיים — טריפה"]:::answer
+  S2["③ מעשה: ירוקין הוכשרו — ׳ירוקין פסולין׳ רק בקורקבן, לב וכבד"]:::statement
+  S3["④ מעשה: אדומין נטרפו — שהאדימו אחר שהוריקו"]:::statement
+  C1["⑤ ר׳ מני: שלקן וחזרו והאדימו, כשרין; רב אשי דחוי — אין מחזיקים ריעותא"]:::conclusion
+  S1 -->|שאלה| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Yoḥanan: the measure of green is like that of a hole — any amount"]:::statement
+  Q1{"② A liver green toward the intestines — but if removed it is kosher!"}:::question
+  A1["② Rava: the green liver proves it fell into fire and the intestines were singed — treifa"]:::answer
+  S2["③ Incident: green deemed kosher — ׳green is unfit׳ only for gizzard, heart, liver"]:::statement
+  S3["④ Incident: red deemed treifa — red that had first turned green"]:::statement
+  C1["⑤ R. Mani: boiled and turned red again, kosher; Rav Ashi rejected — no presumed flaw"]:::conclusion
+  S1 -->|question| Q1
+  Q1 -->|answer| A1
+  A1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שִׁיעוּר יְרוּקָּתָן כְּשִׁיעוּר נְקוּבָתָן … בְּמַשֶּׁהוּ"]:::statement
+  Q1{"② הוֹרִיקָה כָּבֵד כְּנֶגֶד בְּנֵי מֵעַיִים מַהוּ? … וְלֹא יְהֵא אֶלָּא נִיטְּלָה!"}:::question
+  A1["② כֵּיוָן שֶׁהוֹרִיקָה כָּבֵד … בְּיָדוּעַ שֶׁנָּפְלָה לָאוּר, וְנֶחְמְרוּ … וּטְרֵפָה"]:::answer
+  S2["③ יְרוּקִּין … וְאַכְשְׁרַהּ … אֶלָּא בַּקּוּרְקְבָן, בַּלֵּב וּבַכָּבֵד"]:::statement
+  S3["④ אֲדוּמִּין הֲווֹ וּטְרֵפָה … אֲדוּמִּין שֶׁהוֹרִיקוּ וִירוּקִּין שֶׁהֶאֱדִימוּ – טְרֵפָה"]:::statement
+  C1["⑤ אֲדוּמִּין שֶׁהוֹרִיקוּ וּשְׁלָקָן וְחָזְרוּ וְהֶאֱדִימוּ – כְּשֵׁרִין … אַחְזוֹקֵי רֵיעוּתָא לָא מַחְזְקִינַן"]:::conclusion
+  S1 -->|שאלה| Q1
+  Q1 -->|תירוץ| A1
+  A1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ו ב — Chullin 56b:3</span></div>
+    <div class="orig">נָפְלָה לָאוּר, אָמַר רַבִּי יוֹחָנָן מִשּׁוּם רַבִּי יוֹסֵי בֶּן יְהוֹשֻׁעַ: שִׁיעוּר יְרוּקָּתָן כְּשִׁיעוּר נְקוּבָתָן, מָה נְקוּבָתָן בְּמַשֶּׁהוּ – אַף יְרוּקָּתָן בְּמַשֶּׁהוּ.</div>
+    <div class="trans" data-when="he">המשנה: נפלה לאור ונחמרו בני מעיה. רבי יוחנן בשם רבי יוסי בן יהושע: שיעור הירקות שווה לשיעור הנקב — כשם שנקב כלשהו בבני המעיים מטריף, כך ירקות כלשהי בהם מטריפה.</div>
+    <div class="trans" data-when="en">§ The mishna states: In a case where a bird fell into the fire and its innards were singed, if they turned green the bird is a tereifa; if they are red the bird is kosher. Rabbi Yoḥanan says in the name of Rabbi Yosei ben Yehoshua: The measure of their turning green is like the measure of their perforation. Just as their perforation in any amount renders them a tereifa, so too their turning green in any amount renders them a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ו ב — Chullin 56b:4</span></div>
+    <div class="orig">בְּעָא מִינֵּיהּ רַב יוֹסֵף בְּרֵיהּ דְּרַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי מֵרַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: הוֹרִיקָה כָּבֵד כְּנֶגֶד בְּנֵי מֵעַיִים מַהוּ? אֲמַר לֵיהּ: טְרֵפָה. וְלֹא יְהֵא אֶלָּא נִיטְּלָה! אָמַר רָבָא: כֵּיוָן שֶׁהוֹרִיקָה כָּבֵד כְּנֶגֶד בְּנֵי מֵעַיִים – בְּיָדוּעַ שֶׁנָּפְלָה לָאוּר, וְנֶחְמְרוּ בְּנֵי מֵעַיִים, וּטְרֵפָה.</div>
+    <div class="trans" data-when="he">רב יוסף בנו של ריב״ל שאל את אביו: כבד שהוריק בצד הפונה לבני המעיים מהו? השיב: טריפה. הקשה: והרי אם ניטל כל הכבד ונשאר כזית — כשרה, אם כן ירקותו לא תגרע ממנו! רבא יישב: אין הטריפות מחמת הכבד, אלא שירקותו מוכיחה שהעוף נפל לאור ונחמרו בני המעיים עצמם, ולכן טריפה.</div>
+    <div class="trans" data-when="en">Rav Yosef, son of Rabbi Yehoshua ben Levi, asked Rabbi Yehoshua ben Levi: If a liver turned green on the side facing the intestines, what is the halakha? Rabbi Yehoshua ben Levi said to him: The bird is a tereifa. Rav Yosef said to him: But this halakha should be no more stringent than that of a case where the liver was removed and an olive-bulk remained (see 54a), in which case the bird is kosher. Therefore, as long as an olive-bulk remains red, the bird should be kosher. Rava said: Since the liver turned green facing the intestines, it is certain that the bird fell into the fire and the intestines themselves were singed, and this is why the animal is a tereifa, not because of the liver per se.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ו ב — Chullin 56b:5</span></div>
+    <div class="orig">רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי הַוְיָא לֵיהּ הָהִיא תַּרְנְגוֹלְתָּא, שַׁדְּרֵיהּ לְקַמֵּיהּ דְּרַבִּי אֶלְעָזָר הַקַּפָּר בְּרִיבִּי, אֲמַר לֵיהּ: יְרוּקִּין הֲווֹ, וְאַכְשְׁרַהּ. וְהָאֲנַן תְּנַן: ״יְרוּקִּין פְּסוּלִין״! לֹא אָמְרוּ ״יְרוּקִּין פְּסוּלִין״ אֶלָּא בַּקּוּרְקְבָן, בַּלֵּב וּבַכָּבֵד. תַּנְיָא נָמֵי הָכִי: בְּאֵלּוּ בְּנֵי מֵעַיִים אָמְרוּ – בַּקּוּרְקְבָן, בַּלֵּב וּבַכָּבֵד.</div>
+    <div class="trans" data-when="he">מעשה: ריב״ל שלח תרנגולת שנפלה לאור לרבי אלעזר הקפר, וכשהיו בני מעיה ירוקים — הכשירהּ. תמה ריב״ל: והרי שנינו ״ירוקין פסולין״! ענה: לא אמרו כן אלא בקורקבן, בלב ובכבד שדרכם להיות אדומים; אבל בני מעיים שדרכם ירוקים, ירקותם אינה מטריפה. וכן שנינו בברייתא: באלו בני מעיים אמרו — בקורקבן, בלב ובכבד.</div>
+    <div class="trans" data-when="en">The Gemara recounts: Rabbi Yehoshua ben Levi had a certain hen that fell into the fire. After it was slaughtered, he sent it before the distinguished Rabbi Elazar HaKappar and said to him: Its innards were green, and Rabbi Elazar HaKappar deemed it kosher. Rabbi Yehoshua ben Levi asked: But didn’t we learn in the mishna: If they turned green they are unfit? Rabbi Elazar HaKappar said to him: The Sages said that if they turned green they are unfit only with regard to the gizzard, the heart, and the liver, which are naturally red. Other innards of a hen, such as the intestines, are naturally green, and a green appearance in them does not render the hen a tereifa. The Gemara notes: This is also taught in a baraita: Concerning which innards did they say that a green appearance renders the bird a tereifa? Only concerning the gizzard, the heart, and the liver.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ו ב — Chullin 56b:6</span></div>
+    <div class="orig">רַבִּי יִצְחָק בַּר יוֹסֵף הֲוָה לֵיהּ הָהִוא תַּרְנְגוֹלְתָּא, שַׁדְּרַהּ לְקַמֵּיהּ דְּרַבִּי אֲבָהוּ, וַאֲמַר לֵיהּ: אֲדוּמִּין הֲווֹ וּטְרֵפָה. וְהָאֲנַן תְּנַן: ״אֲדוּמִּין כְּשֵׁרִים״! אֲמַר לֵיהּ: אֲדוּמִּין שֶׁהוֹרִיקוּ וִירוּקִּין שֶׁהֶאֱדִימוּ – טְרֵפָה, לֹא אָמְרוּ ״אֲדוּמִּין כְּשֵׁרִים״ אֶלָּא בַּלֵּב בַּקּוּרְקְבָן וּבַכָּבֵד.</div>
+    <div class="trans" data-when="he">מעשה הפוך: ר׳ יצחק בר יוסף שלח תרנגולת לרבי אבהו, ובני מעיה אדומים — והטריפהּ. תמה: והרי שנינו ״אדומין כשרים״! ענה: בני מעיים אדומים שמטבעם ירוקים והאדימו — טריפה; ולא אמרו ״אדומין כשרים״ אלא בלב, בקורקבן ובכבד שמטבעם אדומים.</div>
+    <div class="trans" data-when="en">The Gemara recounts: Rabbi Yitzḥak bar Yosef had a certain hen that fell into the fire. After it was slaughtered, he sent it before Rabbi Abbahu and said to him: Its innards were red, and Rabbi Elazar HaKappar deemed it a tereifa. Rabbi Yitzḥak bar Yosef asked: But didn’t we learn in the mishna: If they are red, the bird is kosher? Rabbi Elazar HaKappar said to him: Red innards that turned green and green innards that turned red render the animal a tereifa. The Sages said in the mishna that red innards are kosher only with regard to the heart, the gizzard, and the liver, because these organs are naturally red. Organs that are naturally green, however, render the bird a tereifa if they have turned red.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ו ב — Chullin 56b:7</span></div>
+    <div class="orig">אָמַר רַב שְׁמוּאֵל בַּר חִיָּיא אָמַר רַבִּי מָנִי: אֲדוּמִּין שֶׁהוֹרִיקוּ וּשְׁלָקָן וְחָזְרוּ וְהֶאֱדִימוּ – כְּשֵׁרִין, מַאי טַעְמָא? קוּטְרָא עָיֵיל בְּהוּ. אָמַר רַב נַחְמָן בַּר יִצְחָק: אַף אָנוּ נֹאמַר, אֲדוּמִּין שֶׁלֹּא הוֹרִיקוּ וּשְׁלָקָן וְהוֹרִיקוּ – טְרֵפָה, מַאי טַעְמָא? אִיגַּלַּאי בַּהְתַּיְיהוּ. אָמַר רַב אָשֵׁי: הִלְכָּךְ לָא לֵיכוֹל אִינָשׁ אֶלָּא בְּשִׁלְקָא. וְלָא הִיא, אַחְזוֹקֵי רֵיעוּתָא לָא מַחְזְקִינַן.</div>
+    <div class="trans" data-when="he">רב שמואל בר חייא בשם רבי מני: אדומים שהוריקו, ובישלם וחזרו והאדימו — כשרים, שזה מוכיח שלא נשרפו אלא העשן צבעם זמנית. רב נחמן בר יצחק: ואף נאמר להפך — אדומים שלא הוריקו, ובישלם והוריקו — טריפה, שנתגלתה קלקלתם. רב אשי: אם כן לא יאכל אדם אלא מבושל, לבדוק. ודחו: לא כן, שאין מחזיקים ריעותא בלא ראיה.</div>
+    <div class="trans" data-when="en">Rav Shmuel bar Ḥiyya says that Rabbi Mani says: If red organs turned green, and one boiled them and they turned red again, they are kosher. What is the reason? This proves that they were not burned; rather, smoke entered them and changed their color temporarily. Rav Naḥman bar Yitzḥak said: We, too, will say: If red organs did not turn green, and one boiled them and they then turned green, the animal is a tereifa. What is the reason? Their shame was revealed, i.e., it is evident that they were in fact burned. Rav Ashi said: Therefore, even if a bird’s innards remain red after it fell in a fire, a person may eat it only if it is boiled, to be certain that the innards will not turn green. The Gemara rejects this: But that is not so, since we do not presume the existence of a flaw without evidence.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">דרסה — צריכה בדיקה</span><span data-when="en">Trampled — requires inspection</span>
+      <span class="ref">Chullin 56b:8</span></h2>
+  <div class="lead"><span data-when="he">עוף שנדרס או ריצצוהו — אף לאחר ששהה מעת לעת, צריך בדיקה שמא נטרף.</span><span data-when="en">A trampled or crushed bird — even after lasting 24 hours, it requires inspection lest it be a tereifa.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① דרסה וטרפה בכותל — אחת זו ואחת זו צריכה בדיקה"]:::statement
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① Trampled or slammed against a wall — each of these requires inspection"]:::statement
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① דְּרָסָהּ וּטְרָפָהּ בַּכּוֹתֶל … אַחַת זוֹ וְאַחַת זוֹ צְרִיכָה בְּדִיקָה"]:::statement
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ו ב — Chullin 56b:8</span></div>
+    <div class="orig">דְּרָסָהּ וּטְרָפָהּ בַּכּוֹתֶל. אָמַר רַבִּי אֶלְעָזָר בֶּן אַנְטִיגְנוֹס מִשּׁוּם רַבִּי אֶלְעָזָר בְּרַבִּי יַנַּאי: אַחַת זוֹ וְאַחַת זוֹ צְרִיכָה בְּדִיקָה.</div>
+    <div class="trans" data-when="he">המשנה: דרסהּ אדם או טרפהּ בכותל או ריצצתהּ בהמה — אם שהתה מעת לעת ושחטהּ, כשרה. רבי אלעזר בן אנטיגנוס משום רבי אלעזר ברבי ינאי: כל אחד מן המקרים הללו עדיין צריך בדיקה לאחר שחיטה, שמא יש בו פגיעה המטריפה אותו בפני עצמה.</div>
+    <div class="trans" data-when="en">§ The mishna states: If a person trampled the bird, or slammed it against a wall, or if an animal crushed it, and it lasted twenty-four hours, and then one slaughtered it, it is kosher. Rabbi Elazar ben Antigonus says in the name of Rabbi Elazar, son of Rabbi Yannai: Both this and that, i.e., all of the above cases, require inspection after slaughter, to ascertain that there is no injury that would itself render the animal a tereifa.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">משנה: אלו כשרות בעוף</span><span data-when="en">Mishna: these are kosher in a bird</span>
+      <span class="ref">Chullin 56b:9</span></h2>
+  <div class="lead"><span data-when="he">המשנה השנייה מונה את הכשרות בעוף — נקב הגרגרת, הזפק, ובני מעיים שיצאו ולא ניקבו.</span><span data-when="en">The second Mishna lists the kosher cases in a bird — a pierced windpipe, the crop, and intestines that emerged without being perforated.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: ואלו כשרות בעוף"]):::mishnah
+  S1["① ניקבה או נסדקה הגרגרת; חולדה במקום שאינו מטריף"]:::statement
+  S2["① ניקב הזפק; רבי: אפילו ניטל"]:::statement
+  S3["① יצאו בני מעיים ולא ניקבו; נשתברו גפיה ורגליה"]:::statement
+  S4["① נמרטו כנפיה; ר׳ יהודה: ניטלה הנוצה — פסולה"]:::statement
+  M1 --> S1
+  M1 --> S2
+  M1 --> S3
+  M1 --> S4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: and these are kosher in a bird"]):::mishnah
+  S1["① Windpipe pierced or cracked; weasel at a non-fatal spot"]:::statement
+  S2["① The crop pierced; Rabbi: even if it was removed"]:::statement
+  S3["① Intestines emerged unperforated; wings or legs broken"]:::statement
+  S4["① Wing-feathers plucked; R. Yehuda: down removed — unfit"]:::statement
+  M1 --> S1
+  M1 --> S2
+  M1 --> S3
+  M1 --> S4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① וְאֵלּוּ כְּשֵׁרוֹת בָּעוֹף"]):::mishnah
+  S1["① נִיקְּבָה הַגַּרְגֶּרֶת, אוֹ שֶׁנִּסְדְּקָה … מָקוֹם שֶׁאֵינוֹ עוֹשֶׂה אוֹתָהּ טְרֵפָה"]:::statement
+  S2["① נִיקַּב הַזֶּפֶק, רַבִּי אוֹמֵר: אֲפִילּוּ נִיטַּל"]:::statement
+  S3["① יָצְאוּ בְּנֵי מֵעֶיהָ וְלֹא נִיקְּבוּ, נִשְׁתַּבְּרוּ גַּפֶּיהָ, נִשְׁתַּבְּרוּ רַגְלֶיהָ"]:::statement
+  S4["① נִמְרְטוּ כְּנָפֶיהָ, רַבִּי יְהוּדָה אוֹמֵר: אִם נִטְּלָה הַנּוֹצָה פְּסוּלָה"]:::statement
+  M1 --> S1
+  M1 --> S2
+  M1 --> S3
+  M1 --> S4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ו ב — Chullin 56b:9</span></div>
+    <div class="orig">מַתְנִי׳ וְאֵלּוּ כְּשֵׁרוֹת בָּעוֹף: נִיקְּבָה הַגַּרְגֶּרֶת, אוֹ שֶׁנִּסְדְּקָה, הִכְּתָה חוּלְדָּה עַל רֹאשָׁהּ מָקוֹם שֶׁאֵינוֹ עוֹשֶׂה אוֹתָהּ טְרֵפָה, נִיקַּב הַזֶּפֶק, רַבִּי אוֹמֵר: אֲפִילּוּ נִיטַּל, יָצְאוּ בְּנֵי מֵעֶיהָ וְלֹא נִיקְּבוּ, נִשְׁתַּבְּרוּ גַּפֶּיהָ, נִשְׁתַּבְּרוּ רַגְלֶיהָ, נִמְרְטוּ כְּנָפֶיהָ, רַבִּי יְהוּדָה אוֹמֵר: אִם נִטְּלָה הַנּוֹצָה פְּסוּלָה.</div>
+    <div class="trans" data-when="he">המשנה מונה את הכשרות בעוף: נקב או סדק בגרגרת (קנה הנשימה לאורכו); מכת חולדה במקום שאינו מטריף; נקב הזפק (ורבי: אף אם ניטל הזפק כולו, כשרה); בני מעיים שיצאו מן הגוף אך לא ניקבו; נשתברו גפיה (כנפיה) או רגליה; נמרטו כנפיה. רבי יהודה חולק: אם ניטלה הנוצה (הפלומה) — פסולה.</div>
+    <div class="trans" data-when="en">MISHNA: And these are kosher among birds: If a bird’s windpipe was perforated or cracked lengthwise; or if a weasel struck the bird on its head in a place that does not render it a tereifa; or if the crop was perforated. Rabbi Yehuda HaNasi says: It is kosher even if the crop was removed. If the bird’s intestines emerged from the abdominal wall but were not perforated, or if its wings were broken, or if its legs were broken, or if the feathers on its wings were plucked, the bird is kosher. Rabbi Yehuda says: If the down covering its body was removed, it is a tereifa and unfit for consumption.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">זפק וטרפחת — מעשה והוראה</span><span data-when="en">Crop and womb — an incident and ruling</span>
+      <span class="ref">Chullin 56b:10–12</span></h2>
+  <div class="lead"><span data-when="he">מעשה בר׳ סימאי ור׳ צדוק שהורו בטרפחת כרבי בזפק — ושאלת הגמרא מה כיוונו; וגדר גג הזפק.</span><span data-when="en">R. Simai and R. Tzadok ruled on the womb like Rabbi on the crop — what did they intend; and the definition of the roof of the crop.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: ר׳ סימאי ור׳ צדוק הורו בטרפחת כרבי בזפק"]:::statement
+  Q1{"② איבעיא: הורו לאיסור או להיתר?"}:::question
+  C1["② תיקו"]:::conclusion
+  S2["③ רבה: גג הזפק נידון כוושט — כל הנמתח עמו"]:::statement
+  S1 -->|איבעיא| Q1
+  Q1 -->|לא נפשט| C1
+  C1 --> S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: R. Simai and R. Tzadok ruled on the womb like Rabbi on the crop"]:::statement
+  Q1{"② Dilemma: did they rule to forbid or to permit?"}:::question
+  C1["② Let it stand (teiku)"]:::conclusion
+  S2["③ Rabba: the roof of the crop is judged like the gullet — all that stretches with it"]:::statement
+  S1 -->|dilemma| Q1
+  Q1 -->|unresolved| C1
+  C1 --> S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מַעֲשֶׂה בְּרַבִּי סִימַאי וְרַבִּי צָדוֹק … וְהוֹרוּ בְּטַרְפַּחַת כְּרַבִּי בְּזֶפֶק"]:::statement
+  Q1{"② הוֹרוּ בְּטַרְפַּחַת לְאִיסּוּרָא … אוֹ … לְהֶתֵּירָא כְּרַבִּי בְּזֶפֶק?"}:::question
+  C1["② תֵּיקוּ"]:::conclusion
+  S2["③ גַּגּוֹ שֶׁל זֶפֶק נִידּוֹן כְּוֶושֶׁט … כֹּל שֶׁנִּמְתָּח עִמּוֹ"]:::statement
+  S1 -->|איבעיא| Q1
+  Q1 -->|לא נפשט| C1
+  C1 --> S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ו ב — Chullin 56b:10</span></div>
+    <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן: מַעֲשֶׂה בְּרַבִּי סִימַאי וְרַבִּי צָדוֹק שֶׁהָלְכוּ לְעַבֵּר שָׁנָה בְּלוֹד, וְשָׁבְתוּ בְּאוֹנוֹ, וְהוֹרוּ בְּטַרְפַּחַת כְּרַבִּי בְּזֶפֶק.</div>
+    <div class="trans" data-when="he">ברייתא: מעשה ברבי סימאי ורבי צדוק שהלכו לעבר את השנה בלוד, ושבתו בעיר אונו, והורו בבהמה שניטלה טרפחת שלה (בית הרחם) — כדעת רבי שהכשיר בעוף אף שניטל הזפק.</div>
+    <div class="trans" data-when="en">GEMARA: The Sages taught in a baraita: There was an incident involving Rabbi Simai and Rabbi Tzadok, who went to intercalate the year in Lod, and they spent Shabbat in the town of Ono. And they ruled with regard to an animal whose womb was removed, in accordance with the opinion of Rabbi Yehuda HaNasi in the mishna with regard to the crop.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ו ב — Chullin 56b:11</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: הוֹרוּ בְּטַרְפַּחַת לְאִיסּוּרָא, כְּרַבִּי בְּזֶפֶק לְהֶתֵּירָא? אוֹ דִילְמָא: הוֹרוּ בְּטַרְפַּחַת לְהֶתֵּירָא כְּרַבִּי בְּזֶפֶק, אֲבָל כְּרַבִּי בְּזֶפֶק לָא סְבִירָא לְהוּ? תֵּיקוּ.</div>
+    <div class="trans" data-when="he">נשאלה שאלה: האם הם הורו בטרפחת לאיסור (שתי הוראות נפרדות: טרפחת אסורה, וזפק מותר כרבי)? או שמא הוראה אחת: שהורו בטרפחת להיתר כדרך שרבי מתיר בזפק — אך בזפק עצמו אינם סוברים כרבי? הגמרא: תיקו, השאלה לא נפשטה.</div>
+    <div class="trans" data-when="en">A dilemma was raised before the Sages: What is the meaning of the baraita? Is it referring to two different rulings, i.e., that they ruled with regard to the womb to prohibit it, and they also ruled in accordance with the opinion of Rabbi Yehuda HaNasi with regard to the crop to permit it? Or perhaps it is referring to only one ruling, and it means that they ruled with regard to the womb to permit it, in accordance with the opinion of Rabbi Yehuda HaNasi with regard to the crop, but they do not hold in accordance with the opinion of Rabbi Yehuda HaNasi with regard to the crop itself. The Gemara concludes: The dilemma shall stand unresolved.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ו ב — Chullin 56b:12</span></div>
+    <div class="orig">אָמַר רַבָּה, וְאִיתֵּימָא רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: גַּגּוֹ שֶׁל זֶפֶק נִידּוֹן כְּוֶושֶׁט. הֵיכָא? אָמַר רַב בִּיבִי בַּר אַבָּיֵי: כֹּל שֶׁנִּמְתָּח עִמּוֹ.</div>
+    <div class="trans" data-when="he">רבה (ויש אומרים ריב״ל): אף שנקב הזפק כשר, ״גג הזפק״ — חלקו העליון — נידון כוושט, ונקב כלשהו בו מטריף. ושאלו: היכן הוא גג הזפק? רב ביבי בר אביי: כל חלק מן הזפק הנמתח יחד עם הוושט.</div>
+    <div class="trans" data-when="en">Rabba says, and some say it was Rabbi Yehoshua ben Levi who says: The roof the crop is treated like the gullet, i.e., it renders the bird a tereifa if perforated in any amount. The Gemara asks: Where is the roof of the crop? Rav Beivai bar Abaye said: It is any part of the crop that stretches with the gullet.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">יצאו בני מעיים — הוא עשך ויכוננך</span><span data-when="en">Intestines emerged — He made you and established you</span>
+      <span class="ref">Chullin 56b:13–57a:1</span></h2>
+  <div class="lead"><span data-when="he">בני מעיים שיצאו והוחזרו — אם היפך בהם, טריפה; דרשת ׳הוא עשך ויכוננך׳ ומעשה ברומאי.</span><span data-when="en">Intestines that emerged and were returned — if jumbled, treifa; the exposition of ׳He made you׳ and an incident with a Roman.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ שמואל: לא ניקבו וכשרים רק כשלא היפך בהם; היפך — טריפה"]:::statement
+  S2["② דרשה: ׳הוא עשך ויכוננך׳ — כונניות באדם, נהפך אחד אינו חי"]:::statement
+  S3["③ ר׳ מאיר: ׳הוא עשך ויכוננך׳ — כרך שהכל בו, ממנו כהניו ומלכיו"]:::statement
+  C1["④ מעשה ברומאי: בני מעיים שנפקו, חזרו באחוזת עינים וחי"]:::conclusion
+  S1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Shmuel: emerged intestines are kosher only if not jumbled; if jumbled — treifa"]:::statement
+  S2["② Exposition: ׳He made you and established you׳ — fixed places, a switched one cannot live"]:::statement
+  S3["③ R. Meir: ׳He made you׳ — a city with all in it, from it its priests and kings"]:::statement
+  C1["④ Incident with a Roman: emerged intestines, returned by an illusion, and he lived"]:::conclusion
+  S1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① לֹא שָׁנוּ אֶלָּא שֶׁלֹּא הִיפֵּךְ בָּהֶן, אֲבָל הִיפֵּךְ בָּהֶן – טְרֵפָה"]:::statement
+  S2["② ״הוּא עָשְׂךָ וַיְכֹנְנֶךָ״ … כּוֹנָנִיּוֹת בָּאָדָם, שֶׁאִם נֶהְפָּךְ … אֵינוֹ יָכוֹל לִחְיוֹת"]:::statement
+  S3["③ רַבִּי מֵאִיר … כַּרְכָא דְּכוֹלָּה בֵּיהּ, מִמֶּנּוּ כֹּהֲנָיו … מִמֶּנּוּ מְלָכָיו"]:::statement
+  C1["④ הָהוּא רוֹמָאָה … עוּל מַעְיָינֵיהּ וְחַיְּיטֵיהּ לִכְרֵסֵיהּ"]:::conclusion
+  S1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ו ב — Chullin 56b:13</span></div>
+    <div class="orig">יָצְאוּ בְּנֵי מֵעֶיהָ, אָמַר רַבִּי שְׁמוּאֵל בַּר רַב יִצְחָק: לֹא שָׁנוּ אֶלָּא שֶׁלֹּא הִיפֵּךְ בָּהֶן, אֲבָל הִיפֵּךְ בָּהֶן – טְרֵפָה, דִּכְתִיב: ״הוּא עָשְׂךָ וַיְכֹנְנֶךָ״, מְלַמֵּד שֶׁבָּרָא הַקָּדוֹשׁ בָּרוּךְ הוּא כּוֹנָנִיּוֹת בָּאָדָם, שֶׁאִם נֶהְפָּךְ (אַחַת) [אֶחָד] מֵהֶן – אֵינוֹ יָכוֹל לִחְיוֹת.</div>
+    <div class="trans" data-when="he">המשנה הכשירה בני מעיים שיצאו ולא ניקבו. רבי שמואל בר רב יצחק: לא הכשירו אלא כשהחזירם כסדרם, אבל אם היפך בהם את סדרם — טריפה, שנאמר ״הוא עשך ויכוננך״, מלמד שברא הקב״ה כונניות (מקומות קבועים) באדם, שאם נהפך אחד מהם — אינו יכול לחיות.</div>
+    <div class="trans" data-when="en">§ The mishna states: If the bird’s intestines emerged from the stomach wall but were not perforated, the bird is kosher. Rabbi Shmuel bar Rav Yitzḥak says: The Sages taught this halakha only in a case where one did not jumble them, but returned them to the stomach in their proper order. But if he jumbled them, the bird is a tereifa, as it is written: “Has He not made you, and established you?” (Deuteronomy 32:6). The verse teaches that the Holy One, Blessed be He, created established locations for each organ in a person, so that if one of them is switched he cannot live. The same applies to other creatures.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ו ב — Chullin 56b:14</span></div>
+    <div class="orig">תַּנְיָא, הָיָה רַבִּי מֵאִיר אוֹמֵר: ״הוּא עָשְׂךָ וַיְכֹנְנֶךָ״ – כַּרְכָא דְּכוֹלָּה בֵּיהּ, מִמֶּנּוּ כֹּהֲנָיו, מִמֶּנּוּ נְבִיאָיו, מִמֶּנּוּ שָׂרָיו, מִמֶּנּוּ מְלָכָיו, שֶׁנֶּאֱמַר: ״מִמֶּנּוּ פִנָּה מִמֶּנּוּ יָתֵד וְגוֹ׳״.</div>
+    <div class="trans" data-when="he">ברייתא אגדית על אותו פסוק: רבי מאיר היה דורש ״הוא עשך ויכוננך״ — ישראל הם ככרך שהכל מצוי בו: ממנו כהניו, ממנו נביאיו, ממנו שריו, ממנו מלכיו, שנאמר ״ממנו פינה ממנו יתד״.</div>
+    <div class="trans" data-when="en">It is taught in a baraita: Rabbi Meir would say that the verse: “Has He not made you, and established you?” teaches that the Jewish people is a city with everything in it. Out of it come its priests, out of it come its prophets, out of it come its chiefs, out of it come its kings, as it is stated: “Out of them shall come forth the cornerstone, out of them the stake, out of them the battle bow, out of them every master together” (Zechariah 10:4).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ו ב — Chullin 56b:15</span></div>
+    <div class="orig">הָהוּא רוֹמָאָה דְּחַזְיֵיהּ לְהָהוּא גַּבְרָא דִּנְפַל מֵאִיגָּרָא לְאַרְעָא, פְּקַעיה כְּרֵסֵיהּ וּנְפוּק מַעְיָינֵיהּ, אַתְיֵיהּ לִבְרֵיהּ וְשַׁחְטֵיהּ קַמֵּיהּ</div>
+    <div class="trans" data-when="he">מעשה ברומאי שראה אדם נפל מן הגג לארץ, נבקעה כריסו ויצאו מעיו. הביא הרומאי את בנו ושחטו לפניו…</div>
+    <div class="trans" data-when="en">The Gemara recounts an incident involving a certain Roman who saw a certain man fall from the roof to the ground, and his stomach ruptured and his intestines emerged. The Roman brought the man’s son and slaughtered him before his father’s eyes</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ז א — Chullin 57a:1</span></div>
+    <div class="orig">בַּאֲחוּזַּת עֵינַיִם, אִינְּגִיד וְאִיתְּנַח, עוּל (למעייניה) [מַעְיָינֵיהּ] וְחַיְּיטֵיהּ לִכְרֵסֵיהּ.</div>
+    <div class="trans" data-when="he">…באחיזת עיניים — הראה כאילו שוחטו, ולא שחטו ממש. נתעלף האב וגנח, ומחמת תנועה זו נכנסו מעיו חזרה לבטנו; תפר הרומאי את כריסו, וחי. מכאן ראיה שבני מעיים שיצאו ולא ניקבו — חוזרים וחי.</div>
+    <div class="trans" data-when="en">deceptively, i.e., he only pretended to kill the son. The father fainted and went limp. By this movement, his intestines entered his stomach, and the Roman sewed up his stomach, and he recovered.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
