@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ע״ו</title>
+<meta name="description" content="מפת הסוגיא של חולין ע״ו: בהמה שנחתכו רגליה — מן הארכובה ולמטה כשרה, ולמעלה פסולה; היכן הארכובה וצומת הגידין; כמה גידין וכמה מהם נפסקים; ונשבר העצם — מחלוקת רב ושמואל, והדין כשהעצם יצא לחוץ ועור ובשר חופים את רובו.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="76">
+<meta name="gemara-map:sefaria-ref" content="Chullin 76">
+<meta name="gemara-map:topic-he" content="נחתכו רגליה, צומת הגידין, נשבר העצם">
+<meta name="gemara-map:topic-en" content="Severed legs, convergence of sinews, broken bone">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ע״ו">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 76">
+<meta name="gemara-map:blurb-he" content="היכן בָּרגל החיתוך מטריף, מהו צומת הגידין וכמה ממנו נפסק, ונשבר העצם — אֵבר ובהמה: מתי שניהם מותרים, מתי רק הבהמה.">
+<meta name="gemara-map:blurb-en" content="Where in the leg a cut makes a tereifa, what the convergence of sinews is and how much of it must sever, and a broken bone — when both limb and animal are permitted, and when only the animal.">
+<meta name="gemara-map:sugya-count" content="7">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ע״ו</span><span data-when="en">Sugya map — Chullin 76</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ע״ו א — ע״ז א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 76a–77a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> פרק ׳בהמה שנחתכו רגליה׳: <b>מן הארכובה ולמטה כשרה, ולמעלה פסולה</b>, וכן ניטל <b>צומת הגידין</b>. הגמרא מבררת היכן ה״ארכובה״ (מחלוקת רב יהודה ועולא), מהו ומהיכן עד היכן צומת הגידין וכמה גידין יש בו, וכמה מהם צריך להיפסק כדי להטריף. ב<b>״נשבר העצם״</b> נחלקים רב ושמואל אם למעלה מן הארכובה הבהמה נֶאסרת, ולבסוף — <b>הלכה כרב</b>; וכשהעצם יצא לחוץ, הבהמה כשרה אם <b>עור ובשר חופים את רובו</b>.</span>
+    <span data-when="en"><b>Bottom line:</b> The chapter “an animal whose legs were severed”: <b>below the joint it is kosher, above it a tereifa</b>, and likewise if the <b>convergence of sinews</b> was removed. The Gemara pins down where the “joint” is (Rav Yehuda vs. Ulla), what the convergence of sinews is and how far it runs, how many sinews it has, and how many must sever to render a tereifa. On <b>“the bone broke,”</b> Rav and Shmuel dispute whether a break above the joint forbids the animal — and the halakha follows <b>Rav</b>; and when the bone protrudes, the animal is kosher if <b>skin and flesh cover a majority of it</b>.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ע״ו</span><span data-when="en">Overview — Chullin 76</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · משנה: נחתכו רגליה, וצומת הגידין, ונשבר העצם"]):::mishnah
+  O2["2 · היכן הארכובה — רב יהודה ועולא"]:::statement
+  O3["3 · מהו ומהיכן צומת הגידין"]:::statement
+  O4["4 · כמה חוטים, וכמה נפסקים"]:::statement
+  O5["5 · נשבר העצם — רב ושמואל"]:::statement
+  O6["6 · ההלכה ששלחו מארץ ישראל"]:::statement
+  O7["7 · יצא העצם לחוץ — עור ובשר"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · Mishna: severed legs, convergence of sinews, broken bone"]):::mishnah
+  O2["2 · Where is the joint — Rav Yehuda and Ulla"]:::statement
+  O3["3 · What and how far is the convergence of sinews"]:::statement
+  O4["4 · How many strands, and how many sever"]:::statement
+  O5["5 · The bone broke — Rav and Shmuel"]:::statement
+  O6["6 · The halakha sent from Eretz Yisrael"]:::statement
+  O7["7 · The bone protrudes — skin and flesh"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">המשנה — נחתכו רגליה ונשבר העצם</span><span data-when="en">The Mishna — severed legs and a broken bone</span>
+      <span class="ref">Chullin 76a:1–2</span></h2>
+  <div class="lead"><span data-when="he">חיתוך הרגל ״מן הארכובה ולמטה״ — כשרה, ״ולמעלה״ — פסולה, וכן ניטל צומת הגידין. ונשבר העצם: אם רוב הבשר קיים — שחיטתו מטהרתו.</span><span data-when="en">A leg severed “from the joint and below” is kosher, “and above” a tereifa, as is a removed convergence of sinews. And if the bone broke: if most flesh remains, slaughter renders it permitted.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① משנה: נחתכו מן הארכובה ולמטה כשרה, ולמעלה פסולה, וכן ניטל צומת הגידין"]):::mishnah
+  M2(["② נשבר העצם: רוב הבשר קיים — שחיטתו מטהרתו, ואם לאו — אינה מטהרתו"]):::mishnah
+  M1 --> M2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Mishna: severed below the joint — kosher, above — tereifa; likewise a removed convergence of sinews"]):::mishnah
+  M2(["② Bone broke: most flesh intact — slaughter renders it permitted, else not"]):::mishnah
+  M1 --> M2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① בְּהֵמָה שֶׁנֶּחְתְּכוּ רַגְלֶיהָ מִן הָאַרְכּוּבָּה וּלְמַטָּה – כְּשֵׁרָה … וְכֵן שֶׁנִּיטַּל צוֹמֶת הַגִּידִין"]):::mishnah
+  M2(["② נִשְׁבַּר הָעֶצֶם, אִם רוֹב הַבָּשָׂר קַיָּים – שְׁחִיטָתוֹ מְטַהַרְתּוֹ, וְאִם לָאו – אֵין שְׁחִיטָתוֹ מְטַהַרְתּוֹ"]):::mishnah
+  M1 --> M2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ו א — Chullin 76a:1</span></div>
+    <div class="orig">מַתְנִי׳ בְּהֵמָה שֶׁנֶּחְתְּכוּ רַגְלֶיהָ מִן הָאַרְכּוּבָּה וּלְמַטָּה – כְּשֵׁרָה, מִן הָאַרְכּוּבָּה וּלְמַעְלָה – פְּסוּלָה, וְכֵן שֶׁנִּיטַּל צוֹמֶת הַגִּידִין.</div>
+    <div class="trans" data-when="he">משנה: בהמה שנחתכו רגליה האחוריות — אם נחתכו מן ה״ארכובה״ (פרק הברך) ולמטה, כשרה; מן הארכובה ולמעלה, פסולה (טריפה). וכן בהמה שניטל ממנה ״צומת הגידין״ (מקום התקבצות הגידים בשוק) — טריפה.</div>
+    <div class="trans" data-when="en">MISHNA: With regard to an animal whose hind legs were severed, if they were severed from the leg joint and below, the animal is kosher; from the leg joint and above, the animal is thereby rendered a tereifa and is not kosher. And likewise, an animal whose convergence of sinews in the thigh was removed is a tereifa and is not kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ו א — Chullin 76a:2</span></div>
+    <div class="orig">נִשְׁבַּר הָעֶצֶם, אִם רוֹב הַבָּשָׂר קַיָּים – שְׁחִיטָתוֹ מְטַהַרְתּוֹ, וְאִם לָאו – אֵין שְׁחִיטָתוֹ מְטַהַרְתּוֹ.</div>
+    <div class="trans" data-when="he">נשבר עצם האֵבר (ולא נחתך לגמרי) ואחר כך נשחטה הבהמה: אם רוב הבשר שסביב העצם קיים — שחיטת הבהמה מטהרת אף את האֵבר מטומאת אֵבר מן החי; ואם לאו — אין שחיטתו מטהרתו.</div>
+    <div class="trans" data-when="en">If the bone of a limb was broken but the limb was not completely severed, and the animal was then slaughtered, if the majority of the flesh surrounding the bone is intact, the slaughter of the animal renders it permitted; but if not, its slaughter does not render it permitted.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">היכן הארכובה — רב יהודה מול עולא</span><span data-when="en">Where is the joint — Rav Yehuda vs. Ulla</span>
+      <span class="ref">Chullin 76a:3–11</span></h2>
+  <div class="lead"><span data-when="he">לרב יהודה: הארכובה התחתונה (הנמכרת עם הראש); לעולא: הארכובה העליונה (הניכרת בגמל). עולא מקשה מ״וכן צומת הגידין״, ורב יהודה משתיק.</span><span data-when="en">Rav Yehuda: the lower joint (sold with the head); Ulla: the upper joint (conspicuous in a camel). Ulla objects from “and likewise the convergence of sinews,” and Rav Yehuda is silenced.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב יהודה בשם רב: הארכובה — הנמכרת עם הראש (התחתונה)"]:::statement
+  S2["② עולא בשם ר׳ אושעיא: הארכובה הניכרת בגמל (העליונה)"]:::statement
+  Q1{"③ עולא לרב יהודה: לשיטתי ׳וכן צומת הגידין׳ מובן — ולשיטתך, למה לי?"}:::question
+  A1["④ רב יהודה: רכובה בלא צומת, וצומת בלא רכובה"]:::answer
+  Q2{"④ עולא: והא ׳נחתכו׳ קתני! · רב יהודה אישתיק"}:::question
+  S3["⑤ אחר שיצא: היה לי לתרץ ׳למעלה׳ — למעלה מצומת הגידין"]:::statement
+  S4["⑥ חזר: טוב שלא אמרתי — ׳מן הארכובה ולמעלה׳ קתני, ונדחה"]:::statement
+  S5["⑦ רב פפא מַתְנֵי אחרת: ׳למטה/למעלה׳ — משניהם; וארכובה כעולא"]:::statement
+  Q3{"⑧ ומי איכא מידי — מלמעלה פוסק וחיה, מלמטה פוסק ומתה?"}:::question
+  A2["⑨ רב אשי: אין מדמים טריפות זו לזו — חותכה מכאן ומתה, מכאן וחיה"]:::answer
+  S1 -->|מול| S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|נחתכו קתני| Q2
+  Q2 -->|הרהור| S3
+  S3 -->|חזרה בו| S4
+  S4 -->|גרסת רב פפא| S5
+  S5 -.->|קושיא| Q3
+  Q3 -->|יישוב| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Yehuda (Rav): the joint sold with the head — the lower one"]:::statement
+  S2["② Ulla (R. Oshaya): the joint conspicuous in a camel — the upper one"]:::statement
+  Q1{"③ Ulla to Rav Yehuda: for me ׳and likewise sinews׳ fits — for you, what is its point?"}:::question
+  A1["④ Rav Yehuda: knee without sinews, and sinews without knee"]:::answer
+  Q2{"④ Ulla: but it teaches ׳were severed׳! · Rav Yehuda fell silent"}:::question
+  S3["⑤ After he left: I should have answered ׳above׳ — above the convergence of sinews"]:::statement
+  S4["⑥ He reconsidered: good I did not — it teaches ׳from the joint and above׳, refuted"]:::statement
+  S5["⑦ Rav Pappa teaches differently: ׳below/above׳ — of both; and the joint as Ulla"]:::statement
+  Q3{"⑧ Is it possible — cut higher and it lives, cut lower and it dies?"}:::question
+  A2["⑨ Rav Ashi: one does not compare tereifot — cut here it dies, there it lives"]:::answer
+  S1 -->|vs.| S2
+  S2 -->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|but ׳were severed׳| Q2
+  Q2 -->|second thought| S3
+  S3 -->|reconsidered| S4
+  S4 -->|Rav Pappa׳s version| S5
+  S5 -.->|objection| Q3
+  Q3 -->|resolution| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב יְהוּדָה … לְמַטָּה מִן הָאַרְכּוּבָּה … בְּאַרְכּוּבָּה הַנִּמְכֶּרֶת עִם הָרֹאשׁ"]:::statement
+  S2["② עוּלָּא אָמַר רַבִּי אוֹשַׁעְיָא: כְּנֶגְדּוֹ בְּגָמָל נִיכָּר"]:::statement
+  Q1{"③ בִּשְׁלָמָא לְדִידִי … הַיְינוּ דְּקָתָנֵי וְכֵן שֶׁנִּיטַּל צוֹמֶת הַגִּידִין, אֶלָּא לְדִידָךְ מַאי?"}:::question
+  A1["④ רְכוּבָּה בְּלֹא צוֹמֶת הַגִּידִים, וְצוֹמֶת הַגִּידִים בְּלֹא רְכוּבָּה"]:::answer
+  Q2{"④ וְהָא ׳נֶחְתְּכוּ׳ קָתָנֵי! אִישְׁתִּיק"}:::question
+  S3["⑤ לְבָתַר דִּנְפַק … ׳לְמַעְלָה׳ – לְמַעְלָה מִצּוֹמֶת הַגִּידִין?"]:::statement
+  S4["⑥ הֲדַר אָמַר … הָכָא נָמֵי ׳מִן הָאַרְכּוּבָּה וּלְמַעְלָה׳ קָתָנֵי"]:::statement
+  S5["⑦ רַב פָּפָּא מַתְנֵי הָכִי … לְמַטָּה מִן הָאַרְכּוּבָּה וּמִצּוֹמֶת הַגִּידִין … כִּדְעוּלָּא"]:::statement
+  Q3{"⑧ וּמִי אִיכָּא מִידֵּי, דְּאִילּוּ מִדְּלֵי פָּסֵיק לֵיהּ וַחֲיָה, מְתַתֵּי פָּסֵיק לֵיהּ וּמֵתָה?"}:::question
+  A2["⑨ אָמַר רַב אָשֵׁי: אֵין אוֹמְרִין בִּטְרֵפוֹת זוֹ דּוֹמָה לָזוֹ … חוֹתְכָהּ מִכָּאן וָמֵתָה, חוֹתְכָהּ מִכָּאן וְחַיָּה"]:::answer
+  S1 -->|מול| S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|נחתכו קתני| Q2
+  Q2 -->|הרהור| S3
+  S3 -->|חזרה בו| S4
+  S4 -->|גרסת רב פפא| S5
+  S5 -.->|קושיא| Q3
+  Q3 -->|יישוב| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ו א — Chullin 76a:3</span></div>
+    <div class="orig">גְּמָ׳ אָמַר רַב יְהוּדָה אָמַר רַב אָמַר רַבִּי חִיָּיא: לְמַטָּה – לְמַטָּה מִן הָאַרְכּוּבָּה, לְמַעְלָה – לְמַעְלָה מִן הָאַרְכּוּבָּה. בְּאֵיזוֹ אַרְכּוּבָּה אָמְרוּ? בְּאַרְכּוּבָּה הַנִּמְכֶּרֶת עִם הָרֹאשׁ.</div>
+    <div class="trans" data-when="he">גמרא: רב יהודה בשם רב בשם ר׳ חייא: ״למטה״ שבמשנה — למטה מן הארכובה, ״למעלה״ — למעלה מן הארכובה. ובאיזו ארכובה מדובר? בארכובה התחתונה, ה״נמכרת עם הראש״ — היא חיבור עצם השוק התחתון לעצם האמצעי. נמצא שטריפה רק אם נחתך בעצם האמצעי או העליון.</div>
+    <div class="trans" data-when="en">GEMARA: Rav Yehuda says that Rav says that Rabbi Ḥiyya says: When the mishna makes reference to the leg being severed from the leg joint and below, it means that the cut was below the leg joint, and when it says that if it was severed from the leg joint and above it is a tereifa, it means that the cut was above the leg joint. And with regard to which leg joint did they say this? With regard to the leg joint that is sold together with the head of the animal. This is the lower leg joint that connects the lower bone, or metatarsus, and middle bone, or tibia. Accordingly, the animal is a tereifa only if the leg was severed in the middle bone or upper bone.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ו א — Chullin 76a:4</span></div>
+    <div class="orig">עוּלָּא אָמַר רַבִּי אוֹשַׁעְיָא: כְּנֶגְדּוֹ בְּגָמָל נִיכָּר.</div>
+    <div class="trans" data-when="he">עולא בשם ר׳ אושעיא חולק: המשנה מדברת על הארכובה העליונה — זו שבדרך כלל אינה ניכרת מבחוץ, אך בגמל היא בולטת. היא חיבור עצם הירך העליון לעצם האמצעי. נמצא שטריפה רק אם נחתך בעצם העליון.</div>
+    <div class="trans" data-when="en">Ulla says that Rabbi Oshaya says: The mishna is referring to the leg joint that in most animals cannot be seen from the outside, but the corresponding joint in the leg of a camel is prominent and conspicuous. This is referring to the joint between the upper bone, or femur, and middle bone, or tibia. Accordingly, the animal is a tereifa only if it was severed in the upper bone.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ו א — Chullin 76a:5</span></div>
+    <div class="orig">אֲמַר לֵיהּ עוּלָּא לְרַב יְהוּדָה: בִּשְׁלָמָא לְדִידִי דְּאָמֵינָא כְּנֶגְדּוֹ בְּגָמָל נִיכָּר, הַיְינוּ דְּקָתָנֵי: וְכֵן שֶׁנִּיטַּל צוֹמֶת הַגִּידִין, אֶלָּא לְדִידָךְ, מַאי וְכֵן שֶׁנִּיטַּל צוֹמֶת הַגִּידִין?</div>
+    <div class="trans" data-when="he">עולא מקשה על רב יהודה: לשיטתי שהארכובה היא העליונה — חיתוך בעצם האמצעי אינו מטריף, ולכן צריך המשנה להוסיף ״וכן צומת הגידין״ ללמד שניטל צומת הגידין (שבעצם האמצעי) מטריף. אך לשיטתך שהארכובה התחתונה, וכבר חיתוך באמצעי מטריף — מה מוסיף ״וכן צומת הגידין״?</div>
+    <div class="trans" data-when="en">Ulla said to Rav Yehuda: Granted, according to my opinion, as I say it means the joint whose corresponding joint in the leg of a camel is conspicuous, i.e., the upper joint, this explanation is consistent with that which the mishna teaches: And likewise, an animal whose convergence of sinews in the thigh was removed is not kosher. The convergence of sinews lies on the lower part of the middle bone. Since I hold that if the middle bone is severed, this does not render the animal a tereifa, it is necessary for the mishna to teach that nevertheless, if that bone was severed at the point of the convergence of sinews, this would render it a tereifa. But according to your opinion that the mishna is referring to the lower joint, and if the middle bone is severed, this renders the animal a tereifa, what is the purpose of teaching: And likewise, an animal whose convergence of sinews in the thigh was removed is not kosher?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ו א — Chullin 76a:6</span></div>
+    <div class="orig">אֲמַר לֵיהּ: רְכוּבָּה בְּלֹא צוֹמֶת הַגִּידִים, וְצוֹמֶת הַגִּידִים בְּלֹא רְכוּבָּה. וְהָא ״נֶחְתְּכוּ״ קָתָנֵי! אִישְׁתִּיק.</div>
+    <div class="trans" data-when="he">תירוץ רב יהודה: המשנה כוללת שני מקרים — חיתוך מעל הרכובה התחתונה בלא צומת הגידין, וניטל צומת הגידין בלא חיתוך הרכובה. הקשה עולא: והרי המשנה אומרת ״נחתכו״ — משמע חיתוך שלם, הכולל בהכרח גם את צומת הגידין! ורב יהודה שתק, שלא היה לו יישוב.</div>
+    <div class="trans" data-when="en">Rav Yehuda said to Ulla: According to my opinion, the mishna is referring to two cases: The first is where the leg was severed above the lower leg joint, in the middle bone, without the removal of the convergence of sinews in the thigh, and the second is where the convergence of sinews in the thigh was removed without the leg above the leg joint being severed. Ulla then asked Rav Yehuda: But the mishna teaches: Were severed, indicating that the leg was entirely severed, which perforce includes the convergence of sinews. Rav Yehuda was silent, as he did not have a resolution.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ו א — Chullin 76a:7</span></div>
+    <div class="orig">לְבָתַר דִּנְפַק אֲמַר: מַאי טַעְמָא לָא אֲמַרִי לֵיהּ, ״לְמַטָּה״ – לְמַטָּה מִן הָאַרְכּוּבָּה, ״לְמַעְלָה״ – לְמַעְלָה מִצּוֹמֶת הַגִּידִין?</div>
+    <div class="trans" data-when="he">לאחר שעולא יצא, אמר רב יהודה בלבו: למה לא תירצתי לו כך — ״למטה״ היינו למטה מן הארכובה התחתונה, ו״למעלה״ היינו בעצם האמצעי, מעל צומת הגידין? לפי זה היה צורך ללמד ש״צומת הגידין״ עצמו מטריף.</div>
+    <div class="trans" data-when="en">After Ulla left, Rav Yehuda said to himself: What is the reason that I did not say to him the following resolution: When the mishna states that if the leg was severed below the leg joint the animal is kosher, it means below the lower leg joint, and when it says that if it was severed above it is a tereifa, it means in the middle bone above the convergence of sinews in the thigh. Accordingly, it would still be necessary to teach that if the convergence of sinews in the thigh was removed, this would render it a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ו א — Chullin 76a:8</span></div>
+    <div class="orig">הֲדַר אָמַר: וְלָא אֲמַרִי לֵיהּ, וַאֲמַר לִי: ״נֶחְתְּכוּ״ קָתָנֵי? הָכָא נָמֵי, ״מִן הָאַרְכּוּבָּה וּלְמַעְלָה״ קָתָנֵי.</div>
+    <div class="trans" data-when="he">חזר רב יהודה והרהר: טוב שלא אמרתי לו זאת — שכן כשם שלקושיה הראשונה השיבני ״נחתכו קתני״, כך גם כאן היה דוחה: ״מן הארכובה ולמעלה״ קתני — לשון הכוללת את כל העצם האמצעי, ובכללו אזור צומת הגידין; ושוב היה התירוץ נדחה.</div>
+    <div class="trans" data-when="en">Rav Yehuda then said to himself: It is good that I did not suggest this resolution, as did I not initially say a resolution to him, and he said to me that it was refuted by the fact that the mishna teaches: Were severed, which clearly indicates that it was severed completely? Here too, he could have said: You cannot explain the mishna as referring only to severing the leg above the convergence of sinews, as the mishna teaches: From the lower leg joint and above, which clearly includes the entire middle bone, including the area of the convergence of sinews.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ו א — Chullin 76a:9</span></div>
+    <div class="orig">רַב פָּפָּא מַתְנֵי הָכִי: אָמַר רַב יְהוּדָה אָמַר רַב אָמַר רַבִּי חִיָּיא: ״לְמַטָּה״ – לְמַטָּה מִן הָאַרְכּוּבָּה וּמִצּוֹמֶת הַגִּידִין, ״לְמַעְלָה״ – לְמַעְלָה מִן הָאַרְכּוּבָּה וּמִצּוֹמֶת הַגִּידִין, וְכֵן שֶׁנִּיטַּל צוֹמֶת הַגִּידִין. וְאַרְכּוּבָּה גּוּפַהּ כִּדְעוּלָּא אָמַר רַבִּי אוֹשַׁעְיָא.</div>
+    <div class="trans" data-when="he">רב פפא שונה את הדברים אחרת: רב יהודה בשם רב בשם ר׳ חייא: ״למטה״ — למטה משניהם, מן הארכובה ומצומת הגידין (העצם התחתון); ״למעלה״ — למעלה משניהם (העצם העליון). והמשנה מוסיפה שבעצם האמצעי טריפה רק אם ניטל צומת הגידין. והארכובה עצמה — כעולא בשם ר׳ אושעיא, היא העליונה.</div>
+    <div class="trans" data-when="en">Rav Pappa teaches the previous discussion like this: Rav Yehuda says that Rav says that Rabbi Ḥiyya says: When the mishna refers to severing the leg below, it means severing below both the leg joint and the convergence of sinews in the thigh, i.e., the lower bone was severed, and when it refers to severing the leg above, it means severing above both the leg joint and the convergence of sinews in the thigh, i.e., the upper bone was severed. And then the mishna adds that with regard to the middle bone, it is only a tereifa when the convergence of sinews was removed. And this explanation assumes that the leg joint itself is referring to the upper leg joint, in accordance with that which Ulla said that Rabbi Oshaya said, i.e., that it means the joint whose corresponding joint in the leg of a camel is conspicuous.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ו א — Chullin 76a:10</span></div>
+    <div class="orig">וּמִי אִיכָּא מִידֵּי, דְּאִילּוּ מִדְּלֵי פָּסֵיק לֵיהּ וַחֲיָה, מְתַתֵּי פָּסֵיק לֵיהּ וּמֵתָה?</div>
+    <div class="trans" data-when="he">קושיא על רב פפא: וכי ייתכן דבר כזה — שאם חותך גבוה יותר (בעצם האמצעי מעל צומת הגידין) הבהמה חיה, ואם חותך נמוך יותר (על צומת הגידין) היא מתה? תמוה שחיתוך נרחב יותר יזיק פחות.</div>
+    <div class="trans" data-when="en">The Gemara questions Rav Pappa’s explanation of the opinions of Ulla and Rav Yehuda: But is there any possibility that if one went higher up the leg and severed the middle bone above the convergence of sinews, it would live, i.e., the animal would not be a tereifa, but if one went down the leg and severed it on the convergence of sinews, it would be a tereifa and would die within twelve months? It is illogical that severing more of the leg is less life-threatening for the animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״ו א — Chullin 76a:11</span></div>
+    <div class="orig">אָמַר רַב אָשֵׁי: טְרֵפוֹת קָא מְדַמֵּית לַהֲדָדֵי? אֵין אוֹמְרִין בִּטְרֵפוֹת זוֹ דּוֹמָה לָזוֹ, שֶׁהֲרֵי חוֹתְכָהּ מִכָּאן וָמֵתָה, חוֹתְכָהּ מִכָּאן וְחַיָּה.</div>
+    <div class="trans" data-when="he">יישוב רב אשי: וכי מדמים טריפות זו לזו? אין אומרים בדיני טריפות ״זו דומה לזו״, שכן אֵיברים שונים מגיבים אחרת — חותכה במקום אחד ומתה, וחותכה במקום אחר (אף נרחב יותר) וחיה.</div>
+    <div class="trans" data-when="en">Rav Ashi said: Are you comparing different types of tereifot to one another? One cannot say with regard to tereifot that this is similar to that, as different areas of an animal’s body react differently: One cuts it from here, at a low point on the animal’s body, and it could die; and one cuts it from there, at a higher point, and it could live.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">מהו ומהיכן עד היכן צומת הגידין</span><span data-when="en">What the convergence of sinews is, and how far it runs</span>
+      <span class="ref">Chullin 76a:12–76b:1</span></h2>
+  <div class="lead"><span data-when="he">היכן מתחיל צומת הגידין (מחלוקת אמוראים בשם רב אשי ורב אסי), עד היכן הוא נמשך, וסימני הגידים שהם בכלל הצומת.</span><span data-when="en">Where the convergence of sinews begins (amoraic dispute), how far it extends, and the marks of which sinews belong to it.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ואלו הן צומת הגידין? שלוש דעות בשם רב אשי/רב אסי"}:::question
+  S1["② תלמיד: דערקומא גופה · ר׳ אבא: לא תציתו לו — היכא דפרעי טבחי"]:::statement
+  Q2{"③ רב יהודה בשם שמואל: מקום שהגידין צומתין — ועד כמה?"}:::question
+  A1["③ רב יעקב בשם שמואל: ממקום שצומתין עד מקום שמתפשטין"]:::answer
+  S2["④ אביי: ארבעה טפחים בשור; בדקה — בולטים כן, בלועים לא"]:::statement
+  S3["⑤ אביי: קשים/עבים/לבנים — צומת; רכים/דקים/לא לבנים — לא"]:::statement
+  S4["⑥ מר בר רב אשי: כיון שצלולים — אף שאינם לבנים"]:::statement
+  Q1 -->|דחיית קצה| S1
+  S1 -->|הגדרה| Q2
+  Q2 -->|תירוץ| A1
+  A1 -->|שיעור| S2
+  S2 -->|סימנים| S3
+  S3 -->|הוספה| S4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① Which are the convergence of sinews? Three views from Rav Ashi/Rav Asi"}:::question
+  S1["② A student: the arkum bone itself · R. Abba: do not heed him — where butchers split"]:::statement
+  Q2{"③ Rav Yehuda (Shmuel): where the sinews converge — and how far?"}:::question
+  A1["③ Rav Yaakov (Shmuel): from where they converge until they diverge"]:::answer
+  S2["④ Abaye: four handbreadths in an ox; in a small animal — prominent yes, subsumed no"]:::statement
+  S3["⑤ Abaye: hard/thick/white — convergence; soft/thin/not-white — not"]:::statement
+  S4["⑥ Mar bar Rav Ashi: once translucent — even if not white"]:::statement
+  Q1 -->|edge rejected| S1
+  S1 -->|definition| Q2
+  Q2 -->|answer| A1
+  A1 -->|measure| S2
+  S2 -->|marks| S3
+  S3 -->|added| S4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① וְאֵלּוּ הֵן צוֹמֶת הַגִּידִין? … דְּאַגַּרְמָא וּלְבַר … דְּאַגַּרְמָא וּלְגָיו … דְּעִילָּוֵי עַרְקוּמָא"}:::question
+  S1["② דְּעַרְקוּמָא גּוּפַהּ … לָא תְּצִיתוּ לֵיהּ … הֵיכָא דְּפָרְעִי טַבָּחֵי"]:::statement
+  Q2{"③ אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: מְקוֹם שֶׁהַגִּידִין צוֹמְתִין, וְעַד כַּמָּה?"}:::question
+  A1["③ מִמְּקוֹם שֶׁצּוֹמְתִין עַד מְקוֹם שֶׁמִּתְפַּשְּׁטִין"]:::answer
+  S2["④ אָמַר אַבָּיֵי: אַרְבָּעָה בַּטְדֵי בְּתוֹרָא … בְּלִיטִי הָווּ … בְּלִיעִי לָא הָווּ"]:::statement
+  S3["⑤ אַשּׁוּנֵי הָווּ … רַכִּיכֵי לָא … אַלִּימֵי הָווּ … קַטִּינֵי לָא … חִוָּורֵי הָווּ … לָא חִוָּורֵי לָא"]:::statement
+  S4["⑥ מָר בַּר רַב אָשֵׁי אָמַר: כֵּיוָן דְּזִיגִי – אַף עַל גַּב דְּלָא חִוָּורֵי"]:::statement
+  Q1 -->|דחיית קצה| S1
+  S1 -->|הגדרה| Q2
+  Q2 -->|תירוץ| A1
+  A1 -->|שיעור| S2
+  S2 -->|סימנים| S3
+  S3 -->|הוספה| S4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ו א — Chullin 76a:12</span></div>
+    <div class="orig">וְאֵלּוּ הֵן צוֹמֶת הַגִּידִין? רַבָּה אָמַר רַב אָשֵׁי: דְּאַגַּרְמָא וּלְבַר, רַבָּה בַּר רַב הוּנָא אָמַר רַב אָשֵׁי: דְּאַגַּרְמָא וּלְגָיו, רָבָא בְּרֵיהּ דְּרַבָּה בַּר רַב הוּנָא אָמַר רַב אַסִּי: דְּעִילָּוֵי עַרְקוּמָא.</div>
+    <div class="trans" data-when="he">ואלו הם הגידים שבכלל ״צומת הגידין״ שניטלם מטריף? שלוש דעות: רבה בשם רב אשי — הגידים שמן העצם וכלפי חוץ; רבה בר רב הונא בשם רב אשי — אלו הסמוכים לעצם; רבא בריה דרבה בר רב הונא בשם רב אסי — אף אלו שמעל עצם ה״ערקום״ (עצם קטן שבין העצם התחתון לאמצעי).</div>
+    <div class="trans" data-when="en">§ The Gemara asks: And which parts are included in the convergence of sinews in the thigh, such that if they are removed it renders the animal a tereifa? The sinews at the bottom of the bone cleave to it, as there is no flesh on that part of the bone. A short distance above that they separate from the bone and then they diverge from each other as they enter the flesh. Rabba says that Rav Ashi says: Those which are off the bone, before they diverge. Rabba bar Rav Huna says that Rav Ashi says: Those which are adjacent to the bone. Rava, son of Rabba bar Rav Huna, says that Rav Asi says: The convergence of sinews begins even lower and includes those which are above the arkum bone, a small bone that lies between the lower bone and the middle bone of the leg.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ו א — Chullin 76a:13</span></div>
+    <div class="orig">יָתֵיב הָהוּא מֵרַבָּנַן קַמֵּיהּ דְּרַבִּי אַבָּא, וְיָתֵיב וְקָאָמַר: דְּעַרְקוּמָא גּוּפַהּ. אֲמַר לֵיהּ רַבִּי אַבָּא: לָא תְּצִיתוּ לֵיהּ, הָכִי אָמַר רַב יְהוּדָה: הֵיכָא דְּפָרְעִי טַבָּחֵי. וְהַיְינוּ רָבָא בְּרֵיהּ דְּרַבָּה בַּר רַב הוּנָא אָמַר רַב אַסִּי.</div>
+    <div class="trans" data-when="he">אחד החכמים ישב לפני ר׳ אבא ואמר: צומת הגידין כולל אף את גידי עצם הערקום עצמו. אמר להם ר׳ אבא: אל תשמעו לו (זו דעה מחמירה מדי); כך אמר רב יהודה — צומת הגידין הוא במקום שהטבחים פותחים בו את הרגל. ודין זה כדעת רבא בריה דרבה בר רב הונא בשם רב אסי.</div>
+    <div class="trans" data-when="en">The Gemara relates: One of the Sages sat before Rabbi Abba, and he sat and said: The convergence of sinews includes the sinews of the arkum bone itself. Rabbi Abba said to his students: Do not listen to that Sage, as his ruling is too stringent. This is what Rav Yehuda said: It is in the place where butchers split open the animal’s leg. The Gemara comments: And this is the same as that which Rava, son of Rabba bar Rav Huna, says that Rav Asi says, i.e., that it includes the sinews above the arkum.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ו א — Chullin 76a:14</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: צוֹמֶת הַגִּידִים שֶׁאָמְרוּ – מְקוֹם שֶׁהַגִּידִין צוֹמְתִין, וְעַד כַּמָּה? אֲמַר לֵיהּ הָהוּא מִדְּרַבָּנַן, וְרַב יַעֲקֹב שְׁמֵיהּ: כִּי הֲוֵינַן בֵּי רַב יְהוּדָה אֲמַר לַן: שְׁמַעוּ מַנִּי מִלְּתָא דְּמִגַּבְרָא רַבָּה שְׁמִיעַ לִי, וּמַנּוּ? שְׁמוּאֵל: צוֹמֶת הַגִּידִין שֶׁאָמְרוּ – מְקוֹם שֶׁהַגִּידִין צוֹמְתִין בּוֹ, וּמִמְּקוֹם שֶׁצּוֹמְתִין עַד מְקוֹם שֶׁמִּתְפַּשְּׁטִין.</div>
+    <div class="trans" data-when="he">רב יהודה בשם שמואל: ״צומת הגידין״ — המקום שבו הגידים מתקבצים ונראים כאחד. ועד היכן הוא נמשך? רב יעקב מסר בשם רב יהודה בשם שמואל: ממקום שהגידים צומתין (מתקבצים) עד המקום שבו הם מתפשטים ונבלעים בתוך הבשר.</div>
+    <div class="trans" data-when="en">Rav Yehuda says that Shmuel says: The convergence of sinews in the thigh that they spoke of in the mishna is the place where the sinews converge and appear as though they are a single entity. The Gemara asks: And until how far does it extend? One of the Sages, and his name is Rav Ya’akov, said to them: When we were studying in the school of Rav Yehuda, he said to us: Hear from me a matter that I heard from a great man, and who is he? Shmuel. The convergence of sinews that they spoke of is the place where the sinews converge, and it extends from the place where they converge until the place where they diverge and are subsumed within the flesh.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ו א — Chullin 76a:15</span></div>
+    <div class="orig">וְכַמָּה? אָמַר אַבָּיֵי: אַרְבָּעָה בַּטְדֵי בְּתוֹרָא. בְּדַקָּה מַאי? אָמַר אַבָּיֵי: בְּלִיטִי – הָווּ צוֹמֶת הַגִּידִים, בְּלִיעִי – לָא הָווּ צוֹמֶת הַגִּידִים.</div>
+    <div class="trans" data-when="he">וכמה אורך יש לצומת הגידין? אביי: ארבעה טפחים בשור. ובבהמה דקה (כבש ועז)? אביי: אין שיעור קבוע — כל זמן שהגידים בולטים ואינם נבלעים בבשר, הם בכלל צומת הגידין; משנבלעו — אינם.</div>
+    <div class="trans" data-when="en">The Gemara asks: And how far is this? Abaye said: Four handbreadths in an ox. The Gemara asks: What is the measure in a small domesticated animal? Abaye said: There is no set measure; rather, as long as the sinews are prominent and are not subsumed within the flesh, they are part of the convergence of sinews in the thigh, but once they are subsumed they are not considered part of the convergence of sinews in the thigh.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ו א — Chullin 76a:16</span></div>
+    <div class="orig">אַשּׁוּנֵי – הָווּ צוֹמֶת הַגִּידִים, רַכִּיכֵי – לָא הָווּ צוֹמֶת הַגִּידִים, אַלִּימֵי – הָווּ צוֹמֶת הַגִּידִים, קַטִּינֵי – לָא הָווּ צוֹמֶת הַגִּידִים, חִוָּורֵי – הָווּ צוֹמֶת הַגִּידִים, לָא חִוָּורֵי – לָא הָווּ צוֹמֶת הַגִּידִים.</div>
+    <div class="trans" data-when="he">המשך סימני אביי: גידים קשים — בכלל צומת הגידין, רכים — אינם; עבים — בכלל, דקים — אינם; לבנים — בכלל, שאינם לבנים — אינם.</div>
+    <div class="trans" data-when="en">Abaye adds: The sinews that are hard are part of the convergence of sinews in the thigh; those that are soft are not part of the convergence of sinews. Those that are thick are part of the convergence of sinews; those that are thin are not part of the convergence of sinews. Those that are white are part of the convergence of sinews; those that are not white are not part of the convergence of sinews.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ו ב — Chullin 76b:1</span></div>
+    <div class="orig">מָר בַּר רַב אָשֵׁי אָמַר: כֵּיוָן דְּזִיגִי – אַף עַל גַּב דְּלָא חִוָּורֵי.</div>
+    <div class="trans" data-when="he">מר בר רב אשי מוסיף: כיון שהגידים צלולים (שקופים), הרי הם בכלל צומת הגידין — אף על פי שאינם לבנים ממש.</div>
+    <div class="trans" data-when="en">Mar bar Rav Ashi said: Once the sinews begin to be translucent, even if they are not actually white, they are considered part of the convergence of sinews.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">כמה חוטים, וכמה מהם נפסקים</span><span data-when="en">How many strands, and how many must sever</span>
+      <span class="ref">Chullin 76b:2–6</span></h2>
+  <div class="lead"><span data-when="he">בבהמה שלושה חוטים (אחד עבה, שניים דקים), בעוף שישה־עשר; וכמה צריך להיפסק כדי להטריף — מחלוקת רב, שמואל ורבנאי.</span><span data-when="en">In an animal three strands (one thick, two thin), in a bird sixteen; and how much must sever to render a tereifa — Rav, Shmuel and Rabbenai differ.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אמימר בשם רב זביד: שלושה חוטים, אחד עבה ושניים דקים — רוב בניין/רוב מניין; מר בר רב אשי לקולא"]:::statement
+  S2["② בעופות שישה־עשר חוטים, נפסק אחד — טריפה; מעשה ברב אשי"]:::statement
+  S3["③ רב יהודה בשם רב: ׳ברובו׳ — רוב אחד מהם · שמואל: והרי נשארו תרי"]:::statement
+  Q1{"④ דיוק: דווקא דאיכא תרי — ופליגא דרבנאי: אפילו כחוט הסרבל כשרה"}:::question
+  S4["⑤ ואיכא דאמרי: ׳רובו׳ — רוב כל אחד; שמואל: מסייע לרבנאי"]:::statement
+  S1 -->|בעוף| S2
+  S2 -->|רוב| S3
+  S3 -.->|דיוק וחולק| Q1
+  Q1 -->|לישנא אחרינא| S4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Ameimar (Rav Zevid): three strands, one thick two thin — majority of structure/number; Mar bar Rav Ashi leniently"]:::statement
+  S2["② In birds sixteen strands, one severed — tereifa; Rav Ashi׳s case"]:::statement
+  S3["③ Rav Yehuda (Rav): ׳its majority׳ — majority of one · Shmuel: but two remain"]:::statement
+  Q1{"④ Inference: only since two remain — and differs with Rabbenai: even a cloak-string remains, kosher"}:::question
+  S4["⑤ Some say: ׳its majority׳ — majority of each; Shmuel: supports Rabbenai"]:::statement
+  S1 -->|in a bird| S2
+  S2 -->|majority| S3
+  S3 -.->|inference, dissent| Q1
+  Q1 -->|other version| S4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אָמַר אַמֵּימָר מִשְּׁמֵיהּ דְּרַב זְבִיד: תְּלָתָא חוּטֵי הָווּ … אִיפְּסִיק אַלִּימָא אַזְדָּא רוֹב בִּנְיָן … מָר בַּר רַב אָשֵׁי מַתְנֵי לְקוּלָּא"]:::statement
+  S2["② בְּעוֹפוֹת שִׁיתְּסַר חוּטֵי הָווּ, אִיפְּסִיק חַד מִינַּיְיהוּ – טְרֵפָה … וְאַשְׁכַּח בֵּיהּ חֲמֵיסַר"]:::statement
+  S3["③ אָמַר רַב יְהוּדָה אָמַר רַב … מַאי רוּבּוֹ? רוֹב אֶחָד מֵהֶן … מִכְּדֵי תְּלָתָא הָווּ … הָא אִיכָּא תְּרֵי"]:::statement
+  Q1{"④ טַעְמָא דְּאִיכָּא תְּרֵי … וּפְלִיגָא דְּרַבְנַאי … אֲפִילּוּ … כְּחוּט הַסַּרְבָּל – כְּשֵׁרָה"}:::question
+  S4["⑤ וְאִיכָּא דְּאָמְרִי: מַאי רוּבּוֹ? רוֹב כׇּל אֶחָד וְאֶחָד … מְסַיַּיע לֵיהּ לְרַבְנַאי"]:::statement
+  S1 -->|בעוף| S2
+  S2 -->|רוב| S3
+  S3 -.->|דיוק וחולק| Q1
+  Q1 -->|לישנא אחרינא| S4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ו ב — Chullin 76b:2</span></div>
+    <div class="orig">אָמַר אַמֵּימָר מִשְּׁמֵיהּ דְּרַב זְבִיד: תְּלָתָא חוּטֵי הָווּ, חַד אַלִּימָא וּתְרֵי קַטִּינֵי. אִיפְּסִיק אַלִּימָא – אַזְדָּא רוֹב בִּנְיָן, אִיפְּסִיק קַטִּינֵי – אַזְדָּא רוֹב מִנְיָן. מָר בַּר רַב אָשֵׁי מַתְנֵי לְקוּלָּא: אִיפְּסִיק אַלִּימָא – הָאִיכָּא רוֹב מִנְיָן, אִיפְּסִיק קַטִּינֵי – הָאִיכָּא רוֹב בִּנְיָן.</div>
+    <div class="trans" data-when="he">אמימר בשם רב זביד: צומת הגידין שלושה חוטים — אחד עבה ושניים דקים. נפסק העבה — הלך ״רוב בניין״ (שהוא עבה משניהם); נפסקו הדקים — הלך ״רוב מניין״; בשני המקרים טריפה. מר בר רב אשי שונה לקולא: נפסק העבה — עדיין יש רוב מניין (שני הדקים); נפסקו הדקים — עדיין יש רוב בניין (העבה); ובשני המקרים כשרה.</div>
+    <div class="trans" data-when="en">§ With regard to the removal of the convergence of sinews in the thigh, which renders the animal a tereifa, Ameimar says in the name of Rav Zevid: There are three strands, i.e., sinews; one is thick and the other two are thin. If the thick sinew was severed, a majority of the structure of the convergence of sinews is gone, as the thick sinew is thicker than the other two combined. If the thin ones were severed, then a majority of the number of sinews is gone. If either type of majority has been severed, the animal is rendered a tereifa. Conversely, Mar bar Rav Ashi teaches a lenient version of this ruling: If the thick sinew was severed, since there is a majority of the number of sinews that remains, the animal is not a tereifa. Likewise, if the thin ones were severed, since there is a majority of the structure that remains intact, the animal is not a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ו ב — Chullin 76b:3</span></div>
+    <div class="orig">בְּעוֹפוֹת שִׁיתְּסַר חוּטֵי הָווּ, אִיפְּסִיק חַד מִינַּיְיהוּ – טְרֵפָה. אָמַר מָר בַּר רַב אָשֵׁי: הֲוָה קָאֵימְנָא קַמֵּיהּ דְּאַבָּא, וְאַיְיתוֹ לְקַמֵּיהּ עוֹפָא, וּבְדַק וְאַשְׁכַּח בֵּיהּ חֲמֵיסַר. הֲוָה חַד דַּהֲוָה שָׁנֵי מֵחַבְרֵיהּ, נַפְּצֵיהּ וְאַשְׁכַּח תְּרֵי.</div>
+    <div class="trans" data-when="he">בעופות שישה־עשר חוטים, ונפסק אחד מהם — טריפה. מר בר רב אשי סיפר: עמדתי לפני אבי (רב אשי), והביאו לפניו עוף, ובדק ומצא בו חמישה־עשר חוטים בלבד. היה אחד שונה מחבריו; פירקוֹ ומצא שהוא בעצם שני חוטים — והרי שישה־עשר.</div>
+    <div class="trans" data-when="en">The Gemara comments: All this applies to animals, whereas with regard to birds, there are sixteen strands; if even one of them is severed, it is a tereifa. Mar bar Rav Ashi said: I was standing before father, i.e., Rav Ashi, and they brought before him a bird, and he examined it to see if it was a tereifa and found fifteen sinews. There was one of them that was different from the others; he broke it apart and it was found to be composed of two sinews.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ו ב — Chullin 76b:4</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה אָמַר רַב: צוֹמֶת הַגִּידִין שֶׁאָמְרוּ בְּרוּבּוֹ; מַאי רוּבּוֹ? רוֹב אֶחָד מֵהֶן. כִּי אַמְרִיתַהּ קַמֵּיהּ דִּשְׁמוּאֵל, אָמַר לִי: מִכְּדֵי תְּלָתָא הָווּ, כִּי מִיפְּסִיק חַד מִינַּיְיהוּ לִגְמָרֵי, הָא אִיכָּא תְּרֵי.</div>
+    <div class="trans" data-when="he">רב יהודה בשם רב: צומת הגידין שאמרו שמטריף — בנפסק ״רובו״. ומהו ״רובו״? רוב אחד מן החוטים. רב יהודה: כשאמרתי זאת לפני שמואל אמר לי: הרי שלושה חוטים הם, וכשנפסק אחד מהם לגמרי עדיין נשארו שניים — ולכן כשרה (בעי רוב מניין שלם).</div>
+    <div class="trans" data-when="en">The Gemara returns to the issue of the convergence of sinews in an animal. Rav Yehuda says that Rav says: The convergence of sinews in the thigh of which the Sages spoke, stating that if it is severed the animal is a tereifa, is referring to the severing of the majority of it. Rav Yehuda added: What is the meaning of the majority of it? This means the majority of one of the sinews. Rav Yehuda further stated: When I stated this halakha in the name of Rav before Shmuel, he said to me: Since they are three sinews, when one of them is severed entirely, there are still two remaining, which means that the majority of the convergence of sinews is intact. Therefore, the animal is still kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ו ב — Chullin 76b:5</span></div>
+    <div class="orig">טַעְמָא דְּאִיכָּא תְּרֵי, הָא לֵיכָּא תְּרֵי – לָא, וּפְלִיגָא דְּרַבְנַאי, דְּאָמַר רַבְנַאי אָמַר שְׁמוּאֵל: צוֹמֶת הַגִּידִים, אֲפִילּוּ לֹא נִשְׁתַּיֵּיר בָּהּ אֶלָּא כְּחוּט הַסַּרְבָּל – כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">דיוק מדברי שמואל: הטעם שכשרה הוא שנשארו שניים שלמים, הא אם אין שניים — טריפה. ובזה חולק שמואל על רבנאי, שאף הוא אמר בשם שמואל: צומת הגידין, אפילו לא נשתייר ממנה אלא כעובי חוט הסרבל (החוט שסוגרים בו צוארון המעיל) — כשרה.</div>
+    <div class="trans" data-when="en">The Gemara infers from Shmuel’s statement: The reason the animal is not a tereifa is only that there are two remaining, from which it may be inferred that if there are not two remaining it is not kosher, despite the fact that the other sinew is intact. The Gemara notes: And according to this version of his opinion, Shmuel disagrees with the opinion of Rabbenai, who also stated his ruling in Shmuel’s name. As Rabbenai says that Shmuel says: With regard to the convergence of sinews in the thigh, even if only one sinew remains of it, which is as thick as the string used to close the neckline of a cloak [hasarbal], the animal is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ו ב — Chullin 76b:6</span></div>
+    <div class="orig">וְאִיכָּא דְּאָמְרִי: מַאי רוּבּוֹ? רוֹב כׇּל אֶחָד וְאֶחָד. כִּי אַמְרִיתַהּ קַמֵּיהּ דִּשְׁמוּאֵל, אָמַר לִי: מִכְּדֵי תְּלָתָא הָווּ, הָאִיכָּא תְּלָתָא דְּכֹל חַד וְחַד מְסַיַּיע לֵיהּ לְרַבְנַאי, דְּאָמַר רַבְנַאי אָמַר שְׁמוּאֵל: צוֹמֶת הַגִּידִין שֶׁאָמְרוּ, אֲפִילּוּ לֹא נִשְׁתַּיֵּיר בָּהּ אֶלָּא כְּחוּט הַסַּרְבָּל – כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">גרסה אחרת: מהו ״רובו״? רוב כל אחד ואחד מן החוטים. רב יהודה: כשאמרתי זאת לפני שמואל אמר לי: הרי שלושה הם, ויש שליש מכל אחד ואחד — ודי בכך. ולפי גרסה זו שמואל מסייע לרבנאי שאמר בשמו: אפילו לא נשתייר אלא כחוט הסרבל — כשרה.</div>
+    <div class="trans" data-when="en">And some say that there is a different version of this discussion. Rav Yehuda said: What is the meaning of a majority of it? This means a majority of each and every one of the sinews. Rav Yehuda added: When I stated this halakha in the name of Rav before Shmuel, he said to me: Since they are three sinews, there is one-third of each and every one, and that should be sufficient. There is no need for a majority of each sinew to remain. The Gemara notes: Rav Yehuda’s statement in the name of Shmuel supports the opinion of Rabbenai, as Rabbenai says that Shmuel says: With regard to the convergence of sinews in the thigh of which the Sages spoke, even if there remains of each of the three sinews only as much as the thickness of the string used to close the neckline of a cloak, the animal is kosher. This also indicates that there is no need for a majority of the sinew to remain.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">נשבר העצם — רב מול שמואל</span><span data-when="en">The bone broke — Rav vs. Shmuel</span>
+      <span class="ref">Chullin 76b:7–11</span></h2>
+  <div class="lead"><span data-when="he">לרב: למעלה מן הארכובה, אם אין רוב בשר — אף הבהמה אסורה; לשמואל: לעולם רק האֵבר אסור והבהמה מותרת. רב נחמן מתקיף — ויישובו.</span><span data-when="en">For Rav: above the joint, if most flesh is gone, the animal too is forbidden; for Shmuel: always only the limb is forbidden. Rav Naḥman objects — and the resolution.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רב: למעלה — אין רוב בשר, זה וזה אסור; למטה — אבר אסור ובהמה מותרת"]:::statement
+  S2["② שמואל: בין למעלה בין למטה — אבר אסור, בהמה מותרת"]:::statement
+  Q1{"③ רב נחמן לשמואל: יאמרו ׳אבר מוטל באשפה ומותרת׳?"}:::question
+  Q2{"③ רב אחא בר רב הונא: גם לרב יקשה כן!"}:::question
+  A1["④ רב נחמן: כך אמרתי — אבר שחיה ממנה מוטל באשפה ומותרת (רק לשמואל)"]:::answer
+  S1 -->|מול| S2
+  S2 -.->|מתקיף| Q1
+  Q1 -.->|השוואה| Q2
+  Q2 -->|יישוב| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Rav: above — no majority of flesh, both forbidden; below — limb forbidden, animal permitted"]:::statement
+  S2["② Shmuel: above or below — limb forbidden, animal permitted"]:::statement
+  Q1{"③ Rav Naḥman to Shmuel: people will say ׳a limb in the garbage, yet permitted׳?"}:::question
+  Q2{"③ Rav Aḥa bar Rav Huna: this troubles Rav too!"}:::question
+  A1["④ Rav Naḥman: I meant — a limb the animal lives by, in garbage, yet permitted (only for Shmuel)"]:::answer
+  S1 -->|vs.| S2
+  S2 -.->|objects| Q1
+  Q1 -.->|comparison| Q2
+  Q2 -->|resolution| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אָמַר רַב: לְמַעְלָה מִן הָאַרְכּוּבָּה … וְאִם לָאו – זֶה וָזֶה אָסוּר. לְמַטָּה … אֵבֶר אָסוּר וּבְהֵמָה מוּתֶּרֶת"]:::statement
+  S2["② וּשְׁמוּאֵל אָמַר: בֵּין לְמַעְלָה בֵּין לְמַטָּה … אֵבֶר אָסוּר, וּבְהֵמָה מוּתֶּרֶת"]:::statement
+  Q1{"③ מַתְקֵיף לַהּ רַב נַחְמָן לִשְׁמוּאֵל: יֹאמְרוּ ׳אֵבֶר מִמֶּנָּה מוּטָּל בָּאַשְׁפָּה וּמוּתֶּרֶת׳?"}:::question
+  Q2{"③ אֲמַר לֵיהּ רַב אַחָא בַּר רַב הוּנָא … לְרַב נָמֵי יֹאמְרוּ … מוּטָּל בָּאַשְׁפָּה וּמוּתֶּרֶת!"}:::question
+  A1["④ הָכִי קָאָמֵינָא, אֵבֶר שֶׁחָיָה מִמֶּנָּה מוּטָּל בָּאַשְׁפָּה, וּמוּתֶּרֶת?"]:::answer
+  S1 -->|מול| S2
+  S2 -.->|מתקיף| Q1
+  Q1 -.->|השוואה| Q2
+  Q2 -->|יישוב| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ו ב — Chullin 76b:8</span></div>
+    <div class="orig">אָמַר רַב: לְמַעְלָה מִן הָאַרְכּוּבָּה, אִם רוֹב הַבָּשָׂר קַיָּים – זֶה וָזֶה מוּתָּר, וְאִם לָאו – זֶה וָזֶה אָסוּר. לְמַטָּה מִן הָאַרְכּוּבָּה, אִם רוֹב הַבָּשָׂר קַיָּים – זֶה וָזֶה מוּתָּר, אִם לָאו – אֵבֶר אָסוּר וּבְהֵמָה מוּתֶּרֶת.</div>
+    <div class="trans" data-when="he">רב מבאר את המשנה ״נשבר העצם״: נשבר למעלה מן הארכובה — אם רוב הבשר קיים, זה וזה (הבהמה והאֵבר) מותרים; ואם לאו — זה וזה אסורים (הבהמה טריפה). נשבר למטה מן הארכובה — אם רוב הבשר קיים, שניהם מותרים; ואם לאו — רק האֵבר אסור, אך הבהמה מותרת (שאין שבירה למטה מטריפה).</div>
+    <div class="trans" data-when="en">Rav says: If the bone was broken above the leg joint and then the animal was slaughtered, if a majority of the flesh around the break is intact, both this, the animal itself, and that, the limb, are permitted. The break does not render the animal a tereifa and the limb is not regarded as a hanging limb; therefore it is permitted by the slaughter of the animal. But if not, i.e., if a majority of the flesh around the break is not intact, both this and that, the animal and the limb, are prohibited. If the bone was broken below the leg joint, then if a majority of the flesh is intact, both this and that are permitted; if not, then the limb itself is prohibited from the area of the break and below, as it is not permitted by the slaughter of the animal, but the rest of the animal is permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ו ב — Chullin 76b:9</span></div>
+    <div class="orig">וּשְׁמוּאֵל אָמַר: בֵּין לְמַעְלָה בֵּין לְמַטָּה, אִם רוֹב הַבָּשָׂר קַיָּים – זֶה וָזֶה מוּתָּר, אִם לָאו – אֵבֶר אָסוּר, וּבְהֵמָה מוּתֶּרֶת.</div>
+    <div class="trans" data-when="he">שמואל חולק: בין שנשבר למעלה ובין שנשבר למטה — אם רוב הבשר קיים, זה וזה מותרים; ואם לאו, האֵבר אסור והבהמה מותרת. לדעתו אף שבירה למעלה מן הארכובה אינה מטריפה את הבהמה, אלא אם כן נחתך האֵבר לגמרי.</div>
+    <div class="trans" data-when="en">And Shmuel says: Whether the break is above or below the leg joint, the halakha is the same: If a majority of the flesh is intact, both this and that, the limb and the animal, are permitted. If the majority of the flesh is not intact, the limb is prohibited and the animal is permitted. Even if the leg was broken above the leg joint the animal does not become a tereifa unless the leg was entirely severed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ו ב — Chullin 76b:10</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב נַחְמָן לִשְׁמוּאֵל: יֹאמְרוּ ״אֵבֶר מִמֶּנָּה מוּטָּל בָּאַשְׁפָּה וּמוּתֶּרֶת״? אֲמַר לֵיהּ רַב אַחָא בַּר רַב הוּנָא לְרַב נַחְמָן: לְרַב נָמֵי יֹאמְרוּ ״אֵבֶר מִמֶּנָּה מוּטָּל בָּאַשְׁפָּה וּמוּתֶּרֶת״!</div>
+    <div class="trans" data-when="he">רב נחמן מקשה על שמואל: אם תתיר את הבהמה ואת האֵבר תאסור, יאמרו הבריות ״אֵבר ממנה מוטל באשפה, והיא עצמה מותרת״? — ויבואו להתיר אף כשנחתך האֵבר לגמרי. אמר לו רב אחא בר רב הונא: אם כן, אף לרב יקשה כן — שהרי בשבירה למטה רב מתיר את הבהמה ואוסר את האֵבר!</div>
+    <div class="trans" data-when="en">Rav Naḥman objects to this ruling of Shmuel: If one permits the animal despite the fact that its leg is prohibited, people will say: A limb from the animal is placed in the garbage, as it is prohibited, and yet the animal itself is permitted? They may then mistakenly conclude that even if that leg had been completely severed from the animal, the animal would be permitted. Rav Aḥa bar Rav Huna said to Rav Naḥman: This concern also exists according to the opinion of Rav, in a case where the bone is broken below the joint and the flesh is not intact. Rav rules in that case that the animal is permitted and the limb is prohibited. But is there not the concern that people will say: A limb from this animal is placed in the garbage, and the animal itself is permitted?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ו ב — Chullin 76b:11</span></div>
+    <div class="orig">אֲמַר לֵיהּ: הָכִי קָאָמֵינָא, אֵבֶר שֶׁחָיָה מִמֶּנָּה מוּטָּל בָּאַשְׁפָּה, וּמוּתֶּרֶת?</div>
+    <div class="trans" data-when="he">השיב רב נחמן: כך כיוונתי — שיאמרו ״אֵבר שאילו ניטל הבהמה תֶיעשה טריפה (׳שחיה ממנה׳) מוטל באשפה, והיא מותרת״. חשש זה קיים רק לשמואל, המתיר אף בשבירה למעלה מן הארכובה — מקום שחיתוך שלם בו מטריף; אך לרב, המתיר רק בשבירה למטה (שאין בה טריפה כלל), אין החשש.</div>
+    <div class="trans" data-when="en">Rav Naḥman said to him: This is what I meant to say: People will say: A limb from which this animal lives, i.e., which if removed, renders the animal a tereifa, is placed in the garbage, and the animal itself is permitted? The concern exists only according to the opinion of Shmuel, who permits the animal even when the break is above the joint, as were it severed there, the animal would thereby be rendered a tereifa. People may mistakenly equate the case where the bone was broken and the case where it was severed and permit both. The concern does not exist according to the opinion of Rav, as he permits the animal only in a case where the bone is broken below the joint, and even if it were severed there that would not render it a tereifa.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">ההלכה ששלחו מארץ ישראל</span><span data-when="en">The halakha sent from Eretz Yisrael</span>
+      <span class="ref">Chullin 76b:12–16</span></h2>
+  <div class="lead"><span data-when="he">שלחו מארץ ישראל הלכה ולבסוף — כרב; רב חסדא מקשה מברייתא ומשנה, ולמסקנה שמואל חזר בו לדעת רב.</span><span data-when="en">A ruling was sent from Eretz Yisrael, finally — like Rav; Rav Ḥisda objects from a baraita and a mishna, and in the end Shmuel retracted in favor of Rav.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שלחו מתם: כרב, כשמואל, ולבסוף כרב — והאבר מטמא במשא"]:::statement
+  Q1{"② רב חסדא מתיב מברייתא: שחיטת טריפה מטהרת אבר המדולדל"}:::question
+  A1["③ רבה: אותיב ממתניתין! הוכשרו בדמיה — ר׳ מאיר, ר׳ שמעון: לא הוכשרו"]:::answer
+  S2["④ רב חסדא: מתניתין איכא לדחויי, כדדחינן"]:::statement
+  C1["⑤ ר׳ זירא לרב ירמיה: יישר, וכן אריוך (שמואל) בבבל — הדר ביה שמואל לגבי רב"]:::conclusion
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|אותיב ממתניתין| A1
+  A1 -->|דחייה| S2
+  S2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Sent from there: like Rav, like Shmuel, finally like Rav — the limb imparts impurity by carrying"]:::statement
+  Q1{"② Rav Ḥisda objects from a baraita: slaughter of a tereifa purifies a hanging limb"}:::question
+  A1["③ Rabba: object from a mishna! ׳rendered susceptible by its blood׳ — R. Meir vs. R. Shimon"]:::answer
+  S2["④ Rav Ḥisda: the mishna can be refuted, as we refuted it"]:::statement
+  C1["⑤ R. Zeira to Rav Yirmeya: well said, and Aryokh (Shmuel) in Babylonia — Shmuel retracted to Rav"]:::conclusion
+  S1 -.->|objection| Q1
+  Q1 -->|object from a mishna| A1
+  A1 -->|refuted| S2
+  S2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שְׁלַחוּ מִתָּם: הִלְכְתָא כְּוָותֵיהּ דְּרַב … כְּוָותֵיהּ דִּשְׁמוּאֵל … כְּוָותֵיהּ דְּרַב, וְאֵבֶר עַצְמוֹ מְטַמֵּא בְּמַשָּׂא"]:::statement
+  Q1{"② מֵתִיב רַב חִסְדָּא: … טִיהֲרָה שְׁחִיטַת טְרֵפָה אוֹתָהּ וְאֶת הָאֵבֶר הַמְדוּלְדָּל בָּהּ … תְּטַהֵר אֶת הָעוּבָּר?"}:::question
+  A1["③ אֲמַר לֵיהּ רַבָּה … אוֹתֵיב מִמַּתְנִיתִין! … הוּכְשְׁרוּ בְּדָמֶיהָ … רַבִּי שִׁמְעוֹן אוֹמֵר: לֹא הוּכְשְׁרוּ"]:::answer
+  S2["④ מַתְנִיתִין אִיכָּא לְדַחוֹיֵי, כִּדְדָחֵינַן"]:::statement
+  C1["⑤ … יִישַׁר, וְכֵן תַּרְגְּמַהּ אַרְיוֹךְ בְּבָבֶל … הֲדַר בֵּיהּ שְׁמוּאֵל לְגַבֵּיהּ דְּרַב"]:::conclusion
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|אותיב ממתניתין| A1
+  A1 -->|דחייה| S2
+  S2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ו ב — Chullin 76b:12</span></div>
+    <div class="orig">שְׁלַחוּ מִתָּם: הִלְכְתָא כְּוָותֵיהּ דְּרַב, הֲדוּר שְׁלַחוּ: כְּוָותֵיהּ דִּשְׁמוּאֵל, הֲדוּר שְׁלַחוּ: כְּוָותֵיהּ דְּרַב, וְאֵבֶר עַצְמוֹ מְטַמֵּא בְּמַשָּׂא.</div>
+    <div class="trans" data-when="he">שלחו מארץ ישראל פסק במחלוקת: הלכה כרב (שלמעלה מן הארכובה, באין רוב בשר, הבהמה אסורה). חזרו ושלחו: כשמואל. שוב חזרו ושלחו: כרב — שהבהמה טריפה, והוסיפו שהאֵבר עצמו אינו מיטהר בשחיטה אלא מטמא טומאת אֵבר מן החי במשא.</div>
+    <div class="trans" data-when="en">§ With regard to this dispute, they sent a ruling from there, Eretz Yisrael: The halakha is in accordance with the opinion of Rav that if the bone was broken above the leg joint, if a majority of the flesh around the break is not intact, both the animal and the limb are prohibited. They then sent a ruling: The halakha is in accordance with the opinion of Shmuel that only the limb is prohibited. They then a ruling: The halakha is in accordance with the opinion of Rav that the animal is a tereifa, and they added that the limb itself is not rendered pure by the slaughter; rather, it imparts the impurity of a limb from a living animal by carrying. The animal itself, though, is rendered pure from the impurity of a carcass and is prohibited only as a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ו ב — Chullin 76b:13</span></div>
+    <div class="orig">מֵתִיב רַב חִסְדָּא: לֹא, אִם טִיהֲרָה שְׁחִיטַת טְרֵפָה אוֹתָהּ וְאֶת הָאֵבֶר הַמְדוּלְדָּל בָּהּ – דָּבָר שֶׁגּוּפָהּ, תְּטַהֵר אֶת הָעוּבָּר – דָּבָר שֶׁאֵינוֹ גּוּפָהּ?</div>
+    <div class="trans" data-when="he">רב חסדא מקשה מברייתא (מדף עג): ר׳ מאיר השיב לחכמים — לא! אם שחיטת טריפה מטהרת אותה ואת האֵבר המדולדל (תלוי) בה, שהם ״דבר שגופה״, וכי תטהר את העובר שאינו מגופה? — הרי שלכולי עלמא האֵבר המדולדל של טריפה מיטהר בשחיטה, ודלא כפסק ששלחו.</div>
+    <div class="trans" data-when="en">Rav Ḥisda raises an objection from a baraita cited earlier (73a) concerning whether the slaughter of a mother animal can render pure a limb of its fetus that was extended outside the womb even though the act of slaughter cannot render the fetus permitted for consumption. The Rabbis brought proof for their opinion that this limb is rendered pure from the halakha that a tereifa is rendered pure by slaughter even though it is not thereby permitted for consumption. Rabbi Meir responded: No, even if the slaughter of a tereifa renders the animal itself pure, and likewise, the slaughter of any animal renders pure the limb that was partially cut from it but still hangs from it from imparting the impurity of a carcass, despite the fact that this animal or limb is prohibited for consumption, that is so with regard to something that is part of its own body. Does it necessarily follow that it should also render pure the limb of its fetus, which is something that is not part of its own body? It is explicit in Rabbi Meir’s claim that the hanging limb of a tereifa is rendered pure by the slaughter of the animal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ו ב — Chullin 76b:14</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַבָּה: הַדּוֹרֵי אַפִּירְכֵי לְמָה לָךְ? אוֹתֵיב מִמַּתְנִיתִין! נִשְׁחֲטָה בְּהֵמָה – הוּכְשְׁרוּ בְּדָמֶיהָ, דִּבְרֵי רַבִּי מֵאִיר. רַבִּי שִׁמְעוֹן אוֹמֵר: לֹא הוּכְשְׁרוּ.</div>
+    <div class="trans" data-when="he">אמר לו רבה: למה לך לחפש קושיות מברייתות שאינן ידועות לכל? הקשֵה ממשנה מפורשת! אֵבר או בשר מדולדלים בבהמה שנשחטה — הוכשרו לקבל טומאה בדמהּ, דברי ר׳ מאיר; ר׳ שמעון אומר: לא הוכשרו. משמע שלכל הדעות אין דינם כאֵבר מן החי (שאינו צריך הכשר), אלא הם מיטהרים בשחיטה.</div>
+    <div class="trans" data-when="en">Rabba said to Rav Ḥisda: Why are you searching after refutations from baraitot that are not known by all? You can raise a conclusive refutation from the mishna (127b): With regard to the limb or flesh of an animal that was partially severed but remains hanging from it, if the animal was slaughtered, the limb and the flesh were thereby rendered susceptible to contracting the impurity of food by the blood of the animal, as blood is one of the seven liquids that render foods susceptible to impurity; this is the statement of Rabbi Meir. Rabbi Shimon says: They were not rendered susceptible with the blood of the slaughtered animal. It is evident that according to all opinions in the mishna, the hanging limb and flesh are not regarded as a limb or flesh from a living animal, which would not need to be rendered susceptible to impurity, as they impart their own impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ו ב — Chullin 76b:15</span></div>
+    <div class="orig">אֲמַר לֵיהּ: מַתְנִיתִין אִיכָּא לְדַחוֹיֵי, כִּדְדָחֵינַן.</div>
+    <div class="trans" data-when="he">השיב רב חסדא: את המשנה אפשר לדחות, כפי שדחינו אותה כבר לעיל (דף עג): המחלוקת אם הוכשר בדם נאמרה רק בבשר המדולדל, אך אֵבר מדולדל בבהמה ששחטוה אכן דינו כאֵבר מן החי. ולכן בחר להקשות דווקא מן הברייתא.</div>
+    <div class="trans" data-when="en">Rav Ḥisda said to Rabba: The difficulty from the mishna can be refuted, as we refuted it earlier (73a), by claiming that the dispute about the blood rendering the animal susceptible to impurity concerns only the hanging flesh, but that a hanging limb from an animal that was slaughtered does have the status of a limb from a living animal and the associated impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ו ב — Chullin 76b:16</span></div>
+    <div class="orig">כִּי סָלֵיק רַבִּי זֵירָא, אַשְׁכְּחֵיהּ לְרַב יִרְמְיָה דְּיָתֵיב וְקָאָמַר לַהּ לְהָא שְׁמַעְתָּא. אֲמַר לֵיהּ: יִישַׁר, וְכֵן תַּרְגְּמַהּ אַרְיוֹךְ בְּבָבֶל. אַרְיוֹךְ מַנּוּ? שְׁמוּאֵל. וְהָא מִיפְלָג פְּלִיג! הֲדַר בֵּיהּ שְׁמוּאֵל לְגַבֵּיהּ דְּרַב.</div>
+    <div class="trans" data-when="he">כשעלה ר׳ זירא לארץ ישראל, מצא את רב ירמיה יושב ואומר את שמועת רב (שלמעלה מן הארכובה, באין רוב בשר, הבהמה טריפה). אמר לו: יישר כוחך, וכן תרגם ״אריוך״ בבבל. ומיהו אריוך? שמואל. והקשו: והרי שמואל חולק על רב! ותירצו: שמואל חזר בו והודה לרב.</div>
+    <div class="trans" data-when="en">The Gemara relates that when Rabbi Zeira ascended to Eretz Yisrael he found Rav Yirmeya sitting and saying this halakha of Rav, i.e., that if the bone is broken above the leg joint and the flesh is not intact, the animal is a tereifa. Rabbi Zeira said to him: You have spoken well, and Aryokh interpreted the matter likewise in Babylonia. The Gemara asks: Who is Aryokh? It is Shmuel. But that is difficult, as Shmuel disagrees with Rav concerning this issue. The Gemara explains: Shmuel retracted his opinion in favor of that of Rav.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">יצא העצם לחוץ — עור ובשר חופים את רובו</span><span data-when="en">The bone protrudes — skin and flesh cover its majority</span>
+      <span class="ref">Chullin 76b:17–77a:10</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: יצא העצם לחוץ, אם עור ובשר חופים את רובו — מותר. דיון בשיעור ה״רוב״, בעור המצרף לבשר, בגידים רכים, ובאיכות הבשר החופה.</span><span data-when="en">Baraita: if the bone protrudes, it is permitted if skin and flesh cover its majority. Discussion of the “majority,” of skin combining with flesh, of soft sinews, and of the quality of the covering flesh.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  P1["① ברייתא: יצא העצם, עור ובשר חופים רובו — מותר; רב פפא: רוב עוביו ורוב הקיפו"]:::proof
+  S1["② עולא בשם ר׳ יוחנן: עור הרי הוא כבשר · רב נחמן: ׳עור או בשר׳ תנינן"]:::statement
+  S2["③ לישנא אחרינא: עור מצטרף לבשר · מעשה בר גוזלא — דרכיך שאני"]:::statement
+  S3["④ גידין רכים לפני רבה: ׳סופן להקשות׳ — נמנין בפסח, התורה חסה"]:::statement
+  Q1{"⑤ רב פפא: ריש לקיש ואיסורא דאורייתא! · אישתיק"}:::question
+  A1["⑥ הדר ביה ר׳ יוחנן לגבי ריש לקיש — בלשון יחיד אני שונה"]:::answer
+  S4["⑦ אביי שהה; רבא: מה לי נפל מה לי איתיה — מותר"]:::statement
+  Q2{"⑧ רבינא: מתלקט/מתרוסס/מתמסמס/ניקב/נקלף/נסדק/ניטל שליש מהו?"}:::question
+  A2["⑧ רב הונא: מתמסמס — שהרופא קודרו"]:::answer
+  S5["⑨ רב אשי: נקדר כטבעת — מסרטו בעצם, ולא בברזל; ובדקנה גרמא דידיה"]:::statement
+  P1 -->|עור| S1
+  S1 -->|לישנא אחרינא| S2
+  S2 -->|גידין רכים| S3
+  S3 -.->|קושיא| Q1
+  Q1 -->|יישוב| A1
+  A1 -->|מעשה| S4
+  S4 -->|ספקות| Q2
+  Q2 -->|הגדרה| A2
+  A2 -->|פשיטת ספק| S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  P1["① Baraita: bone protrudes, skin and flesh cover its majority — permitted; Rav Pappa: both width and circumference"]:::proof
+  S1["② Ulla (R. Yoḥanan): skin is like flesh · Rav Naḥman: we learned ׳skin or flesh׳"]:::statement
+  S2["③ Other version: skin combines with flesh · a fledgling case — soft skin differs"]:::statement
+  S3["④ Soft sinews before Rabba: ׳will harden׳ — registered for Pesaḥ, Torah spared money"]:::statement
+  Q1{"⑤ Rav Pappa: Reish Lakish, and Torah prohibition! · silent"}:::question
+  A1["⑥ R. Yoḥanan retracted to Reish Lakish — I teach it as a lone opinion"]:::answer
+  S4["⑦ Abaye delayed; Rava: fell out or in place — permitted alike"]:::statement
+  Q2{"⑧ Ravina: gathered/pulverized/decomposed/perforated/peeled/cracked/lower-third removed — what?"}:::question
+  A2["⑧ Rav Huna: decomposed — what the doctor cuts away"]:::answer
+  S5["⑨ Rav Ashi: cut ring-like — incise with bone, not iron; only if bone holds its flesh"]:::statement
+  P1 -->|skin| S1
+  S1 -->|other version| S2
+  S2 -->|soft sinews| S3
+  S3 -.->|objection| Q1
+  Q1 -->|resolution| A1
+  A1 -->|incident| S4
+  S4 -->|dilemmas| Q2
+  Q2 -->|definition| A2
+  A2 -->|resolves a dilemma| S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  P1["① תָּנוּ רַבָּנַן: נִשְׁבַּר הָעֶצֶם וְיָצָא לַחוּץ, אִם עוֹר וּבָשָׂר חוֹפִין אֶת רוּבּוֹ – מוּתָּר … בָּעֵינַן רוֹב עוֹבְיוֹ וּבָעֵינַן רוֹב הֶקֵּיפוֹ"]:::proof
+  S1["② אָמַר עוּלָּא אָמַר רַבִּי יוֹחָנָן: עוֹר הֲרֵי הוּא כְּבָשָׂר … אֲנַן ׳עוֹר אוֹ בָּשָׂר׳ תָּנֵינַן"]:::statement
+  S2["③ אִיכָּא דְּאָמְרִי … עוֹר מִצְטָרֵף לְבָשָׂר … בַּר גּוֹזָלָא דְּרַכִּיךְ שָׁאנֵי"]:::statement
+  S3["④ הָנְהוּ גִּידִין רַכִּין … גִּידִין שֶׁסּוֹפָן לְהַקְשׁוֹת … הַתּוֹרָה חָסָה עַל מָמוֹנָן שֶׁל יִשְׂרָאֵל"]:::statement
+  Q1{"⑤ רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, וְאִיסּוּרָא דְּאוֹרָיְיתָא … מַאי לֵיחוּשׁ לְהוּ?! אִישְׁתִּיק"}:::question
+  A1["⑥ דַּהֲדַר בֵּיהּ רַבִּי יוֹחָנָן … בִּלְשׁוֹן יָחִיד אֲנִי שׁוֹנֶה אוֹתָהּ"]:::answer
+  S4["⑦ שַׁהֲיֵיהּ תְּלָתָא רִיגְלֵי … מָה לִי נְפַל, מָה לִי אִיתֵיהּ?"]:::statement
+  Q2{"⑧ מִתְלַקֵּט מַהוּ? מִתְרוֹסֵס מַהוּ? מִתְמַסְמֵס מַהוּ? … נִיקַּב מַהוּ? נִקְלַף מַהוּ? נִסְדַּק מַהוּ?"}:::question
+  A2["⑧ אָמַר רַב הוּנָא … כֹּל שֶׁהָרוֹפֵא קוֹדְרוֹ"]:::answer
+  S5["⑨ נִקְדַּר כְּמִין טַבַּעַת … מְסָרְטוֹ בְּעֶצֶם … אֲבָל פַּרְזְלָא מִזְרָף זָרֵיף … וְהוּא דִּקְנָה גַּרְמָא דִּידֵיהּ"]:::statement
+  P1 -->|עור| S1
+  S1 -->|לישנא אחרינא| S2
+  S2 -->|גידין רכים| S3
+  S3 -.->|קושיא| Q1
+  Q1 -->|יישוב| A1
+  A1 -->|מעשה| S4
+  S4 -->|ספקות| Q2
+  Q2 -->|הגדרה| A2
+  A2 -->|פשיטת ספק| S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ו ב — Chullin 76b:17</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: נִשְׁבַּר הָעֶצֶם וְיָצָא לַחוּץ, אִם עוֹר וּבָשָׂר חוֹפִין אֶת רוּבּוֹ – מוּתָּר, אִם לָאו – אָסוּר. וְכַמָּה רוּבּוֹ? כִּי אֲתָא רַב דִּימִי אָמַר רַבִּי יוֹחָנָן: רוֹב עוֹבְיוֹ, וְאָמְרִי לַהּ: רוֹב הֶקֵּיפוֹ. אָמַר רַב פָּפָּא: הִלְכָּךְ, בָּעֵינַן רוֹב עוֹבְיוֹ וּבָעֵינַן רוֹב הֶקֵּיפוֹ.</div>
+    <div class="trans" data-when="he">ברייתא: נשבר העצם ויצא לחוץ — אם עור ובשר חופים את רובו, מותר; ואם לאו, אסור. וכמה ״רובו״? רב דימי בשם ר׳ יוחנן: רוב עוביו של העצם; ויש אומרים: רוב היקפו. רב פפא: הואיל ולא הוכרע — מצריכים גם רוב עוביו וגם רוב היקפו.</div>
+    <div class="trans" data-when="en">§ The Sages taught in a baraita: In a case where the bone broke and protruded outward, if skin and flesh cover a majority of the bone the animal is permitted; if not, it is prohibited. The Gemara asks: And how much is a majority of a bone? When Rav Dimi came from Eretz Yisrael to Babylonia, he said that Rabbi Yoḥanan says: A majority of its width, and some say that he said: A majority of its circumference. Rav Pappa said: Therefore, as there is no clear ruling on the matter, we require that the bone be covered by a majority of its width, and we also require that it be covered by a majority of its circumference.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ו ב — Chullin 76b:18</span></div>
+    <div class="orig">אָמַר עוּלָּא אָמַר רַבִּי יוֹחָנָן: עוֹר הֲרֵי הוּא כְּבָשָׂר. אֲמַר לֵיהּ רַב נַחְמָן לְעוּלָּא: וְלֵימָא מָר עוֹר מְצָרֵף לְבָשָׂר, דְּהָא ״עוֹר וּבָשָׂר״ קָתָנֵי! אֲמַר לֵיהּ: אֲנַן ״עוֹר אוֹ בָּשָׂר״ תָּנֵינַן.</div>
+    <div class="trans" data-when="he">עולא בשם ר׳ יוחנן: לעניין זה עור הרי הוא כבשר — אם ניטל הבשר אך העור חופה את רוב העצם, כשרה. רב נחמן לעולא: ולמה לא יאמר המאסטר שהעור ״מצרף״ לבשר (היינו רק יחד הם חופים), שהרי הברייתא שונה ״עור ובשר״? השיב לו עולא: אנו שונים את הברייתא ״עור או בשר״ — כל אחד לעצמו.</div>
+    <div class="trans" data-when="en">Ulla said that Rabbi Yoḥanan said: Skin is like flesh with regard to this issue, i.e., if the flesh has been removed but the skin covers a majority of the bone, the animal is kosher. Rav Naḥman said to Ulla: And let the Master say that skin combines with flesh, i.e., that if flesh and skin together cover a majority of the bone the animal is kosher, as the tanna of the above baraita teaches: Skin and flesh, which indicates that skin alone is ineffective. Ulla said to him: We learned that the baraita states: Skin or flesh.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ו ב — Chullin 76b:19</span></div>
+    <div class="orig">אִיכָּא דְּאָמְרִי [אָמַר עוּלָּא], אָמַר רַבִּי יוֹחָנָן: עוֹר מִצְטָרֵף לְבָשָׂר. אֲמַר לֵיהּ רַב נַחְמָן לְעוּלָּא: וְלֵימָא מָר עוֹר מַשְׁלִים לְבָשָׂר לְחוּמְרָא!</div>
+    <div class="trans" data-when="he">גרסה אחרת: עולא בשם ר׳ יוחנן — עור מצטרף לבשר (יחד חופים את הרוב, אך עור לבדו אינו מועיל). רב נחמן לעולא: ולמה לא יאמר שהעור ״משלים״ לבשר לחומרא — שרק אם רוב הכיסוי בשר והשאר עור כשרה, אך מחצה בשר ומחצה עור אינה כשרה?</div>
+    <div class="trans" data-when="en">Some say that there is a different version of this discussion: Ulla said that Rabbi Yoḥanan said: Skin combines with flesh. Rav Naḥman said to Ulla: And let the Master say that skin completes the amount of flesh required, and this is a stringent ruling. This would mean that if the majority of the bone is covered mostly with flesh and the rest of the majority is covered with skin the animal is kosher, but if the majority is covered half with flesh and half with skin, it is not kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ו ב — Chullin 76b:20</span></div>
+    <div class="orig">אֲמַר לֵיהּ: אֲנָא עוֹבָדָא יָדַעְנָא, דְּהָהוּא בַּר גּוֹזָלָא דַּהֲוָה בֵּי רַבִּי יִצְחָק, דְּעוֹר מְצָרֵף לְבָשָׂר הֲוָה, וַאֲתָא לְקַמֵּיהּ דְּרַבִּי יוֹחָנָן וְאַכְשְׁרֵיהּ. אֲמַר לֵיהּ: בַּר גּוֹזָלָא קָאָמְרַתְּ? בַּר גּוֹזָלָא דְּרַכִּיךְ שָׁאנֵי.</div>
+    <div class="trans" data-when="he">השיב עולא: אני יודע מעשה — גוזל שהיה בבית ר׳ יצחק ונשבר רגלו, ודינו היה ״עור מצרף לבשר״ (יחד חופים את הרוב), ובא לפני ר׳ יוחנן והכשירו. אמר לו רב נחמן: גוזל אמרת? גוזל שעורו רך שונה — עורו נחשב כבשר, ואין ראיה משם.</div>
+    <div class="trans" data-when="en">Ulla said to him: I know my ruling from the following incident: As there was a certain fledgling that was in the house of Rabbi Yitzḥak, and its leg broke, and it was a situation where the skin combined with flesh to cover the majority of the bone. And Rabbi Yitzḥak came before Rabbi Yoḥanan and he deemed the bird kosher. Rav Naḥman said to him: Do you speak of a fledgling? The halakha in the case of a fledgling is different, as its skin is soft and is considered like flesh.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ו ב — Chullin 76b:21</span></div>
+    <div class="orig">הָנְהוּ גִּידִין רַכִּין דַּאֲתוֹ לְקַמֵּיהּ דְּרַבָּה, אָמַר רַבָּה: לְמַאי לֵיחוּשׁ לְהוּ? חֲדָא, דְּאָמַר רַבִּי יוֹחָנָן: גִּידִין שֶׁסּוֹפָן לְהַקְשׁוֹת</div>
+    <div class="trans" data-when="he">מעשה בגידים רכים שצירופם לבשר חפה את רוב העצם השבור, ובאו לפני רבה. אמר רבה: מה יש לחוש להם? חדא — שאמר ר׳ יוחנן: גידים שסופם להקשות (להיעשות קשים) דינם כבשר.</div>
+    <div class="trans" data-when="en">The Gemara further relates: There was a case involving certain soft sinews that combined with flesh to cover the majority of a broken bone, and they came before Rabba for a ruling. Rabba said: What concern is there with the sinews in this case? First, there is no concern, because Rabbi Yoḥanan says: With regard to sinews that will ultimately harden,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ז א — Chullin 77a:1</span></div>
+    <div class="orig">נִמְנִין עֲלֵיהֶן בַּפֶּסַח, וְעוֹד, הַתּוֹרָה חָסָה עַל מָמוֹנָן שֶׁל יִשְׂרָאֵל.</div>
+    <div class="trans" data-when="he">המשך דברי ר׳ יוחנן: גידים שסופם להקשות — נמנים עליהם בקרבן פסח (אדם נמנה על שֵׂה לאוכלם), משמע שדינם כבשר. ועוד טעם להקל: התורה חסה על ממונם של ישראל.</div>
+    <div class="trans" data-when="en">one may be registered as part of a group that will eat the Paschal offering on their account, i.e., even if those sinews are the only part of the lamb he will eat. Evidently, such sinews are regarded as flesh. And furthermore, the Torah spared the money of the Jewish people, and one must tend toward leniency.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ז א — Chullin 77a:2</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב פָּפָּא לְרַבָּה: רַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, וְאִיסּוּרָא דְּאוֹרָיְיתָא, וְאַתְּ אָמְרַתְּ: מַאי לֵיחוּשׁ לְהוּ?! אִישְׁתִּיק.</div>
+    <div class="trans" data-when="he">רב פפא הקשה לרבה: והרי ריש לקיש חולק על ר׳ יוחנן וסובר שאין נמנים על גידים אלו (שסופם להקשות, ואינם כבשר), ונמצא שהעצם אינו חפוי בבשר — ואיסור טריפה הוא מן התורה! ואיך אתה אומר ״מה יש לחוש״? ושתק רבה.</div>
+    <div class="trans" data-when="en">Rav Pappa said to Rabba: But Rabbi Shimon ben Lakish disagrees with Rabbi Yoḥanan and holds that one may not be registered for those sinews, as they will eventually harden and are therefore not considered flesh. And therefore, the broken bone in this case is not covered by flesh and the animal is prohibited by Torah law as a tereifa, and yet you say: What concern is there with the sinews in this case? Rabba was silent.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ז א — Chullin 77a:3</span></div>
+    <div class="orig">וְאַמַּאי אִישְׁתִּיק? וְהָאָמַר רָבָא: הִלְכְתָא כְּוָותֵיהּ דְּרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ בְּהָנֵי תְּלָת!</div>
+    <div class="trans" data-when="he">ולמה שתק רבה? והרי אמר רבא: אין הלכה כריש לקיש נגד ר׳ יוחנן אלא בשלוש הלכות בלבד (המנויות ביבמות לו), וזו אינה מהן! היה לרבה לדחות את קושיית רב פפא — שאין הלכה כריש לקיש כאן.</div>
+    <div class="trans" data-when="en">The Gemara asks: And why was Rabba silent? But doesn’t Rava say that the halakha is in accordance with the opinion of Rabbi Shimon ben Lakish in his disputes with Rabbi Yoḥanan only with regard to these three matters, i.e., three matters that are mentioned in Yevamot 36a, and not in other cases? If so, Rabba could simply have replied that the halakha is not in accordance with the opinion of Rabbi Shimon ben Lakish with regard to this issue.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״ז א — Chullin 77a:4</span></div>
+    <div class="orig">שָׁאנֵי הָכָא, דַּהֲדַר בֵּיהּ רַבִּי יוֹחָנָן לְגַבֵּיהּ דְּרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ, דַּאֲמַר לֵיהּ: אַל תַּקְנִיטֵנִי, בִּלְשׁוֹן יָחִיד אֲנִי שׁוֹנֶה אוֹתָהּ.</div>
+    <div class="trans" data-when="he">תירוץ: כאן שונה — שר׳ יוחנן עצמו חזר בו והודה לריש לקיש; שכשהקשה עליו ריש לקיש, אמר לו ר׳ יוחנן: אל תקניטני, בלשון יחיד אני שונה הלכה זו (כדעת יחיד, ולא להלכה). נמצא שאף ר׳ יוחנן מודה שאין דין זה הלכה, ולכן שתק רבה.</div>
+    <div class="trans" data-when="en">The Gemara answers: Here, with regard to sinews that will ultimately harden, it is different, as Rabbi Yoḥanan retracted his ruling in favor of the opinion of Rabbi Shimon ben Lakish, as when Rabbi Shimon ben Lakish raised a difficulty against Rabbi Yoḥanan’s opinion, Rabbi Yoḥanan said to him: Do not provoke me by asking questions to refute my opinion that the fact that the sinews will ultimately harden is disregarded, as I teach it in explanation of a lone opinion (see Pesaḥim 84a). Even Rabbi Yoḥanan conceded that the opinion he expressed was only according to one Sage, but is not the halakha.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״ז א — Chullin 77a:5</span></div>
+    <div class="orig">הָהוּא נִשְׁבַּר הָעֶצֶם וְיָצָא לַחוּץ, דְּאִישְׁתְּקִיל קוּרְטִיתָא מִינֵּיהּ, אֲתָא לְקַמֵּיהּ דְּאַבָּיֵי, שַׁהֲיֵיהּ תְּלָתָא רִיגְלֵי.</div>
+    <div class="trans" data-when="he">מעשה בעצם שנשבר ויצא לחוץ, והיה ברובו חפוי עור ובשר, אלא שניטל ממנו פירור עצם קטן (״קורטיתא״). בא הדבר לפני אביי, והשהה את תשובתו שלושה רגלים — עד שייכנסו החכמים ויוכל להיוועץ בהם.</div>
+    <div class="trans" data-when="en">The Gemara relates: There was a certain case in which a bone in an animal’s leg broke and protruded outward. This bone was mostly covered with flesh and skin, but a small piece [kurtita] of the bone had been removed from it. The case came before Abaye, who delayed his response until three pilgrimage Festivals had passed, when the Sages gathered together and he could ask them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ע״ז א — Chullin 77a:6</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אַדָּא בַּר מַתְנָא: זִיל קַמֵּיהּ דְּרָבָא בְּרֵיהּ דְּרַב יוֹסֵף בַּר חָמָא, דַּחֲרִיפָא סַכִּינֵיהּ. אֲתָא לְקַמֵּיהּ, אֲמַר: מִכְּדֵי ״נִשְׁבַּר הָעֶצֶם וְיָצָא לַחוּץ״ תְּנַן, מָה לִי נְפַל, מָה לִי אִיתֵיהּ?</div>
+    <div class="trans" data-when="he">רב אדא בר מתנא אמר לבעל הבהמה: לך אל רבא בריה דרב יוסף בר חמא, ש״חריף סכינו״ (מהיר וחד בהוראה). בא לפניו, ואמר רבא: הואיל ושנינו בברייתא ״נשבר העצם ויצא לחוץ״ — אם רובו חפוי כשרה, ומה לי אם פירור העצם נפל לגמרי, ומה לי אם הוא במקומו? בשניהם מותר.</div>
+    <div class="trans" data-when="en">Rav Adda bar Mattana said to the owner of the animal: Go before Rava, son of Rav Yosef bar Ḥama, whose knife is sharp, i.e., he has insight into halakhic matters and decides matters quickly, and ask him to decide your case. The owner came before Rava to seek his opinion. Rava said to him: Since we learned in the baraita (76b): If the bone broke and protruded outward, if skin and flesh cover a majority of the bone the animal is permitted, what difference is there to me if the bone fell out, and what difference is there to me if it is in its place? In either case, the animal is permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ע״ז א — Chullin 77a:7</span></div>
+    <div class="orig">אֲמַר לֵיהּ רָבִינָא לְרָבָא: מִתְלַקֵּט מַהוּ? מִתְרוֹסֵס מַהוּ? מִתְמַסְמֵס מַהוּ? הֵיכִי דָּמֵי מִתְמַסְמֵס? אָמַר רַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ: כֹּל שֶׁהָרוֹפֵא קוֹדְרוֹ.</div>
+    <div class="trans" data-when="he">רבינא לרבא שאל ספקות בבשר החופה: ״מתלקט״ — הבשר מפוזר, ואילו צוברים אותו היה רוב; ״מתרוסס״ — מרוסק ודק; ״מתמסמס״ — נמוח. מהו? ושאלו: היכי דמי מתמסמס? אמר רב הונא בריה דרב יהושע: כל בשר שהרופא ״קודרו״ (חותכו ומסירו כדי שיתרפא המקום).</div>
+    <div class="trans" data-when="en">With regard to a case where flesh covers the majority of a broken bone, Ravina said to Rava: If the flesh was torn in pieces and spread over the area, and if gathered it would constitute a majority, what is the halakha? Similarly, if the flesh was pulverized and thin, what is the halakha? If it was decomposed, what is the halakha? The Gemara asks: What are the circumstances of this case in which the flesh is decomposed? Rav Huna, son of Rav Yehoshua, said: This is referring to any kind of flesh that the doctor cuts away [kodro] and removes to enable the surrounding area to heal.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ע״ז א — Chullin 77a:8</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: נִיקַּב מַהוּ? נִקְלַף מַהוּ? נִסְדַּק מַהוּ? נִיטַּל שְׁלִישׁ הַתַּחְתּוֹן מַהוּ?</div>
+    <div class="trans" data-when="he">עוד נסתפקו: בשר החופה את העצם — ניקב מהו? נקלף מעל העצם מהו? נסדק מהו? ניטל השליש התחתון שבעוביו (הסמוך לעצם) מהו? — ספקות שלא נפשטו.</div>
+    <div class="trans" data-when="en">A dilemma was raised before the Sages: If the flesh that covers the bone was perforated, what is the halakha? Likewise, if the flesh was peeled off the bone, what is the halakha? If it was cracked, what is the halakha? If the bottom third of the width of the flesh, i.e., the part that is adjacent to the bone, was removed, what is the halakha?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ע״ז א — Chullin 77a:9</span></div>
+    <div class="orig">תָּא שְׁמַע, דְּאָמַר עוּלָּא אָמַר רַבִּי יוֹחָנָן: עוֹר הֲרֵי הוּא כְּבָשָׂר, דִּלְמָא דִּקְנָה מַשְׁכָּא דִּידֵיהּ.</div>
+    <div class="trans" data-when="he">תא שמע לפשוט: שאמר עולא בשם ר׳ יוחנן ״עור הרי הוא כבשר״ — משמע שכל כיסוי מועיל. ודחו: דלמא מדובר במקום שלא היה בו בשר מעולם אלא עור בלבד (כגון סמוך לברך, ש״קנה משכא דידיה״ — העור מחזיק מקומו); אך במקום שיש בשר, צריך דווקא בשר בריא.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear, as Ulla says that Rabbi Yoḥanan says: Skin is like flesh. This would appear to indicate that any covering is sufficient. The Gemara refutes this proof: Perhaps Rabbi Yoḥanan was referring to a specific case where there was never flesh on the bone, but only skin, e.g., adjacent to the knee, where the skin holds its own place close to the bone. This ruling may not apply in an area where there was flesh. Perhaps in such a place the bone must be covered by flesh that is still healthy.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ע״ז א — Chullin 77a:10</span></div>
+    <div class="orig">אָמַר רַב אָשֵׁי: כִּי הֲוֵינַן בֵּי רַב פַּפֵּי, אִיבַּעְיָא לַן: נִקְדַּר כְּמִין טַבַּעַת, מַהוּ? וּפְשַׁטְנָא מֵהָא דְּאָמַר רַב יְהוּדָה אָמַר רַב: דָּבָר זֶה שָׁאַלְתִּי לַחֲכָמִים וְלָרוֹפְאִים, וְאָמְרוּ: מְסָרְטוֹ בְּעֶצֶם וּמַעֲלֶה אֲרוּכָה, אֲבָל פַּרְזְלָא מִזְרָף זָרֵיף. אָמַר רַב פָּפָּא: וְהוּא דִּקְנָה גַּרְמָא דִּידֵיהּ.</div>
+    <div class="trans" data-when="he">רב אשי: כשהיינו בבית רב פפי נסתפקנו — נקדר הבשר סביב כעין טבעת (ורוב היקף העצם עדיין חפוי), מהו? ופשטנו מדברי רב יהודה בשם רב: שאלתי דבר זה לחכמים ולרופאים, ואמרו — מסרטים את הבשר בעצם חד ומעלה ארוכה (מתרפא), אבל בברזל אין עושים שזורף ומדלקֵ. אמר רב פפא: וזה דווקא כשהבשר עדיין ״קנה גרמא דידיה״ — אחוז יפה בעצמו, שאז מתרפא.</div>
+    <div class="trans" data-when="en">Rav Ashi said: While we were studying in Rav Pappi’s study hall, we raised a dilemma: If the flesh and skin were cut in the shape of a ring around the break, and yet most of the circumference of the bone is surrounded by flesh, what is the halakha? And we resolved this dilemma from this statement that Rav Yehuda says that Rav says: I asked about this matter to the Sages and to the doctors, what to do when a bone breaks and the surrounding flesh has been cut away, and they said: One makes an incision in it with a sharp piece of bone to help the blood flow and then congeal, and in this manner the wound will heal. The Gemara notes: But one should not make the incision with an iron implement, as it will cause inflammation. Rav Pappa said: And this advice should be implemented only in a case where one can see that the bone is holding firmly onto its flesh, as only in such a case will the flesh heal.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
