@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין נ״ד</title>
+<meta name="description" content="מפת הסוגיא של חולין נ״ד: ׳זה הכלל׳ ואין מוסיפים על הטריפות; משנת ׳ואלו כשרות׳ ומחלוקת ר׳ יוחנן וריש לקיש; שיעור החֶסְרון בגרגרת — דינר קורדינאה, וכלל ׳עד ולא עד בכלל׳.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="54">
+<meta name="gemara-map:sefaria-ref" content="Chullin 54">
+<meta name="gemara-map:topic-he" content="זה הכלל, ואלו כשרות, ושיעור עד">
+<meta name="gemara-map:topic-en" content="The principle, what is kosher, the measure">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין נ״ד">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 54">
+<meta name="gemara-map:blurb-he" content="אין מוסיפים על הטריפות שמנו חכמים; ׳אלו טריפות׳ ו׳אלו כשרות׳ — מי מהן דווקא; ושיעור ׳עד׳ נמדד להחמיר.">
+<meta name="gemara-map:blurb-en" content="One may not add to the listed tereifot; which list is exhaustive; and the word ‘until’ is read stringently.">
+<meta name="gemara-map:sugya-count" content="3">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין נ״ד</span><span data-when="en">Sugya map — Chullin 54</span></h1>
+    <div class="subtitle"><span data-when="he">חולין נ״ד א — נ״ה א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 54a–55a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שלושה דיוני המשך לרשימת הטריפות: <b>אין להוסיף</b> על מה שמנו חכמים — אף שהפגיעה ממיתה, מאחר שתרופה מצילה; משנת <b>״ואלו כשרות״</b> והמחלוקת אם ״אלו טריפות״ או ״אלו כשרות״ נאמרו דווקא (תלוי בבוקא דאטמא); ושיעור החֶסְרון בגרגרת — דינר קורדינאה, ומכאן לכלל <b>״עד ולא עד בכלל״</b> שנמדד תמיד להחמיר.</span>
+    <span data-when="en"><b>Bottom line:</b> Three follow-ups to the list of tereifot: one <b>may not add</b> to what the Sages counted — even a fatal wound, since medicine could heal it; the Mishna <b>“and these are kosher”</b> and the dispute whether “these are tereifot” or “these are kosher” is exclusive (turning on a dislocated femur head); and the measure of a missing windpipe — a Kurdish dinar — leading to the rule <b>“until and not including,”</b> always read stringently.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין נ״ד</span><span data-when="en">Overview — Chullin 54</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · זה הכלל — אין מוסיפים על הטריפות"]:::statement
+  O2["2 · ואלו כשרות — דווקא, ובוקא דאטמא"]:::statement
+  O3["3 · שיעור ׳עד׳ — ולא עד בכלל"]:::statement
+  O1 --> O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · The principle — no adding to tereifot"]:::statement
+  O2["2 · These are kosher — exclusive, and the femur head"]:::statement
+  O3["3 · The measure ׳until׳ — not including"]:::statement
+  O1 --> O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">זה הכלל — אין מוסיפים על הטריפות; ואלו כשרות</span><span data-when="en">The principle — no adding to tereifot; and these are kosher</span>
+      <span class="ref">Chullin 54a:9–54b:3</span></h2>
+  <div class="lead"><span data-when="he">״זה הכלל״ מוסיף שבע שמועות; אך אין מוסיפים על הטריפות שמנו חכמים. ואלו כשרות — ומחלוקת אם ״טריפות״ או ״כשרות״ נאמרו דווקא.</span><span data-when="en">“This is the principle” adds seven rulings, yet one may not add to the Sages’ list. And these are kosher — with a dispute over which clause is exclusive.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① זה הכלל — להוסיף מאי? שבע שמועות"}:::question
+  S1["② הרגו בגיד הנשה — אין מוסיפים על הטריפות"]:::statement
+  S2["③ הרגו בכוליא — אין מוסיפים על הטריפות"]:::statement
+  Q2{"④ והרי מתה! גמירי: אילו פיזרו סם — חיה"}:::question
+  M1(["⑤ משנה: ואלו כשרות — גרגרת, גולגולת, לב, שדרה, כבד…"]):::mishnah
+  M2(["⑥ המסס, טחול, כליות, לחי, אם; הגלודה — מחלוקת"]):::mishnah
+  S3["⑦ ר׳ יוחנן: ׳אלו טריפות׳ דווקא · ריש לקיש: ׳אלו כשרות׳ דווקא"]:::statement
+  Q3{"⑧ במאי פליגי? בבוקא דאטמא דשף — טריפה?"}:::question
+  A1["⑨ ר׳ יוחנן: בא בזה הכלל, דדמי לנטולי — הא דרב מתנא כשרה"]:::answer
+  A2["⑩ ריש לקיש: לא דמי לכלום — הא דרב מתנא טריפה"]:::answer
+  C1["⑪ גופא: הלכתא — אף נפסק ניבו כשרה, עד דמתעכלא"]:::conclusion
+  Q1 -->|הוראה| S1
+  S1 -->|וכן| S2
+  S2 -.->|קושיא| Q2
+  Q2 -->|משנה חדשה| M1
+  M1 --> M2
+  M2 -->|מחלוקת אמוראים| S3
+  S3 -->|במאי פליגי| Q3
+  Q3 -->|ר׳ יוחנן| A1
+  Q3 -->|ריש לקיש| A2
+  A1 -->|גופא ומסקנה| C1
+  A2 -->|גופא ומסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① The principle — adds what? Seven rulings"}:::question
+  S1["② Killed via the sciatic nerve — one may not add to tereifot"]:::statement
+  S2["③ Killed via the kidney — one may not add to tereifot"]:::statement
+  Q2{"④ But we see them die! Tradition: with medicine it would live"}:::question
+  M1(["⑤ Mishna: these are kosher — windpipe, skull, heart, spine, liver…"]):::mishnah
+  M2(["⑥ Omasum, spleen, kidneys, jaw, womb; flayed — disputed"]):::mishnah
+  S3["⑦ R. Yoḥanan: ׳these are tereifot׳ exclusive · Reish Lakish: ׳these are kosher׳ exclusive"]:::statement
+  Q3{"⑧ Over what do they differ? A dislocated femur head — tereifa?"}:::question
+  A1["⑨ R. Yoḥanan: it fits ׳the principle׳, like removed organs — Rav Mattana׳s case is kosher"]:::answer
+  A2["⑩ Reish Lakish: it resembles nothing — Rav Mattana׳s case is tereifa"]:::answer
+  C1["⑪ The matter itself: halakha — even a cut sinew is kosher, unless decomposed"]:::conclusion
+  Q1 -->|ruling| S1
+  S1 -->|likewise| S2
+  S2 -.->|objection| Q2
+  Q2 -->|new Mishna| M1
+  M1 --> M2
+  M2 -->|amoraic dispute| S3
+  S3 -->|over what| Q3
+  Q3 -->|R. Yoḥanan| A1
+  Q3 -->|Reish Lakish| A2
+  A1 -->|the matter, conclusion| C1
+  A2 -->|the matter, conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① זֶה הַכְּלָל, לְאֵתוֹיֵי מַאי? לְאֵתוֹיֵי שַׁב שְׁמַעְתָּתָא"}:::question
+  S1["② מָחוּ בְּגִידָא נַשְׁיָא … אֵין לְךָ אֶלָּא מַה שֶּׁמָּנוּ חֲכָמִים"]:::statement
+  S2["③ מָחוּ בְּכוּלְיָא … אֵין לְךָ אֶלָּא מַה שֶּׁמָּנוּ חֲכָמִים"]:::statement
+  Q2{"④ וְהָא קָא חָזֵינַן דְּקָא מֵתָה! גְּמִירִי דְּאִי בָּדְרִי לַהּ סַמָּא, חַיָּיא"}:::question
+  M1(["⑤ וְאֵלּוּ כְּשֵׁרוֹת בַּבְּהֵמָה, נִיקְּבָה הַגַּרְגֶּרֶת אוֹ שֶׁנִּסְדְּקָה …"]):::mishnah
+  M2(["⑥ הֶמְסֵס … נִיטַּל הַטְּחוֹל … הַגְּלוּדָה – רַבִּי מֵאִיר מַכְשִׁיר, וַחֲכָמִים פּוֹסְלִין"]):::mishnah
+  S3["⑦ רַבִּי יוֹחָנָן: ׳אֵלּוּ טְרֵפוֹת׳ דַּוְקָא · רֵישׁ לָקִישׁ: ׳אֵלּוּ כְּשֵׁרוֹת׳ דַּוְקָא"]:::statement
+  Q3{"⑧ בְּמַאי קָא מִיפַּלְגִי? בִּדְרַב מַתְנָא … בּוּקָא דְּאַטְמָא דְּשָׁף – טְרֵפָה"}:::question
+  A1["⑨ אָתְיָא בְּזֶה הַכְּלָל, דְּדָמְיָא לִנְטוּלֵי … הָא דְּרַב מַתְנָא כְּשֵׁרָה"]:::answer
+  A2["⑩ לָא אָתְיָא בְּזֶה הַכְּלָל … הָא דְּרַב מַתְנָא טְרֵפָה"]:::answer
+  C1["⑪ גּוּפָא … וְהִלְכְתָא: אִיפְּסִיק נָמֵי כְּשֵׁרָה, עַד דְּמִתְעַכְלָא אִתְעֲכוֹלֵי"]:::conclusion
+  Q1 -->|הוראה| S1
+  S1 -->|וכן| S2
+  S2 -.->|קושיא| Q2
+  Q2 -->|משנה חדשה| M1
+  M1 --> M2
+  M2 -->|מחלוקת אמוראים| S3
+  S3 -->|במאי פליגי| Q3
+  Q3 -->|ר׳ יוחנן| A1
+  Q3 -->|ריש לקיש| A2
+  A1 -->|גופא ומסקנה| C1
+  A2 -->|גופא ומסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ד א — Chullin 54a:9</span></div>
+    <div class="orig">זֶה הַכְּלָל, לְאֵתוֹיֵי מַאי? לְאֵתוֹיֵי שַׁב שְׁמַעְתָּתָא.</div>
+    <div class="trans" data-when="he">המשנה הקודמת חתמה ב״זה הכלל: כל שאין כמוה חיה — טריפה״. הגמרא שואלת: מה מוסיף הכלל מעבר למה שכבר נמנה? תשובה: שבע שמועות (טריפות שאמרו אמוראים) שלא נמנו במשנה.</div>
+    <div class="trans" data-when="en">§ The mishna states: This is the principle: Any animal that was injured such that an animal in a similar condition could not live for an extended period is a tereifa. The Gemara asks: What case does this principle add that was not previously mentioned? The Gemara responds: It was stated to add seven halakhot of tereifot taught by amora’im and not listed in the mishna. These cases are enumerated on 42b.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ד א — Chullin 54a:10</span></div>
+    <div class="orig">דְּבֵי יוֹסֵף רִישְׁבָּא מָחוּ בְּגִידָא נַשְׁיָא וְקָטְלִי, אֲתוֹ לְקַמֵּיהּ דְּרַבִּי יְהוּדָה בֶּן בְּתֵירָא, אֲמַר לְהוּ: וְכִי לְהוֹסִיף עַל הַטְּרֵפוֹת יֵשׁ? אֵין לְךָ אֶלָּא מַה שֶּׁמָּנוּ חֲכָמִים!</div>
+    <div class="trans" data-when="he">אנשי בית יוסף הצייד היו ממיתים בהמה בחץ שפגע בגיד הנשה. שאלו את ר׳ יהודה בן בתירא אם בהמה כזו טריפה (אם נשחטה קודם שמתה). השיבם: וכי אפשר להוסיף על רשימת הטריפות? אין לך אלא מה שמנו חכמים — ואין זו ברשימה.</div>
+    <div class="trans" data-when="en">The Gemara recounts: The men of the house of Yosef the hunter would strike the sciatic nerve of an animal with an arrow and kill it that way. In other words, the animal would die from that wound. They came before Rabbi Yehuda ben Beteira to ask if an animal with an injured sciatic nerve is a tereifa, which is relevant if the animal was slaughtered before it died. Rabbi Yehuda ben Beteira said to them: And is it possible to add to the list of tereifot? You have only what the Sages counted, and the Sages mentioned no such tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ד א — Chullin 54a:11</span></div>
+    <div class="orig">רַב פָּפָּא בַּר אַבָּא רִישְׁבָּא, מָחוּ בְּכוּלְיָא וְקָטְלִי. אֲתוֹ לְקַמֵּיהּ דְּרַבִּי אַבָּא, אֲמַר לְהוּ: וְכִי לְהוֹסִיף עַל הַטְּרֵפוֹת יֵשׁ? אֵין לְךָ אֶלָּא מַה שֶּׁמָּנוּ חֲכָמִים!</div>
+    <div class="trans" data-when="he">כיוצא בזה: אנשי רב פפא בר אבא הצייד היו ממיתים בהמה בחץ שפגע בכוליא (כליה). שאלו את ר׳ אבא, והשיבם אף הוא: וכי אפשר להוסיף על הטריפות? אין לך אלא מה שמנו חכמים.</div>
+    <div class="trans" data-when="en">Likewise, the men of Rav Pappa bar Abba the hunter would strike an animal in the kidney with an arrow and kill it that way. They came before Rabbi Abba to ask if such an animal is a tereifa. Rabbi Abba said to them: And is it possible to add to the list of tereifot? You have only what the Sages counted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ד א — Chullin 54a:12</span></div>
+    <div class="orig">וְהָא קָא חָזֵינַן דְּקָא מֵתָה! גְּמִירִי דְּאִי בָּדְרִי לַהּ סַמָּא, חַיָּיא.</div>
+    <div class="trans" data-when="he">קושיא: והרי אנו רואים שבהמות אלו מתות מן הפגיעה — סימן שהן טריפות? תירוץ: מסורת בידינו שבכל אלו, אילו פיזרו תרופה על המכה, הבהמה הייתה חיה; ואין טריפה אלא מה שאי אפשר לרפא.</div>
+    <div class="trans" data-when="en">The Gemara objects: But we see that they die. Isn’t this an indication that the animal is a tereifa? The Gemara responds: It is learned as a tradition that in all these cases, if one were to scatter medicine on the wound, the animal would live. An animal is not considered a tereifa unless it cannot be healed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ד א — Chullin 54a:13</span></div>
+    <div class="orig">מַתְנִי׳ וְאֵלּוּ כְּשֵׁרוֹת בַּבְּהֵמָה, נִיקְּבָה הַגַּרְגֶּרֶת אוֹ שֶׁנִּסְדְּקָה. עַד כַּמָּה תֶּחְסַר? רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל אוֹמֵר: עַד כְּאִיסָּר הָאִיטַלְקִי. נִפְחֲתָה הַגּוּלְגּוֹלֶת וְלֹא נִיקַּב קְרוּם שֶׁל מוֹחַ, נִיקַּב הַלֵּב וְלֹא לְבֵית חֲלָלוֹ, נִשְׁבְּרָה הַשִּׁדְרָה וְלֹא נִפְסַק הַחוּט שֶׁלָּהּ, נִיטְּלָה הַכָּבֵד וְנִשְׁתַּיֵּיר הֵימֶנָּה כְּזַיִת.</div>
+    <div class="trans" data-when="he">משנה: ואלו כשרות בבהמה — ניקבה הגרגרת (קנה הנשימה) או שנסדקה לאורכה. עד כמה תחסר? רשב״ג: עד כשיעור איסר האיטלקי. נפחתה הגולגולת ולא ניקב קרום המוח; ניקב הלב אך לא לחלל שבו; נשברה השדרה ולא נפסק חוט השדרה; ניטלה הכבד ונשתייר ממנה כזית — כשרה.</div>
+    <div class="trans" data-when="en">MISHNA: And these, despite their condition, are kosher in an animal: If its windpipe was perforated or cracked lengthwise. How much can the windpipe be missing and still be kosher? Rabban Shimon ben Gamliel says: Until the perforation is the same size as the Italian issar. If the skull was fractured but the membrane of the brain was not perforated, it is kosher. If the heart was perforated and the perforation did not reach its chamber, or if the spinal column was broken but its cord was not cut, or if the liver was removed and an olive-bulk of it remained, it is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ד א — Chullin 54a:14</span></div>
+    <div class="orig">הֶמְסֵס וּבֵית הַכּוֹסוֹת, שֶׁנִּיקְּבוּ זֶה לְתוֹךְ זֶה. נִיטַּל הַטְּחוֹל, נִיטְּלוּ הַכְּלָיוֹת, נִיטַּל לֶחִי הַתַּחְתּוֹן, נִיטְּלָה הָאֵם שֶׁלָּהּ, וַחֲרוּתָה בִּידֵי שָׁמַיִם. הַגְּלוּדָה – רַבִּי מֵאִיר מַכְשִׁיר, וַחֲכָמִים פּוֹסְלִין.</div>
+    <div class="trans" data-when="he">המשך המשנה: המסס ובית הכוסות שניקבו זה לתוך זה (ולא לחלל הגוף); ניטל הטחול, ניטלו הכליות, ניטל הלחי התחתון, ניטלה האם (רחם), והבהמה שריאתה התכווצה בידי שמים — כשרה. הגלודה (שהופשט עורה): ר׳ מאיר מכשיר, וחכמים פוסלים.</div>
+    <div class="trans" data-when="en">Additionally, it is kosher if the omasum or the reticulum was perforated one into the other. If the spleen was removed, or the kidneys were removed, or if its lower jaw was removed, or if its womb was removed, or if its lung shriveled by the hand of Heaven, the animal is kosher. In the case of an animal whose hide was removed, Rabbi Meir deems it kosher, and the Rabbis deem it a tereifa and unfit for consumption.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ד א — Chullin 54a:15</span></div>
+    <div class="orig">גְּמָ׳ אִתְּמַר: רַבִּי יוֹחָנָן אָמַר: ״אֵלּוּ טְרֵפוֹת״ דַּוְקָא, וְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אָמַר: ״אֵלּוּ כְּשֵׁרוֹת״ דַּוְקָא.</div>
+    <div class="trans" data-when="he">גמרא: המשנה הקודמת פתחה ״אלו טריפות״, וזו פותחת ״אלו כשרות״. ר׳ יוחנן: ״אלו טריפות״ דווקא — הרשימה כאן אינה ממצה. ריש לקיש: ״אלו כשרות״ דווקא — רשימת הטריפות שבראש הפרק אינה ממצה.</div>
+    <div class="trans" data-when="en">GEMARA: The mishna begins: And these are kosher, while the previous mishna begins: These are tereifot. With regard to this, it was stated that Rabbi Yoḥanan says: The tanna intended the phrase: These are tereifot, specifically, teaching that an animal is kosher in another case. The list of kosher cases here is therefore not exhaustive. And Rabbi Shimon ben Lakish says that the tanna intended the phrase: These are kosher, specifically, teaching that an animal is a tereifa in another case. The list of tereifot at the beginning of the chapter is therefore not exhaustive.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין נ״ד א — Chullin 54a:16</span></div>
+    <div class="orig">בְּמַאי קָא מִיפַּלְגִי? בִּדְרַב מַתְנָא, דְּאָמַר רַב מַתְנָא: הַאי בּוּקָא דְּאַטְמָא דְּשָׁף מִדּוּכְתֵּיהּ – טְרֵפָה. רַבִּי יוֹחָנָן אָמַר: ״אֵלּוּ טְרֵפוֹת״ דַּוְקָא, תְּנָא טְרֵפוֹת, וּתְנָא ״זֶה הַכְּלָל״,</div>
+    <div class="trans" data-when="he">במאי פליגי? בדינו של רב מתנא: ראש עצם הירך (בוקא דאטמא) שנשמט ממקומו לגמרי — טריפה. לר׳ יוחנן ש״אלו טריפות״ דווקא: התנא שנה את הטריפות, ושנה ״זה הכלל״ להוסיף עליהן —</div>
+    <div class="trans" data-when="en">The Gemara explains: With regard to what case do they disagree? They disagree with regard to the statement of Rav Mattana, as Rav Mattana says: This head of the femur that was completely dislocated renders the animal a tereifa. According to Rabbi Yoḥanan, who says that the phrase: These are tereifot, is meant specifically, the tanna taught the list of tereifot and taught afterward: This is the principle, to add cases that were not stated explicitly;</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין נ״ד ב — Chullin 54b:1</span></div>
+    <div class="orig">וְחַזְיַיהּ לִדְרַב מַתְנָא דְּאָתְיָא בְּזֶה הַכְּלָל, מַאי טַעְמָא? דְּדָמְיָא לִנְטוּלֵי. תְּנָא ״אֵלּוּ טְרֵפוֹת״ – הָנֵי הוּא דִּטְרֵפָה, הָא דְּרַב מַתְנָא כְּשֵׁרָה.</div>
+    <div class="trans" data-when="he">— וראה שדינו של רב מתנא לכאורה נכלל ב״זה הכלל״ (דומה לאיברים שניטלו, שמטריפים), ולכן שנה ״אלו טריפות״ דווקא: רק אלו טריפות, אבל בוקא דאטמא כשרה — לשיטת ר׳ יוחנן.</div>
+    <div class="trans" data-when="en">and the tanna then saw that the case of Rav Mattana, where the end of the thigh is dislocated, ostensibly comes under the heading of: This is the principle, and one might assume that it renders the animal a tereifa as well. What is the reason for this? It is because a dislocated thigh is similar to the cases of removed organs that render the animal a tereifa. Therefore, he taught the phrase: These are tereifot, at the beginning of the mishna, to emphasize that it is only these that render an animal a tereifa, but in the case of Rav Mattana, the animal is kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין נ״ד ב — Chullin 54b:2</span></div>
+    <div class="orig">וְרַבִּי שִׁמְעוֹן בֶּן לָקִישׁ אָמַר: אֵלּוּ כְּשֵׁרוֹת דַּוְקָא, תְּנָא טְרֵפוֹת, וּתְנָא ״זֶה הַכְּלָל״, וְחַזְיַיהּ לִדְרַב מַתְנָא דְּלָא אָתְיָא בְּ״זֶה הַכְּלָל״, מַאי טַעְמָא? לָאו לִנְקוּבֵי דָּמְיָא, וְלָא לִפְסוּקֵי דָּמְיָא, וְלִנְטוּלֵי נָמֵי לָא דָּמְיָא, תְּנָא ״אֵלּוּ כְּשֵׁרוֹת״ – הָנֵי הוּא דִּכְשֵׁרוֹת, הָא דְּרַב מַתְנָא טְרֵפָה.</div>
+    <div class="trans" data-when="he">ולריש לקיש ש״אלו כשרות״ דווקא: התנא שנה ״זה הכלל״ וראה שדינו של רב מתנא לכאורה אינו נכלל בו — שאינו דומה לא לנקובים, לא לפסוקים ולא לניטלים — ולכן שנה ״אלו כשרות״ דווקא: רק אלו כשרות, אבל בוקא דאטמא טריפה.</div>
+    <div class="trans" data-when="en">And according to Rabbi Shimon ben Lakish, who says that the phrase: These are kosher, is meant specifically, the tanna taught the list of tereifot, and taught afterward that this is the principle. And the tanna then saw that the case of Rav Mattana ostensibly does not come under the heading of: This is the principle, and one might assume that it does not render the animal a tereifa. What is the reason for this? It is because a dislocated thigh is not similar to cases of perforated organs, and it is not similar to cases of cut organs, such as the windpipe, and it is not similar to cases of removed organs. Therefore, he taught the phrase: These are kosher, to emphasize that it is only these that are kosher, but in the case of Rav Mattana, the animal is a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין נ״ד ב — Chullin 54b:3</span></div>
+    <div class="orig">גּוּפָא, אָמַר רַב מַתְנָא: הַאי בּוּקָא דְּאַטְמָא דְּשָׁף מִדּוּכְתֵּיהּ – טְרֵפָה, וְרָבָא אָמַר: כְּשֵׁרָה, וְאִי אִיפְּסִיק נִיבֵיהּ – טְרֵפָה. וְהִלְכְתָא: אִיפְּסִיק נָמֵי כְּשֵׁרָה, עַד דְּמִתְעַכְלָא אִתְעֲכוֹלֵי.</div>
+    <div class="trans" data-when="he">הגמרא חוזרת לעצם הדין: רב מתנא — בוקא דאטמא שנשמט לגמרי טריפה; רבא — כשרה, ורק אם נפסק הגיד המחזיק את העצם — טריפה. ומסקנה: ההלכה — אף שנפסק הגיד כשרה, אלא אם כן נתעכל הגיד ונרקב.</div>
+    <div class="trans" data-when="en">The Gemara addresses the matter itself: Rav Mattana says: This head of the femur that was completely dislocated renders the animal a tereifa. And Rava said: The animal is kosher, but if its sinew holding the bone in place is cut, it is a tereifa. The Gemara concludes: And the halakha is: Even if the sinew is cut, the animal is still kosher, unless the sinew decomposed, in which case the animal is a tereifa.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">שיעור האיסר — ועמידה מפני תלמידי חכמים</span><span data-when="en">The measure of the issar — and rising for scholars</span>
+      <span class="ref">Chullin 54b:4–8</span></h2>
+  <div class="lead"><span data-when="he">זעירי מתרגם את שיעור האיסר לדינר קורדינאה; ואגב מעשה ר׳ חנא, דיון אם בעלי אומניות עומדים מפני תלמידי חכמים.</span><span data-when="en">Ze’eiri renders the issar as a Kurdish dinar; an incident then raises whether tradesmen rise for Torah scholars.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① זעירי: שיעור האיסר — כדינר קורדינאה"]:::statement
+  S2["② ר׳ חנא: ר׳ יוחנן ביקש דינר למדידה, ולא הניחני לעמוד — אין אומן עומד בשעת מלאכתו"]:::statement
+  Q1{"③ ולא? והתנן: כל בעלי אומניות עומדים מפניהם!"}:::question
+  A1["④ ר׳ יוחנן: מפני מביאי הביכורים עומדים, מפני ת״ח אין עומדים"]:::answer
+  S3["④ ר׳ יוסי בר אבין: כמה חביבה מצוה בשעתה — מפניהם עומדים"]:::statement
+  Q2{"⑤ ממאי? דלמא כדי שלא תהא מכשילן לעתיד לבוא"}:::question
+  S1 -->|אגב| S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|למד מכאן| S3
+  S3 -.->|דחייה| Q2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Ze’eiri: the issar measure — like a Kurdish dinar"]:::statement
+  S2["② R. Ḥana: R. Yoḥanan sought a dinar to measure, forbade me to rise — no craftsman rises mid-work"]:::statement
+  Q1{"③ Really? But we learned: all tradesmen rise before them!"}:::question
+  A1["④ R. Yoḥanan: they rise for first-fruit bringers, not for Torah scholars"]:::answer
+  S3["④ R. Yosei bar Avin: how beloved a mitzva in its time — for them they rise"]:::statement
+  Q2{"⑤ From where? Perhaps only so as not to deter them in future"}:::question
+  S1 -->|incidentally| S2
+  S2 -->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -->|inferred| S3
+  S3 -.->|rejected| Q2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① אָמַר זְעֵירִי … שִׁיעוּרֵיהּ בְּדִינָרָא קוּרְדִּינָאָה … בֵּינֵי פְּשִׁיטֵי דְּפוּמְבְּדִיתָא"]:::statement
+  S2["② בַּר נַפָּחָא … בְּעָא מִינַּי דִּינָרָא … אֵין בַּעֲלֵי אוּמָּנִיּוֹת רַשָּׁאִין לַעֲמוֹד … בְּשָׁעָה שֶׁעֲסוּקִין בִּמְלַאכְתָּם"]:::statement
+  Q1{"③ וְלָא? וְהָתְנַן: כׇּל בַּעֲלֵי אוּמָּנִיּוֹת עוֹמְדִים מִפְּנֵיהֶם …"}:::question
+  A1["④ מִפְּנֵיהֶם עוֹמְדִין, מִפְּנֵי תַּלְמִידֵי חֲכָמִים אֵין עוֹמְדִין"]:::answer
+  S3["④ כַּמָּה חֲבִיבָה מִצְוָה בִּשְׁעָתָהּ, שֶׁהֲרֵי מִפְּנֵיהֶם עוֹמְדִין …"]:::statement
+  Q2{"⑤ מִמַּאי? דִּילְמָא כְּדֵי שֶׁלֹּא תְּהֵא נִמְצָא מַכְשִׁילָן לֶעָתִיד לָבֹא"}:::question
+  S1 -->|אגב| S2
+  S2 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|למד מכאן| S3
+  S3 -.->|דחייה| Q2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ד ב — Chullin 54b:4</span></div>
+    <div class="orig">עַד כַּמָּה תֶּחְסַר? אָמַר זְעֵירִי: אַתּוּן דְּלָא מִיתְחֲמֵי לְכוֹן שִׁיעוּרָא, שִׁיעוּרֵיהּ בְּדִינָרָא קוּרְדִּינָאָה, וְהָוֵי כִּפְשִׁיטָא זוּטַרְתִּי, וּמִשְׁתַּכְחָא בֵּינֵי פְּשִׁיטֵי דְּפוּמְבְּדִיתָא.</div>
+    <div class="trans" data-when="he">המשנה: ״עד כמה תחסר?… עד כאיסר האיטלקי״. זעירי (שעלה מארץ ישראל) אמר לבני בבל: אתם שאינכם מכירים את שיעור האיסר האיטלקי, אמדוהו כדינר קורדינאה, שהוא כפרוטה קטנה ומצוי בין פרוטות פומבדיתא.</div>
+    <div class="trans" data-when="en">§ The mishna states: How much can the windpipe be missing and still be kosher? Rabban Shimon ben Gamliel says: Until the perforation is the same size as an Italian issar. Ze’eiri, who came from Eretz Yisrael, said with regard to this: You, who are not familiar with the measure of an Italian issar, because it is not used in Babylonia, should estimate its measure as a Kurdish dinar. And it is like a small peruta coin and can be found among the perutot of Pumbedita.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ד ב — Chullin 54b:5</span></div>
+    <div class="orig">אָמַר רַבִּי חָנָא פָּתוּרָאָה: עִילָּא מִינַּאי הֲוָה קָאֵי בַּר נַפָּחָא, וּבְעָא מִינַּי דִּינָרָא קוּרְדִּינָאָה לְשַׁעוֹרֵי בֵּיהּ טְרֵיפְתָא, וּבְעַי לְמֵיקָם מִקַּמֵּיהּ וְלָא שְׁבַקְנִי. אָמַר לִי: שֵׁב בְּנִי שֵׁב, אֵין בַּעֲלֵי אוּמָּנִיּוֹת רַשָּׁאִין לַעֲמוֹד מִפְּנֵי תַּלְמִידֵי חֲכָמִים בְּשָׁעָה שֶׁעֲסוּקִין בִּמְלַאכְתָּם.</div>
+    <div class="trans" data-when="he">ר׳ חנא השולחני: ר׳ יוחנן (בר נפחא) עמד מעלי וביקש ממני דינר קורדינאה למדוד בו טריפה. ביקשתי לעמוד מפניו מתוך כבוד, ולא הניחני; אמר לי: שב בני שב, אין בעלי אומניות רשאים לעמוד מפני תלמידי חכמים בשעה שהם עוסקים במלאכתם.</div>
+    <div class="trans" data-when="en">Rabbi Ḥana the money changer said: Bar Nappaḥa, i.e., Rabbi Yoḥanan, was standing over me, and he requested of me a Kurdish dinar with which to measure tereifot, in accordance with the statement of Ze’eiri. And I wanted to rise before him out of respect, but he did not let me. Rabbi Yoḥanan said to me: Sit, my son, sit. Tradesmen are not permitted to stand before Torah scholars when they are engaged in their work.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ד ב — Chullin 54b:6</span></div>
+    <div class="orig">וְלָא? וְהָתְנַן: כׇּל בַּעֲלֵי אוּמָּנִיּוֹת עוֹמְדִים מִפְּנֵיהֶם, וְשׁוֹאֲלִין בִּשְׁלוֹמָן, וְאוֹמְרִין לָהֶם: אַחֵינוּ אַנְשֵׁי מְקוֹם פְּלוֹנִי בּוֹאֲכֶם בְּשָׁלוֹם!</div>
+    <div class="trans" data-when="he">קושיא: וכי אין בעלי אומניות עומדים מפני ת״ח? והרי שנינו (ביכורים): כל בעלי האומניות עומדים מפני מביאי הביכורים, ושואלים בשלומם ואומרים: אחינו אנשי מקום פלוני, בואכם לשלום!</div>
+    <div class="trans" data-when="en">The Gemara asks: And are tradesmen not permitted to stand before Torah scholars? But didn’t we learn in a mishna (Bikkurim 3:3): When the pilgrims bring their first fruits to Jerusalem, all the tradesmen stand before them, and greet them, and say to them: Our brothers from such and such place, welcome?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ד ב — Chullin 54b:7</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹחָנָן: מִפְּנֵיהֶם עוֹמְדִין, מִפְּנֵי תַּלְמִידֵי חֲכָמִים אֵין עוֹמְדִין. אָמַר רַבִּי יוֹסֵי בַּר אָבִין: בֹּא וּרְאֵה כַּמָּה חֲבִיבָה מִצְוָה בִּשְׁעָתָהּ, שֶׁהֲרֵי מִפְּנֵיהֶם עוֹמְדִין, מִפְּנֵי תַּלְמִידֵי חֲכָמִים אֵין עוֹמְדִין.</div>
+    <div class="trans" data-when="he">תירוץ ר׳ יוחנן: מפני מביאי הביכורים עומדים, אבל מפני תלמידי חכמים אין עומדים. ר׳ יוסי בר אבין למד מכאן: בוא וראה כמה חביבה מצוה בשעת עשייתה — שהרי מפני מביאי הביכורים עומדים, ומפני ת״ח אין עומדים.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan said: Yes, they stand before those bringing first fruits, but they do not stand before Torah scholars. Rabbi Yosei bar Avin says: Come and see how beloved is a mitzva performed in its proper time, as the tradesmen stand before those who brought first fruits, while they do not stand before Torah scholars.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ד ב — Chullin 54b:8</span></div>
+    <div class="orig">מִמַּאי? דִּילְמָא כְּדֵי שֶׁלֹּא תְּהֵא נִמְצָא מַכְשִׁילָן לֶעָתִיד לָבֹא.</div>
+    <div class="trans" data-when="he">דחייה: מניין שעומדים מפני חביבות המצוה? שמא עומדים רק כדי שלא להכשילם לעתיד — שאם לא יכבדום, יימנעו מלעלות עם ביכוריהם בשנים הבאות.</div>
+    <div class="trans" data-when="en">The Gemara rejects the statement of Rabbi Yosei bar Avin: From where does one know that they rise out of respect? Perhaps the tradesmen stand only in order not to cause those bringing first fruits to fail and sin in the future. That is, if the tradesmen do not treat those bringing the first fruits with great respect, they may not make the effort to travel to Jerusalem in a subsequent year.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">״עד״ ולא עד בכלל — שיעורי חכמים להחמיר</span><span data-when="en">“Until” and not including — measures read stringently</span>
+      <span class="ref">Chullin 54b:9–55a:6</span></h2>
+  <div class="lead"><span data-when="he">רב נחמן: ״עד״ ולא עד בכלל. רבא מקשה משורת תא־שמע ממידות כלים; והיישוב — שיעורי חכמים נדרשים תמיד להחמיר.</span><span data-when="en">Rav Naḥman: “until” excludes the measure itself. Rava objects from a chain of vessel-measures; resolved: the Sages’ measures are always read stringently.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב נחמן: כסלע כיתר מכסלע — ׳עד׳ ולא עד בכלל"]:::statement
+  Q1{"② מיתיבי: חבל המטה עד ה׳ טפחים — טהור; ה׳ כלמטה? · לא, כלמעלה"}:::question
+  P1["③ ת״ש: מה׳ עד י׳ — טמא; י׳ כלמטה? · לא, כלמעלה"]:::proof
+  P2["④ ת״ש: דקין שבכלי חרס — עד לוג; לוג כלמטה? · לא, כלמעלה"]:::proof
+  P3["⑤ ת״ש: מלוג עד סאה ברביעית; סאה כלמטה? · לא, כלמעלה"]:::proof
+  P4["⑥ ת״ש: מסאה עד סאתים בחצי לוג; סאתים כלמטה? · לא, כלמעלה"]:::proof
+  Q2{"⑦ והתניא: לוג, סאה, סאתים — כלמטה!"}:::question
+  A1["⑧ התם לחומרא: כל שיעורי חכמים להחמיר, חוץ מכגריס שבכתמים"]:::answer
+  C1["⑨ דייקא נמי: ה׳ כלמעלה, י׳ כלמטה — הכל להחמיר"]:::conclusion
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|ת״ש| P1
+  P1 -->|ת״ש| P2
+  P2 -->|ת״ש| P3
+  P3 -->|ת״ש| P4
+  P4 -.->|והתניא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -->|דיוק ומסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Naḥman: exactly a sela is like more than a sela — ׳until׳ not including"]:::statement
+  Q1{"② Objection: a bed-rope until 5 handbreadths — pure; 5 as below? · No, as above"}:::question
+  P1["③ Come and hear: 5 to 10 — impure; 10 as below? · No, as above"]:::proof
+  P2["④ Come and hear: small clay vessels — up to a log; log as below? · No, as above"]:::proof
+  P3["⑤ Come and hear: log to se׳a, a quarter-log; se׳a as below? · No, as above"]:::proof
+  P4["⑥ Come and hear: se׳a to two se׳a, half a log; two se׳a as below? · No, as above"]:::proof
+  Q2{"⑦ But a baraita teaches: log, se׳a, two se׳a — all as below!"}:::question
+  A1["⑧ There stringently: all Sages׳ measures stringent, save the groat for stains"]:::answer
+  C1["⑨ Precise too: 5 as above, 10 as below — all toward stringency"]:::conclusion
+  S1 -.->|objection| Q1
+  Q1 -->|come and hear| P1
+  P1 -->|come and hear| P2
+  P2 -->|come and hear| P3
+  P3 -->|come and hear| P4
+  P4 -.->|but a baraita| Q2
+  Q2 -->|answer| A1
+  A1 -->|inference, conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב נַחְמָן: כְּסֶלַע – כְּיָתֵר מִכְּסֶלַע … ׳עַד׳, וְלֹא עַד בַּכְּלָל"]:::statement
+  Q1{"② חֶבֶל הַיּוֹצֵא מִן הַמִּטָּה עַד חֲמִשָּׁה טְפָחִים – טָהוֹר … לֹא, חֲמִשָּׁה כִּלְמַעְלָה"}:::question
+  P1["③ תָּא שְׁמַע: מֵחֲמִשָּׁה וְעַד עֲשָׂרָה – טָמֵא … לָא, עֲשָׂרָה כִּלְמַעְלָה"]:::proof
+  P2["④ תָּא שְׁמַע: הַדַּקִּין שֶׁבִּכְלִי חֶרֶס … וְעַד לוֹג … לֹא, לוֹג כִּלְמַעְלָה"]:::proof
+  P3["⑤ תָּא שְׁמַע: מִלּוֹג עַד סְאָה – בִּרְבִיעִית … לָא, סְאָה כִּלְמַעְלָה"]:::proof
+  P4["⑥ תָּא שְׁמַע: מִסְּאָה וְעַד סָאתַיִם – בַּחֲצִי לוֹג … לָא, סָאתַיִם כִּלְמַעְלָה"]:::proof
+  Q2{"⑦ וְהָתַנְיָא: לוֹג – כִּלְמַטָּה, סְאָה – כִּלְמַטָּה, סָאתַיִם – כִּלְמַטָּה"}:::question
+  A1["⑧ הָתָם לְחוּמְרָא … כׇּל שִׁיעוּרֵי חֲכָמִים לְהַחְמִיר, חוּץ מִכִּגְרִיס שֶׁל כְּתָמִים לְהָקֵל"]:::answer
+  C1["⑨ דַּיְקָא נָמֵי … חֲמִשָּׁה – כִּלְמַעְלָה, עֲשָׂרָה – כִּלְמַטָּה"]:::conclusion
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|ת״ש| P1
+  P1 -->|ת״ש| P2
+  P2 -->|ת״ש| P3
+  P3 -->|ת״ש| P4
+  P4 -.->|והתניא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -->|דיוק ומסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין נ״ד ב — Chullin 54b:9</span></div>
+    <div class="orig">אָמַר רַב נַחְמָן: כְּסֶלַע – כְּיָתֵר מִכְּסֶלַע, כְּאִיסָּר – כְּיָתֵר מִכְּאִיסָּר.</div>
+    <div class="trans" data-when="he">רב נחמן (על שיעורי המשנה): חֶסְרון בגודל סלע נחשב כיתר מכסלע, וחֶסְרון כאיסר נחשב כיתר מכאיסר. כלומר השיעור עצמו כבר נכלל בפסול.</div>
+    <div class="trans" data-when="en">§ The mishna states: How much can the windpipe be missing and still be kosher? Rabban Shimon ben Gamliel says: Until the perforation is the same size as an Italian issar. With regard to this, Rav Naḥman says: Whenever the Sages specify the measure as that of a sela, e.g., with regard to a damaged skull for purposes of tereifot, they mean that even an area exactly the size of a sela is treated as more than a sela. Likewise, when they specify the measure as that of an issar, they mean that an area exactly the size of an issar is treated as though it were more than an issar.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין נ״ד ב — Chullin 54b:10</span></div>
+    <div class="orig">אַלְמָא קָסָבַר רַב נַחְמָן: ״עַד״, וְלֹא עַד בַּכְּלָל.</div>
+    <div class="trans" data-when="he">מסקנת הדיוק: שמע מינה שרב נחמן סובר ״עד״ ולא עד בכלל — השיעור הנקוב (איסר) עצמו בכלל הפסול, ולכן ניקב כאיסר טריפה.</div>
+    <div class="trans" data-when="en">Since Rav Naḥman holds that a perforation exactly the size of an issar is treated as though it were larger than an issar, he must hold that such a perforation in the windpipe renders the animal a tereifa. The Gemara therefore infers: Apparently, Rav Naḥman holds that whenever the Sages use the word: Until, it means until and not including the measure, as the mishna states that an animal with a perforated windpipe is kosher until the perforation reaches the size of an issar.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין נ״ד ב — Chullin 54b:11</span></div>
+    <div class="orig">אֵיתִיבֵיהּ רָבָא לְרַב נַחְמָן: חֶבֶל הַיּוֹצֵא מִן הַמִּטָּה עַד חֲמִשָּׁה טְפָחִים – טָהוֹר. מַאי לָאו חֲמִשָּׁה כִּלְמַטָּה? לֹא, חֲמִשָּׁה כִּלְמַעְלָה.</div>
+    <div class="trans" data-when="he">רבא הקשה לרב נחמן ממשנה (כלים): חבל היוצא מן המטה עד חמישה טפחים — טהור (אינו מקבל טומאה, שאין בו שימוש). וכי לא משמע שחמישה ״כלמטה״ — בכלל הטהור, היינו ״עד ועד בכלל״? תשובה: לא, חמישה ״כלמעלה״ — מחוץ לטהור.</div>
+    <div class="trans" data-when="en">Rava raised an objection to the opinion of Rav Naḥman from a mishna (Kelim 19:2): The end of a rope that extends from a rope bed is not susceptible to ritual impurity until it is five handbreadths long. If the bed becomes impure, the rope remains pure, because it has no use and is therefore not considered part of the bed. What, is it not teaching that a rope exactly five handbreadths long is treated as though its length were below that amount? If so, the word: Until, means until and including the exact measure. The Gemara responds: No, a rope exactly five handbreadths long is like a rope whose length is above that amount.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין נ״ד ב — Chullin 54b:12</span></div>
+    <div class="orig">תָּא שְׁמַע: מֵחֲמִשָּׁה וְעַד עֲשָׂרָה – טָמֵא. מַאי לָאו עֲשָׂרָה כִּלְמַטָּה? לָא, עֲשָׂרָה כִּלְמַעְלָה.</div>
+    <div class="trans" data-when="he">תא שמע מהמשך אותה משנה: מחמישה ועד עשרה טפחים — טמא (מקבל טומאה). וכי לא משמע שעשרה ״כלמטה״ — בכלל הטמא? תשובה: לא, עשרה ״כלמעלה״ — מחוץ לטמא.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a proof from the continuation of the mishna: If the end of the rope was of any length from five handbreadths until ten, it is susceptible to impurity. What, is it not teaching that a rope exactly ten handbreadths long is treated as though its length were below that? The Gemara responds: No, a rope exactly ten handbreadths long is treated like a rope whose length is above that, and it is not susceptible to impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין נ״ד ב — Chullin 54b:13</span></div>
+    <div class="orig">תָּא שְׁמַע: הַדַּקִּין שֶׁבִּכְלִי חֶרֶס, הֵן וְקַרְקְרוֹתֵיהֶן וְדוֹפְנוֹתֵיהֶם, יוֹשְׁבִין שֶׁלֹּא מְסוּמָּכִין –</div>
+    <div class="trans" data-when="he">תא שמע ממשנה אחרת (כלים): הקטנים שבכלי חרס — הם, ושברי קרקעיותיהם ודופנותיהם, היושבים (עומדים) בלא תמיכה —</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear proof from another mishna (Kelim 2:2): With regard to the smallest of earthenware vessels, if they, or even their broken-off bases or sides, can sit, i.e., remain upright, without being supported,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין נ״ה א — Chullin 55a:1</span></div>
+    <div class="orig">שִׁיעוּרָן בִּכְדֵי סִיכַת קָטָן וְעַד לוֹג. מַאי לָאו לוֹג כִּלְמַטָּה? לֹא, לוֹג כִּלְמַעְלָה.</div>
+    <div class="trans" data-when="he">— שיעורם לקבלת טומאה: כדי סיכת תינוק, וזה כשהכלי השלם החזיק עד לוג. וכי לא משמע שלוג ״כלמטה״ — בכלל? תשובה: לא, לוג ״כלמעלה״ — מחוץ לכלל.</div>
+    <div class="trans" data-when="en">their measure in order to be susceptible to ritual impurity is that they can hold enough oil with which to anoint a small child. If they cannot hold this amount, they are considered useless and are not susceptible to impurity. And this measure applies only to vessels that held up to a log when they were whole; if they had originally held more, they must hold more when broken in order to be susceptible to impurity. What, is it not teaching that if it originally held exactly one log it is treated as though it had held below that amount? If so, the term: Up to, means up to and including. The Gemara responds: No, if it held exactly one log it is treated as though it held above that amount, and if broken it must be capable of holding a greater measure in order to be susceptible to impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין נ״ה א — Chullin 55a:2</span></div>
+    <div class="orig">תָּא שְׁמַע: מִלּוֹג עַד סְאָה – בִּרְבִיעִית, מַאי לָאו סְאָה כִּלְמַטָּה? לָא, סְאָה כִּלְמַעְלָה.</div>
+    <div class="trans" data-when="he">תא שמע מהמשך המשנה: כלי שהחזיק מלוג עד סאה — שיעור שברו ברביעית. וכי לא משמע שסאה ״כלמטה״? תשובה: לא, סאה ״כלמעלה״.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear proof from the continuation of the same mishna: If the vessel originally held from a log up to a se’a, its broken-off base or sides must hold a quarter-log in order to be susceptible to impurity. What, is it not teaching that if it originally held exactly a se’a it is treated as though it had held below that amount? The Gemara responds: No, if it held exactly a se’a it is treated as though it had held above that amount, and its base or sides must hold a greater measure in order to be susceptible to impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין נ״ה א — Chullin 55a:3</span></div>
+    <div class="orig">תָּא שְׁמַע: מִסְּאָה וְעַד סָאתַיִם – בַּחֲצִי לוֹג, מַאי לָאו סָאתַיִם כִּלְמַטָּה? לָא, סָאתַיִם כִּלְמַעְלָה.</div>
+    <div class="trans" data-when="he">תא שמע מהמשך המשנה: כלי שהחזיק מסאה עד סאתים — שיעור שברו בחצי לוג. וכי לא משמע שסאתים ״כלמטה״? תשובה: לא, סאתים ״כלמעלה״.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear proof from the continuation of the same mishna: If the vessel had originally held from a se’a up to two se’a, its broken-off base or sides must hold half a log to be susceptible to impurity. What, is it not teaching that if it had originally held exactly two se’a it is treated as if though it had held below that amount? The Gemara responds: No, if it had held exactly two se’a it is treated as though it had held above that amount.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין נ״ה א — Chullin 55a:4</span></div>
+    <div class="orig">וְהָתַנְיָא: לוֹג – כִּלְמַטָּה, סְאָה – כִּלְמַטָּה, סָאתַיִם – כִּלְמַטָּה.</div>
+    <div class="trans" data-when="he">קושיא מכרעת: והרי שנינו בברייתא במפורש — לוג ״כלמטה״, סאה ״כלמטה״, סאתים ״כלמטה״; ומשמע ״עד ועד בכלל״, נגד רב נחמן.</div>
+    <div class="trans" data-when="en">The Gemara asks: How can one explain the mishna in this manner? But isn’t it taught explicitly in a baraita: If the vessel had originally held exactly a log it is treated as though it had held below that amount; if it had held exactly a se’a it is treated as though it had held below that amount; if it had held exactly two se’a it is treated as though it had held below that amount? Evidently, the term: Up to, means up to and including the given measure, in contradiction to Rav Naḥman’s opinion that it means up to and not including the measure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין נ״ה א — Chullin 55a:5</span></div>
+    <div class="orig">הָתָם לְחוּמְרָא, דְּאָמַר רַבִּי אֲבָהוּ אָמַר רַבִּי יוֹחָנָן: כׇּל שִׁיעוּרֵי חֲכָמִים לְהַחְמִיר, חוּץ מִכִּגְרִיס שֶׁל כְּתָמִים לְהָקֵל.</div>
+    <div class="trans" data-when="he">תירוץ: ״עד״ נדרש תמיד להחמיר. בכלים — להחמיר היינו ״עד ועד בכלל״, שהכלי מקבל טומאה ביתר קלות. ר׳ אבהו בשם ר׳ יוחנן: כל שיעורי חכמים נדרשים להחמיר, חוץ מכגריס שבכתמים שנדרש להקל. ובטריפה, להחמיר היינו ״עד ולא עד בכלל״.</div>
+    <div class="trans" data-when="en">The Gemara responds: The term: Up to, is always interpreted in the more stringent manner. Accordingly, there, with regard to the impurity of vessels, the term: Up to, is interpreted as up to and including in order to rule stringently, since the vessel is then more easily susceptible to impurity. As Rabbi Abbahu says that Rabbi Yoḥanan says: All measures of the Sages must be interpreted stringently, except for the measure of a groat as a standard for stains of blood found on a woman’s clothing, which is interpreted leniently. Even if the stain is exactly the size of a groat, the woman remains pure. Here, it is more stringent to interpret the phrase: Up to, as up to and including, because an animal is then more susceptible to being rendered a tereifa.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין נ״ה א — Chullin 55a:6</span></div>
+    <div class="orig">דַּיְקָא נָמֵי, דְּקָתָנֵי עֲלַהּ דְּהַהִיא: חֲמִשָּׁה – כִּלְמַעְלָה, עֲשָׂרָה – כִּלְמַטָּה.</div>
+    <div class="trans" data-when="he">דיוק המסייע: אף לשון הברייתא מדויקת — על משנת חבל המטה שנינו: חמישה ״כלמעלה״ (מחוץ לטהור), עשרה ״כלמטה״ (בכלל הטמא) — ובשני המקרים הולכים להחמיר.</div>
+    <div class="trans" data-when="en">The Gemara notes: The language is also precise, i.e., it is evident that the phrase: Up to, is always interpreted stringently, as the mishna (Kelim 19:2) states that if a rope extending from a rope bed is of any length up to five handbreadths, it is not susceptible to ritual impurity, but if it is of any length from five up to ten handbreadths, it is susceptible. And a baraita teaches with regard to that mishna: If the rope was exactly five handbreadths long, it is treated as though its length were above that; if the rope was exactly ten handbreadths long, it is treated as though its length were below that. In both cases, the measure is interpreted stringently.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
