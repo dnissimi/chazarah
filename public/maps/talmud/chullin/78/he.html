@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ע״ח</title>
+<meta name="description" content="מפת הסוגיא של חולין ע״ח: פתיחת פרק ׳אותו ואת בנו׳ — היכן נוהג האיסור וטבלת המקרים; דרשת ׳שור או שה׳ ללמדו במוקדשין ובכלאים; מחלוקת חנניה וחכמים אם נוהג בזכרים; והלכה כחנניה — והחקירה אם חוששין לזרע האב בפרדות.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="78">
+<meta name="gemara-map:sefaria-ref" content="Chullin 78">
+<meta name="gemara-map:topic-he" content="אותו ואת בנו — היכן נוהג, וזרע האב">
+<meta name="gemara-map:topic-en" content="A mother and offspring — scope, and paternity">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ע״ח">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 78">
+<meta name="gemara-map:blurb-he" content="פתיחת פרק ׳אותו ואת בנו׳: היכן נוהג האיסור וטבלת המקרים; דרשות הכתוב למוקדשין, לכלאים ולחלוקת האיסורים; מחלוקת חנניה וחכמים בזכרים — והלכה כחנניה, עם החקירה אם חוששין לזרע האב.">
+<meta name="gemara-map:blurb-en" content="The chapter ‘a mother and its offspring’ opens: where the prohibition applies and the table of cases; verses deriving it for sacrificial animals, diverse kinds, and the split of prohibitions; the Ḥananya–Rabbis dispute over males — and the halakha like Ḥananya, with the inquiry over paternity in mules.">
+<meta name="gemara-map:sugya-count" content="3">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ע״ח</span><span data-when="en">Sugya map — Chullin 78</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ע״ח א — ע״ט ב · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 78a–79b · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> פתיחת פרק חמישי, <b>״אותו ואת בנו״</b>: המשנה קובעת היכן נוהג האיסור ופורשת טבלת מקרים (חולין/קדשים, בחוץ/בפנים) ודיני הראשון והשני; הגמרא דורשת מן הכתוב שהאיסור נוהג <b>במוקדשין ובכלאים</b>, ואיך ״או״ ו״אותו״ מחלקים את האיסורים; ומכאן מחלוקת <b>חנניה וחכמים</b> אם נוהג אף בזכרים, ש<b>הלכה כחנניה</b> — ובעקבותיה החקירה אם ר׳ יהודה <b>חושש לזרע האב</b> בפרדות, שנפשטה: ספוקי מספקא ליה.</span>
+    <span data-when="en"><b>Bottom line:</b> The fifth chapter, <b>“a mother and its offspring,”</b> opens: the Mishna fixes where the prohibition applies and lays out a table of cases (non-sacred/sacred, outside/inside the Temple) with the law of the first and second animal; the Gemara derives from Scripture that it applies to <b>sacrificial animals and diverse kinds</b>, and how the words “or” and “it” split the prohibitions; this yields the <b>Ḥananya–Rabbis</b> dispute over whether it applies to males too, where <b>the halakha follows Ḥananya</b> — prompting the inquiry whether R. Yehuda is <b>concerned with paternity</b> in mules, resolved: he is uncertain.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ע״ח</span><span data-when="en">Overview — Chullin 78</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · משנה: אותו ואת בנו — היכן נוהג, וטבלת המקרים"]):::mishnah
+  O2["2 · דרשות הכתוב: מוקדשין, כלאים, וחלוקת האיסורים; זכרים או נקבות"]:::statement
+  O3["3 · הלכה כחנניה — וחקירת ׳זרע האב׳ בפרדות"]:::statement
+  O1 --> O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · Mishna: a mother and offspring — scope, and the table of cases"]):::mishnah
+  O2["2 · Scriptural derivations: sacred, diverse kinds, splitting; males or females"]:::statement
+  O3["3 · Halakha like Ḥananya — and the ׳paternity׳ inquiry in mules"]:::statement
+  O1 --> O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">פתיחת הפרק — משנת ׳אותו ואת בנו׳ וטבלת המקרים</span><span data-when="en">The chapter opens — the Mishna of ׳a mother and offspring׳ and the table of cases</span>
+      <span class="ref">Chullin 78a:4–78a:14</span></h2>
+  <div class="lead"><span data-when="he">הדרן על פרק ׳בהמה המקשה׳, ופתיחת פרק חמישי. המשנה: היכן נוהג איסור ׳אותו ואת בנו׳, ופירוט מקרי השוחט — חולין וקדשים, בחוץ ובפנים, ודין הראשון והשני.</span><span data-when="en">Concluding ׳the animal in hard labor׳ and opening the fifth chapter. The Mishna: where the prohibition of ׳a mother and offspring׳ applies, and the detailed cases of one who slaughters — non-sacred and sacred, outside and inside, the law of the first and second.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① הדרן ׳בהמה המקשה׳ — משנה: אותו ואת בנו נוהג בכל מקום, חולין וקדשים"]):::mishnah
+  M2(["② כיצד? חולין בחוץ — שניהם כשרים, השני סופג ארבעים"]):::mishnah
+  M3(["③ קדשים בחוץ — הראשון כרת, שניהם פסולים, שניהם סופגים"]):::mishnah
+  M4(["④ חולין בפנים / קדשים בפנים — דין הראשון והשני"]):::mishnah
+  M5(["⑤ חולין וקדשים בחוץ — הראשון כשר ופטור, השני סופג ופסול"]):::mishnah
+  M6(["⑥ קדשים וחולין בחוץ — הראשון כרת, השני כשר, שניהם סופגים"]):::mishnah
+  M7(["⑦ חולין וקדשים / קדשים וחולין בפנים"]):::mishnah
+  M8(["⑧ חולין בחוץ ובפנים — הראשון כשר, השני סופג ופסול"]):::mishnah
+  M9(["⑨ קדשים בחוץ ובפנים — הראשון כרת, שניהם סופגים ופסולים"]):::mishnah
+  M10(["⑩ חולין / קדשים בפנים ובחוץ — דין הראשון והשני"]):::mishnah
+  M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7 --> M8 --> M9 --> M10
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Hadran ׳the animal in hard labor׳ — Mishna: a mother and offspring applies everywhere, non-sacred and sacred"]):::mishnah
+  M2(["② How so? Non-sacred outside — both fit, the second incurs forty lashes"]):::mishnah
+  M3(["③ Sacred outside — the first liable to karet, both unfit, both incur lashes"]):::mishnah
+  M4(["④ Non-sacred inside / sacred inside — the law of first and second"]):::mishnah
+  M5(["⑤ Non-sacred then sacred, outside — first fit and exempt, second incurs lashes, unfit"]):::mishnah
+  M6(["⑥ Sacred then non-sacred, outside — first karet, second fit, both incur lashes"]):::mishnah
+  M7(["⑦ Non-sacred-and-sacred / sacred-and-non-sacred, inside"]):::mishnah
+  M8(["⑧ Non-sacred outside then inside — first fit, second incurs lashes, unfit"]):::mishnah
+  M9(["⑨ Sacred outside then inside — first karet, both incur lashes, both unfit"]):::mishnah
+  M10(["⑩ Non-sacred / sacred inside then outside — the law of first and second"]):::mishnah
+  M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7 --> M8 --> M9 --> M10
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① הֲדַרַן עֲלָךְ בְּהֵמָה הַמְקַשָּׁה … אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג … בְּחוּלִּין וּבְמוּקְדָּשִׁין"]):::mishnah
+  M2(["② כֵּיצַד? … חוּלִּין בַּחוּץ – שְׁנֵיהֶם כְּשֵׁרִים, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים"]):::mishnah
+  M3(["③ קָדָשִׁים בַּחוּץ – הָרִאשׁוֹן חַיָּיב כָּרֵת, וּשְׁנֵיהֶם פְּסוּלִים, וּשְׁנֵיהֶם סוֹפְגִים"]):::mishnah
+  M4(["④ חוּלִּין בִּפְנִים … קָדָשִׁים בִּפְנִים – הָרִאשׁוֹן כָּשֵׁר וּפָטוּר …"]):::mishnah
+  M5(["⑤ חוּלִּין וְקָדָשִׁים בַּחוּץ – הָרִאשׁוֹן כָּשֵׁר, וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג … וּפָסוּל"]):::mishnah
+  M6(["⑥ קָדָשִׁים וְחוּלִּין בַּחוּץ – הָרִאשׁוֹן חַיָּיב כָּרֵת … וְהַשֵּׁנִי כָּשֵׁר, וּשְׁנֵיהֶם סוֹפְגִים"]):::mishnah
+  M7(["⑦ חוּלִּין וְקָדָשִׁים בִּפְנִים … קָדָשִׁים וְחוּלִּין בִּפְנִים …"]):::mishnah
+  M8(["⑧ חוּלִּין בַּחוּץ וּבִפְנִים – הָרִאשׁוֹן כָּשֵׁר … וְהַשֵּׁנִי סוֹפֵג … וּפָסוּל"]):::mishnah
+  M9(["⑨ קָדָשִׁים בַּחוּץ וּבִפְנִים – הָרִאשׁוֹן חַיָּיב כָּרֵת, וּשְׁנֵיהֶם סוֹפְגִים … וּשְׁנֵיהֶם פְּסוּלִים"]):::mishnah
+  M10(["⑩ חוּלִּין בִּפְנִים וּבַחוּץ … קָדָשִׁים בִּפְנִים וּבַחוּץ …"]):::mishnah
+  M1 --> M2 --> M3 --> M4 --> M5 --> M6 --> M7 --> M8 --> M9 --> M10
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ח א — Chullin 78a:4-5</span></div>
+    <div class="orig">הֲדַרַן עֲלָךְ בְּהֵמָה הַמְקַשָּׁה. מַתְנִי׳ אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בֵּין בָּאָרֶץ בֵּין בְּחוּצָה לָאָרֶץ, בִּפְנֵי הַבַּיִת וְשֶׁלֹּא בִּפְנֵי הַבַּיִת, בְּחוּלִּין וּבְמוּקְדָּשִׁין.</div>
+    <div class="trans" data-when="he">סיום פרק ׳בהמה המקשה׳ ופתיחת פרק חמישי. משנה: איסור ׳אותו ואת בנו׳ (שלא לשחוט בהמה ובנה ביום אחד) נוהג בכל מקום — בארץ ובחוצה לארץ, בזמן הבית ושלא בזמן הבית, ובין בחולין ובין בקדשים.</div>
+    <div class="trans" data-when="en">(הדרן — chapter division; no Davidson translation) MISHNA: The prohibition against slaughtering an animal itself and its offspring applies both in Eretz Yisrael and outside of Eretz Yisrael, both in the presence, i.e., the time, of the Temple and not in the presence of the Temple, and it applies with regard to non-sacred animals and with regard to sacrificial animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ח א — Chullin 78a:6</span></div>
+    <div class="orig">כֵּיצַד? הַשּׁוֹחֵט אוֹתוֹ וְאֶת בְּנוֹ, חוּלִּין בַּחוּץ – שְׁנֵיהֶם כְּשֵׁרִים, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים.</div>
+    <div class="trans" data-when="he">כיצד? השוחט בהמה ובנה — שניהם חולין, מחוץ לעזרה — שתיהן כשרות לאכילה, אך על שחיטת השנייה לוקה ארבעים (משום ׳לא תשחטו ביום אחד׳).</div>
+    <div class="trans" data-when="en">How so? In the case of one who slaughters an animal itself and its offspring, both of which are non-sacred, and slaughters them outside the Temple courtyard, both of the animals are fit for consumption, but for slaughtering the second animal, one incurs [sofeg] the forty lashes for violating the prohibition: “You shall not slaughter it and its offspring both in one day” (Leviticus 22:28).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ח א — Chullin 78a:7</span></div>
+    <div class="orig">קָדָשִׁים בַּחוּץ – הָרִאשׁוֹן חַיָּיב כָּרֵת, וּשְׁנֵיהֶם פְּסוּלִים, וּשְׁנֵיהֶם סוֹפְגִים אֶת הָאַרְבָּעִים.</div>
+    <div class="trans" data-when="he">שניהם קדשים, ושחטם בחוץ — על הראשון חייב כרת (שחוטי חוץ); שתיהן פסולות לקרבן; ועל שתיהן לוקה ארבעים — הראשונה משום שחוטי חוץ, והשנייה משום ׳אותו ואת בנו׳.</div>
+    <div class="trans" data-when="en">If both animals were sacrificial animals slaughtered outside the Temple courtyard, then for slaughtering the first animal, one is liable to receive excision from the World-to-Come [karet]. For slaughtering the second animal one is not liable to receive karet. The second animal was not fit for sacrifice, since one may not slaughter an animal and its offspring on the same day. And both animals are disqualified for use as offerings, and for the slaughter of both of them, one incurs forty lashes apiece: The first being a sacrificial animal slaughtered outside the courtyard and the second being the offspring of an animal slaughtered that day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ח א — Chullin 78a:8</span></div>
+    <div class="orig">חוּלִּין בִּפְנִים – שְׁנֵיהֶם פְּסוּלִין, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים; קָדָשִׁים בִּפְנִים – הָרִאשׁוֹן כָּשֵׁר וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים וּפָסוּל.</div>
+    <div class="trans" data-when="he">שניהם חולין ושחטם בעזרה — שתיהן פסולות (חולין בעזרה), ועל השנייה לוקה. שניהם קדשים בעזרה — הראשון כשר ופטור, ועל השני לוקה והוא פסול (שאסור היה לשוחטו ביום זה).</div>
+    <div class="trans" data-when="en">If both animals were non-sacred and slaughtered inside the Temple courtyard, both of them are unfit to be sacrificed, being non-sacred animals slaughtered in the courtyard. And for slaughter of the second animal, one incurs the forty lashes for slaughtering an animal and its offspring on a single day. If both animals were sacrificial animals slaughtered inside the Temple courtyard, the first is fit for sacrifice, and one who slaughters it is exempt from any punishment. But for slaughter of the second animal, one incurs the forty lashes for slaughtering an animal and its offspring on a single day, and it is unfit for sacrifice, because one was not allowed to slaughter it on that day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ח א — Chullin 78a:9</span></div>
+    <div class="orig">חוּלִּין וְקָדָשִׁים בַּחוּץ – הָרִאשׁוֹן כָּשֵׁר, וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים, וּפָסוּל.</div>
+    <div class="trans" data-when="he">הראשון חולין והשני קדשים, ושחטם בחוץ — הראשון כשר לאכילה ופטור, ועל השני (קדשים) לוקה משום ׳אותו ואת בנו׳, והוא פסול לקרבן.</div>
+    <div class="trans" data-when="en">If the first animal was non-sacred and the second a sacrificial animal, and both were slaughtered outside the Temple courtyard, the first is fit for consumption and one who slaughters it is exempt from any punishment. But for slaughtering the second animal, one incurs the forty lashes for slaughtering an animal and its offspring on a single day, and the animal is unfit for sacrifice.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ח א — Chullin 78a:10</span></div>
+    <div class="orig">קָדָשִׁים וְחוּלִּין בַּחוּץ – הָרִאשׁוֹן חַיָּיב כָּרֵת וּפָסוּל, וְהַשֵּׁנִי כָּשֵׁר, וּשְׁנֵיהֶם סוֹפְגִים אֶת הָאַרְבָּעִים.</div>
+    <div class="trans" data-when="he">הראשון קדשים והשני חולין, ושחטם בחוץ — על הראשון חייב כרת (שחוטי חוץ) והוא פסול; השני כשר לאכילה; ועל שתיהן לוקה — הראשון משום שחוטי חוץ, והשני משום ׳אותו ואת בנו׳.</div>
+    <div class="trans" data-when="en">If the first animal was a sacrificial animal and the second was non-sacred and both were slaughtered outside the Temple courtyard, for the first animal, one is liable to receive karet for slaughtering a sacrificial animal outside the courtyard, and the animal is unfit for sacrifice. And the second is fit for consumption; and for the slaughter of both of them one incurs forty lashes apiece: The first being a sacrificial animal slaughtered outside the courtyard and the second being the offspring of an animal slaughtered that day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ח א — Chullin 78a:11</span></div>
+    <div class="orig">חוּלִּין וְקָדָשִׁים בִּפְנִים – שְׁנֵיהֶם פְּסוּלִין, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים. קָדָשִׁים וְחוּלִּין בִּפְנִים – הָרִאשׁוֹן כָּשֵׁר וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים וּפָסוּל.</div>
+    <div class="trans" data-when="he">הראשון חולין והשני קדשים בעזרה — שניהם פסולים, ועל השני לוקה. הראשון קדשים והשני חולין בעזרה — הראשון כשר ופטור, ועל השני לוקה והוא פסול (שהוא חולין).</div>
+    <div class="trans" data-when="en">If the first animal was non-sacred and the second was a sacrificial animal and both were slaughtered inside the Temple courtyard, both of them are unfit for sacrifice. And for slaughtering the second animal, one incurs the forty lashes. If the first animal was a sacrificial animal and the second was non-sacred and both were slaughtered inside the Temple courtyard, the first is fit for sacrifice and one who slaughters it is exempt from any punishment. And for slaughtering the second animal, one incurs the forty lashes, and the animal is unfit for sacrifice, as it is non-sacred.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ח א — Chullin 78a:12</span></div>
+    <div class="orig">חוּלִּין בַּחוּץ וּבִפְנִים – הָרִאשׁוֹן כָּשֵׁר, וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים, וּפָסוּל.</div>
+    <div class="trans" data-when="he">שניהם חולין, ושחט הראשון בחוץ והשני בעזרה — הראשון כשר לאכילה ופטור; ועל השני לוקה משום ׳אותו ואת בנו׳, והוא פסול (חולין בעזרה).</div>
+    <div class="trans" data-when="en">If both animals were non-sacred, and one slaughters them, the first outside the Temple courtyard and the second inside the Temple courtyard, the first is fit for consumption and one who slaughters it is exempt from any punishment. And for slaughtering the second animal, one incurs the forty lashes for slaughtering an animal and its offspring on a single day, and the animal is unfit for sacrifice as it is non-sacred.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״ח א — Chullin 78a:13</span></div>
+    <div class="orig">קָדָשִׁים בַּחוּץ וּבִפְנִים – הָרִאשׁוֹן חַיָּיב כָּרֵת, וּשְׁנֵיהֶם סוֹפְגִים אֶת הָאַרְבָּעִים, וּשְׁנֵיהֶם פְּסוּלִים.</div>
+    <div class="trans" data-when="he">שניהם קדשים, ושחט הראשון בחוץ והשני בעזרה — על הראשון חייב כרת; ועל שתיהן לוקה — הראשון משום שחוטי חוץ, והשני משום ׳אותו ואת בנו׳; ושתיהן פסולות.</div>
+    <div class="trans" data-when="en">If both animals were sacrificial animals, and one slaughters them, the first outside the Temple courtyard and the second inside the Temple courtyard, for slaughtering the first animal one is liable to receive karet, and for slaughtering both of them one incurs forty lashes apiece. One set of lashes is given because the first was a sacrificial animal slaughtered outside the courtyard, and the second set of lashes is given because the second animal is the offspring of an animal slaughtered that day. And both of them are unfit for sacrifice.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״ח א — Chullin 78a:14</span></div>
+    <div class="orig">חוּלִּין בִּפְנִים וּבַחוּץ – הָרִאשׁוֹן פָּסוּל, וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים, וְכָשֵׁר. קָדָשִׁים בִּפְנִים וּבַחוּץ – הָרִאשׁוֹן כָּשֵׁר, וּפָטוּר, וְהַשֵּׁנִי סוֹפֵג אֶת הָאַרְבָּעִים, וּפָסוּל.</div>
+    <div class="trans" data-when="he">שניהם חולין, ושחט הראשון בעזרה והשני בחוץ — הראשון פסול (חולין בעזרה) ופטור; ועל השני לוקה והוא כשר לאכילה. שניהם קדשים, הראשון בעזרה והשני בחוץ — הראשון כשר ופטור; ועל השני לוקה והוא פסול (שלא הגיע זמנו).</div>
+    <div class="trans" data-when="en">If both animals were non-sacred, and one slaughters them, the first inside the Temple courtyard and the second outside the Temple courtyard, the first is unfit for sacrifice, as it is non-sacred, and the one who slaughters it is exempt. And for the second, one incurs the forty lashes and the animal is fit for consumption. If both animals were sacrificial animals, and one slaughters them, the first inside the Temple courtyard and the second outside the Temple courtyard, the first is fit for sacrifice and one who slaughters it is exempt. And for the second animal, one incurs the forty lashes, and the animal is unfit for sacrifice because its requisite time has not yet arrived.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">דרשות הכתוב — מוקדשין, כלאים, וחלוקת האיסורים; זכרים או נקבות</span><span data-when="en">Scriptural derivations — sacred, diverse kinds, splitting; males or females</span>
+      <span class="ref">Chullin 78a:15–79a:1</span></h2>
+  <div class="lead"><span data-when="he">הגמרא דורשת ש׳אותו ואת בנו׳ נוהג במוקדשין ובחולין; שו״ת על כלאים ועל ייתור ׳או׳ ו׳אותו׳ לחלק; ומכאן מחלוקת חנניה וחכמים אם נוהג בזכרים, התלויה במחלוקת ר׳ יאשיה ור׳ יונתן.</span><span data-when="en">The Gemara derives that ׳a mother and offspring׳ applies to sacrificial and non-sacred animals; a give-and-take over diverse kinds and over the superfluous ׳or׳ and ׳it׳ that split the prohibitions; yielding the Ḥananya–Rabbis dispute over males, which turns on R. Yoshiya vs R. Yonatan.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: מניין שנוהג במוקדשין? ׳שור או כשב׳ וסמיכות ׳ושור או שה׳"]:::statement
+  Q1{"② ואימא במוקדשין דווקא? · ׳שור׳ הפסיק העניין"}:::question
+  Q2{"③ ואימא בחולין דווקא? · ׳ושור׳ — וי״ו מוסיף על עניין ראשון"}:::question
+  Q3{"④ אי כמוקדשין — כלאים לא? והרי תניא נוהג בכלאים ובכוי!"}:::question
+  Q4{"⑤ ועוד, ׳שה׳ כתיב — והוצא כלאים; ואמר רבא:"}:::question
+  A1["⑥ רבא: ׳שה׳ — בנה אב להוציא כלאים; ׳או׳ — לרבות כלאים"]:::answer
+  Q5{"⑦ האי ׳או׳ מיבעי ליה לחלק! · לחלק מ׳בנו׳ נפקא"}:::question
+  Q6{"⑧ ואכתי מיבעי ליה לכדתניא ׳שור ושה ובנו׳! · לא, מ׳אותו׳"}:::question
+  Q7{"⑨ הניחא לרבנן דמייתר ׳אותו׳; אלא לחנניה לחלק מנא ליה? · כר׳ יונתן"}:::question
+  P1["⑩ דתניא: ׳אביו ואמו קלל׳ — אביו קלל אמו קלל, דברי ר׳ יאשיה"]:::proof
+  S2["⑪ ר׳ יונתן: משמע שניהם ומשמע אחד, עד שיפרוט ׳יחדו׳"]:::statement
+  Q8{"⑫ מאי חנניה ומאי רבנן? · תניא: נוהג בנקבות ולא בזכרים; חנניה: אף בזכרים"}:::question
+  P2["⑬ טעם רבנן: דין מאם על הבנים — נקבות ולא זכרים"]:::proof
+  Q9{"⑭ לא! שכן באם על הבנים לא עשה מזומן כשאינו מזומן"}:::question
+  A2["⑮ ת״ל ׳אותו׳ — אחד ולא שניים; אחר שחילק, זכיתי לדין: נקבות ולא זכרים"]:::answer
+  A3["⑯ ואם נפשך לומר — ׳בנו׳: מי שבנו כרוך אחריו, יצא זכר"]:::answer
+  Q10{"⑰ מה ׳אם נפשך׳? וכי תימא ׳אותו׳ זכר — הרי אומר ׳בנו׳"}:::question
+  C1["⑱ ולחנניה: ׳אותו׳ זכר, ׳בנו׳ כרוך נקבה — נוהג בזכרים ובנקבות"]:::conclusion
+  S1 -->|ואימא| Q1
+  Q1 -->|ואימא| Q2
+  Q2 -->|אי| Q3
+  Q3 -->|ועוד| Q4
+  Q4 -->|תירוץ| A1
+  A1 -.->|קושיא| Q5
+  Q5 -.->|ואכתי| Q6
+  Q6 -->|הניחא| Q7
+  Q7 -->|כר׳ יונתן| P1
+  P1 -->|לעומתו| S2
+  S2 -->|מאי פלוגתא| Q8
+  Q8 -->|טעם רבנן| P2
+  P2 -.->|דחייה| Q9
+  Q9 -->|ת״ל אותו| A2
+  A2 -->|ואם נפשך| A3
+  A3 -->|מה אם נפשך| Q10
+  Q10 -->|ולחנניה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: whence sacred animals? ׳A bull or a sheep׳ juxtaposed with ׳and whether a bull or a sheep׳"]:::statement
+  Q1{"② Say only sacred? · ׳A bull׳ interrupted the topic"}:::question
+  Q2{"③ Say only non-sacred? · ׳And a bull׳ — the ׳and׳ adds to the first matter"}:::question
+  Q3{"④ If like sacred — diverse kinds excluded? But a baraita: it applies to diverse kinds and a koy!"}:::question
+  Q4{"⑤ Moreover, ׳a sheep׳ is written — excluding diverse kinds; and Rava said:"}:::question
+  A1["⑥ Rava: ׳sheep׳ is a paradigm excluding diverse kinds; ׳or׳ comes to include them"]:::answer
+  Q5{"⑦ But ׳or׳ is needed to separate the prohibitions! · Separating derives from ׳its offspring׳"}:::question
+  Q6{"⑧ But ׳or׳ is still needed for the baraita ׳a bull and a sheep and its offspring׳! · No, from ׳it׳"}:::question
+  Q7{"⑨ Fine for the Rabbis, for whom ׳it׳ is superfluous; but for Ḥananya, whence the split? · Like R. Yonatan"}:::question
+  P1["⑩ Baraita: ׳his father and his mother he cursed׳ — cursed father, cursed mother; R. Yoshiya"]:::proof
+  S2["⑪ R. Yonatan: it implies both and implies each alone, unless ׳together׳ is specified"]:::statement
+  Q8{"⑫ What is Ḥananya and what is the Rabbis? · Baraita: applies to females not males; Ḥananya: to males too"}:::question
+  P2["⑬ Rabbis׳ reason: an inference from mother-bird — females not males"]:::proof
+  Q9{"⑭ No! For mother-bird, prepared ones are not like unprepared"}:::question
+  A2["⑮ The verse: ׳it׳ — one not two; after the split, I returned to the inference: females not males"]:::answer
+  A3["⑯ And if you wish to refute — ׳its offspring׳: whose offspring clings to it, excluding the male"]:::answer
+  Q10{"⑰ What is the ׳if you wish׳? Should you say ׳it׳ implies male — it says ׳its offspring׳"}:::question
+  C1["⑱ For Ḥananya: ׳it׳ implies male, ׳its offspring clinging׳ implies female — applies to males and females"]:::conclusion
+  S1 -->|say| Q1
+  Q1 -->|say| Q2
+  Q2 -->|if| Q3
+  Q3 -->|moreover| Q4
+  Q4 -->|answer| A1
+  A1 -.->|objection| Q5
+  Q5 -.->|still needed| Q6
+  Q6 -->|fine for Rabbis| Q7
+  Q7 -->|like R. Yonatan| P1
+  P1 -->|by contrast| S2
+  S2 -->|what is the dispute| Q8
+  Q8 -->|Rabbis׳ reason| P2
+  P2 -.->|rebuttal| Q9
+  Q9 -->|the verse ׳it׳| A2
+  A2 -->|if you wish| A3
+  A3 -->|what is ׳if you wish׳| Q10
+  Q10 -->|for Ḥananya| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: מִנַּיִן … שֶׁנּוֹהֵג בְּמוּקְדָּשִׁין? … ״וְשׁוֹר אוֹ שֶׂה אֹתוֹ וְאֶת בְּנוֹ לֹא תִשְׁחֲטוּ״"]:::statement
+  Q1{"② וְאֵימָא: בְּמוּקְדָּשִׁין – אִין, בְּחוּלִּין – לָא! ״שׁוֹר״ הִפְסִיק הָעִנְיָן"}:::question
+  Q2{"③ וְאֵימָא: בְּחוּלִּין – אִין, בְּמוּקְדָּשִׁין – לָא! ״וְשׁוֹר״ – וָי״ו מוֹסִיף עַל עִנְיָן רִאשׁוֹן"}:::question
+  Q3{"④ אִי מָה קָדָשִׁים כִּלְאַיִם לָא … אַלְּמָה תַּנְיָא: נוֹהֵג בְּכִלְאַיִם וּבְכוֹי?"}:::question
+  Q4{"⑤ וְעוֹד, ״שֶׂה״ כְּתִיב, וְאָמַר רָבָא:"}:::question
+  A1["⑥ זֶה בָּנָה אָב … ״שֶׂה״ … לְהוֹצִיא אֶת הַכִּלְאַיִם … ״אוֹ״ לְרַבּוֹת אֶת הַכִּלְאַיִם"]:::answer
+  Q5{"⑦ הַאי ״אוֹ״ מִיבְּעֵי לֵיהּ לְחַלֵּק … לְחַלֵּק – מִ״בְּנוֹ״ נָפְקָא"}:::question
+  Q6{"⑧ וְאַכַּתִּי מִיבְּעֵי לֵיהּ לְכִדְתַנְיָא … ״שׁוֹר וָשֶׂה וּבְנוֹ״ … לָא, מֵ״אוֹתוֹ״"}:::question
+  Q7{"⑨ הָנִיחָא לְרַבָּנַן דִּמְיַיתַּר ״אוֹתוֹ״ … אֶלָּא לַחֲנַנְיָה … כְּרַבִּי יוֹנָתָן"}:::question
+  P1["⑩ דְּתַנְיָא: ״אָבִיו וְאִמּוֹ קִלֵּל״ – אָבִיו קִלֵּל, אִמּוֹ קִלֵּל, דִּבְרֵי רַבִּי יֹאשִׁיָּה"]:::proof
+  S2["⑪ רַבִּי יוֹנָתָן: מַשְׁמָע שְׁנֵיהֶם כְּאֶחָד … עַד שֶׁיִּפְרוֹט … ״יַחְדָּו״"]:::statement
+  Q8{"⑫ מַאי חֲנַנְיָה … דְּתַנְיָא: נוֹהֵג בִּנְקֵבוֹת … חֲנַנְיָה: בֵּין בִּזְכָרִים וּבֵין בִּנְקֵבוֹת"}:::question
+  P2["⑬ מַאי טַעְמָא דְּרַבָּנַן? … מָה … בְּאֵם עַל הַבָּנִים – בִּנְקֵבוֹת וְלֹא בִּזְכָרִים …"]:::proof
+  Q9{"⑭ לֹא, אִם אָמַרְתָּ בְּאֵם עַל הַבָּנִים, שֶׁכֵּן לֹא עָשָׂה בָּהּ מְזוּמָּן כְּשֶׁאֵינוֹ מְזוּמָּן"}:::question
+  A2["⑮ תַּלְמוּד לוֹמַר: ״אוֹתוֹ״ – אֶחָד וְלֹא שְׁנַיִם … בִּנְקֵבוֹת וְלֹא בִּזְכָרִים"]:::answer
+  A3["⑯ וְאִם נַפְשְׁךָ לוֹמַר, ״בְּנוֹ״ – מִי שֶׁבְּנוֹ כָּרוּךְ אַחֲרָיו, יָצָא זָכָר"]:::answer
+  Q10{"⑰ מָה אִם נַפְשְׁךָ לוֹמַר? … ״אוֹתוֹ״ זָכָר מַשְׁמַע, הֲרֵי הוּא אוֹמֵר ״בְּנוֹ״"}:::question
+  C1["⑱ וְלַחֲנַנְיָה … ״אוֹתוֹ״ … זָכָר … ״בְּנוֹ״ … נְקֵבָה, נוֹהֵג בֵּין בִּזְכָרִים בֵּין בִּנְקֵבוֹת"]:::conclusion
+  S1 -->|ואימא| Q1
+  Q1 -->|ואימא| Q2
+  Q2 -->|אי| Q3
+  Q3 -->|ועוד| Q4
+  Q4 -->|תירוץ| A1
+  A1 -.->|קושיא| Q5
+  Q5 -.->|ואכתי| Q6
+  Q6 -->|הניחא| Q7
+  Q7 -->|כר׳ יונתן| P1
+  P1 -->|לעומתו| S2
+  S2 -->|מאי פלוגתא| Q8
+  Q8 -->|טעם רבנן| P2
+  P2 -.->|דחייה| Q9
+  Q9 -->|ת״ל אותו| A2
+  A2 -->|ואם נפשך| A3
+  A3 -->|מה אם נפשך| Q10
+  Q10 -->|ולחנניה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ח א — Chullin 78a:15</span></div>
+    <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן: מִנַּיִן לְאוֹתוֹ וְאֶת בְּנוֹ שֶׁנּוֹהֵג בְּמוּקְדָּשִׁין? תַּלְמוּד לוֹמַר: ״שׁוֹר אוֹ כֶשֶׂב אוֹ עֵז כִּי יִוָּלֵד״, וּכְתִיב בָּתְרֵיהּ: ״וְשׁוֹר אוֹ שֶׂה אֹתוֹ וְאֶת בְּנוֹ לֹא תִשְׁחֲטוּ בְּיוֹם אֶחָד״ – לִימֵּד עַל אוֹתוֹ וְאֶת בְּנוֹ שֶׁנּוֹהֵג בְּמוּקְדָּשִׁין.</div>
+    <div class="trans" data-when="he">גמרא: שנו חכמים — מניין שאיסור ׳אותו ואת בנו׳ נוהג גם בקרבנות? נלמד מסמיכות הכתובים: ״שור או כשב או עז כי יולד״ (פרשת קרבנות), ואחריו ״ושור או שה אותו ואת בנו לא תשחטו ביום אחד״ — סמיכות זו מלמדת שהאיסור נוהג אף במוקדשין.</div>
+    <div class="trans" data-when="en">GEMARA: The Sages taught in a baraita: From where is it derived that the prohibition against slaughtering an animal itself and its offspring in a single day applies to sacrificial animals? It is derived from a verse, as the verse states: “When a bull, or a sheep, or a goat, is born…but from the eighth day and forward it may be accepted for an offering…to the Lord” (Leviticus 22:27), and it is written in the following verse: “And whether it be a bull or a sheep, you shall not slaughter it and its offspring both in one day.” The juxtaposition of the verses teaches with regard to the prohibition against slaughtering an animal itself and its offspring that it applies to sacrificial animals as well.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ח א — Chullin 78a:16</span></div>
+    <div class="orig">וְאֵימָא: בְּמוּקְדָּשִׁין – אִין, בְּחוּלִּין – לָא! ״שׁוֹר״ הִפְסִיק הָעִנְיָן.</div>
+    <div class="trans" data-when="he">קושיא: ואמור להפך — נוהג רק במוקדשין ולא בחולין? תירוץ: חזרת ״ושור או שה״ (לאחר שכבר נזכרו בכתוב הקודם) הפסיקה את עניין הקרבנות — סימן שהכתוב השני אינו עוסק דווקא בקדשים.</div>
+    <div class="trans" data-when="en">The Gemara challenges: But since this prohibition is taught in the context of other halakhot of consecrated animals, perhaps I will say: Yes, it applies to sacrificial animals, but it does not apply to non-sacred animals. The Gemara explains: The repetitive phrase “and whether it be a bull or a sheep” in the second verse, when those types of animals, i.e., bulls and sheep, were already mentioned in the first verse, interrupted the topic, clarifying that the second verse is not referring to sacrificial animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ח א — Chullin 78a:17</span></div>
+    <div class="orig">וְאֵימָא: בְּחוּלִּין – אִין, בְּמוּקְדָּשִׁין – לָא! כְּתִיב: ״וְשׁוֹר״ – וָי״ו מוֹסִיף עַל עִנְיָן רִאשׁוֹן.</div>
+    <div class="trans" data-when="he">קושיא הפוכה: ואמור — נוהג רק בחולין ולא במוקדשין? תירוץ: נאמר ״וְשור״ בוי״ו, והוי״ו מוסיפה את האיסור שבכתוב השני על העניין הראשון (הקרבנות) — ולכן נוהג אף במוקדשין.</div>
+    <div class="trans" data-when="en">The Gemara challenges: But if so, I will say: Yes, the prohibition applies to non-sacred animals, but it does not apply to sacrificial animals. The Gemara explains: Since in that verse it is written: “And whether it be a bull…you shall not slaughter it and its offspring,” the conjunction “and” adds the prohibition stated in the second verse to the first matter, including sacrificial animals as well.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ח א — Chullin 78a:18</span></div>
+    <div class="orig">אִי מָה קָדָשִׁים כִּלְאַיִם לָא, אַף אוֹתוֹ וְאֶת בְּנוֹ כִּלְאַיִם לָא? אַלְּמָה תַּנְיָא: אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בְּכִלְאַיִם וּבְכוֹי?</div>
+    <div class="trans" data-when="he">קושיא: אם למדים מן הקרבנות — כשם שבקרבנות כלאים (ולד עז וכבש) פסול, כך גם ב׳אותו ואת בנו׳ ולד כלאים לא יהיה אסור? והרי שנינו: ׳אותו ואת בנו׳ נוהג בכלאים ובכוי (בעל סימני חיה ובהמה)!</div>
+    <div class="trans" data-when="en">The Gemara challenges: If this prohibition also applies to sacrificial animals, perhaps just as with regard to sacrificial animals, the offspring of diverse kinds is not included, e.g., the offspring of a ewe and a goat is unfit to be an offering, so too with regard to the prohibition of: A mother and its offspring, the offspring of diverse kinds should not be included, so that in the case of the offspring of a ewe and a goat, it would be permitted to slaughter the mother and offspring on the same day. Why, then, is it taught in a baraita (see Tosefta 5:1): The prohibition of: A mother and its offspring, applies to the offspring of diverse kinds and to a koy, a kosher animal with characteristics of both domesticated and undomesticated animals?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ח א — Chullin 78a:19</span></div>
+    <div class="orig">וְעוֹד, ״שֶׂה״ כְּתִיב, וְאָמַר רָבָא:</div>
+    <div class="trans" data-when="he">ועוד קושיא: מדוע בכלל יהיה כלאים אסור — והרי ״שה״ כתוב בכתוב זה (״ושור או שה״), ואמר רבא:</div>
+    <div class="trans" data-when="en">And additionally, why should the prohibition of: A mother and its offspring, apply to the offspring of diverse kinds? “A sheep,” is written in the verse with regard to that prohibition, and Rava said</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ח ב — Chullin 78b:1</span></div>
+    <div class="orig">זֶה בָּנָה אָב – כׇּל מָקוֹם שֶׁנֶּאֱמַר ״שֶׂה״ אֵינוֹ אֶלָּא לְהוֹצִיא אֶת הַכִּלְאַיִם. אָמַר קְרָא ״אוֹ״ לְרַבּוֹת אֶת הַכִּלְאַיִם.</div>
+    <div class="trans" data-when="he">תירוץ רבא: זה בנה אב — כל מקום שנאמר ״שה״ בתורה בא להוציא כלאים (שאינו לא כבש ולא עז). אם כן ׳שה׳ היה צריך להוציא כלאים מ׳אותו ואת בנו׳; אלא שאמר הכתוב ״או״ לרבות את הכלאים — ולכן נוהג בו האיסור.</div>
+    <div class="trans" data-when="en">concerning the verse: “These are the animals that you may eat: An ox, a seh of sheep, and a seh of goats” (Deuteronomy 14:4), that this verse establishes a paradigm for other cases: Wherever the word seh is stated in the Torah, it serves only to exclude an animal of diverse kinds. The Hebrew word seh denotes either a sheep or a goat. The offspring of diverse kinds, which is neither a sheep nor a goat, does not qualify as a seh. The Gemara answers that with regard to a mother and its offspring, the verse states: “Whether it be a bull or a sheep” (Leviticus 22:28), and the “or” is superfluous there and serves to include the offspring of diverse kinds.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ח ב — Chullin 78b:2</span></div>
+    <div class="orig">הַאי ״אוֹ״ מִיבְּעֵי לֵיהּ לְחַלֵּק, דְּסָלְקָא דַּעְתָּךְ אָמֵינָא: עַד דְּשָׁחֵיט שׁוֹר וּבְנוֹ שֶׂה וּבְנוֹ לָא מִיחַיַּיב, קָא מַשְׁמַע לַן. לְחַלֵּק – מִ״בְּנוֹ״ נָפְקָא.</div>
+    <div class="trans" data-when="he">קושיא: ה״או״ דרוש לחלק את האיסורים — שלא תאמר אינו חייב עד שישחט גם שור ובנו וגם שה ובנו; ה״או״ מלמד שחייב על כל מין בפני עצמו. תירוץ: לחלק נלמד מ״בנו״ (ולא ׳בניהם׳), וה״או״ פנוי לרבות כלאים.</div>
+    <div class="trans" data-when="en">The Gemara challenges: This word “or” is necessary to separate the prohibitions, as it might enter your mind to say: One is not liable unless he slaughters both a bull and its offspring and a sheep and its offspring in a single day. Therefore, the word “or” teaches us that one is liable for slaughtering either type of animal with its offspring. The Gemara responds: Separating the prohibitions is derived from the use of the words “its offspring” instead of their offspring.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ח ב — Chullin 78b:3</span></div>
+    <div class="orig">וְאַכַּתִּי מִיבְּעֵי לֵיהּ לְכִדְתַנְיָא: אִילּוּ נֶאֱמַר ״שׁוֹר וָשֶׂה וּבְנוֹ״, הָיִיתִי אוֹמֵר: עַד שֶׁיִּשְׁחוֹט שׁוֹר וָשֶׂה וּבְנוֹ, תַּלְמוּד לוֹמַר: ״שׁוֹר אוֹ שֶׂה אוֹתוֹ וְאֶת בְּנוֹ״. מַאי לָאו מֵ״אוֹ״ נָפְקָא לֵיהּ? לָא, מֵ״אוֹתוֹ״.</div>
+    <div class="trans" data-when="he">קושיא: ועדיין ה״או״ דרוש לברייתא — אילו נאמר ״שור ושה ובנו״ הייתי אומר שאינו חייב עד שישחט שור ושה ובנו יחד; ת״ל ״שור או שה אותו ואת בנו״. וכי לא מ״או״ נלמד? תירוץ: לא, מ״אותו״ נלמד — וה״או״ פנוי לרבות כלאים.</div>
+    <div class="trans" data-when="en">The Gemara challenges: But the word “or” is still necessary for that which is taught in a baraita: If it were stated: A bull, and a sheep, and its offspring you shall not slaughter in one day, I would say: One is not liable unless he slaughters a bull, and a sheep, and the offspring of one of them in a single day. Therefore, the verse states: “A bull or a sheep…it and its offspring” (Leviticus 22:28), to teach that one is liable even for slaughtering either of them and its offspring. What, is it not from the word “or” that the baraita derives this halakha? The Gemara responds: No, it is derived from the word “it,” and the offspring of diverse kinds are included in the prohibition due to the word “or.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״ח ב — Chullin 78b:4</span></div>
+    <div class="orig">הָנִיחָא לְרַבָּנַן, דִּמְיַיתַּר לְהוּ ״אוֹתוֹ״, אֶלָּא לַחֲנַנְיָה, דְּלָא מְיַיתַּר לֵיהּ ״אוֹתוֹ״, לְחַלֵּק מְנָא לֵיהּ? לְחַלֵּק לָא צְרִיךְ קְרָא, דְּסָבַר לַהּ כְּרַבִּי יוֹנָתָן.</div>
+    <div class="trans" data-when="he">קושיא: ניחא לרבנן ש״אותו״ מיותר אצלם (ומשמש לחלק), אבל לחנניה ש״אותו״ אינו מיותר — מניין לו לחלק? תירוץ: לחלק אינו צריך כתוב, שחנניה סובר כר׳ יונתן (שאף בלי ייתור מחלקים).</div>
+    <div class="trans" data-when="en">The Gemara asks: This works out well according to the opinion of the Rabbis, cited further in the discussion, for whom the word “it” is superfluous and can be used for this derivation, leaving the word “or” available to include the offspring of diverse kinds; but according to the opinion of Ḥananya, for whom the word “it” is not superfluous, from where does he derive that one is to separate into two prohibitions slaughtering either a bull with its offspring or a sheep with its offspring? The Gemara answers that there is no need for a verse to separate them into two prohibitions, as Ḥananya holds in accordance with the opinion of Rabbi Yonatan.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״ח ב — Chullin 78b:5</span></div>
+    <div class="orig">דְּתַנְיָא: ״אִישׁ אֲשֶׁר יְקַלֵּל אֶת אָבִיו וְאֶת אִמּוֹ״, אֵין לִי אֶלָּא אָבִיו וְאִמּוֹ, אָבִיו שֶׁלֹּא אִמּוֹ וְאִמּוֹ שֶׁלֹּא אָבִיו מִנַּיִן? תַּלְמוּד לוֹמַר: ״אָבִיו וְאִמּוֹ קִלֵּל״ – אָבִיו קִלֵּל, אִמּוֹ קִלֵּל, דִּבְרֵי רַבִּי יֹאשִׁיָּה.</div>
+    <div class="trans" data-when="he">ראיה למחלוקת: שנינו — ״איש אשר יקלל את אביו ואת אמו״, אין לי אלא שקילל שניהם; קילל אביו לבד או אמו לבד מניין? ת״ל ״אביו ואמו קלל״ — אביו קלל, אמו קלל. דברי ר׳ יאשיה: ׳וו החיבור׳ נדרשת בדווקא, שאין חייב על אחד אלא בכתוב מיוחד.</div>
+    <div class="trans" data-when="en">As it is taught in a baraita: From the verse: “A man who curses his father and his mother shall die” (Leviticus 20:9), I have derived only that one is liable if he curses both his father and his mother. From where do I derive that if one curses his father but not his mother, or his mother but not his father, he is liable? The continuation of the verse states: “His father and his mother he has cursed, his blood is upon him.” In the first part of the verse, the word “curses” is in proximity to “his father,” and in the last part of the verse, “cursed” is in proximity to “his mother.” This teaches that the verse is referring to both a case where he cursed only his father and a case where he cursed only his mother; this is the statement of Rabbi Yoshiya. Rabbi Yoshiya maintains that conjunctions are interpreted strictly unless the verse indicates otherwise.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ע״ח ב — Chullin 78b:6</span></div>
+    <div class="orig">רַבִּי יוֹנָתָן אוֹמֵר: מַשְׁמָע שְׁנֵיהֶם כְּאֶחָד, וּמַשְׁמָע אֶחָד בִּפְנֵי עַצְמוֹ, עַד שֶׁיִּפְרוֹט לְךָ הַכָּתוּב ״יַחְדָּו״.</div>
+    <div class="trans" data-when="he">ר׳ יונתן חולק: ׳וו החיבור׳ משמעה גם שניהם יחד וגם כל אחד בפני עצמו, ואין צורך בכתוב מיוחד לחיוב על אחד — אלא אם כן פירש הכתוב ״יחדו״ (כגון ׳לא תחרוש בשור ובחמור יחדו׳). לפיכך ה״או״ מיותר לחנניה ומשמש לרבות כלאים.</div>
+    <div class="trans" data-when="en">Rabbi Yonatan says: There is no need for this derivation, because the phrase “his father and his mother” indicates that one is liable if he curses both of them together, and it also indicates that he is liable if he curses either one of them on their own, unless the verse specifies that one is liable only if he curses both together. An example of a verse where the Torah specifies that the halakha applies only to the two elements in conjunction is: “You shall not plow with an ox and a donkey together” (Deuteronomy 22:10). According to Rabbi Yonatan, had the verse stated with regard to a mother and its offspring: A bull and a sheep, and not: A bull or a sheep, one would still be liable for slaughtering each with its own offspring independently. Therefore, the word “or” is superfluous, and is utilized by Ḥananya, who agrees with the opinion of Rabbi Yonatan, to include the offspring of diverse kinds in this prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ע״ח ב — Chullin 78b:7</span></div>
+    <div class="orig">מַאי חֲנַנְיָה, וּמַאי רַבָּנַן? דְּתַנְיָא: אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בִּנְקֵבוֹת, וְאֵינוֹ נוֹהֵג בִּזְכָרִים. חֲנַנְיָה אוֹמֵר: נוֹהֵג בֵּין בִּזְכָרִים וּבֵין בִּנְקֵבוֹת.</div>
+    <div class="trans" data-when="he">הגמרא מבררת: מהי דעת חנניה ומהי דעת רבנן שהוזכרו? שנינו — ׳אותו ואת בנו׳ נוהג בנקבות (אם ובתה) ואינו נוהג בזכרים (אב ובנו). חנניה אומר: נוהג בין בזכרים בין בנקבות.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the opinion of Ḥananya, and what is the opinion of the Rabbis that were mentioned earlier? Their opinions are elucidated as it is taught in a baraita: Despite the fact that the verse is written in the masculine form, the prohibition against slaughtering itself and its offspring in a single day applies to females, i.e., to a mother and its offspring, but it does not apply to males, i.e., a male animal and its offspring. Ḥananya says: It applies both to males and to females.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ע״ח ב — Chullin 78b:8</span></div>
+    <div class="orig">מַאי טַעְמָא דְּרַבָּנַן? דְּתַנְיָא: יָכוֹל יְהֵא אוֹתוֹ וְאֶת בְּנוֹ נוֹהֵג בֵּין בִּזְכָרִים וּבֵין בִּנְקֵבוֹת? וְדִין הוּא: חִיֵּיב כָּאן, וְחַיָּיב בְּאֵם עַל הַבָּנִים; מָה כְּשֶׁחִיֵּיב בְּאֵם עַל הַבָּנִים – בִּנְקֵבוֹת וְלֹא בִּזְכָרִים, אַף כְּשֶׁחִיֵּיב כָּאן – בִּנְקֵבוֹת וְלֹא בִּזְכָרִים.</div>
+    <div class="trans" data-when="he">טעם רבנן: שנינו — יכול יהא נוהג אף בזכרים? דין הוא: התורה חייבה כאן (אותו ואת בנו) וחייבה ב׳אם על הבנים׳ (שילוח הקן); מה ׳אם על הבנים׳ נוהג בנקבות ולא בזכרים (״והאם רובצת״), אף כאן בנקבות ולא בזכרים.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the reasoning of the Rabbis, i.e., the first tanna? Their reasoning is as it is taught in a baraita: One might have thought that the prohibition against slaughtering a mother and its offspring would apply both to males and to females. But could one not derive this by logical inference, reaching the opposite conclusion: The Torah rendered one obligated here not to slaughter an animal and its offspring in a single day, and the Torah rendered one obligated with regard to a mother bird with its chicks not to seize them together, but to dispatch the mother. Just as when it rendered one obligated with regard to a mother bird with its chicks, the obligation applies to female birds but not to males, as the verse states: “And the mother sitting on the chicks” (Deuteronomy 22:6), so too, when it rendered one obligated here, with regard to an animal and its offspring, the obligation should apply to female animals, but not to males.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ע״ח ב — Chullin 78b:9</span></div>
+    <div class="orig">לֹא, אִם אָמַרְתָּ בְּאֵם עַל הַבָּנִים, שֶׁכֵּן לֹא עָשָׂה בָּהּ מְזוּמָּן כְּשֶׁאֵינוֹ מְזוּמָּן, תֹּאמַר בְּאוֹתוֹ וְאֶת בְּנוֹ, שֶׁעָשָׂה בּוֹ מְזוּמָּן כְּשֶׁאֵינוֹ מְזוּמָּן?</div>
+    <div class="trans" data-when="he">דחיית ההיקש: לא! מה ל׳אם על הבנים׳ שהקל בו — אינו נוהג במזומן (קן שבביתו) כבאינו מזומן; תאמר ב׳אותו ואת בנו׳ שהחמיר בו ונוהג אף במזומן? משכך אין ללמוד שאינו נוהג בזכרים.</div>
+    <div class="trans" data-when="en">One may respond: No, if you say that this is so with regard to a mother bird with its chicks, for which the Torah did not render prepared ones equivalent to unprepared ones, as the obligation to dispatch the mother bird applies only where one happens to encounter a mother bird with its chicks spontaneously, but not to ones that he keeps in his property, shall you also say that this is so with regard to the prohibition of an animal itself and its offspring, for which the Torah rendered prepared ones equivalent to unprepared ones, prohibiting an animal and its offspring even if they are prepared? If so, the prohibition against slaughtering an animal and its offspring should apply to both males and females.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ע״ח ב — Chullin 78b:10</span></div>
+    <div class="orig">תַּלְמוּד לוֹמַר: ״אוֹתוֹ״ – אֶחָד וְלֹא שְׁנַיִם. אַחַר שֶׁחִלֵּק הַכָּתוּב, זָכִיתִי לְדִין: חִיֵּיב כָּאן וְחִיֵּיב בְּאֵם עַל הַבָּנִים – מָה כְּשֶׁחִיֵּיב בְּאֵם עַל הַבָּנִים – בִּנְקֵבוֹת וְלֹא בִּזְכָרִים, אַף כְּשֶׁחִיֵּיב כָּאן – בִּנְקֵבוֹת וְלֹא בִּזְכָרִים.</div>
+    <div class="trans" data-when="he">ת״ל ״אותו״ — אחד ולא שניים (חייב על אחד מן ההורים בלבד). לאחר שחילק הכתוב (שאין מצרפים אב ואם), חזר וזכה ההיקש: מה ׳אם על הבנים׳ בנקבות ולא בזכרים, אף ׳אותו ואת בנו׳ בנקבות ולא בזכרים — שכן עתה אין הפירכא של מזומן שייכת.</div>
+    <div class="trans" data-when="en">Therefore, the verse states: “A bull or a sheep, it and its offspring” (Leviticus 22:28). The superfluous word “it” indicates that this applies to only one parent, but not to two. The baraita continues: After the verse separated the parents, rendering the prohibition applicable to only one of them, I merited returning to the logical inference mentioned earlier: The Torah rendered one obligated here not to slaughter an animal and its offspring in a single day, and the Torah rendered one obligated to dispatch the mother with regard to a mother bird with its chicks. Just as when it rendered one obligated with regard to a mother bird with its chicks, the obligation applies to females but not to males, so too, when it rendered one obligated here, the obligation applies to females but not to males.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ע״ח ב — Chullin 78b:11</span></div>
+    <div class="orig">וְאִם נַפְשְׁךָ לוֹמַר, ״בְּנוֹ״ – מִי שֶׁבְּנוֹ כָּרוּךְ אַחֲרָיו, יָצָא זָכָר שֶׁאֵין בְּנוֹ כָּרוּךְ אַחֲרָיו.</div>
+    <div class="trans" data-when="he">ואם תרצה לפרוך — יש כתוב נוסף: ״בנו״ — מי שבנו כרוך אחריו (האם, שהוולד נמשך אחריה), יצא הזכר שאין בנו כרוך אחריו. ולכן נוהג בנקבות בלבד.</div>
+    <div class="trans" data-when="en">And if it is your wish to say that one can refute this, that refutation can be countered by the following derivation: The verse states: “It and its offspring” (Leviticus 22:28), indicating that this applies to that parent whose offspring clings to it. This serves to exclude the male parent, whose offspring does not cling to it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין ע״ט א — Chullin 79a:1</span></div>
+    <div class="orig">מָה אִם נַפְשְׁךָ לוֹמַר? וְכִי תֵּימָא ״אוֹתוֹ״ זָכָר מַשְׁמַע, הֲרֵי הוּא אוֹמֵר ״בְּנוֹ״ – מִי שֶׁבְּנוֹ כָּרוּךְ אַחֲרָיו, יָצָא זָכָר שֶׁאֵין בְּנוֹ כָּרוּךְ אַחֲרָיו.</div>
+    <div class="trans" data-when="he">למה נצרך ה׳אם נפשך לומר׳? משום שאם תאמר ש״אותו״ משמעו זכר (לשון זכר) — ומכאן שנוהג גם בזכר — לכך אומר הכתוב ״בנו״: מי שבנו כרוך אחריו, יצא זכר שאין בנו כרוך אחריו. לדעת רבנן.</div>
+    <div class="trans" data-when="en">And according to the opinion of Ḥananya, the reason for his ruling is that it is written “it,” which indicates a male, and it is written “its offspring,” teaching that the prohibition applies to that parent whose offspring clings to it, which indicates a female. Therefore, this prohibition applies to both males and females.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין ע״ט א — Chullin 79a:1</span></div>
+    <div class="orig">וְלַחֲנַנְיָה, כְּתִיב ״אוֹתוֹ״ דְּמַשְׁמַע זָכָר, וּכְתִיב ״בְּנוֹ״ – מִי שֶׁבְּנוֹ כָּרוּךְ אַחֲרָיו דְּמַשְׁמַע נְקֵבָה, הִלְכָּךְ נוֹהֵג בֵּין בִּזְכָרִים בֵּין בִּנְקֵבוֹת.</div>
+    <div class="trans" data-when="he">ולחנניה: כתוב ״אותו״ המשמע זכר, וכתוב ״בנו״ — מי שבנו כרוך אחריו, המשמע נקבה; הואיל ושני הכתובים קיימים, נוהג האיסור בין בזכרים בין בנקבות.</div>
+    <div class="trans" data-when="en">And according to the opinion of Ḥananya, the reason for his ruling is that it is written “it,” which indicates a male, and it is written “its offspring,” teaching that the prohibition applies to that parent whose offspring clings to it, which indicates a female. Therefore, this prohibition applies to both males and females.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">הלכה כחנניה — וחקירת ׳זרע האב׳ בפרדות</span><span data-when="en">Halakha like Ḥananya — and the ׳paternity׳ inquiry in mules</span>
+      <span class="ref">Chullin 79a:2–79b:1</span></h2>
+  <div class="lead"><span data-when="he">שמואל: הלכה כחנניה, ואזיל לטעמיה — חנניה הם ׳חכמים׳ דכלאים החוששים לזרע האב. ומכאן חקירה אם ר׳ יהודה פשיטא ליה או מספקא ליה אם חוששין לזרע האב, ושורת תא־שמע מן הפרדות.</span><span data-when="en">Shmuel: the halakha follows Ḥananya, consistent with his reasoning — Ḥananya is the ׳Rabbis׳ of diverse kinds who are concerned with paternity. Hence an inquiry whether R. Yehuda is certain or uncertain about paternity, with a chain of ׳come and hear׳ from mules.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שמואל: הלכה כחנניה; ואזדא לטעמיה — ר׳ יהודה בנולדים מן הסוס"]:::statement
+  S2["② שמואל: זו דעת ר׳ יהודה, אין חוששין לזרע האב; וחכמים: כל הפרדות אחת"]:::statement
+  S3["③ מאן חכמים? חנניה, דחושש לזרע האב — כולם חדא מינא"]:::statement
+  Q1{"④ איבעיא: פשיטא ליה לר׳ יהודה דאין חוששין, או מספקא ליה?"}:::question
+  S4["⑤ נפקא מינה: למישרא פרי עם האם — פשיטא שרי, מספקא אסור"]:::statement
+  P1["⑥ ת״ש: נולדים מן הסוס מותרין — דאבוה דהאי סוס; אלמא פשיטא ליה!"]:::proof
+  A1["⑦ לא, דאבוה דהאי חמור; וצריכא — דלא תימא צד משתמש בצד"]:::answer
+  P2["⑧ ת״ש: פרדה שתבעה — אין מרביעין סוס וחמור אלא מינה; אלמא מספקא!"]:::proof
+  A2["⑨ דלא ידעינן מינא דאמה; וליבדוק בסימנין? באלמת וגידמת"]:::answer
+  Q2{"⑩ מאי הוי עלה?"}:::question
+  C1["⑪ ת״ש דרב הונא בריה דרב יהושע: הכל מודין בפרי עם האם שאסור — ש״מ מספקא ליה"]:::conclusion
+  S5["⑫ ר׳ אבא: עיין להנך דדמיין להדדי — אין חוששין לזרע האב; וסימנין דאורייתא"]:::statement
+  S1 -->|דעת ר׳ יהודה| S2
+  S2 -->|מאן חכמים| S3
+  S3 -->|איבעיא| Q1
+  Q1 -->|נפקא מינה| S4
+  S4 -->|תא שמע| P1
+  P1 -->|תירוץ| A1
+  A1 -->|תא שמע| P2
+  P2 -->|תירוץ| A2
+  A2 -->|מאי הוי עלה| Q2
+  Q2 -->|מסקנה| C1
+  C1 -->|מעשה| S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Shmuel: halakha like Ḥananya; consistent — R. Yehuda on those born from a horse"]:::statement
+  S2["② Shmuel: this is R. Yehuda, not concerned with paternity; Rabbis: all mules are one"]:::statement
+  S3["③ Who are the ׳Rabbis׳? Ḥananya, concerned with paternity — all one species"]:::statement
+  Q1{"④ Inquiry: is R. Yehuda certain that paternity is disregarded, or uncertain?"}:::question
+  S4["⑤ Difference: mating offspring with the mother׳s kind — certain permits, uncertain forbids"]:::statement
+  P1["⑥ Come and hear: born from a horse are permitted — father a horse; so he is certain!"]:::proof
+  A1["⑦ No, the father is a donkey; and it must be said — lest the components mate"]:::answer
+  P2["⑧ Come and hear: a mule in heat — only her own kind, not horse or donkey; so uncertain!"]:::proof
+  A2["⑨ Where the mother׳s kind is unknown; but check by signs? When mute and lopped"]:::answer
+  Q2{"⑩ What was concluded about it?"}:::question
+  C1["⑪ Rav Huna son of R. Yehoshua: all agree mating with the mother is forbidden — hence uncertain"]:::conclusion
+  S5["⑫ R. Abba: bring those alike to each other — paternity disregarded; and the signs are by Torah law"]:::statement
+  S1 -->|R. Yehuda׳s view| S2
+  S2 -->|who are Rabbis| S3
+  S3 -->|inquiry| Q1
+  Q1 -->|difference| S4
+  S4 -->|come and hear| P1
+  P1 -->|answer| A1
+  A1 -->|come and hear| P2
+  P2 -->|answer| A2
+  A2 -->|what was concluded| Q2
+  Q2 -->|conclusion| C1
+  C1 -->|incident| S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב הוּנָא בַּר חִיָּיא אָמַר שְׁמוּאֵל: הִלְכְתָא כַּחֲנַנְיָה … רַבִּי יְהוּדָה … הַנּוֹלָדִים מִן הַסּוּס …"]:::statement
+  S2["② זוֹ דִּבְרֵי רַבִּי יְהוּדָה, דְּאָמַר אֵין חוֹשְׁשִׁין לְזֶרַע הָאָב … חֲכָמִים: כׇּל מִינֵי פְּרָדוֹת אַחַת הֵן"]:::statement
+  S3["③ מַאן חֲכָמִים? חֲנַנְיָה הוּא, דְּאָמַר חוֹשְׁשִׁין לְזֶרַע הָאָב … כּוּלְּהוּ חֲדָא מִינָא נִינְהוּ"]:::statement
+  Q1{"④ אִיבַּעְיָא לְהוּ: מִי פְּשִׁיט לֵיהּ … דְּאֵין חוֹשְׁשִׁין … אוֹ דִלְמָא סַפּוֹקֵי מְסַפְּקָא לֵיהּ?"}:::question
+  S4["⑤ לְמִישְׁרֵא פְּרִי עִם הָאֵם … פְּשִׁיטָא לֵיהּ – שְׁרֵי … סַפּוֹקֵי מְסַפְּקָא לֵיהּ – אָסוּר"]:::statement
+  P1["⑥ מַאי תָּא שְׁמַע: … מוּתָּרִין זֶה בָּזֶה … אֶלָּא לָאו דַּאֲבוּהּ דְּהַאי סוּס … אַלְמָא מִיפְשָׁט פְּשִׁיטָא לֵיהּ!"]:::proof
+  A1["⑦ לָא, לְעוֹלָם דַּאֲבוּהּ דְּהַאי חֲמוֹר … מַהוּ דְּתֵימָא: אָתֵי צַד דְּסוּס … קָא מַשְׁמַע לַן"]:::answer
+  P2["⑧ תָּא שְׁמַע: פִּרְדָּה שֶׁתָּבְעָה – אֵין מַרְבִּיעִין … לֹא סוּס וְלֹא חֲמוֹר, אֶלָּא מִינָהּ …"]:::proof
+  A2["⑨ דְּלָא יָדְעִינַן מִינָא דְּאִמַּהּ … וְלִיבְדּוֹק בְּסִימָנִין? … הָכָא … בְּאִלֶּמֶת וְגִידֶּמֶת"]:::answer
+  Q2{"⑩ מַאי הָוֵי עֲלַהּ?"}:::question
+  C1["⑪ דְּאָמַר רַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ: הַכֹּל מוֹדִין בִּפְרִי עִם הָאֵם שֶׁאָסוּר. שְׁמַע מִינַּהּ סַפּוֹקֵי מְסַפְּקָא לֵיהּ"]:::conclusion
+  S5["⑫ אֲמַר לֵיהּ רַבִּי אַבָּא לְשַׁמָּעֵיהּ … עַיֵּין לְהָנָךְ דְּדָמְיָין לַהֲדָדֵי … אֵין חוֹשְׁשִׁין לְזֶרַע הָאָב. וְסִימָנִין דְּאוֹרָיְיתָא"]:::statement
+  S1 -->|דעת ר׳ יהודה| S2
+  S2 -->|מאן חכמים| S3
+  S3 -->|איבעיא| Q1
+  Q1 -->|נפקא מינה| S4
+  S4 -->|תא שמע| P1
+  P1 -->|תירוץ| A1
+  A1 -->|תא שמע| P2
+  P2 -->|תירוץ| A2
+  A2 -->|מאי הוי עלה| Q2
+  Q2 -->|מסקנה| C1
+  C1 -->|מעשה| S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ע״ט א — Chullin 79a:2</span></div>
+    <div class="orig">אָמַר רַב הוּנָא בַּר חִיָּיא אָמַר שְׁמוּאֵל: הִלְכְתָא כַּחֲנַנְיָה, וְאַזְדָּא שְׁמוּאֵל לְטַעְמֵיהּ, דִּתְנַן: רַבִּי יְהוּדָה אוֹמֵר: הַנּוֹלָדִים מִן הַסּוּס, אַף עַל פִּי שֶׁאֲבִיהֶן חֲמוֹר – מוּתָּרִין זֶה בְּזֶה, אֲבָל הַנּוֹלָדִין מִן הַחֲמוֹר עִם הַנּוֹלָדִין מִן הַסּוּס – אֲסוּרִין.</div>
+    <div class="trans" data-when="he">רב הונא בר חייא בשם שמואל: הלכה כחנניה (שנוהג אף בזכרים). ושמואל הולך לשיטתו, שכן שנינו (כלאים): ר׳ יהודה אומר — ולדות הנולדים מסוסה, אף שאבי האחד חמור והשני סוס, מותרים זה בזה (שהאם קובעת); אבל הנולדים מחמורה עם הנולדים מסוסה — אסורים.</div>
+    <div class="trans" data-when="en">Rav Huna bar Ḥiyya says that Shmuel says: The halakha is in accordance with the opinion of Ḥananya. And Shmuel follows his line of reasoning, as we learned in a mishna (Kilayim 8:4): Rabbi Yehuda says: With regard to two animals that are born from a female horse, even if the father of one is a donkey and the father of the other is a horse, they are permitted to mate with one another. Since the mothers of both are horses, the offspring are all considered of the same species. But to mate animals that are born from a female donkey with animals that are born from a female horse, even if one animal was born from a male horse and a female donkey and the other was born from a male donkey and a female horse, is prohibited, due to the prohibition of diverse kinds.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ע״ט א — Chullin 79a:3</span></div>
+    <div class="orig">וְאָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: זוֹ דִּבְרֵי רַבִּי יְהוּדָה, דְּאָמַר אֵין חוֹשְׁשִׁין לְזֶרַע הָאָב, אֲבָל חֲכָמִים אוֹמְרִים: כׇּל מִינֵי פְּרָדוֹת אַחַת הֵן.</div>
+    <div class="trans" data-when="he">ועוד אמר רב יהודה בשם שמואל: משנה זו דברי ר׳ יהודה, הסובר שאין חוששין לזרע האב — המין נקבע לפי האם בלבד. אבל חכמים אומרים: כל מיני הפרדות מין אחד הן (שהמין נקבע אף לפי האב), ולכן מותרות זו בזו.</div>
+    <div class="trans" data-when="en">And, commenting on that mishna, Rav Yehuda says that Shmuel says: This is the statement of Rabbi Yehuda, who says: One need not be concerned with its paternity in determining the species of an animal, as the species is determined solely by the mother. But the Rabbis say: The species of an animal is determined according to both its mother and its father. Therefore, all types of mules, regardless of which parent is a horse and which is a donkey, are considered a single species and may mate with each other.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ע״ט א — Chullin 79a:4</span></div>
+    <div class="orig">מַאן חֲכָמִים? חֲנַנְיָה הוּא, דְּאָמַר חוֹשְׁשִׁין לְזֶרַע הָאָב, וְהַאי בַּר סוּסְיָא וַחֲמָרָא, וְהַאי בַּר חֲמָרָא וְסוּסְיָא – כּוּלְּהוּ חֲדָא מִינָא נִינְהוּ.</div>
+    <div class="trans" data-when="he">מי הם ׳חכמים׳ כאן? חנניה הוא, הסובר שחוששין לזרע האב — ולכן פרדה זו שמאביה סוס ואמה חמורה, ופרדה זו שמאביה חמור ואמה סוסה, כולן מין אחד הן (שניהם תערובת סוס וחמור), ומותרות זו בזו.</div>
+    <div class="trans" data-when="en">Now, whose opinion is referred to as that of the Rabbis here? It is that of Ḥananya, who says: One needs to be concerned with paternity, as, in his opinion, the prohibition against slaughtering an animal and its offspring applies to a male and its offspring as well. And therefore, with regard to the prohibition of diverse kinds as well, this mule that is the offspring of a female horse and a male donkey, and that mule that is the offspring of a female donkey and a male horse are all a single species.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ע״ט א — Chullin 79a:5</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: מִי פְּשִׁיט לֵיהּ לְרַבִּי יְהוּדָה דְּאֵין חוֹשְׁשִׁין לְזֶרַע הָאָב, אוֹ דִלְמָא סַפּוֹקֵי מְסַפְּקָא לֵיהּ? לְמַאי נָפְקָא מִינַּהּ?</div>
+    <div class="trans" data-when="he">נשאלה שאלה: האם ר׳ יהודה פשוט לו שאין חוששין לזרע האב, או שמא מסופק הוא בדבר? ושואלת הגמרא: מה הנפקא מינה?</div>
+    <div class="trans" data-when="en">A dilemma was raised before the Sages: Is Rabbi Yehuda certain that one need not be concerned with its paternity in determining the species of the offspring, or perhaps he is uncertain whether or not one need be concerned with its paternity? The Gemara asks: What is the practical difference?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ע״ט א — Chullin 79a:6</span></div>
+    <div class="orig">לְמִישְׁרֵא פְּרִי עִם הָאֵם, אִי אָמְרַתְּ: מִיפְשָׁט פְּשִׁיטָא לֵיהּ – פְּרִי עִם הָאֵם שְׁרֵי, אֶלָּא אִי אָמְרַתְּ: סַפּוֹקֵי מְסַפְּקָא לֵיהּ – פְּרִי עִם הָאֵם אָסוּר.</div>
+    <div class="trans" data-when="he">הנפקא מינה: להתיר הרבעת הוולד עם בני מין אמו. אם פשוט לו שאין חוששין לזרע האב — הוולד עם מין האם מותר (שניהם נחשבים סוס). ואם מסופק לו — אסור, שמא חוששין גם לזרע האב.</div>
+    <div class="trans" data-when="en">The Gemara answers: The practical difference is with regard to permitting the mating of the offspring with the species of the mother, e.g., the mating of the offspring of a female horse and a male donkey together with a horse. If you say that Rabbi Yehuda is certain that one need not be concerned with its paternity, then the mating of the offspring with the species of the mother is permitted, as, in this case, they are both considered horses. But if you say that Rabbi Yehuda is uncertain, then the mating of the offspring with the species of the mother is prohibited, as one must be concerned about the species of the father.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ע״ט א — Chullin 79a:7</span></div>
+    <div class="orig">מַאי תָּא שְׁמַע: רַבִּי יְהוּדָה אוֹמֵר: כׇּל הַנּוֹלָדִים מִן הַסּוּס, אַף עַל פִּי שֶׁאֲבִיהֶן חֲמוֹר – מוּתָּרִין זֶה בָּזֶה. הֵיכִי דָמֵי? אִילֵּימָא דַּאֲבוּהּ דְּהַאי חֲמוֹר וַאֲבוּהּ דְּהַאי חֲמוֹר – צְרִיכָא לְמֵימַר? אֶלָּא לָאו דַּאֲבוּהּ דְּהַאי סוּס וַאֲבוּהּ דְּהַאי חֲמוֹר;</div>
+    <div class="trans" data-when="he">תא שמע מן המשנה: ר׳ יהודה — כל הנולדים מסוסה מותרים זה בזה. כיצד? אם אבי שניהם חמור — פשוט שמותרים (שניהם בני סוסה), ולמה נצרך לומר? אלא ודאי שאבי האחד סוס ואבי השני חמור,</div>
+    <div class="trans" data-when="en">What, then, is the answer to the question? The Gemara suggests: Come and hear a possible resolution from the mishna cited earlier: Rabbi Yehuda says: All that are born from a female horse, even if the father of one of them is a donkey, are permitted to mate with each other. What are the circumstances here? If we say that the father of this male animal is a donkey, and the father of that female animal, with which the male is to be mated, is a donkey, does it need to be said? Since the mothers of both animals are horses, they are both of exactly the same species and may certainly mate with each other. Rather, is it not that the father of this one is a horse, and the father of that other one is a donkey?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ע״ט א — Chullin 79a:8</span></div>
+    <div class="orig">וְקָתָנֵי מוּתָּרִים זֶה עִם זֶה, אַלְמָא מִיפְשָׁט פְּשִׁיטָא לֵיהּ!</div>
+    <div class="trans" data-when="he">ובכל זאת שנינו שמותרים זה עם זה — משמע שפשוט לר׳ יהודה שאין חוששין לזרע האב; שאם היה מסופק, היה אוסר (שהרי אבי האחד סוס ואבי השני חמור).</div>
+    <div class="trans" data-when="en">And yet it is taught that they are permitted to mate with each other. Evidently, Rabbi Yehuda is certain that one need not be concerned with its paternity in determining the species of the offspring. If he were uncertain, he would deem their mating prohibited, as the father of one is a horse while the father of the other is a donkey.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ע״ט א — Chullin 79a:9</span></div>
+    <div class="orig">לָא, לְעוֹלָם דַּאֲבוּהּ דְּהַאי חֲמוֹר, וַאֲבוּהּ דְּהַאי חֲמוֹר. וּדְקָאָמְרַתְּ: צְרִיכָא לְמֵימַר? מַהוּ דְּתֵימָא: אָתֵי צַד דְּסוּס מִשְׁתַּמֵּשׁ בְּצַד חֲמוֹר, וְצַד חֲמוֹר מִשְׁתַּמֵּשׁ בְּצַד סוּס, קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">דחיית הראיה: לא! לעולם אבי שניהם חמור (וניתן לדחות). ומה שהקשית ׳צריכא למימר?׳ — אכן צריך, שלא תאמר שצד הסוס שבזכר ישתמש בצד החמור שבנקבה וצד החמור שבזכר בצד הסוס שבנקבה (ויהא כלאים); קא משמע לן שמותר.</div>
+    <div class="trans" data-when="en">The Gemara responds: No, one cannot cite proof from this, as it can be said that actually, the father of this male animal is a donkey, and the father of that female animal is also a donkey. And with regard to that which you say: Does it need to be said that these two may mate? It does need to be said, lest you say: The horse component of the male mule comes and copulates with the donkey component of the female mule, and the donkey component of the male mule copulates specifically with the horse component of the female mule, which would violate the prohibition of diverse kinds. Therefore, Rabbi Yehuda teaches us that they are both of the same species and may mate.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ע״ט א — Chullin 79a:10</span></div>
+    <div class="orig">תָּא שְׁמַע: רַבִּי יְהוּדָה אוֹמֵר, פִּרְדָּה שֶׁתָּבְעָה – אֵין מַרְבִּיעִין עָלֶיהָ לֹא סוּס וְלֹא חֲמוֹר, אֶלָּא מִינָהּ. וְאִי אָמְרַתְּ מִפְשָׁט פְּשִׁיטָא לֵיהּ לַרְבַּע עֲלַהּ מִינָא דְּאִמַּהּ! דְּלָא יָדְעִינַן מִינָא דְּאִמַּהּ מַאי נִיהוּ.</div>
+    <div class="trans" data-when="he">תא שמע: ר׳ יהודה — פרדה שתבעה (להזדווג), אין מרביעין עליה לא סוס ולא חמור אלא בן מינה (פרד). ואם פשוט לו שאין חוששין לזרע האב — מדוע לא ירביע עליה את מין אמה? אלמא מספקא ליה! ומשני: מדובר שאין יודעים מהו מין אמה.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a possible resolution from a baraita: Rabbi Yehuda says: With regard to a female mule in heat, one may not mate a horse or a donkey with her, due to the prohibition against crossbreeding diverse kinds of livestock. Rather, one mates her with one of her kind, another mule. And if you say that Rabbi Yehuda is certain that one need not be concerned with its paternity in determining the species of the offspring, then why not mate her with the species of her mother? Evidently, Rabbi Yehuda is uncertain and therefore deems it prohibited to mate her with either a horse or a donkey. The Gemara responds: The baraita is referring to a case where we do not know what the mother’s species is.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ע״ט א — Chullin 79a:11</span></div>
+    <div class="orig">וְהָא ״אֶלָּא מִינַּהּ״ קָתָנֵי? הָכִי קָאָמַר: אֵין מַרְבִּיעִין עָלֶיהָ לֹא מִין סוּס וְלֹא מִין חֲמוֹר, לְפִי שֶׁאֵין יוֹדְעִין בְּמִינָהּ. וְלִיבְדּוֹק בְּסִימָנִין? דְּאָמַר אַבָּיֵי: עָבֵי קָלֵיהּ – בַּר חַמָּרָא, צְנִיף קָלֵיהּ – בַּר סוּסְיָא. וְאָמַר רַב פָּפָּא: רַבְרְבָן אוּדְנֵיהּ וְזוּטְרָא גְּנוּבְתֵיהּ – בַּר חַמָּרָא, זוּטְרָן אוּדְנֵיהּ וְרַבָּה גְּנוּבְתֵיהּ – בַּר סוּסְיָא. הָכָא בְּמַאי עָסְקִינַן? בְּאִלֶּמֶת וְגִידֶּמֶת.</div>
+    <div class="trans" data-when="he">קושיא: והרי שנינו ׳אלא מינה׳ — משמע שמינה ידוע! תירוץ: כך אמר — אין מרביעין עליה מין סוס ולא מין חמור לפי שאין יודעין מינה. וליבדוק בסימנים? שאמר אביי: קולו עבה — בן חמורה, קולו צלול — בן סוסה; ורב פפא: אוזניו גדולות וזנבו קצר — בן חמורה, אוזניו קטנות וזנבו ארוך — בן סוסה. ומשני: כאן מדובר בפרדה אילמת וקטועת אוזניים וזנב, שאי אפשר לבדקה.</div>
+    <div class="trans" data-when="en">The Gemara challenges: But the baraita teaches: Rather, one mates her with one of her kind, indicating that her species is known. The Gemara explains that this is what the baraita is saying: One may not mate the species of a horse or the species of a donkey with her, because one does not usually know the species of the mother of a mule that one encounters. The Gemara suggests: But let one check her species by her distinguishing characteristics, as Abaye says: If its voice is deep, it is the offspring of a female donkey; if its voice is shrill, it is the offspring of a female horse. And Rav Pappa says: If its ears are large and its tail is small, it is the offspring of a female donkey; if its ears are small and its tail is large, it is the offspring of a female horse. The Gemara answers: Here we are dealing with a mule who is mute, and whose ears and tail are lopped off, and whose species cannot be determined. Therefore, Rabbi Yehuda’s opinion cannot be proven from this case.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ע״ט א — Chullin 79a:12</span></div>
+    <div class="orig">מַאי הָוֵי עֲלַהּ? תָּא שְׁמַע, דְּאָמַר רַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ: הַכֹּל מוֹדִין בִּפְרִי עִם הָאֵם שֶׁאָסוּר. שְׁמַע מִינַּהּ סַפּוֹקֵי מְסַפְּקָא לֵיהּ, שְׁמַע מִינַּהּ.</div>
+    <div class="trans" data-when="he">מה הוכרע בדבר? תא שמע: אמר רב הונא בריה דרב יהושע — הכל מודים (ואף ר׳ יהודה) שהרבעת הוולד עם מין אמו אסורה. שמע מינה: מספקא ליה לר׳ יהודה אם חוששין לזרע האב — שאילו היה פשוט לו, היה מתיר; שמע מינה.</div>
+    <div class="trans" data-when="en">The Gemara asks: What conclusion was reached about it? Come and hear a resolution, as Rav Huna, son of Rav Yehoshua, says: All, including Rabbi Yehuda, agree with regard to mating the offspring with the species of its mother that it is prohibited. Conclude from it that Rabbi Yehuda is uncertain. If he were certain that one need not be concerned with its paternity, he would deem mating the offspring with the species of its mother permitted, since the father’s species would not matter. The Gemara affirms: Conclude from it that this is so.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ע״ט א — Chullin 79a:13, 79b:1</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַבִּי אַבָּא לְשַׁמָּעֵיהּ: אִי מְעַיְּילַתְּ לִי כּוּדַנְיָיתָא בְּרִיסְפַּק, עַיֵּין לְהָנָךְ דְּדָמְיָין לַהֲדָדֵי, וְעַיֵּיל לִי. אַלְמָא קָסָבַר: אֵין חוֹשְׁשִׁין לְזֶרַע הָאָב. וְסִימָנִין דְּאוֹרָיְיתָא.</div>
+    <div class="trans" data-when="he">מעשה: ר׳ אבא אמר למשרתו — אם תכניס לי פרדות לרכב, בחר אותן הדומות זו לזו (בקול ובאוזניים ובזנב) והכניסן לי, כדי שלא לעבור על כלאים. אלמא ר׳ אבא סובר שאין חוששין לזרע האב (שהסימנים מורים רק על מין האם); וסימנין אלו תוקפם מן התורה, ואפשר לסמוך עליהם אף באיסור תורה.</div>
+    <div class="trans" data-when="en">The Gemara relates with regard to this issue that Rabbi Abba said to his servant: If you bring me mules attached to a wagon [rispak], look for those that are similar to each other in their voices and the sizes of their ears and tails, and bring those for me, in order not to violate the prohibition of diverse kinds. Evidently, Rabbi Abba holds that with regard to the offspring of diverse kinds, one need not be concerned with its paternity, since, as explained earlier, these distinguishing characteristics indicate only the species of the mother.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
