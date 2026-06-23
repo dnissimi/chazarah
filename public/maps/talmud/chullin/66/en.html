@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ס״ו</title>
+<meta name="description" content="מפת הסוגיא של חולין ס״ו: סימני דגים — סנפיר וקשקשת; הברייתא בדג המגדל או משיר קשקשים; ולמה כתבה תורה שני סימנים אף שדי בקשקשת; ומדרש ׳כלל ופרט וכלל׳ בדגי כלים, ימים, בורות שיחין ומערות.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="66">
+<meta name="gemara-map:sefaria-ref" content="Chullin 66">
+<meta name="gemara-map:topic-he" content="סימני דגים — סנפיר וקשקשת">
+<meta name="gemara-map:topic-en" content="Fish signs — fins and scales">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ס״ו">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 66">
+<meta name="gemara-map:blurb-he" content="קשקשת מספיקה לטהר דג — אך התורה כתבה גם ׳סנפיר׳ להגדיל תורה; ומדרש ׳כלל ופרט וכלל׳ קובע אילו מימות אוסרים דג טמא ואילו מתירים.">
+<meta name="gemara-map:blurb-en" content="A scale alone suffices to deem a fish kosher, yet the Torah added ‘fins’ to magnify Torah; and a generalization-detail-generalization midrash fixes which waters forbid a fish lacking signs.">
+<meta name="gemara-map:sugya-count" content="2">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ס״ו</span><span data-when="en">Sugya map — Chullin 66</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ס״ו א — ס״ז א · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 66a–67a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שני דיונים בסימני הדגים: <b>קשקשת לבדה</b> כבר מעידה שהדג כשר (כל שיש לו קשקשת יש לו סנפיר), ובכל זאת כתבה תורה גם ׳סנפיר׳ — <b>״יגדיל תורה ויאדיר״</b>. ואחר כך מדרש המתיר ואוסר: עוברים על הדג הטמא ב<b>עשה ולא תעשה</b>, ו<b>״כלל ופרט וכלל״</b> מלמד שדג בלא סימנים אסור בימים ובנחלים ובחריצין, אך דגים בכלים ובבורות שיחין ומערות — מותרים.</span>
+    <span data-when="en"><b>Bottom line:</b> Two discussions of the fish signs: a <b>scale alone</b> already proves the fish kosher (whatever has scales has fins), yet the Torah still wrote ‘fins’ — <b>“to magnify Torah and make it glorious.”</b> Then a midrash that both forbids and permits: eating a non-kosher fish breaks <b>a positive mitzva and a prohibition</b>, and a <b>generalization-detail-generalization</b> reading teaches that a fish lacking signs is forbidden in seas, rivers and trenches, but fish in vessels and in pits, ditches and caves are permitted.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — חולין ס״ו</span><span data-when="en">Overview — Chullin 66</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · סימני דגים — סנפיר וקשקשת, ולמה שניהם"]:::statement
+  O2["2 · עשה ולא תעשה, וכלל ופרט וכלל במימות"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Fish signs — fins and scales, why both"]:::statement
+  O2["2 · Positive and negative mitzva, and the waters midrash"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">סנפיר וקשקשת — ולמה כתבה תורה את שניהם</span><span data-when="en">Fins and scales — why the Torah wrote both</span>
+      <span class="ref">Chullin 66a:9–66b:5</span></h2>
+  <div class="lead"><span data-when="he">דג שעתיד לגדל או להשיר קשקשים — כשר; כל שיש לו קשקשת יש לו סנפיר, ודי בקשקשת לטהר. אם כן למה כתבה תורה ׳סנפיר׳? כדי ״להגדיל תורה ויאדיר״.</span><span data-when="en">A fish that will grow or shed scales is kosher; whatever has scales has fins, so a scale alone suffices. Why then did the Torah write ‘fins’? To “magnify Torah and make it glorious.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: דג כשר — כל שיש לו סנפיר וקשקשת; עתיד לגדל — מותר"]):::mishnah
+  S1["② עתיד להשירן כשעולה מן המים — מותר"]:::statement
+  S2["③ כל שיש לו קשקשת יש לו סנפיר; סנפיר בלבד — טמא"]:::statement
+  Q1{"④ אם סומכים על קשקשת, יכתוב רק קשקשת!"}:::question
+  A1["④ אילו רק ׳קשקשת׳ — הוה אמינא קשקשת היינו סנפיר, ונתיר טמא"]:::answer
+  Q2{"⑤ ומנין שקשקשת הוא לבוש? והכתיב ׳ושריון קשקשים׳ — יכתוב רק קשקשת!"}:::question
+  C1["⑥ ר׳ אבהו ודבי ר׳ ישמעאל: ׳יגדיל תורה ויאדיר׳"]:::conclusion
+  M1 -->|וכן| S1
+  S1 -->|משנה דנדה| S2
+  S2 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|ועדיין| Q2
+  Q2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: kosher fish has fin and scale; will grow scales — permitted"]):::mishnah
+  S1["② Will shed them on rising from the water — permitted"]:::statement
+  S2["③ Whatever has scales has fins; fins alone — non-kosher"]:::statement
+  Q1{"④ If we rely on scales, let it write only ׳scales׳!"}:::question
+  A1["④ Had it written only ׳scales׳ — I would equate scale with fin, permitting the non-kosher"]:::answer
+  Q2{"⑤ And whence that scale means a garment? ׳coat of scale armor׳ — so write only scale!"}:::question
+  C1["⑥ R. Abbahu and school of R. Yishmael: ׳magnify Torah and make it glorious׳"]:::conclusion
+  M1 -->|likewise| S1
+  S1 -->|Nidda mishna| S2
+  S2 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|still| Q2
+  Q2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① וּבַדָּגִים כֹּל שֶׁיֵּשׁ לוֹ סְנַפִּיר וְקַשְׂקֶשֶׂת … עָתִיד לְגַדֵּל … הֲרֵי זֶה מוּתָּר"]):::mishnah
+  S1["② יֵשׁ לוֹ … וְעָתִיד לְהַשִּׁירָן בְּשָׁעָה שֶׁעוֹלֶה מִן הַמַּיִם … מוּתָּר"]:::statement
+  S2["③ כֹּל שֶׁיֵּשׁ לוֹ קַשְׂקֶשֶׂת יֵשׁ לוֹ סְנַפִּיר … סְנַפִּיר וְאֵין לוֹ קַשְׂקֶשֶׂת – דָּג טָמֵא"]:::statement
+  Q1{"④ אַקַּשְׂקֶשֶׂת קָא סָמְכִינַן, לִיכְתּוֹב רַחֲמָנָא קַשְׂקֶשֶׂת וְלָא לִיכְתּוֹב סְנַפִּיר!"}:::question
+  A1["④ אִי כְּתַב … קַשְׂקֶשֶׂת … הֲוָה אָמֵינָא … סְנַפִּיר, וַאֲפִילּוּ דָּג טָמֵא"]:::answer
+  Q2{"⑤ מִמַּאי דְּקַשְׂקֶשֶׂת לְבוּשָׁא … ׳וְשִׁרְיוֹן קַשְׂקַשִּׂים׳ … וְלִיכְתּוֹב … קַשְׂקֶשֶׂת!"}:::question
+  C1["⑥ אָמַר רַבִּי אֲבָהוּ … תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל: ׳יַגְדִּיל תּוֹרָה וְיַאְדִּיר׳"]:::conclusion
+  M1 -->|וכן| S1
+  S1 -->|משנה דנדה| S2
+  S2 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|ועדיין| Q2
+  Q2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ו א — Chullin 66a:9</span></div>
+    <div class="orig">וּבַדָּגִים כֹּל שֶׁיֵּשׁ לוֹ סְנַפִּיר וְקַשְׂקֶשֶׂת. תָּנוּ רַבָּנַן: אֵין לוֹ עַכְשָׁיו וְעָתִיד לְגַדֵּל לְאַחַר זְמַן, כְּגוֹן הַסּוּלְתָּנִית וְהָעַפְיָאן – הֲרֵי זֶה מוּתָּר. יֵשׁ לוֹ עַכְשָׁיו וְעָתִיד לְהַשִּׁירָן בְּשָׁעָה שֶׁעוֹלֶה מִן הַמַּיִם, כְּגוֹן</div>
+    <div class="trans" data-when="he">המשנה: דג כשר — כל שיש לו סנפיר (כנף שחייה) וקשקשת. ברייתא: דג שאין לו קשקשים עכשיו אך עתיד לגדלם, כגון הסולתנית והעפיאן — מותר. וכן דג שיש לו קשקשים עכשיו אך עתיד להשירם בשעה שעולה מן המים, כגון —</div>
+    <div class="trans" data-when="en">§ The mishna states: And with regard to fish, any fish that has a fin and a scale is kosher. The Sages taught in a baraita: If a fish does not have scales now but will grow them after a period of time, such as the sultanit and afyan fish, it is permitted. Likewise, if it has scales now but will shed them when it is caught and rises from the water, such as</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ו ב — Chullin 66b:1</span></div>
+    <div class="orig">אֲקוּנָס וַאֲפוּנָס כְּסֶפַּתְיָאס וְאֶכְּסְפַּטְיָאס וַאֲטוּנָס – הֲרֵי זֶה מוּתָּר.</div>
+    <div class="trans" data-when="he">המשך הברייתא: כגון האקונס והאפונס והכספתיאס והאכספטיאס והאטונס — מותר. הרי שהולכים אחר העתיד.</div>
+    <div class="trans" data-when="en">the akunas, and the afunas, and the kesaftiyas, and the akhsaftiyas, and the atunas, it is permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ו ב — Chullin 66b:2</span></div>
+    <div class="orig">תְּנַן הָתָם: כֹּל שֶׁיֵּשׁ לוֹ קַשְׂקֶשֶׂת יֵשׁ לוֹ סְנַפִּיר, וְיֵשׁ שֶׁיֵּשׁ לוֹ סְנַפִּיר וְאֵין לוֹ קַשְׂקֶשֶׂת. יֵשׁ לוֹ קַשְׂקֶשֶׂת וְיֵשׁ לוֹ סְנַפִּיר – דָּג טָהוֹר, יֵשׁ לוֹ סְנַפִּיר וְאֵין לוֹ קַשְׂקֶשֶׂת – דָּג טָמֵא.</div>
+    <div class="trans" data-when="he">שנינו במשנה אחרת (נדה נא ב): כל שיש לו קשקשת יש לו גם סנפיר, אך יש שיש לו סנפיר ואין לו קשקשת. דג שיש לו קשקשת וסנפיר — טהור; ויש לו סנפיר אך אין לו קשקשת — טמא. נמצא שהקשקשת היא הסימן המכריע.</div>
+    <div class="trans" data-when="en">We learned in a mishna elsewhere (Nidda 51b): Any fish that has scales certainly has fins, but there are fish that have fins and do not have scales. Any fish that has scales and fins is a kosher fish. If it has fins but no scales, it is a non-kosher fish.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ו ב — Chullin 66b:3</span></div>
+    <div class="orig">מִכְּדֵי אַקַּשְׂקֶשֶׂת קָא סָמְכִינַן, לִיכְתּוֹב רַחֲמָנָא קַשְׂקֶשֶׂת וְלָא לִיכְתּוֹב סְנַפִּיר! אִי כְּתַב רַחֲמָנָא קַשְׂקֶשֶׂת וְלָא כְּתַב סְנַפִּיר, הֲוָה אָמֵינָא: מַאי קַשְׂקֶשֶׂת? סְנַפִּיר, וַאֲפִילּוּ דָּג טָמֵא. כְּתַב רַחֲמָנָא סְנַפִּיר וְקַשְׂקֶשֶׂת.</div>
+    <div class="trans" data-when="he">קושיא: הואיל ועיקר הסימן הוא הקשקשת (שכל שיש לו קשקשת יש לו סנפיר), תכתוב התורה ׳קשקשת׳ בלבד ולא ׳סנפיר׳! תירוץ: אילו כתבה ׳קשקשת׳ לבד, הייתי אומר ׳קשקשת׳ פירושו סנפיר, ואתיר אף דג טמא; לכן כתבה ׳סנפיר וקשקשת׳ — שלא לטעות.</div>
+    <div class="trans" data-when="en">The Gemara asks: Now, since we rely only on scales to deem a fish kosher, presuming that if it has scales it must have fins as well, let the Merciful One write only “scales” as the sign of a kosher fish and let Him not write “fins” at all. The Gemara responds: If the Merciful One had written: Scales [kaskeset], and had not written: Fins [senappir], I would say: What is kaskeset? It is fins. And I would thereby come to permit even non-kosher fish. Therefore, the Merciful One stated: “Senappir and kaskeset,” to leave no room for error.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ו ב — Chullin 66b:4</span></div>
+    <div class="orig">וְהַשְׁתָּא דִּכְתַב רַחֲמָנָא סְנַפִּיר וְקַשְׂקֶשֶׂת, מִמַּאי דְּקַשְׂקֶשֶׂת לְבוּשָׁא הוּא, דִּכְתִיב ״וְשִׁרְיוֹן קַשְׂקַשִּׂים הוּא לָבוּשׁ״, וְלִיכְתּוֹב רַחֲמָנָא קַשְׂקֶשֶׂת וְלָא לִיכְתּוֹב סְנַפִּיר?</div>
+    <div class="trans" data-when="he">קושיא נוספת: עכשיו שכתבה התורה ׳סנפיר וקשקשת׳, מניין שקשקשת היא לבוש (הקשקשים שעל גוף הדג) ולא הסנפיר? שנאמר ״ושריון קשקשים הוא לבוש״. ואם כן יכלה התורה לכתוב ׳קשקשת׳ בלבד — ושוב למה ׳סנפיר׳?</div>
+    <div class="trans" data-when="en">The Gemara asks: But now that the Merciful One has written: “Senappir and kaskeset,” from where is it derived that kaskeset denotes clothing, i.e., scales, rather than fins? As it is written: “And he was clad with a coat of scale armor [kaskasim]” (I Samuel 17:5). And if it is certain that kaskeset refers to scales, the question resurfaces: Let the Merciful One write only “kaskeset,” and let Him not write “senappir.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ו ב — Chullin 66b:5</span></div>
+    <div class="orig">אָמַר רַבִּי אֲבָהוּ, וְכֵן תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל: ״יַגְדִּיל תּוֹרָה וְיַאְדִּיר״.</div>
+    <div class="trans" data-when="he">מסקנה: ר׳ אבהו, וכן תנא דבי ר׳ ישמעאל: הקדוש ברוך הוא רצה לזכות את ישראל, לפיכך הרבה להם תורה ומצוות, שנאמר ״יגדיל תורה ויאדיר״. לכן כתבה התורה את שני הסימנים אף שאחד מספיק.</div>
+    <div class="trans" data-when="en">Rabbi Abbahu said, and so the tanna of the school of Rabbi Yishmael taught: The Holy One, Blessed be He, wished to bestow good upon the Jewish people. Therefore, He made their Torah abundant, as it is written: “The Lord was pleased, for His righteousness’ sake, to make Torah great and glorious” (Isaiah 42:21). He consequently expanded some aspects of the Torah more than strictly necessary.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">עשה ולא תעשה, וכלל ופרט וכלל במימות</span><span data-when="en">Positive and negative mitzva, and the waters midrash</span>
+      <span class="ref">Chullin 66b:6–67a:4</span></h2>
+  <div class="lead"><span data-when="he">התורה כתבה את האיסור בעשה ובלאו — לעבור בשניהם. ומדרש ׳כלל ופרט וכלל׳ קובע: דג בלא סימנים אסור בכל מים נובעים (ימים, נחלים, חריצין), אך מותר בכלים ובבורות שיחין ומערות.</span><span data-when="en">The Torah wrote the rule positively and negatively — to transgress on both. A generalization-detail-generalization midrash fixes: a fish lacking signs is forbidden in all flowing water (seas, rivers, trenches), but permitted in vessels and in pits, ditches and caves.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: כתבה תורה עשה ולאו — לעבור עליו בשניהם"]:::statement
+  Q1{"② ׳תאכלו מכל אשר במים׳ למה? ולרבות בורות שיחין ומערות"}:::question
+  S2["③ היכן התיר בכלים? בימים ובנחלים — אית ליה אכול; בכלים — אף דלית ליה אכול"]:::statement
+  Q2{"④ אימא להפך: בכלים אף דאית ליה לא תיכול? לא ס״ד, מקרא דאין לו"}:::question
+  Q3{"⑤ אימא כלל ופרט — ימים ונחלים אין, נעיצין וחריצין לא"}:::question
+  A1["⑥ ׳במים׳ חזר וכלל — כלל ופרט וכלל"]:::answer
+  Q4{"⑦ והרי שני כללות סמוכים! רבינא: הטל פרט ביניהם"}:::question
+  A2["⑧ כעין הפרט — מים נובעים: חריצין לאיסור, בורות שיחין ומערות להיתר"]:::answer
+  Q5{"⑨ ואימא מים גדלים על הקרקע — אף בורות לאיסור, וממעט כלים"}:::question
+  C1["⑩ אם כן ׳תאכלו׳ מאי אהני? על כורחך בורות מותרים"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|בירור| S2
+  S2 -.->|אימא| Q2
+  Q2 -->|דחייה| Q3
+  Q3 -->|תירוץ| A1
+  A1 -.->|קושיא| Q4
+  Q4 -->|מדרש| A2
+  A2 -.->|אימא| Q5
+  Q5 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: Torah wrote it positively and negatively — to transgress both"]:::statement
+  Q1{"② Why ׳eat of all that are in the waters׳? To include pits, ditches, caves"}:::question
+  S2["③ Where did it permit vessels? In seas/rivers — with signs eat; in vessels — even without, eat"]:::statement
+  Q2{"④ Say the reverse: in vessels even with signs do not eat? No — the ׳lacks׳ verse refutes"}:::question
+  Q3{"⑤ Say generalization-detail — seas/rivers yes, channels/trenches no"}:::question
+  A1["⑥ ׳in the waters׳ generalizes again — generalization, detail, generalization"]:::answer
+  Q4{"⑦ But two adjacent generalizations! Ravina: place the detail between them"}:::question
+  A2["⑧ Like the detail — flowing water: trenches forbidden, pits/ditches/caves permitted"]:::answer
+  Q5{"⑨ Say water on the ground — even pits forbidden, excluding only vessels"}:::question
+  C1["⑩ If so, what use is ׳you may eat׳? Perforce pits are permitted"]:::conclusion
+  S1 -->|objection| Q1
+  Q1 -->|clarify| S2
+  S2 -.->|say| Q2
+  Q2 -->|rejected| Q3
+  Q3 -->|answer| A1
+  A1 -.->|objection| Q4
+  Q4 -->|midrash| A2
+  A2 -.->|say| Q5
+  Q5 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן … וְלָמָּה שְׁנָאָן? לַעֲבוֹר עָלָיו בַּעֲשֵׂה וְלֹא תַעֲשֶׂה"]:::statement
+  Q1{"② ׳תֹּאכְלוּ מִכֹּל אֲשֶׁר בַּמָּיִם׳ … לְרַבּוֹת בּוֹרוֹת שִׁיחִין וּמְעָרוֹת"}:::question
+  S2["③ הֵיכָן הִתִּיר בְּכֵלִים? בַּיַּמִּים וּבַנְּחָלִים … אֱכוֹל … הָא בְּכֵלִים … אֱכוֹל"]:::statement
+  Q2{"④ אֵימָא: בְּכֵלִים … דְּאִית לֵיהּ לָא תֵּיכוֹל? לָא סָלְקָא דַּעְתָּךְ … וְכֹל אֲשֶׁר אֵין לוֹ"}:::question
+  Q3{"⑤ וְאֵימָא … כְּלָל וּפְרָט … יַמִּים וּנְחָלִים – אִין, נְעִיצִין וַחֲרִיצִין – לֹא"}:::question
+  A1["⑥ ׳בַּמַּיִם׳ – חָזַר וְכָלַל"]:::answer
+  Q4{"⑦ הָנֵי תְּרֵי כְּלָלֵי דִּסְמִיכִי … רָבִינָא … הַטֵּל פְּרָט בֵּינֵיהֶם"}:::question
+  A2["⑧ כְּעֵין הַפְּרָט … מַיִם נוֹבְעִים … חֲרִיצִין … לְאִיסּוּרָא … בּוֹרוֹת … לְהֶתֵּירָא"]:::answer
+  Q5{"⑨ וְאֵימָא … מַיִם גְּדֵלִין עַל גַּבֵּי קַרְקַע … בּוֹרוֹת … לְאִיסּוּרָא … מַיעֵט כֵּלִים"}:::question
+  C1["⑩ אִם כֵּן, ׳תֹּאכְלוּ׳ מַאי אַהֲנִי לֵיהּ?"]:::conclusion
+  S1 -->|קושיא| Q1
+  Q1 -->|בירור| S2
+  S2 -.->|אימא| Q2
+  Q2 -->|דחייה| Q3
+  Q3 -->|תירוץ| A1
+  A1 -.->|קושיא| Q4
+  Q4 -->|מדרש| A2
+  A2 -.->|אימא| Q5
+  Q5 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס״ו ב — Chullin 66b:6</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: מִמַּשְׁמָע שֶׁנֶּאֱמַר ״אֱכוֹל אֶת שֶׁיֵּשׁ לוֹ״, שׁוֹמֵעַ אֲנִי ״אַל תֹּאכַל אֶת שֶׁאֵין לוֹ״, וּמִמַּשְׁמָע שֶׁנֶּאֱמַר ״אַל תֹּאכַל אֶת שֶׁאֵין לוֹ״, שׁוֹמֵעַ אֲנִי ״אֱכוֹל אֶת שֶׁיֵּשׁ לוֹ״. וְלָמָּה שְׁנָאָן? לַעֲבוֹר עָלָיו בַּעֲשֵׂה וְלֹא תַעֲשֶׂה.</div>
+    <div class="trans" data-when="he">ברייתא: התורה כתבה את הסימן גם בעשה (״אכול את שיש לו״) וגם בלאו (״אל תאכל את שאין לו״). מכל אחד לבדו ניתן להסיק את חברו — ולמה כפלתם? כדי שהאוכל דג טמא יעבור גם בעשה וגם בלא תעשה.</div>
+    <div class="trans" data-when="en">§ The Sages taught in a baraita: The Torah states the prohibition of non-kosher fish both positively and negatively: “These may you eat of all that are in the waters: Whatever has fins and scales…them you may eat. And all that have not fins and scales…they are a detestable thing unto you” (Leviticus 11:9–10). From the implication of that which is stated: Eat fish that have these signs, I would derive the inverse: Do not eat fish that do not have them. And from the implication of that which is stated: Do not eat fish that do not have them, I would derive the inverse: Eat fish that have them. If so, why did the Torah teach both of them? It is in order to indicate that one who eats non-kosher fish transgresses, on its account, both a positive mitzva and a prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״ו ב — Chullin 66b:7</span></div>
+    <div class="orig">״תֹּאכְלוּ מִכֹּל אֲשֶׁר בַּמָּיִם״, מָה תַּלְמוּד לוֹמַר? שֶׁיָּכוֹל הוֹאִיל וְהִתִּיר בִּמְפוֹרָשׁ וְהִתִּיר בִּסְתָם, מָה כְּשֶׁהִתִּיר בִּמְפוֹרָשׁ לֹא הִתִּיר אֶלָּא בְּכֵלִים, אַף כְּשֶׁהִתִּיר בִּסְתָם לֹא הִתִּיר אֶלָּא בְּכֵלִים. מִנַּיִן לְרַבּוֹת בּוֹרוֹת שִׁיחִין וּמְעָרוֹת, שֶׁשּׁוֹחֶה וְשׁוֹתֶה מֵהֶן וְאֵינוֹ נִמְנָע? תַּלְמוּד לוֹמַר ״תֹּאכְלוּ מִכֹּל אֲשֶׁר בַּמָּיִם״.</div>
+    <div class="trans" data-when="he">קושיא: ״תאכלו מכל אשר במים״ — מה בא ללמד? יכולתי לחשוב שכשם שההיתר המפורש (לדגים בלא סימנים) הוא רק בכלים, אף ההיתר הסתום רק בכלים. מניין לרבות שגם בבורות שיחין ומערות אדם שוחה ושותה ואינו נמנע מן השרצים? תלמוד לומר ״תאכלו מכל אשר במים״.</div>
+    <div class="trans" data-when="en">Given that the verse states: “Whatever has fins and scales…them may you eat,” what is the meaning when the verse states: “These may you eat of all that are in the waters?” Why is this necessary? It is necessary, as without this verse one might have thought: Since the Torah permitted creeping creatures of the water without fins and scales explicitly and also permitted them implicitly, one can infer: Just as when the Torah permitted such creatures explicitly, it permitted them only when in vessels, so too, when it permitted them implicitly, it permitted them only in vessels. From where is it derived to include as kosher even those in pits, ditches, and caves, that one may bend down and drink from them and need not refrain from drinking the creeping creatures in them? The verse states: “These may you eat of all that are in the waters,” to indicate that this is permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״ו ב — Chullin 66b:8</span></div>
+    <div class="orig">הֵיכָן הִתִּיר בְּכֵלִים? דִּכְתִיב: ״אֶת זֶה תֹּאכְלוּ מִכֹּל אֲשֶׁר בַּמָּיִם וְגוֹ׳״, בַּיַּמִּים וּבַנְּחָלִים הוּא דְּכִי אִית לֵיהּ – אֱכוֹל, דְּלֵית לֵיהּ – לָא תֵּיכוֹל, הָא בְּכֵלִים – אַף עַל גַּב דְּלֵית לֵיהּ – אֱכוֹל.</div>
+    <div class="trans" data-when="he">בירור: היכן התירה התורה דגים שאין להם סימנים בכלים? שנאמר ״את זה תאכלו מכל אשר במים… בימים ובנחלים״ — דווקא בימים ובנחלים, אם יש לדג סימנים אכול ואם אין לו אל תאכל; אבל בכלים — אף שאין לו סימנים, מותר.</div>
+    <div class="trans" data-when="en">The Gemara elaborates: Where did the Torah permit them in vessels? It did so in the following verse, as it is written: “These may you eat of all that are in the waters: Whatever has fins and scales in the waters, in the seas, and in the rivers, them may you eat.” It would have been sufficient to write simply: “In the waters.” The addition of “in the seas and in the rivers” indicates that it is only in the seas and in the rivers that when it has fins and scales you may eat it, and that you may not eat one that does not have them. But with regard to a creeping creature found in vessels, even if it does not have fins and scales you may eat it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״ו ב — Chullin 66b:9</span></div>
+    <div class="orig">אֵימָא: בְּכֵלִים – אַף עַל גַּב דְּאִית לֵיהּ לָא תֵּיכוֹל? לָא סָלְקָא דַּעְתָּךְ, דִּכְתִיב: ״וְכֹל אֲשֶׁר אֵין לוֹ סְנַפִּיר וְקַשְׂקֶשֶׂת בַּיַּמִּים וּבַנְּחָלִים מִכֹּל שֶׁרֶץ הַמַּיִם״ – בַּיַּמִּים וּבַנְּחָלִים דְּלֵית לֵיהּ לָא תֵּיכוֹל, הָא בְּכֵלִים – אַף עַל גַּב דְּלֵית לֵיהּ אֱכוֹל.</div>
+    <div class="trans" data-when="he">קושיא: אדרבה, אימא להפך — שבכלים אף דג שיש לו סימנים אסור? תירוץ: לא תעלה כן על דעתך, שנאמר ״וכל אשר אין לו סנפיר וקשקשת… בימים ובנחלים״ — דווקא בימים ובנחלים דג שאין לו סימנים אסור, אבל בכלים אף דג שאין לו סימנים מותר.</div>
+    <div class="trans" data-when="en">The Gemara objects: One could just as easily say the opposite: You may eat a fish that has these signs only when it is found in seas and rivers, but in vessels, even if it has fins and scales, you may not eat it. The Gemara responds: This should not enter your mind, as it is written: “And all that have not fins and scales in the seas, and in the rivers, of all that swarm in the waters, and of all the living creatures that are in the waters, they are a detestable thing to you.” The verse indicates that it is only in the seas and in the rivers that you may not eat a fish that does not have fins and scales. But you may eat a creeping creature found in vessels, even if it does not have fins and scales.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״ו ב — Chullin 66b:10</span></div>
+    <div class="orig">וְאֵימָא: ״בַּמַּיִם״ – כָּלַל, ״בַּיַּמִּים וּבַנְּחָלִים״ – פָּרַט, כְּלָל וּפְרָט – אֵין בַּכְּלָל אֶלָּא מַה שֶּׁבַּפְּרָט; יַמִּים וּנְחָלִים – אִין, נְעִיצִין וַחֲרִיצִין – לֹא.</div>
+    <div class="trans" data-when="he">דחייה: ניתן להוכיח את היתר הבורות אחרת — ״במים״ כלל, ״בימים ובנחלים״ פרט; כלל ופרט אין בכלל אלא מה שבפרט — ימים ונחלים אסורים בדג בלא סימנים, אך נעיצין וחריצין (תעלות) לא. אם כן הפסוק ״תאכלו מכל אשר במים״ מיותר.</div>
+    <div class="trans" data-when="en">The Gemara objects: But one can prove whether it is permitted to drink from pits, ditches, and caves differently. Say instead that the phrase “whatever has fins and scales in the waters” is a generalization, and the phrase “in the seas and in the rivers” is a detail. In any instance of a generalization and a detail, the generalization only includes that which is spelled out in the detail. Therefore, in the seas and rivers, yes, one may eat only fish with fins and scales, but in water channels and trenches, as well as pits, ditches, and caves, this restriction does not apply. Consequently, the clause “These may you eat of all that are in the waters” is unnecessary.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״ו ב — Chullin 66b:11</span></div>
+    <div class="orig">״בַּמַּיִם״ – חָזַר וְכָלַל.</div>
+    <div class="trans" data-when="he">תירוץ: המילה ״במים״ חוזרת פעמיים בפסוק. בחזרה השנייה כלל שוב — ונמצא ״כלל ופרט וכלל״ ולא ״כלל ופרט״; לכן צריך את הפסוק ״תאכלו מכל אשר במים״ ללמד שדגים בבורות מותרים.</div>
+    <div class="trans" data-when="en">The Gemara responds: This deduction is not sound. The term “in the waters” appears twice in the verse. When the verse repeated it, it then generalized again. Consequently, there are two generalizations and one detail in the verse, making it an instance of a generalization, a detail, and a generalization, which includes all cases similar to the detail, including pits, ditches, and caves, indicating that the restriction applies to them as well. Therefore, the clause “These may you eat of all that are in the waters” is necessary to teach that all fish in pits, ditches, and caves are permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״ו ב — Chullin 66b:12</span></div>
+    <div class="orig">הָנֵי תְּרֵי כְּלָלֵי דִּסְמִיכִי לַהֲדָדֵי נִינְהוּ, אָמַר רָבִינָא: כִּדְאָמְרִי בְּמַעְרְבָא, כׇּל מָקוֹם שֶׁאַתָּה מוֹצֵא שְׁנֵי כְּלָלוֹת הַסְּמוּכִין זֶה לָזֶה –</div>
+    <div class="trans" data-when="he">קושיא: אך שני ה״כללים״ (״במים״, ״במים״) סמוכים זה לזה לפני הפרט, ואין זה ״כלל ופרט וכלל״ אלא ״כלל וכלל ופרט״! אמר רבינא: כדאמרי במערב (ארץ ישראל), כל מקום שאתה מוצא שני כללות הסמוכים זה לזה —</div>
+    <div class="trans" data-when="en">The Gemara asks: How can this verse be an instance of a generalization, a detail, and a generalization? These are two generalizations that are adjacent to each other. Both instances of the term “in the waters” precede the detail, such that the verse is actually a generalization, a generalization, and a detail. Ravina said: As they say in the West, Eretz Yisrael: Wherever you find two generalizations juxtaposed one with the other, followed by a specific detail,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס״ז א — Chullin 67a:1</span></div>
+    <div class="orig">הַטֵּל פְּרָט בֵּינֵיהֶם וְדוּנֵם בִּכְלָל וּפְרָט וּכְלָל, ״בַּמָּיִם״ – כָּלַל, ״בַּיַּמִּים וּבַנְּחָלִים״ – פָּרַט, ״בַּמַּיִם״ – חָזַר וְכָלַל.</div>
+    <div class="trans" data-when="he">המשך דברי רבינא: הטל את הפרט ביניהם, ודון אותם בכלל ופרט וכלל — ״במים״ כלל, ״בימים ובנחלים״ פרט, ״במים״ חזר וכלל. וכך נדרש הפסוק כדין כלל ופרט וכלל.</div>
+    <div class="trans" data-when="en">place the detail between the two generalizations and then expound them as a generalization, and a detail, and a generalization. Therefore, the first instance of the phrase “in the waters” is a generalization. The phrase “in the seas and in the rivers” is a detail. And by the second instance of the phrase “in the waters,” it then generalized again.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס״ז א — Chullin 67a:2</span></div>
+    <div class="orig">כְּלָל וּפְרָט וּכְלָל – אִי אַתָּה דָן אֶלָּא כְּעֵין הַפְּרָט, מָה הַפְּרָט מְפוֹרָשׁ מַיִם נוֹבְעִים, אַף כֹּל מַיִם נוֹבְעִים. מַאי רַבִּי? חֲרִיצִין וּנְעִיצִין לְאִיסּוּרָא, וּמַאי מַיעֵט? בּוֹרוֹת שִׁיחִין וּמְעָרוֹת לְהֶתֵּירָא.</div>
+    <div class="trans" data-when="he">מדרש: בכלל ופרט וכלל אי אתה דן אלא כעין הפרט — מה הפרט (ימים ונחלים) מים נובעים, אף כל מים נובעים בכלל. מה ריבה? חריצין ונעיצין (תעלות זורמות) לאיסור. ומה מיעט? בורות שיחין ומערות (מים עומדים) להיתר.</div>
+    <div class="trans" data-when="en">Therefore, as in any instance of a generalization, and a detail, and a generalization, you may deduce that the verse is referring only to items similar to the detail. Just as the detail, seas and rivers, is referring explicitly to flowing water, so too, fish without fins and scales found in all flowing water are forbidden. What does this include? It includes trenches and water channels, to prohibit fish without fins and scales found in them. And what does it exclude? It excludes pits, ditches, and caves, which are collections of still water, to permit all fish found in them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ס״ז א — Chullin 67a:3</span></div>
+    <div class="orig">וְאֵימָא: מָה הַפְּרָט מְפוֹרָשׁ – מַיִם גְּדֵלִין עַל גַּבֵּי קַרְקַע, אַף כֹּל מַיִם גְּדֵלִין עַל גַּבֵּי קַרְקַע. וּמַאי רַבִּי? אֲפִילּוּ בּוֹרוֹת שִׁיחִין וּמְעָרוֹת לְאִיסּוּרָא, וּמַאי מַיעֵט? מַיעֵט כֵּלִים!</div>
+    <div class="trans" data-when="he">דחייה: אימא להפך — מה הפרט מים הגדלים (מצויים) על הקרקע, אף כל מים שעל הקרקע בכלל; ואז ריבה אף בורות שיחין ומערות לאיסור, ולא מיעט אלא כלים בלבד.</div>
+    <div class="trans" data-when="en">The Gemara asks: But why not say: Just as the detail refers explicitly to water that grows, i.e., is found, on the ground, so too, it includes all water that grows on the ground? And what would this include? It would include even pits, ditches, and caves, to prohibit fish found in them that do not have fins and scales. And what would it exclude? It would exclude only those found in vessels.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ס״ז א — Chullin 67a:4</span></div>
+    <div class="orig">אִם כֵּן, ״תֹּאכְלוּ״ מַאי אַהֲנִי לֵיהּ?</div>
+    <div class="trans" data-when="he">מסקנה: אם תפרש כך, ״תאכלו מכל אשר במים״ מה הועיל? הרי כלים ממילא היו ממועטים, שאינם דומים כלל לימים ונחלים. על כורחך הפסוק בא למעט בורות שיחין ומערות להיתר, וחריצין בלבד לאיסור.</div>
+    <div class="trans" data-when="en">The Gemara responds: If so, what use is the phrase “These may you eat of all that are in the waters”? Even without it, vessels would be excluded, since they are not at all similar to seas and rivers. Rather, the phrase “These may you eat of all that are in the waters” serves to indicate that only trenches and water channels are considered similar to the detail, but all fish found in pits, ditches, and caves are permitted.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
