@@ -18,6 +18,8 @@
 import { getCollection } from 'astro:content';
 import { resolved, DIR, type Lang } from '../../../../../i18n/strings';
 import { SITE } from '../../../../../i18n/urls';
+import { deriveAdjacents, type MapEntrySummary } from '../../../../../lib/map-info';
+import { hebrewNumeral } from '../../../../../lib/browse';
 
 export const prerender = true;
 
@@ -29,13 +31,30 @@ const MAP_FILES = import.meta.glob('/public/maps/**/*.html', {
 
 export async function getStaticPaths() {
   const maps = await getCollection('maps');
+  // Adjacency is derived from the collection at build (deriveAdjacents = numeric
+  // ±1 within the same book), so neighbours are computed, never stored in a map.
+  // Publishing a new daf lights up its neighbours' arrows on the next build with
+  // zero edits to any existing map file.
+  const summaries: MapEntrySummary[] = maps.map((m) => ({
+    corpus: m.data.corpus,
+    book: m.data.book,
+    location: m.data.location,
+    topic: m.data.topic,
+  }));
+  const toNeighbor = (entry: MapEntrySummary | null) =>
+    entry ? { location: entry.location, topic: entry.topic ?? null } : null;
   const paths = [];
   for (const m of maps) {
+    const adj = deriveAdjacents(summaries, m.data.book, m.data.location);
+    // Only PUBLISHED neighbours become in-map nav; gaps are simply omitted (the
+    // info page is where a missing daf turns into a "request this daf" CTA).
+    const prev = toNeighbor(adj.previous?.entry ?? null);
+    const next = toNeighbor(adj.next?.entry ?? null);
     for (const lang of m.data.languages) {
       if (lang !== 'he' && lang !== 'en') continue;
       paths.push({
         params: { corpus: m.data.corpus, book: m.data.book, location: m.data.location, lang },
-        props: { title: m.data.title, blurb: m.data.blurb, topic: m.data.topic, ref: m.data.sefariaRef },
+        props: { title: m.data.title, blurb: m.data.blurb, topic: m.data.topic, ref: m.data.sefariaRef, prev, next },
       });
     }
   }
@@ -49,9 +68,11 @@ const { corpus, book, location, lang } = Astro.params as Record<string, string>;
 const L: Lang = lang === 'en' ? 'en' : 'he';
 const dir = DIR[L];
 const t = resolved(L);
-const { title, blurb, topic, ref } = Astro.props as {
+type NavNeighbor = { location: string; topic: { he: string; en: string } | null } | null;
+const { title, blurb, topic, ref, prev, next } = Astro.props as {
   title: Record<Lang, string>; blurb: Record<Lang, string>;
   topic: { he: string; en: string }; ref: string;
+  prev: NavNeighbor; next: NavNeighbor;
 };
 const pageTitle = `${title[L]} — ${t.brand}`;
 
@@ -164,6 +185,49 @@ const seoHead = [
   `<meta name="twitter:description" content="${esc(blurb[L])}">`,
 ].join('\n');
 
+// Prev/next map navigation — site chrome, like the header: injected into the
+// portable map file at build, never stored in it. Edge-pinned + logical inset
+// (inset-inline-*) so prev sits on the reading-start side and next on the
+// reading-end side, flipping automatically between RTL (he) and LTR (en).
+const prevArrow = dir === 'rtl' ? '→' : '←';
+const nextArrow = dir === 'rtl' ? '←' : '→';
+const navBtn = (slot: NavNeighbor, kind: 'previous' | 'next'): string => {
+  if (!slot) return '';
+  const n = Number(slot.location);
+  const dafLabel = L === 'he' && Number.isInteger(n) ? hebrewNumeral(n) : slot.location;
+  const kicker = kind === 'previous' ? t.mapInfoAdjacentPrev : t.mapInfoAdjacentNext;
+  const arrow = kind === 'previous' ? prevArrow : nextArrow;
+  const topicText = slot.topic ? slot.topic[L] : '';
+  const label = `${kicker} · ${dafLabel}${topicText ? ` — ${topicText}` : ''}`;
+  const arrowSpan = `<span class="cz-mapnav-arrow" aria-hidden="true">${arrow}</span>`;
+  const textSpan = `<span class="cz-mapnav-text"><span class="cz-mapnav-kicker">${esc(kicker)}</span><span class="cz-mapnav-daf">${esc(dafLabel)}</span></span>`;
+  const inner = kind === 'previous' ? `${arrowSpan}${textSpan}` : `${textSpan}${arrowSpan}`;
+  return `<a class="cz-mapnav-btn cz-mapnav-${kind}" href="/map/${corpus}/${book}/${slot.location}/${L}" aria-label="${esc(label)}" title="${esc(label)}">${inner}</a>`;
+};
+const mapNav = prev || next
+  ? `<nav class="cz-mapnav" aria-label="${esc(L === 'he' ? 'ניווט בין מפות' : 'Map navigation')}">${navBtn(prev, 'previous')}${navBtn(next, 'next')}</nav>`
+  : '';
+// Scoped under .cz-mapnav-* with literal site-palette colours (the map owns its
+// own --ink/--accent vars, so we don't inherit them — same precaution the header
+// CSS takes). z-index sits below the sticky header's 50.
+const mapNavCss = `<style id="cz-mapnav-css">
+  .cz-mapnav-btn{position:fixed;top:50%;transform:translateY(-50%);z-index:45;display:flex;align-items:center;gap:9px;padding:9px 14px;background:rgba(248,243,232,.9);color:#1c1815;border:1px solid #cabfb0;border-radius:999px;box-shadow:0 2px 12px rgba(28,24,21,.14);font-family:'Assistant','Noto Sans Hebrew',system-ui,sans-serif;text-decoration:none;opacity:.72;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:opacity .15s,box-shadow .15s,background .15s}
+  .cz-mapnav-btn:hover,.cz-mapnav-btn:focus-visible{opacity:1;background:rgba(248,243,232,1);box-shadow:0 5px 18px rgba(28,24,21,.2);outline:none}
+  .cz-mapnav-previous{inset-inline-start:14px}
+  .cz-mapnav-next{inset-inline-end:14px}
+  .cz-mapnav-arrow{font-size:17px;line-height:1;color:#574f48}
+  .cz-mapnav-text{display:flex;flex-direction:column;line-height:1.15;text-align:start}
+  .cz-mapnav-kicker{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8a8278}
+  .cz-mapnav-daf{font-size:14px;font-weight:600;color:#1c1815}
+  @media (max-width:640px){
+    .cz-mapnav-btn{padding:8px;gap:0}
+    .cz-mapnav-text{display:none}
+    .cz-mapnav-previous{inset-inline-start:8px}
+    .cz-mapnav-next{inset-inline-end:8px}
+  }
+  @media print{.cz-mapnav-btn{display:none}}
+</style>`;
+
 let html = MAP_FILES[`/public/maps/${corpus}/${book}/${location}/${lang}.html`];
 if (!html) throw new Error(`map file not found for /public/maps/${corpus}/${book}/${location}/${lang}.html`);
 // Set lang/dir server-side (the map's JS also sets it from the URL leaf).
@@ -173,8 +237,8 @@ html = html.replace(/<html[^>]*>/, `<html lang="${L}" dir="${dir}">`);
 // only the REAL tags (title content has no `<`; the real meta has a content= attr).
 html = html.replace(/<title>[^<]*<\/title>/, `<title>${esc(pageTitle)}</title>`);
 html = html.replace(/<meta\s+name="description"\s+content="[^"]*">/, `<meta name="description" content="${esc(blurb[L])}">`);
-html = html.replace('</head>', `${seoHead}\n${fontLink}\n${headerCss}\n</head>`);
+html = html.replace('</head>', `${seoHead}\n${fontLink}\n${headerCss}\n${mapNavCss}\n</head>`);
 html = html.replace(/<body([^>]*)>/, `<body$1>\n${header}`);
-html = html.replace('</body>', `${recordScript}\n</body>`);
+html = html.replace('</body>', `${mapNav}\n${recordScript}\n</body>`);
 ---
 <Fragment set:html={html} />
