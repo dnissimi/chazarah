@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — חולין ס״א</title>
+<meta name="description" content="מפת הסוגיא של חולין ס״א: סוגיית סימני העוף הטהור — מתוך פירכות חוזרות על ׳נשר׳, ׳תורים׳ ושאר עופות נלמד שעוף הבא בסימן אחד טהור, ובלבד שאינו דורס.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="chullin">
+<meta name="gemara-map:location" content="61">
+<meta name="gemara-map:sefaria-ref" content="Chullin 61">
+<meta name="gemara-map:topic-he" content="סימני העוף הטהור">
+<meta name="gemara-map:topic-en" content="Signs of the kosher bird">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — חולין ס״א">
+<meta name="gemara-map:title-en" content="Sugya map — Chullin 61">
+<meta name="gemara-map:blurb-he" content="בירור הלכתי ארוך: כיצד למדים מן הפסוקים שעוף הבא בסימן טהרה אחד טהור, ובלבד שאינו דורס.">
+<meta name="gemara-map:blurb-en" content="A long halakhic sugya: how the verses teach that a bird with even one kosher sign is permitted, provided it does not claw.">
+<meta name="gemara-map:sugya-count" content="1">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — חולין ס״א</span><span data-when="en">Sugya map — Chullin 61</span></h1>
+    <div class="subtitle"><span data-when="he">חולין ס׳ ב — ס״ב א · הסוגיה מתחילה בסוף ס׳ · מקור: ספריא (William Davidson)</span><span data-when="en">Chullin 60b–62a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> סוגיית <b>סימני העוף</b>: התורה לא מנתה סימני טהרה בעוף אלא את העופות הטמאים. מתוך פירכות חוזרות על ״נשר״, ״תורים״ ושאר עופות נלמד ש<b>עוף הבא בסימן טהרה אחד — טהור</b>, ובלבד שאינו דורס.</span>
+    <span data-when="en"><b>Bottom line:</b> The <b>bird-signs</b> sugya: the Torah did not list positive signs for a kosher bird, only the non-kosher birds. Through repeated objections about the <i>nesher</i>, the dove, and other birds, the Gemara establishes that <b>a bird with even one kosher sign is permitted</b> — provided it does not claw its prey.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">סימני העוף הטהור</span><span data-when="en">Signs of the kosher bird</span>
+      <span class="ref">Chullin 60b:16-62a:4</span></h2>
+  <div class="lead"><span data-when="he">המשנה: סימני העוף לא נאמרו בתורה. הגמרא מבררת מן הברייתא דרך פירכות חוזרות, וקובעת: עוף הבא בסימן אחד טהור — ובלבד שאינו דורס.</span><span data-when="en">The Mishna: bird signs were not stated in the Torah. Through repeated objections the Gemara establishes: a bird with even one sign is kosher — provided it does not claw.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① משנה: סימני העוף לא נאמרו — והרי ברייתא דורשת ׳נשר׳ ו׳תורים׳!"}:::question
+  A1["② אביי: לא נאמר פירושן בתורה אלא מדברי סופרים"]:::answer
+  S1["③ ר׳ חייא: עוף הבא בסימן אחד טהור — שאינו דומה לנשר"]:::statement
+  Q2{"④ פירכות חוזרות: נילף מתורים, מעורב, מפרס ועזניה — כמה סימנים מעכבים?"}:::question
+  A2["⑦ עיקרון: כל ׳נילף מן הטמא׳ מתורץ — אם כן ׳נשר/תורים׳ למה לי?"]:::answer
+  S2["⑨ רב נחמן: בקי בשמותיהן — סימן אחד טהור; אינו בקי — צריך שניים ושיכיר עורב"]:::statement
+  Q3{"⑩ עורב ותו לא? והתניא ׳למינו׳ — זרזיר, סנונית לבנה"}:::question
+  C1["⑭ אמימר: הלכה — סימן אחד טהור, והוא דלא דריס; פרס ועזניה ליתנהו ביישוב"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 --> S1
+  S1 -->|פירכות| Q2
+  Q2 -->|כלל| A2
+  A2 --> S2
+  S2 -->|קושיא| Q3
+  Q3 -->|הלכה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Mishna: bird signs were not stated — but a baraita derives from ׳nesher׳ and ׳doves׳!"}:::question
+  A1["② Abaye: their explanation was not stated in the Torah but from the Sages"]:::answer
+  S1["③ R. Ḥiyya: a bird with one sign is kosher — since it is unlike a nesher"]:::statement
+  Q2{"④ Repeated objections: derive from doves, crow, peres and ozniyya — how many signs are needed?"}:::question
+  A2["⑦ Principle: every ׳derive from the non-kosher׳ is answered — else why ׳nesher/doves׳?"]:::answer
+  S2["⑨ Rav Naḥman: familiar with their names — one sign kosher; unfamiliar — needs two and to know the crow"]:::statement
+  Q3{"⑩ Only the crow? But the baraita: ׳after its kind׳ — the zarzir, the white senunit"}:::question
+  C1["⑭ Ameimar: halakha — one sign is kosher, if it does not claw; peres and ozniyya are not in settled areas"]:::conclusion
+  Q1 -->|answer| A1
+  A1 --> S1
+  S1 -->|objections| Q2
+  Q2 -->|principle| A2
+  A2 --> S2
+  S2 -->|question| Q3
+  Q3 -->|halakha| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① סִימָנֵי הָעוֹף לֹא נֶאֶמְרוּ, וְלָא? וְהָתַנְיָא: ׳נֶשֶׁר׳ … תּוֹרִין"}:::question
+  A1["② אָמַר אַבָּיֵי: לֹא נֶאֱמַר פֵּירוּשָׁן מִדִּבְרֵי תוֹרָה אֶלָּא מִדִּבְרֵי סוֹפְרִים"]:::answer
+  S1["③ תָּנֵי רַבִּי חִיָּיא: עוֹף הַבָּא בְּסִימָן אֶחָד טָהוֹר, לְפִי שֶׁאֵין דּוֹמֶה לְנֶשֶׁר"]:::statement
+  Q2{"④ וְלֵילַף מִתּוֹרִין … מֵעוֹרֵב … מִפֶּרֶס וְעׇזְנִיָּה?"}:::question
+  A2["⑦ אֶלָּא נֶשֶׁר דְּלֵית לֵיהּ כְּלָל … הָא דְּאִית לֵיהּ חַד – אֱכוֹל"]:::answer
+  S2["⑨ אָמַר רַב נַחְמָן: הָיָה בָּקִי … בְּסִימָן אֶחָד טָהוֹר … וְהוּא שֶׁיַּכִּיר עוֹרֵב"]:::statement
+  Q3{"⑩ עוֹרֵב וְתוּ לָא? וְהָתַנְיָא: ׳לְמִינוֹ׳ … הַזַּרְזִיר … סְנוּנִית לְבָנָה"}:::question
+  C1["⑭ אָמַר אַמֵּימָר: הִלְכְתָא … בְּסִימָן אֶחָד טָהוֹר, וְהוּא דְּלָא דָּרֵיס … לֵיתַנְהוּ בַּיִּשּׁוּב"]:::conclusion
+  Q1 -->|תירוץ| A1
+  A1 --> S1
+  S1 -->|פירכות| Q2
+  Q2 -->|כלל| A2
+  A2 --> S2
+  S2 -->|קושיא| Q3
+  Q3 -->|הלכה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">חולין ס׳ ב — Chullin 60b:16</span></div>
+    <div class="orig">סִימָנֵי הָעוֹף לֹא נֶאֶמְרוּ, וְלָא? וְהָתַנְיָא: ״נֶשֶׁר״,</div>
+    <div class="trans" data-when="he">המשנה אמרה: סימני העוף הטהור לא נאמרו במפורש בתורה. שואלת הגמרא: ולא נאמרו? והרי שנינו בברייתא דרשה על ״נשר״ —</div>
+    <div class="trans" data-when="en">§ The mishna states: The signs of the kosher bird were not explicitly stated in the Torah. The Gemara asks: And is it true that they were not stated in the Torah? But isn’t it taught in a baraita: “The nesher” (Leviticus 11:13) is a non-kosher bird.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">חולין ס״א א — Chullin 61a:1</span></div>
+    <div class="orig">מָה נֶשֶׁר מְיוּחָד שֶׁאֵין לוֹ אֶצְבַּע יְתֵרָה וְזֶפֶק וְאֵין קוּרְקְבָנוֹ נִקְלָף וְדוֹרֵס וְאוֹכֵל – טָמֵא, אַף כׇּל כַּיּוֹצֵא בּוֹ – טָמֵא. תּוֹרִין שֶׁיֵּשׁ לָהֶן אֶצְבַּע יְתֵרָה וְזֶפֶק וְקוּרְקְבָן נִקְלָף וְאֵין דּוֹרְסִין וְאוֹכְלִין – טְהוֹרִין, אַף כׇּל כַּיּוֹצֵא בָּהֶן – טְהוֹרִין. אָמַר אַבָּיֵי: לֹא נֶאֱמַר פֵּירוּשָׁן מִדִּבְרֵי תוֹרָה אֶלָּא מִדִּבְרֵי סוֹפְרִים.</div>
+    <div class="trans" data-when="he">הברייתא: מה נשר מיוחד שאין לו אצבע יתרה, ולא זפק, ואין קורקבנו נקלף, והוא דורס ואוכל — טמא, אף כל הדומה לו טמא. ותורים שיש להם ארבעה סימנים אלו — טהורים, אף כל הדומה להם טהור. הרי שהסימנים כן נדרשו מן התורה! תירץ אביי: המשנה אומרת שפירוש הסימנים לא נאמר בתורה עצמה אלא מדברי סופרים (הברייתא).</div>
+    <div class="trans" data-when="en">Just as a nesher is unique in that it has no extra digit or crop, and its gizzard cannot be peeled, and it claws its prey and eats it, and it is non-kosher, so too, all like birds with these four signs are non-kosher. And just as doves and pigeons, which have an extra digit and a crop, and whose gizzard can be peeled, and do not claw their food and eat it, are kosher, as they are fit for sacrifice on the altar (see Leviticus 1:14), so too, all like birds with these four signs are kosher. If so, why does the mishna state that the signs were not stated in the Torah? Abaye said: The mishna means that the explanation of the signs of a kosher bird was not stated in the Torah. Rather, one learns it from the statements of the Sages, i.e., the baraita.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">חולין ס״א א — Chullin 61a:2</span></div>
+    <div class="orig">תָּנֵי רַבִּי חִיָּיא: עוֹף הַבָּא בְּסִימָן אֶחָד טָהוֹר, לְפִי שֶׁאֵין דּוֹמֶה לְנֶשֶׁר. נֶשֶׁר דְּלֵית לֵיהּ כְּלָל – הוּא דְּלָא תֵּיכוֹל, הָא אִיכָּא דְּאִית לֵיהּ חַד – תֵּיכוֹל.</div>
+    <div class="trans" data-when="he">תני ר׳ חייא: עוף הבא בסימן אחד מסימני הטהרה (ואינו מנוי בתורה כטמא) — טהור, לפי שאינו דומה לנשר. שהרי הנשר, שאין לו אף סימן כלל — הוא שלא תאכל; הא עוף שיש לו ולו סימן אחד — תאכל.</div>
+    <div class="trans" data-when="en">Rabbi Ḥiyya teaches: A bird that comes before a person with one sign of a kosher bird, and which is not listed in the Torah as non-kosher, is kosher, since it is unlike a nesher. The verse did not need to state that the nesher is non-kosher, since one could have inferred this from the list of other non-kosher birds. Rather, the verse mentions the nesher specifically to indicate that it is only a bird like a nesher, which has none of the signs of a kosher bird, that you shall not eat. But if there is a bird that has even one of the signs, you may eat it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">חולין ס״א א — Chullin 61a:3</span></div>
+    <div class="orig">וְלֵילַף מִתּוֹרִין: מָה תּוֹרִין דְּאִיכָּא כּוּלְּהוּ אַרְבְּעָה, אַף הָכָא נָמֵי עַד דְּאִיכָּא כּוּלְּהוּ אַרְבְּעָה?</div>
+    <div class="trans" data-when="he">פירכא: ולמה ללמוד דווקא מן הנשר? נלמד להפך מן התורים — מה תורים שהתורה התירה במפורש יש בהם כל ארבעת הסימנים, אף כאן אין עוף טהור עד שיהיו בו כל ארבעה!</div>
+    <div class="trans" data-when="en">The Gemara asks: But why learn specifically from the case of a nesher? Let one derive the opposite from the case of doves: Just as doves, which the Torah mentions explicitly as kosher, have all four signs, so too here, no other bird is kosher unless it has all four signs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">חולין ס״א א — Chullin 61a:4</span></div>
+    <div class="orig">אִם כֵּן, שְׁאָר עוֹפוֹת טְמֵאִין דִּכְתַב רַחֲמָנָא לְמָה לִי?</div>
+    <div class="trans" data-when="he">תירוץ: אם למדים מן התורים שצריך ארבעה סימנים, שאר העופות הטמאים שמנתה התורה למה לי? הרי אין בהם ארבעה, וטומאתם נלמדת מן התורים. אלא ודאי אין למדים מן התורים.</div>
+    <div class="trans" data-when="en">The Gemara responds: If it is so that one learns from the case of a dove, why do I need the rest of the non-kosher birds that the Merciful One wrote? Since none of them has all four signs of a kosher bird, their non-kosher status could simply be inferred from the case of a dove. Rather, since the Torah states explicitly that they are non-kosher, it follows that one does not learn from the case of a dove.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">חולין ס״א א — Chullin 61a:5</span></div>
+    <div class="orig">וְנֵילַף מִינַּיְיהוּ: מָה הָתָם תְּלָתָא וְלָא אָכְלִינַן, אַף כֹּל תְּלָתָא וְלָא נֵיכוֹל, וְכׇל שֶׁכֵּן תְּרֵי וְחַד?</div>
+    <div class="trans" data-when="he">פירכא: ונלמד מן העופות הטמאים עצמם — מה הם, שיש בכל אחד שלושה סימנים, ובכל זאת אסורים, אף כל עוף שיש בו שלושה אסור, וכל שכן שניים או אחד!</div>
+    <div class="trans" data-when="en">The Gemara objects: But let us derive instead from them, i.e., the rest of the non-kosher birds, which each have only three signs, the following: Just as there, those birds have three of the signs of a kosher bird mentioned in the mishna, and we still do not eat them, so too, all other birds that have three signs should have the same halakhic status, and we will not eat them. And all the more so should this apply to a bird that has only two signs or one.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">חולין ס״א א — Chullin 61a:6</span></div>
+    <div class="orig">אִם כֵּן, עוֹרֵב, דִּכְתַב רַחֲמָנָא, לְמָה לִי? הַשְׁתָּא דְּאִית לֵיהּ תְּלָתָא לָא אָכְלִינַן, דְּאִית לֵיהּ תְּרֵי מִיבַּעְיָא?</div>
+    <div class="trans" data-when="he">תירוץ: אם כן, העורב שכתבה התורה למה לי? עכשיו שעוף בעל שלושה סימנים אינו נאכל, וכי צריך לומר את העורב, שיש בו רק שניים? אלא ודאי אין למדים מן העופות הטמאים בעלי שלושה.</div>
+    <div class="trans" data-when="en">The Gemara responds: If so, why do I need the crow that the Merciful One wrote among the non-kosher birds? Now that it is established that we do not eat any bird that has three signs, is it necessary to mention the crow, which has only two? Rather, those birds explicitly listed as non-kosher are prohibited, and all other birds with any number of signs are kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">חולין ס״א ב — Chullin 61b:1</span></div>
+    <div class="orig">וְלֵילַף מֵעוֹרֵב: מָה הָתָם תְּרֵי לָא, אַף כֹּל תְּרֵי לָא? אִם כֵּן, פֶּרֶס וְעׇזְנִיָּה דִּכְתַב רַחֲמָנָא לְמָה לִי? הַשְׁתָּא דְּאִית לֵיהּ תְּרֵי לָא אָכְלִינַן, דְּאִית לֵיהּ חַד מִיבַּעְיָא!</div>
+    <div class="trans" data-when="he">פירכא: ונלמד מן העורב — מה עורב בעל שני סימנים אסור, אף כל בעל שניים אסור! תירוץ: אם כן, פרס ועזניה שכתבה התורה למה לי? עכשיו שבעל שניים אסור, וכי צריך לומר אותם, שיש בהם רק אחד? אלא אף בעל סימן אחד טהור, חוץ מן המנויים בתורה.</div>
+    <div class="trans" data-when="en">The Gemara objects: But one should derive instead from a crow: Just as there, a bird with two signs is not kosher, so too any other bird that has only two signs is not kosher. The Gemara responds: If so, why do I need the peres and the ozniyya that the Merciful One wrote among the non-kosher birds? Now that it is established that we do not eat any bird that has two signs, is it necessary to mention these birds, which have only one? Rather, even birds that have only one sign are kosher, save those mentioned explicitly in the Torah as non-kosher.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">חולין ס״א ב — Chullin 61b:2</span></div>
+    <div class="orig">וְנִיגְמַר מִפֶּרֶס וְעׇזְנִיָּה? אִם כֵּן, נֶשֶׁר דִּכְתַב רַחֲמָנָא לְמָה לִי? הַשְׁתָּא דְּאִית לֵיהּ חַד לָא אָכְלִינַן, דְּלֵית לֵיהּ כְּלָל מִיבַּעְיָא! אֶלָּא נֶשֶׁר דְּלֵית לֵיהּ כְּלָל – הוּא דְּלָא תֵּיכוֹל, הָא דְּאִית לֵיהּ חַד – אֱכוֹל.</div>
+    <div class="trans" data-when="he">פירכא: ונלמד מפרס ועזניה, שאף בעל סימן אחד אסור! תירוץ: אם כן, נשר שכתבה התורה למה לי? עכשיו שבעל אחד אסור, וכי צריך לומר את הנשר, שאין לו כלל? אלא: נשר שאין לו אף סימן — הוא שלא תאכל; הא בעל סימן אחד — אכול.</div>
+    <div class="trans" data-when="en">The Gemara objects: But let us learn instead from the peres and ozniyya themselves that all other birds with only one sign are non-kosher. The Gemara responds: If so, why do I need the nesher that the Merciful One wrote? Now that it is established that we do not eat any bird that has one sign, is it necessary to mention the nesher, which has none? Rather, the Torah mentions the nesher to indicate that it is a nesher, which has none of the signs of a kosher bird, that you shall not eat. But if you find any bird that has even one of the signs, you may eat it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">חולין ס״א ב — Chullin 61b:3</span></div>
+    <div class="orig">וְאֶלָּא, טַעְמָא דִּכְתַב רַחֲמָנָא נֶשֶׁר, הָא לָאו הָכִי הֲוָה אָמֵינָא: לֵילַף מִפֶּרֶס וְעׇזְנִיָּה? הָוֵה לֵיהּ פֶּרֶס וְעׇזְנִיָּה שְׁנֵי כְתוּבִין הַבָּאִין כְּאֶחָד, וּשְׁנֵי כְּתוּבִין הַבָּאִין כְּאֶחָד אֵין מְלַמְּדִין.</div>
+    <div class="trans" data-when="he">פירכא: ומשמע שרק מפני שכתבה התורה ״נשר״ אנו מתירים בעל סימן אחד — שאלמלא כן היינו למדים מפרס ועזניה לאסור! דחייה: אי אפשר ללמוד מהם, שכן פרס ועזניה הם ״שני כתובים הבאים כאחד״ (שניהם מלמדים אותו דבר), ושני כתובים הבאים כאחד אין מלמדים.</div>
+    <div class="trans" data-when="en">The Gemara objects: But if so, the reason for eating birds with even one sign is only that the Merciful One wrote: “Nesher.” One can infer, then, that if not for this, I would say: Derive from the peres and ozniyya that any bird with one sign is non-kosher. But that cannot be, since the peres and ozniyya are two verses that come as one, i.e., that teach the same matter, and as a rule, two verses that come as one do not teach a principle.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">חולין ס״א ב — Chullin 61b:4</span></div>
+    <div class="orig">גְּמִירִי, דְּאִיכָּא בְּהַאי לֵיכָּא בְּהַאי, וּדְאִיכָּא בְּהַאי לֵיכָּא בְּהַאי.</div>
+    <div class="trans" data-when="he">תירוץ: למדנו במסורת שהסימן שיש בפרס אינו בעזניה, ושיש בעזניה אינו בפרס; אם כן אינם ״שני כתובים הבאים כאחד״ אלא מלמד כל אחד לחוד, והיה אפשר ללמוד מהם לאסור — לכן הוצרך ״נשר״ להתיר.</div>
+    <div class="trans" data-when="en">The Gemara responds: It is learned as a tradition that the sign present in this, the peres, is absent in that, the ozniyya, and that which is present in that is absent in this. Accordingly, this is not a case of two verses that come as one, since each case would teach only that any other bird with only its respective sign is non-kosher. Consequently, it would have been possible to derive from them that any bird with only one sign is non-kosher. The verse therefore states: “Nesher,” to indicate otherwise.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">חולין ס״א ב — Chullin 61b:5</span></div>
+    <div class="orig">מִכְּדֵי עֶשְׂרִים וְאַרְבָּעָה עוֹפוֹת טְמֵאִים הָווּ, אִי אֶפְשָׁר דְּחַד דְּאִיכָּא בְּהָנָךְ לֵיכָּא בְּהָנֵי, וְהָווּ לְהוּ שְׁנֵי כְּתוּבִים הַבָּאִים כְּאֶחָד.</div>
+    <div class="trans" data-when="he">פירכא: והרי עשרים וארבעה עופות טמאים נמנו בתורה, ואי אפשר שהסימן היחיד שבפרס ובעזניה לא יימצא באף אחד מהשאר; ושוב הרי הם ושאר העופות ״שני כתובים הבאים כאחד״, ואין צורך ב״נשר״.</div>
+    <div class="trans" data-when="en">The Gemara persists: Now, there are twenty-four non-kosher birds mentioned in the verses. It is impossible that the one sign present in these, the peres and ozniyya, respectively, is absent in all those other birds. Consequently, the mentioning of the peres, ozniyya, and the other birds constitutes two verses that come as one. If so, one could not have derived from the cases of the peres and ozniyya that a bird with one sign is not kosher, and the inclusion of the nesher is unnecessary.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">חולין ס״א ב — Chullin 61b:6</span></div>
+    <div class="orig">גְּמִירִי: עֶשְׂרִים וְאַרְבָּעָה עוֹפוֹת טְמֵאִים הָווּ, וְאַרְבָּעָה סִימָנִין. תְּלָתָא הָדְרִי בְּכוּלְּהוּ, עֶשְׂרִים מֵהֶם שְׁלֹשָׁה שְׁלֹשָׁה, וּתְרֵי בְּעוֹרֵב, חַד בְּפֶרֶס וְחַד בְּעׇזְנִיָּה, דְּאִיתֵיהּ בְּהָא לֵיתֵיהּ בְּהָא. מַהוּ דְּתֵימָא לֵילַיף מִינֵּיהּ – כְּתַב רַחֲמָנָא ״נֶשֶׁר״, נֶשֶׁר דְּלֵית לֵיהּ כְּלָל הוּא דְּלָא תֵּיכוֹל, הָא אִיכָּא דְּאִית לֵיהּ חַד – אֱכוֹל.</div>
+    <div class="trans" data-when="he">תירוץ: מסורת בידינו — עשרים וארבעה עופות טמאים וארבעה סימנים. שלושה סימנים חוזרים בכולם: עשרים מהם שלושה־שלושה, ושניים בעורב, אחד בפרס ואחד בעזניה, והסימן שבזה אינו בזה. ואותו סימן רביעי, היחיד שבפרס/עזניה, אינו בשאר; ומפני שתאמר נלמד ממנו לאסור — כתבה התורה ״נשר״: נשר שאין לו כלל הוא שלא תאכל, הא בעל סימן אחד — אכול.</div>
+    <div class="trans" data-when="en">The Gemara responds: It is learned as a tradition that there are twenty-four non-kosher birds, and four signs of a kosher bird. The same three signs can be found in all of them, with the exception of either the peres or the ozniyya. Twenty of them have all three signs, and two of those signs can be found in a crow. One sign is found in a peres and one in an ozniyya, and the sign present in this is absent in that, i.e., one of them has the fourth sign, which is absent from the other twenty-three non-kosher birds. Lest you say: Derive from it that any other bird with only that sign is non-kosher, the Merciful One wrote about the nesher to indicate: It is a nesher, which has none of the signs of a kosher bird, that you shall not eat. But if there is any bird that has even one of the signs, you may eat it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">חולין ס״א ב — Chullin 61b:7</span></div>
+    <div class="orig">אֶלָּא, תּוֹרִין דִּכְתַב רַחֲמָנָא לְמָה לִי? אָמַר רַב עוּקְבָא בַּר חָמָא: לְקׇרְבָּן. אָמַר רַב נַחְמָן:</div>
+    <div class="trans" data-when="he">אם למדים מן הנשר שעוף בעל סימן אחד טהור, תורים שכתבה התורה כטהורים למה לי, והרי יש בהם כל ארבעה? אמר רב עוקבא בר חמא: התורים לא הוזכרו ללמד היתר אכילה אלא ללמד שהם כשרים לקרבן. אמר רב נחמן —</div>
+    <div class="trans" data-when="en">The Gemara asks: But if one learns from nesher that a bird with even one sign is kosher, why do I need the doves that the Merciful One wrote are kosher, which have all four? Rav Ukva bar Ḥama said: The dove was not mentioned to teach that it is kosher, but rather to teach that it is the only bird fit to be sacrificed as an offering. Rav Naḥman says:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">חולין ס״ב א — Chullin 62a:1</span></div>
+    <div class="orig">הָיָה בָּקִי בָּהֶן וּבִשְׁמוֹתֵיהֶן – עוֹף הַבָּא בְּסִימָן אֶחָד טָהוֹר, לֹא הָיָה בָּקִי בָּהֶן וּבִשְׁמוֹתֵיהֶן – בְּסִימָן אֶחָד טָמֵא, בִּשְׁנֵי סִימָנִין טָהוֹר, וְהוּא שֶׁיַּכִּיר עוֹרֵב.</div>
+    <div class="trans" data-when="he">רב נחמן: היה אדם בקי בעופות הטמאים ובשמותיהם — עוף הבא בסימן אחד טהור, שיודע שאינו פרס או עזניה. לא היה בקי בהם — בסימן אחד טמא (שמא הוא פרס/עזניה), ובשני סימנים טהור, ובלבד שיכיר את העורב, שהוא היחיד הטמא בעל שני סימנים.</div>
+    <div class="trans" data-when="en">If one is familiar with the non-kosher birds and their names, any bird that comes before him with only one sign is kosher, since he can be sure that it is not the peres or ozniyya, which have only one sign. If he is not familiar with them and their names, any bird that he finds with one sign is non-kosher, since it may be the peres or ozniyya. But if he finds a bird with exactly two signs, it is kosher, provided that he can recognize a crow, since the crow is the only non-kosher bird with exactly two signs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">חולין ס״ב א — Chullin 62a:2</span></div>
+    <div class="orig">עוֹרֵב וְתוּ לָא? וְהָתַנְיָא: ״עוֹרֵב״ – זֶה עוֹרֵב, ״לְמִינוֹ״ – רַבִּי אֱלִיעֶזֶר אוֹמֵר: לְהָבִיא אֶת הַזַּרְזִיר. אָמְרוּ לוֹ לְרַבִּי אֱלִיעֶזֶר: וַהֲלֹא אַנְשֵׁי כְּפַר תְּמַרְתָּא שֶׁבִּיהוּדָה הָיוּ אוֹכְלִים אוֹתָן מִפְּנֵי שֶׁיֵּשׁ לָהֶן זֶפֶק! אָמַר לָהֶם: אַף הֵן עֲתִידִין לִיתֵּן אֶת הַדִּין.</div>
+    <div class="trans" data-when="he">קושיא על רב נחמן: עורב בלבד ולא יותר? והתניא: ״עורב״ — זה העורב המוכר; ״למינו״ — ר׳ אליעזר: להביא את הזרזיר, שהוא מין עורב טמא. אמרו לו: והרי אנשי כפר תמרתא שביהודה היו אוכלים אותו, מפני שיש לו זפק! אמר להם: אף הם עתידים ליתן את הדין.</div>
+    <div class="trans" data-when="en">The Gemara asks: Must he recognize only the crow and nothing more? But isn’t it taught in a baraita: The verse states: “Every orev after its kinds” (Leviticus 11:15). With regard to the orev, this is the well-known crow; as for the phrase “after its kinds,” Rabbi Eliezer says: It is written to include the zarzir, another type of crow, to teach that it is non-kosher. The Sages said to Rabbi Eliezer: But wouldn’t the people of Kefar Temarta in Judea eat the zarzir, because it has a crop? Rabbi Eliezer said to them: They too will be judged in the future for their transgression.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">חולין ס״ב א — Chullin 62a:3</span></div>
+    <div class="orig">דָּבָר אַחֵר: ״לְמִינֵהוּ״ לְהָבִיא סְנוּנִית לְבָנָה, דִּבְרֵי רַבִּי אֱלִיעֶזֶר. אָמְרוּ לוֹ: וַהֲלֹא אַנְשֵׁי גָּלִיל הָעֶלְיוֹן אוֹכְלִים אוֹתוֹ, מִפְּנֵי שֶׁקֻּרְקְבָנוֹ נִקְלָף! אָמַר לָהֶם: אַף הֵן עֲתִידִין לִיתֵּן אֶת הַדִּין. אֶלָּא עוֹרֵב וְכׇל מִין עוֹרֵב.</div>
+    <div class="trans" data-when="he">דבר אחר: ״למינהו״ — להביא את הסנונית הלבנה, דברי ר׳ אליעזר. אמרו לו: והרי אנשי גליל העליון אוכלים אותה, מפני שקורקבנה נקלף! אמר להם: אף הם עתידים ליתן את הדין. נמצא שיש עופות טמאים נוספים בעלי שני סימנים. תירוץ: רב נחמן התכוון — ובלבד שיכיר עורב וכל מין עורב.</div>
+    <div class="trans" data-when="en">Alternatively, the phrase “after its kinds” is written to include the white senunit and teach that it is non-kosher; this is the statement of Rabbi Eliezer. The Rabbis said to him: But don’t the people of the upper Galilee eat it, because its gizzard can be peeled? Rabbi Eliezer said to them: They too will be judged in the future for their transgression. In any event, the baraita indicates that other non-kosher birds exist that have two signs, like the crow. The Gemara responds: Rather, Rav Naḥman must have meant that one must be able to recognize the well-known crow and all other species of crow.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">18</span> <span class="ref">חולין ס״ב א — Chullin 62a:4</span></div>
+    <div class="orig">אָמַר אַמֵּימָר: הִלְכְתָא, עוֹף הַבָּא בְּסִימָן אֶחָד – טָהוֹר, וְהוּא דְּלָא דָּרֵיס. אֲמַר לֵיהּ רַב אָשֵׁי לְאַמֵּימָר: הָא דְּרַב נַחְמָן מַאי? אֲמַר לֵיהּ: לָא שְׁמִיעַ לִי, כְּלוֹמַר לָא סְבִירָא לִי. מַאי אִיכָּא? מִשּׁוּם פֶּרֶס וְעׇזְנִיָּה? לֵיתַנְהוּ בַּיִּשּׁוּב.</div>
+    <div class="trans" data-when="he">אמימר: הלכה — עוף הבא בסימן אחד טהור, ובלבד שאינו דורס. רב אשי שאל: ומה עם דברי רב נחמן (שצריך בקיאות)? השיב: לא שמעתי, כלומר איני סובר כן. ומה החשש? משום פרס ועזניה (בעלי סימן אחד)? אינם מצויים ביישוב, ואין לחשוש להם.</div>
+    <div class="trans" data-when="en">Ameimar said: The halakha is: Any bird that comes before a person with one sign is kosher, provided that it does not claw its food. Rav Ashi said to Ameimar: What about that which Rav Naḥman said, that if one finds a bird with exactly one sign, he may eat it only if he can identify all the non-kosher birds in the Torah, to be sure that it is not one of them? Ameimar said to him: I did not hear this statement; that is to say: I do not hold accordingly. What concern is there? Is one concerned because of the peres and ozniyya, which have only one sign? They are not found in settled areas, and one need not be concerned about them.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
