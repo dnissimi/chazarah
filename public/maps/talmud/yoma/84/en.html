@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ״ד</title>
+<meta name="description" content="מפת הסוגיא של יומא פ״ד: ריפוי הצפדינא של ר׳ יוחנן והשבועה למטרוניתא; צפדינא מסוכנת ודין ׳החושש בפיו׳ — האם חכמים חולקים על ר׳ מתיא בן חרש; ׳כל ספק נפשות דוחה את השבת׳ אף לשבת אחרת; מפקחין פיקוח נפש בשבת והזריז משובח; ולא הלכו בפיקוח נפש אחר הרוב.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="84">
+<meta name="gemara-map:sefaria-ref" content="Yoma 84">
+<meta name="gemara-map:topic-he" content="פיקוח נפש דוחה שבת">
+<meta name="gemara-map:topic-en" content="Saving a life overrides Shabbat">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ״ד">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 84">
+<meta name="gemara-map:blurb-he" content="ספק נפשות דוחה שבת אף לשבת אחרת, מפקחין מיד והזריז משובח, ולא הלכו בפיקוח נפש אחר הרוב.">
+<meta name="gemara-map:blurb-en" content="Uncertain danger overrides Shabbat even for a future Shabbat, one acts at once and the vigilant is praised, and saving a life does not follow the majority.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ״ד</span><span data-when="en">Sugya map — Yoma 84</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ״ד א — פ״ה א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 84a–85a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> חמישה דיוני המשך לדין ׳החושש בפיו׳ והצלת נפשות בשבת: <b>ר׳ יוחנן והצפדינא</b> — הריפוי, השבועה למטרוניתא ופירסום התרופה; <b>צפדינא מסוכנת</b> (מתחיל בפה וגומר במעיים) — וברר אם חכמים חולקים על ר׳ מתיא בן חרש בדין סם בשבת; <b>״כל ספק נפשות דוחה את השבת״</b> אף לשבת אחרת — מחממין מיד; <b>מפקחין פיקוח נפש בשבת</b> והזריז משובח, ואין צריך נטילת רשות; ו<b>״לא הלכו בפיקוח נפש אחר הרוב״</b> — אף תשעה גוים וישראל אחד שפירשו לחצר אחרת.</span>
+    <span data-when="en"><b>Bottom line:</b> Five follow-ups on medicine in the mouth and saving life on Shabbat: <b>R. Yoḥanan and tzefidna</b> — the cure, his oath to the matron, and publicizing the remedy; <b>tzefidna is dangerous</b> (begins in the mouth, ends in the intestines) — and a clarification of whether the Rabbis dispute R. Matya ben Ḥarash about medicine on Shabbat; <b>“any uncertain danger overrides Shabbat”</b> even a future Shabbat — one heats at once; <b>one saves a life on Shabbat</b> and the vigilant is praiseworthy, needing no permission; and <b>“saving a life does not follow the majority”</b> — even nine gentiles and one Jew who separated to another courtyard.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ״ד</span><span data-when="en">Overview — Yoma 84</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · ר׳ יוחנן והצפדינא — שבועה ופירסום"]:::statement
+  O2["2 · צפדינא מסוכנת — סם בשבת, מי חולק?"]:::statement
+  O3["3 · ספק נפשות דוחה שבת — אף שבת אחרת"]:::statement
+  O4["4 · מפקחין פיקוח נפש בשבת — הזריז משובח"]:::statement
+  O5["5 · לא הלכו בפיקוח נפש אחר הרוב"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · R. Yoḥanan and tzefidna — oath and publicizing"]:::statement
+  O2["2 · Tzefidna is dangerous — medicine on Shabbat, who disputes?"]:::statement
+  O3["3 · Uncertain danger overrides Shabbat — even a future Shabbat"]:::statement
+  O4["4 · One saves a life on Shabbat — the vigilant is praised"]:::statement
+  O5["5 · Saving a life does not follow the majority"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">ר׳ יוחנן והצפדינא — השבועה למטרוניתא</span><span data-when="en">R. Yoḥanan and tzefidna — the oath to the matron</span>
+      <span class="ref">Yoma 84a:4–6</span></h2>
+  <div class="lead"><span data-when="he">המשנה התירה סם בפה בשבת; אגב כך — ר׳ יוחנן שחלה בצפדינא, נשבע למטרוניתא ופירסם את התרופה. מהי התרופה?</span><span data-when="en">The Mishna permits medicine in the mouth on Shabbat; relatedly — R. Yoḥanan fell ill with tzefidna, swore to the matron, then publicized the cure. What was the remedy?</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ר׳ יוחנן חלה בצפדינא, המטרוניתא ריפאתו ונשבע לה — ופירסם בפרק"]:::statement
+  Q1{"② והרי נשבע! ׳לאלהא דישראל לא מגלינא׳ — אבל לעמו מגלה"}:::question
+  Q2{"② והרי חילול השם! דגילה לה מעיקרא"}:::question
+  S2["③ מה התרופה? מי שאור/שאור עם שמן ומלח, או שומן אווז; אביי — קליפת זיתים"]:::statement
+  S1 -.->|קושיא| Q1
+  Q1 -->|ועוד| Q2
+  Q2 -->|מאי עבדא ליה| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① R. Yoḥanan got tzefidna, the matron cured him, he swore to her — then taught it publicly"]:::statement
+  Q1{"② But he swore! ׳To the God of Israel I will not reveal׳ — but to His people he may"}:::question
+  Q2{"② But this desecrates the Name! He told her so at the outset"}:::question
+  S2["③ What was the remedy? Leaven-water/leaven with oil and salt, or goose fat; Abaye — burnt olive seeds"]:::statement
+  S1 -.->|objection| Q1
+  Q1 -->|furthermore| Q2
+  Q2 -->|what was the cure| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רַבִּי יוֹחָנָן חָשׁ בְּצַפְדִּינָא … אִישְׁתְּבַע … נְפַק דַּרְשַׁהּ בְּפִירְקָא"]:::statement
+  Q1{"② וְהָא אִישְׁתְּבַע לַהּ! לֵאלָהָא דְיִשְׂרָאֵל … הָא לְעַמּוֹ יִשְׂרָאֵל מְגַלֵּינָא"}:::question
+  Q2{"② וְהָא אִיכָּא חִלּוּל הַשֵּׁם! דִּמְגַלֵּי לַהּ מֵעִיקָּרָא"}:::question
+  S2["③ מַאי עֲבַדָא לֵיהּ? מֵי שְׂאוֹר … שְׂאוֹר גּוּפֵיהּ … מִשְׁחָא דְּגַדְפָּא דַאֲווֹזָא … קַשְׁיָיתָא דְזֵיתָא"]:::statement
+  S1 -.->|קושיא| Q1
+  Q1 -->|ועוד| Q2
+  Q2 -->|מאי עבדא ליה| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ד א — Yoma 84a:4</span></div>
+    <div class="orig">וְעוֹד אָמַר רַבִּי מַתְיָא: רַבִּי יוֹחָנָן חָשׁ בְּצַפְדִּינָא. אֲזַל גַּבַּהּ דְּהַהִיא מַטְרוֹנִיתָא, עֲבַדָא לֵיהּ מִלְּתָא חַמְשָׁא וּמַעֲלֵי שַׁבְּתָא. אֲמַר לַהּ: בְּשַׁבָּת מַאי? אֲמַרָה לֵיהּ: לָא צְרִיכַתְּ. אִי מִצְטְרִיכְנָא מַאי? אֲמַרָה לֵיהּ: אִישְׁתְּבַע לִי דְּלָא מְגַלֵּית, אִישְׁתְּבַע: לֵאלָהָא דְיִשְׂרָאֵל לָא מְגַלֵּינָא. נְפַק דַּרְשַׁהּ בְּפִירְקָא.</div>
+    <div class="trans" data-when="he">המשנה אמרה: ״ועוד אמר ר׳ מתיא בן חרש: החושש בפיו מטילין לו סם בשבת״. אגב כך מספרת הגמרא: ר׳ יוחנן חלה בצפדינא (מחלת חניכיים מסוכנת). הלך אצל מטרוניתא רופאה, והכינה לו תרופה בחמישי וערב שבת. שאלה: ובשבת מה אעשה? אמרה: לא תצטרך. ואם אצטרך? אמרה: הישבע לי שלא תגלה את התרופה. נשבע: לאלהי ישראל לא אגלה. ואז יצא ולימד את התרופה ברבים.</div>
+    <div class="trans" data-when="en">§ The mishna said: And furthermore, Rabbi Matya ben Ḥarash said: With regard to one who suffers pain in his throat, one may place medicine inside his mouth on Shabbat, although administering a remedy is prohibited on Shabbat. The Gemara discusses a related incident: Rabbi Yoḥanan suffered from the illness tzefidna, which first affects the teeth and gums and then the intestines. He went to a certain gentile matron [matronita] who was a well-known healer. She prepared a medicine for him on Thursday and Friday. He said to her: What shall I do on Shabbat, when I cannot come to collect the medicine from you? She said to him: You will not need it. He asked her: If I do need it, what shall I do? She said to him: Swear to me that you will not reveal the remedy; then I will tell you, and you can prepare it yourself should you need it. He swore: To the God of the Jews, I will not reveal it. She told him the remedy. Rabbi Yoḥanan then went out and taught it publicly, revealing the secret of the remedy.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ד א — Yoma 84a:5</span></div>
+    <div class="orig">וְהָא אִישְׁתְּבַע לַהּ! לֵאלָהָא דְיִשְׂרָאֵל לָא מְגַלֵּינָא. הָא לְעַמּוֹ יִשְׂרָאֵל — מְגַלֵּינָא. וְהָא אִיכָּא חִלּוּל הַשֵּׁם! דִּמְגַלֵּי לַהּ מֵעִיקָּרָא.</div>
+    <div class="trans" data-when="he">קושיא: והרי נשבע לה שלא יגלה! תירוץ: לשון שבועתו דייקא — ״לאלהי ישראל לא אגלה״, כלומר לא אגלה לאל; אבל לעמו ישראל — מגלה. קושיא: ועדיין יש חילול השם, שהמטרוניתא סבורה שאדם גדול עבר על שבועתו! תירוץ: שגילה לה את כוונתו מתחילה — מיד כשגילתה לו, אמר לה שיפרסם.</div>
+    <div class="trans" data-when="en">The Gemara is surprised at this: But he swore to her that he would not reveal it. The Gemara answers that in his vow he declared: I will not reveal it to the God of the Jews. However, his words imply: I will reveal it to His people, the Jews. The Gemara asks: Still, there is a desecration of God’s name, as the matron now thinks that a great man of Rabbi Yoḥanan’s stature broke his vow. The Gemara answers: He revealed it to her at the outset. As soon as she revealed the remedy to him, he told her that his vow would not prevent him from publicizing the remedy.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ד א — Yoma 84a:6</span></div>
+    <div class="orig">מַאי עֲבַדָא לֵיהּ? אָמַר רַב אַחָא בְּרֵיהּ דְּרַב אַמֵּי: מֵי שְׂאוֹר, שֶׁמֶן זַיִת, וָמֶלַח. רַב יֵימַר אֲמַר: שְׂאוֹר גּוּפֵיהּ, שֶׁמֶן זַיִת, וָמֶלַח. רַב אָשֵׁי אָמַר: מִשְׁחָא דְּגַדְפָּא דַאֲווֹזָא. אָמַר אַבָּיֵי: אֲנָא עֲבַדִי לְכוּלְּהוּ וְלָא אִיתַּסַּאי, עַד דַּאֲמַר לִי הַהוּא טַיָּיעָא: אַיְיתִי קַשְׁיָיתָא דְזֵיתָא דְּלָא מְלוֹ תִּילְתָּא, וּקְלִינְהוּ בְּנוּרָא אַמָּרָא חַדְתָּא, וְאַדְבֵּיק בְּכַכֵּי דָרֵיה. עֲבַדִי הָכִי וְאִיתַּסַּאי.</div>
+    <div class="trans" data-when="he">מה הייתה התרופה שהכינה לו? רב אחא בריה דרב אמי: מי שָׂאור (מים שהושרה בהם חמץ), שמן זית ומלח. רב יימר: שאור עצמו, שמן זית ומלח. רב אשי: שומן מעצם כנף האווז. אביי: עשיתי את כל אלה ולא נתרפאתי, עד שאמר לי ערבי אחד — הבא גרעיני זיתים שלא הבשילו שליש, שָׂרֵף אותם על מָרָא (מעדר) חדש, והַדבק על שורת החניכיים. עשיתי כן ונתרפאתי.</div>
+    <div class="trans" data-when="en">The Gemara asks: What was the medicine that she prepared for him? Rav Aḥa, son of Rav Ami, said: It was water in which leaven was steeped, olive oil, and salt. Rav Yeimar said: It was leaven itself, olive oil, and salt. Rav Ashi said: The remedy was fat from the bone marrow of a goose’s wing. Abaye said: I made all of these medicines and was not cured from this ailment, until a certain Arab told me the remedy for it: Take olive seeds that are less than one-third ripe, and burn them in a fire on top of a new hoe, and stick them along the row of gums. I did this and was cured.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">צפדינא מסוכנת — סם בשבת ומחלוקת ר׳ מתיא וחכמים</span><span data-when="en">Tzefidna is dangerous — medicine on Shabbat and R. Matya vs. the Rabbis</span>
+      <span class="ref">Yoma 84a:7–84b:2</span></h2>
+  <div class="lead"><span data-when="he">צפדינא מסוכנת (מתחיל בפה וגומר במעיים), ולכן ריפאהּ ר׳ יוחנן בשבת. כמאן? כר׳ מתיא — ומכאן בירור אם חכמים חולקים עליו בדין סם בשבת.</span><span data-when="en">Tzefidna is dangerous (begins in mouth, ends in intestines), so R. Yoḥanan treated it on Shabbat. Like whom? R. Matya — leading to whether the Rabbis dispute his medicine ruling.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מקור הצפדינא וסימנה; ר׳ יוחנן ריפא בשבת — רנב״י: שאני, מתחיל בפה וגומר במעיים"]:::statement
+  Q1{"② כמאן עשית? כר׳ מתיא! · אומר אני בזו ולא באחרת"}:::question
+  P1["③ לימא מסייע: באלו אין רפואה — למעוטי סם?"]:::proof
+  A1["④ לא, למעוטי הקזה לסרונכי — וכן מסתבר מברייתא דר׳ ישמעאל"]:::answer
+  P2["⑤ ת״ש: ׳באלו׳ — למעוטי תרתי בתרייתא? · לא, תרתי דרישא ולמעוטי דסיפא"]:::proof
+  P3["⑥ ת״ש דרבה בר שמואל: ׳בזו ולא באחרת׳ — אסם, ש״מ"]:::proof
+  C1["⑦ רב אשי: מתניתין דייקא — לא ערבינהו, ש״מ לא פליגי רבנן"]:::conclusion
+  S1 -->|כמאן| Q1
+  Q1 -->|לימא מסייע| P1
+  P1 -->|דחייה| A1
+  A1 -->|תא שמע| P2
+  P2 -->|תא שמע| P3
+  P3 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Tzefidna׳s cause and sign; R. Yoḥanan cured it on Shabbat — RNbY: it differs, begins in mouth, ends in intestines"]:::statement
+  Q1{"② By whose view did you act? R. Matya! · I say in this case alone, not another"}:::question
+  P1["③ Let us say it supports: ׳these have no remedy׳ — to exclude medicine?"]:::proof
+  A1["④ No, to exclude bloodletting for serunkhi — so too from R. Yishmael׳s baraita"]:::answer
+  P2["⑤ Come and hear: ׳these׳ — to exclude the latter two? · No, the first two, excluding the latter"]:::proof
+  P3["⑥ Come and hear, Rabba bar Shmuel: ׳this and no other׳ — the medicine, learn from it"]:::proof
+  C1["⑦ Rav Ashi: the Mishna is precise — it was not combined, learn the Rabbis do not dispute"]:::conclusion
+  S1 -->|by whose view| Q1
+  Q1 -->|support?| P1
+  P1 -->|rejection| A1
+  A1 -->|come and hear| P2
+  P2 -->|come and hear| P3
+  P3 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מִמַּאי הֲוָה? … רַבִּי יוֹחָנָן … עֲבַד הָכִי בְּשַׁבְּתָא … שָׁאנֵי צַפְדִּינָא … מַתְחִיל בַּפֶּה וְגוֹמֵר בִּבְנֵי מֵעַיִים"]:::statement
+  Q1{"② כְּמַאן — כְּרַבִּי מַתְיָא בֶּן חָרָשׁ … שֶׁאֲנִי אוֹמֵר בְּזוֹ, וְלֹא בְּאַחֶרֶת"}:::question
+  P1["③ לֵימָא מְסַיַּיע לֵיהּ … בְּאֵלּוּ אֵין בָּהֶם מִשּׁוּם רְפוּאָה … לְמַעוֹטֵי סַם?"]:::proof
+  A1["④ לָא, לְמַעוֹטֵי מַקִּיזִין דָּם לִסְרוֹנְכֵי … הָכִי נָמֵי מִסְתַּבְּרָא … דְּתַנְיָא"]:::answer
+  P2["⑤ בְּאֵילּוּ לְמַעוֹטֵי מַאי … אַתַּרְתֵּי בָּתְרָיָיתָא? … לָא: אַתַּרְתֵּי דְּרֵישָׁא … וּלְמַעוֹטֵי דְּסֵיפָא"]:::proof
+  P3["⑥ תָּא שְׁמַע, דְּתָנֵי רַבָּה בַּר שְׁמוּאֵל … בָּזוֹ וְלֹא בְּאַחֶרֶת … אַסַּם. שְׁמַע מִינַּהּ"]:::proof
+  C1["⑦ רַב אָשֵׁי אָמַר: מַתְנִיתִין נָמֵי דַּיְקָא … לִיעָרְבִינְהוּ וְלִיתְנִינְהוּ … שְׁמַע מִינַּהּ"]:::conclusion
+  S1 -->|כמאן| Q1
+  Q1 -->|לימא מסייע| P1
+  P1 -->|דחייה| A1
+  A1 -->|תא שמע| P2
+  P2 -->|תא שמע| P3
+  P3 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ד א — Yoma 84a:7</span></div>
+    <div class="orig">מִמַּאי הֲוָה? מֵחַמִּימֵי חַמִּימֵי דְּחִיטֵּי, וּמִשִּׁיּוּרֵי כָּסָא דְהַרְסָנָא. וּמַאי סִימָנֵיהּ — כַּד רָמֵי מִידֵּי בְּכַכֵּיהּ וְאָתֵא דְּמָא מִבֵּי דָרֵי. רַבִּי יוֹחָנָן כִּי חָשׁ בְּצַפְדִּינָא, עֲבַד הָכִי בְּשַׁבְּתָא וְאִיתַּסִּי. וְרַבִּי יוֹחָנָן הֵיכִי עָבֵיד הָכִי? אֲמַר רַב נַחְמָן בַּר יִצְחָק: שָׁאנֵי צַפְדִּינָא הוֹאִיל וּמַתְחִיל בַּפֶּה, וְגוֹמֵר בִּבְנֵי מֵעַיִים.</div>
+    <div class="trans" data-when="he">ממה באה הצפדינא? מאכילת פת חיטים חמה מאוד ומשיירי דג מטוגן בשמן. ומה סימנה? כשנותן דבר בין שיניו ויוצא דם מן החניכיים. ר׳ יוחנן שחלה בצפדינא עשה את התרופה הזו בשבת ונתרפא. ושואלת הגמרא: כיצד עשה כן בשבת? אמר רב נחמן בר יצחק: צפדינא שונה — אף שמתחילה במחלת חניכיים, היא מסוכנת, שמתחילה בפה וגומרת בבני המעיים.</div>
+    <div class="trans" data-when="en">§ The Gemara asks: From where does this disease tzefidna come? It is from eating wheat bread that is too hot and fish remains fried in oil. What is the sign of this sickness? When one puts something between his teeth, blood comes out from his gums. When Rabbi Yoḥanan suffered from tzefidna, he prepared this medicine described above on Shabbat and was cured. The Gemara asks: And how did Rabbi Yoḥanan prepare this medicine on Shabbat for an ailment which affects only the gums but is not life-threatening? Rav Naḥman bar Yitzḥak said: Tzefidna is different, since it does indeed begin in the mouth and appears to be an illness of the teeth, but it ends up in the intestines and is dangerous.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ד א — Yoma 84a:8</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב חִיָּיא בַּר אַבָּא לְרַבִּי יוֹחָנָן: כְּמַאן — כְּרַבִּי מַתְיָא בֶּן חָרָשׁ, דְּאָמַר: הַחוֹשֵׁשׁ בְּפִיו מְטִילִין לוֹ סַם בְּשַׁבָּת. אֲמַר לֵיהּ: שֶׁאֲנִי אוֹמֵר בְּזוֹ, וְלֹא בְּאַחֶרֶת.</div>
+    <div class="trans" data-when="he">אמר רב חייא בר אבא לר׳ יוחנן: כדעת מי עשית? כר׳ מתיא בן חרש שאמר ׳החושש בפיו מטילין לו סם בשבת׳ — דעת יחיד! השיב לו ר׳ יוחנן: לא כן; אני אומר שחכמים הסכימו עמו בזו (סם בפה) ולא באחרת — אם כן אין זו דעת יחיד.</div>
+    <div class="trans" data-when="en">Rav Ḥiyya bar Abba said to Rabbi Yoḥanan: In accordance with whose opinion did you do this? Was it not in accordance with the opinion of Rabbi Matya ben Ḥarash, who said: In the case of one who suffers pain in his mouth, one puts medicine in his mouth on Shabbat, which is a minority opinion? Rabbi Yoḥanan said to him: It is so, but I say the Sages agreed with him about taking medicine in this case alone, but no other. If so, with regard to medicine on Shabbat, the view of Rabbi Matya ben Ḥarash is not a minority opinion.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ד א — Yoma 84a:9</span></div>
+    <div class="orig">לֵימָא מְסַיַּיע לֵיהּ: מִי שֶׁאֲחָזוֹ יֵרָקוֹן — מַאֲכִילִין אוֹתוֹ בְּשַׂר חֲמוֹר, מִי שֶׁנְּשָׁכוֹ כֶּלֶב שׁוֹטֶה — מַאֲכִילִין אוֹתוֹ מֵחֲצַר כָּבֵד שֶׁלּוֹ, וְהַחוֹשֵׁשׁ בְּפִיו — מְטִילִין לוֹ סַם בְּשַׁבָּת, דִּבְרֵי רַבִּי מַתְיָא בֶּן חָרָשׁ. וַחֲכָמִים אוֹמְרִים: בְּאֵילּוּ אֵין בָּהֶם מִשּׁוּם רְפוּאָה. ״בְּאֵלּוּ״ לְמַעוֹטֵי מַאי? מַאי לָאו, לְמַעוֹטֵי סַם?</div>
+    <div class="trans" data-when="he">הגמרא מנסה לסייע לר׳ יוחנן מברייתא: מי שאחזו ירקון מאכילים אותו בשר חמור; מי שנשכו כלב שוטה מאכילים אותו מאונת כבדו; והחושש בפיו מטילים לו סם בשבת — דברי ר׳ מתיא. וחכמים אומרים: באלו אין משום רפואה. ׳באלו׳ — למעוטי מה? האם לא למעט את הסם, כלומר שבסם מודים חכמים?</div>
+    <div class="trans" data-when="en">Let us say that this baraita supports him: With regard to one who is seized with yerakon, one feeds him donkey meat as medicine; with regard to one whom a mad dog bit, one feeds him the lobe of its liver; in the case of one who has pain in his mouth, one puts medicine in his mouth on Shabbat; this is the statement of Rabbi Matya ben Ḥarash. And the Rabbis say: These have no value as a remedy. The Rabbis used the term these, to exclude what? What, is it not to exclude this medicine for tzefidna, which the Rabbis agree is permitted on Shabbat?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ד א — Yoma 84a:10</span></div>
+    <div class="orig">לָא, לְמַעוֹטֵי: מַקִּיזִין דָּם לִסְרוֹנְכֵי. הָכִי נָמֵי מִסְתַּבְּרָא. דְּתַנְיָא: שְׁלֹשָׁה דְּבָרִים אָמַר רַבִּי יִשְׁמָעֵאל בְּרַבִּי יוֹסֵי שֶׁשָּׁמַע מִשּׁוּם רַבִּי מַתְיָא בֶּן חָרָשׁ: מַקִּיזִין דָּם לִסְרוֹנְכֵי בְּשַׁבָּת, וּמִי שֶׁנְּשָׁכוֹ כֶּלֶב שׁוֹטֶה — מַאֲכִילִין אוֹתוֹ מֵחֲצַר כָּבֵד שֶׁלּוֹ, וְהַחוֹשֵׁשׁ בְּפִיו מְטִילִין לוֹ סַם בְּשַׁבָּת.</div>
+    <div class="trans" data-when="he">דחייה: לא, ׳באלו׳ ממעט דבר אחר — מקיזין דם לסרונכי (חולי גרון) בשבת. וכן מסתבר, שכן שנינו בברייתא: שלושה דברים אמר ר׳ ישמעאל ברבי יוסי בשם ר׳ מתיא בן חרש — מקיזין דם לסרונכי בשבת, מי שנשכו כלב שוטה מאכילים אותו מאונת כבדו, והחושש בפיו מטילים לו סם בשבת.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: No, it excludes a different remedy, which Rabbi Matya suggests: Bloodletting to heal the ailment serunkhi is permitted on Shabbat. The Gemara comments: So too, this is reasonable to say, as it was taught in a baraita: Rabbi Yishmael, son of Rabbi Yosei, said three things that he heard in the name of Rabbi Matya ben Ḥarash: One may let blood for serunkhi on Shabbat; and in the case of one whom a mad dog bit, one feeds him the lobe of its liver; and in the case of one who has pain in his mouth, one puts medicine in his mouth on Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ד א — Yoma 84a:11</span></div>
+    <div class="orig">וַחֲכָמִים אוֹמְרִים: בְּאֵילּוּ אֵין בָּהֶן מִשּׁוּם רְפוּאָה. ״בְּאֵילּוּ״ לְמַעוֹטֵי מַאי? מַאי לָאו, אַתַּרְתֵּי בָּתְרָיָיתָא וּלְמַעוֹטֵי דְּרֵישָׁא! לָא: אַתַּרְתֵּי דְּרֵישָׁא קַמָּיָיתָא, וּלְמַעוֹטֵי דְּסֵיפָא.</div>
+    <div class="trans" data-when="he">המשך הברייתא: וחכמים אומרים באלו אין משום רפואה. ׳באלו׳ למעוטי מה? האם לא בא להגביל את חכמים לשתי הדברים האחרונים (שאינם מועילים), ולמעט את הראשון (הקזה לסרונכי) שמודים בו? דחייה: לא, אפשר ש׳באלו׳ מוסב על שני הראשונים שבברייתא וממעט את האחרון — הסם — שמודים בו.</div>
+    <div class="trans" data-when="en">And the Rabbis say: These have no value as a remedy. The Rabbis used the term these to exclude what? What, is it not to limit their argument only to the latter two items, which do not cure anything, and to exclude the first item, bloodletting for serunkhi, which everyone agrees is an effective remedy? The Gemara rejects this: No, there is no proof from here, since it is possible to say that it is referring to the first two items of the first baraita and excludes the latter clause with regard to medicine on Shabbat, which they agree with.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ד ב — Yoma 84b:1</span></div>
+    <div class="orig">תָּא שְׁמַע, דְּתָנֵי רַבָּה בַּר שְׁמוּאֵל: עוּבָּרָה שֶׁהֵרִיחָה — מַאֲכִילִין אוֹתָהּ עַד שֶׁתָּשׁוּב נַפְשָׁהּ, וּמִי שֶׁנְּשָׁכוֹ כֶּלֶב שׁוֹטֶה — מַאֲכִילִין אוֹתוֹ מֵחֲצַר כָּבֵד שֶׁלּוֹ, וְהַחוֹשֵׁשׁ בְּפִיו — מְטִילִין לוֹ סַם בְּשַׁבָּת, דִּבְרֵי רַבִּי אֶלְעָזָר בְּרַבִּי יוֹסֵי, שֶׁאָמַר מִשּׁוּם רַבִּי מַתְיָא בֶּן חָרָשׁ. וַחֲכָמִים אוֹמְרִים: בָּזוֹ וְלֹא בְּאַחֶרֶת. ״בְּזוֹ״ אַהֵיָיא? אִילֵּימָא אַעוּבָּרָה, פְּשִׁיטָא! עוּבָּרָה מִי אִיכָּא לְמַאן דְּאָמַר דְּלָא? אֶלָּא לָאו — אַסַּם. שְׁמַע מִינַּהּ.</div>
+    <div class="trans" data-when="he">תא שמע, ששנה רבה בר שמואל בברייתא: עוברה (מעוברת) שהריחה מאכל ונכספה לו — מאכילים אותה עד שתתיישב נפשה (אף ביום הכיפורים); מי שנשכו כלב שוטה מאכילים אותו מאונת כבדו; והחושש בפיו מטילים לו סם בשבת — דברי ר׳ אלעזר ברבי יוסי בשם ר׳ מתיא. וחכמים אומרים: בזו ולא באחרת. ׳בזו׳ על מה מוסב? אם על העוברה — פשיטא, וכי יש מי שאומר שאין מאכילים? אלא ודאי על הסם — שמע מינה שמודים בו.</div>
+    <div class="trans" data-when="en">Come and hear a proof for the matter, as Rabba bar Shmuel taught in the following baraita: With regard to a pregnant woman who smells and craves food, one feeds her until she is satisfied, even on Yom Kippur; and in the case of one whom a mad dog bit, one feeds him from the lobe of its liver; and in the case of one who has pain in his mouth, one places medicine in his mouth on Shabbat; this is the statement of Rabbi Elazar, son of Rabbi Yosei, who said it in the name of Rabbi Matya ben Ḥarash. And the Rabbis say: In this case and no other. The Gemara clarifies: To which case is this one referring? If we say they said this about a pregnant woman, it is obvious; is there anyone who says one should not give a pregnant woman food? Rather, is it not referring to the halakha pertaining to medicine on Shabbat, which they agree is permitted? Learn from this that the Rabbis did not disagree about this.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״ד ב — Yoma 84b:2</span></div>
+    <div class="orig">רַב אָשֵׁי אָמַר: מַתְנִיתִין נָמֵי דַּיְקָא — וְעוֹד אָמַר רַבִּי מַתְיָא בֶּן חָרָשׁ: הַחוֹשֵׁשׁ בְּפִיו מְטִילִין לוֹ סַם בְּשַׁבָּת, וְלָא פְּלִיגִי רַבָּנַן עֲלֵיהּ. וְאִם אִיתָא דִּפְלִיגִי רַבָּנַן עֲלֵיהּ, לִיעָרְבִינְהוּ וְלִיתְנִינְהוּ, וְלִיפַּלְגוּ רַבָּנַן בְּסֵיפָא. שְׁמַע מִינַּהּ.</div>
+    <div class="trans" data-when="he">רב אשי: אף לשון המשנה מדויקת כך — ׳ועוד אמר ר׳ מתיא בן חרש: החושש בפיו מטילין לו סם בשבת׳, ואין רבנן חולקים עליו. שאם היו חולקים, היה ראוי לשלב את שתי ההלכות יחד ולהחיל את מחלוקת רבנן גם על הסיפא. מאחר שלא נשנה כך — שמע מינה שלא נחלקו רבנן בדין הסם.</div>
+    <div class="trans" data-when="en">Rav Ashi said: The wording of the mishna is also precise in accordance with this approach, as it was taught in the mishna: And furthermore, Rabbi Matya ben Ḥarash said: In the case of one who suffers pain in his mouth, one places medicine in his mouth on Shabbat, and the Rabbis do not disagree with him and say otherwise. And if it is so that the Rabbis disagree with him, then let the mishna combine the two halakhot and teach them together, and let the Rabbis disagree with both points in the latter clause. Since the mishna was not written this way, but instead the dispute of the Rabbis appears after Rabbi Matya’s statement about the mad dog, learn from here that the Rabbis did not disagree with him about the halakha with regard to medicine.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">ספק נפשות דוחה שבת — אף לשבת אחרת</span><span data-when="en">Uncertain danger overrides Shabbat — even a future Shabbat</span>
+      <span class="ref">Yoma 84b:3–6</span></h2>
+  <div class="lead"><span data-when="he">המשנה הוסיפה ׳וכל ספק נפשות דוחה את השבת׳; רב מחדש: אף ספק של שבת אחרת — מחממין מיד ואין ממתינים; ומי עושה את המעשים.</span><span data-when="en">The Mishna added ‘any uncertain danger overrides Shabbat’; Rav teaches: even an uncertainty regarding a future Shabbat — one acts at once without delay; and who performs these acts.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① למה לי ׳כל ספק נפשות דוחה שבת׳? · רב: אף ספק שבת אחרת"}:::question
+  S1["② כגון שאמדוהו לח׳ ימים והיום קמא שבת — מחללין מיד, ולא ימתין"]:::statement
+  P1["③ תניא נמי הכי: מחממין חמין לחולה, אף לשבת אחרת — ספק נפשות דוחה"]:::proof
+  S2["④ ואין עושין ע״י גוים אלא ע״י גדולי ישראל; ונשים/כותים מצטרפים לדעת אחרת"]:::statement
+  Q1 -->|היכי דמי| S1
+  S1 -->|תניא נמי הכי| P1
+  P1 -->|הוספה| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① Why state ׳any uncertain danger overrides Shabbat׳? · Rav: even a future Shabbat"}:::question
+  S1["② E.g. assessed for 8 days, first day is Shabbat — desecrate at once, do not wait"]:::statement
+  P1["③ A baraita too: one heats water for the ill, even a future Shabbat — danger overrides"]:::proof
+  S2["④ Done by Israel׳s great, not gentiles; women/Samaritans combine with another opinion"]:::statement
+  Q1 -->|what case| S1
+  S1 -->|taught likewise| P1
+  P1 -->|addition| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① לְמָה לִי תּוּ … וְכׇל סְפֵק נְפָשׁוֹת דּוֹחֶה אֶת הַשַּׁבָּת? … אֲפִילּוּ סָפֵק שַׁבָּת אַחֶרֶת"}:::question
+  S1["② כְּגוֹן דְּאַמְדוּהּ לִתְמָנְיָא יוֹמֵי, וְיוֹמָא קַמָּא שַׁבְּתָא … קָא מַשְׁמַע לַן"]:::statement
+  P1["③ תַּנְיָא נָמֵי הָכִי: מְחַמִּין חַמִּין לַחוֹלֶה בְּשַׁבָּת … אֶלָּא לְשַׁבָּת אַחֶרֶת"]:::proof
+  S2["④ וְאֵין עוֹשִׂין … אֶלָּא עַל יְדֵי גְּדוֹלֵי יִשְׂרָאֵל … אֲבָל מִצְטָרְפִין לְדַעַת אַחֶרֶת"]:::statement
+  Q1 -->|היכי דמי| S1
+  S1 -->|תניא נמי הכי| P1
+  P1 -->|הוספה| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ד ב — Yoma 84b:3</span></div>
+    <div class="orig">מִפְּנֵי שֶׁסְּפֵק נְפָשׁוֹת הוּא וְכוּ׳. לְמָה לִי תּוּ לְמֵימַר: ״וְכׇל סְפֵק נְפָשׁוֹת דּוֹחֶה אֶת הַשַּׁבָּת״? אָמַר רַב יְהוּדָה אָמַר רַב: לֹא סָפֵק שַׁבָּת זוֹ בִּלְבַד אָמְרוּ, אֶלָּא אֲפִילּוּ סָפֵק שַׁבָּת אַחֶרֶת.</div>
+    <div class="trans" data-when="he">המשנה נימקה שמטילים סם מפני שספק נפשות הוא. שואלת הגמרא: מדוע הוסיפה המשנה גם ׳וכל ספק נפשות דוחה את השבת׳? אמר רב יהודה אמר רב: לא ספק של שבת זו בלבד אמרו שדוחה, אלא אפילו ספק של שבת אחרת (עתידית) דוחה.</div>
+    <div class="trans" data-when="en">§ The mishna states that one with pain in his throat should be given medicine on Shabbat because it is a case of uncertainty concerning a life-threatening situation. The Gemara asks: Why do I need to say furthermore: And any case of uncertainty concerning a life-threatening situation overrides Shabbat? Rav Yehuda said that Rav said: They stated this not only in a case where there is uncertainty with regard to this Shabbat, but even if the uncertainty is with regard to a different future Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ד ב — Yoma 84b:4</span></div>
+    <div class="orig">הֵיכִי דָּמֵי? כְּגוֹן דְּאַמְדוּהּ לִתְמָנְיָא יוֹמֵי, וְיוֹמָא קַמָּא שַׁבְּתָא. מַהוּ דְּתֵימָא: לִיעַכַּב עַד לְאוּרְתָּא כִּי הֵיכִי דְּלָא נֵיחוּל עֲלֵיהּ תְּרֵי שַׁבָּתָא, קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">היכי דמי — מה הציור של ספק שבת אחרת? כגון שאמדו הרופאים שהחולה צריך טיפול שמונה ימים, והיום הראשון של חוליו הוא שבת. מהו דתֵימא: ימתין עד מוצאי שבת כדי שלא יחללו עליו שתי שבתות — קא משמע לן שמחללין מיד, אף שעל ידי כך תתחלל שבת נוספת.</div>
+    <div class="trans" data-when="en">What are the circumstances in which uncertainty would arise as to whether or not his life will be in danger in the future? They are a case where doctors assess that an ill person needs a certain treatment for eight days, and the first day of his illness is Shabbat. Lest you say: He should wait until evening and begin his treatment after Shabbat so they will not need to desecrate two Shabbatot for his sake, therefore it teaches us that one must immediately desecrate Shabbat for his sake. This is the halakha, despite the fact that an additional Shabbat will be desecrated as a result, because there is uncertainty about whether his life is in danger.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ד ב — Yoma 84b:5</span></div>
+    <div class="orig">תַּנְיָא נָמֵי הָכִי: מְחַמִּין חַמִּין לַחוֹלֶה בְּשַׁבָּת, בֵּין לְהַשְׁקוֹתוֹ בֵּין לְהַבְרוֹתוֹ. וְלֹא שַׁבָּת זוֹ בִּלְבַד אָמְרוּ, אֶלָּא לְשַׁבָּת אַחֶרֶת. וְאֵין אוֹמְרִים: נַמְתִּין לוֹ שֶׁמָּא יַבְרִיא, אֶלָּא מְחַמִּין לוֹ מִיָּד, מִפְּנֵי שֶׁסְּפֵק נְפָשׁוֹת דּוֹחֶה אֶת הַשַּׁבָּת. וְלֹא סָפֵק שַׁבָּת זוֹ, אֶלָּא אֲפִילּוּ סָפֵק שַׁבָּת אַחֶרֶת.</div>
+    <div class="trans" data-when="he">תניא נמי הכי (ברייתא מסייעת): מחממין מים לחולה בשבת, בין להשקותו בין לרחצו. ולא שבת זו בלבד אמרו, אלא אף לשבת אחרת. ואין אומרים נמתין שמא יבריא, אלא מחממין לו מיד, מפני שספק נפשות דוחה את השבת — ולא ספק שבת זו בלבד, אלא אפילו ספק שבת אחרת.</div>
+    <div class="trans" data-when="en">That was also taught in a baraita: One heats water for an ill person on Shabbat, whether to give him to drink or to wash him, since it might help him recover. And they did not say it is permitted to desecrate only the current Shabbat for him, but even a different, future Shabbat. And one must not say: Let us wait and perform this labor for him after Shabbat, perhaps he will get well in the meantime. Rather, one heats it for him immediately because any case of uncertainty concerning a life-threatening situation overrides Shabbat. And this is so not only with regard to uncertainty whether his life is in danger on the current Shabbat, but even in a case of uncertainty with regard to danger on a different Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ד ב — Yoma 84b:6</span></div>
+    <div class="orig">וְאֵין עוֹשִׂין דְּבָרִים הַלָּלוּ, לֹא עַל יְדֵי גּוֹיִם, וְלֹא עַל יְדֵי כּוּתִיִּים, אֶלָּא עַל יְדֵי גְּדוֹלֵי יִשְׂרָאֵל. וְאֵין אוֹמְרִין יֵעָשׂוּ דְּבָרִים הַלָּלוּ, לֹא עַל פִּי נָשִׁים, וְלֹא עַל פִּי כּוּתִיִּים, אֲבָל מִצְטָרְפִין לְדַעַת אַחֶרֶת.</div>
+    <div class="trans" data-when="he">המשך הברייתא: ואין עושין מעשים אלו (חילול שבת לחולה) על ידי גוים ולא על ידי כותים, אלא על ידי גדולי ישראל — שיֵדעו לנהוג כראוי. ואין אומרים שייעשו על פי הוראת נשים או כותים, שאינם נאמנים לקבוע; אבל דעתם מצטרפת לדעת אחרת, שאם יש מחלוקת מביאים אותה בחשבון.</div>
+    <div class="trans" data-when="en">And these acts should not be performed by gentiles or Samaritans but should be done by the greatest of the Jewish people, i.e., their scholars, who know how to act properly. And one does not say: These actions may be performed based on the advice of women or Samaritans, since they are not considered experts able to declare a person ill enough to override Shabbat. However, the opinions of these people do combine with an additional opinion, meaning that if there is a dispute, their opinions may be considered when coming to a decision.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">מפקחין פיקוח נפש בשבת — הזריז משובח</span><span data-when="en">One saves a life on Shabbat — the vigilant is praised</span>
+      <span class="ref">Yoma 84b:7–11</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: מפקחין פיקוח נפש בשבת, והזריז משובח, ואין צריך נטילת רשות מבי״ד — תינוק שנפל לים/לבור/דלת ננעלה/דליקה; וצריכא לכל מקרה.</span><span data-when="en">A baraita: one saves a life on Shabbat, the vigilant is praiseworthy, needing no court permission — a child in the sea/pit/locked door/fire; and each case is necessary.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① ת״ר: מפקחין פיקוח נפש בשבת, הזריז משובח, ואין צריך רשות — ים/בור (אף שצד דגים/מתקן מדרגה)"]:::statement
+  S2["② ננעלה דלת — שוברה; מכבין מפני הדליקה — אף שמתכוון לפחם"]:::statement
+  Q1{"③ וצריכא: אי אשמעינן ים — דאזיל ליה, אבל בור דיתיב אימא לא? צריכא"}:::question
+  Q2{"④ ואי בור — דמיבעית, אבל דלת אפשר דמשבש באמגוזי? צריכא"}:::question
+  S3["⑤ מכבין ומפסיקין למה לי? דאפילו לחצר אחרת"]:::statement
+  S1 -->|המשך| S2
+  S2 -->|וצריכא| Q1
+  Q1 -->|וצריכא| Q2
+  Q2 -->|למה לי| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Baraita: save a life on Shabbat, the vigilant is praised, no permission — sea/pit (though he nets fish/makes a step)"]:::statement
+  S2["② Locked door — he breaks it; one extinguishes a fire — though he gains coals"]:::statement
+  Q1{"③ Necessary: from sea — the child drifts off; but a pit, where he stays, say no? necessary"}:::question
+  Q2{"④ And from pit — he is frightened; but a door, one could amuse him with nuts? necessary"}:::question
+  S3["⑤ ׳Extinguish and make a barrier׳ — why? even toward another courtyard"]:::statement
+  S1 -->|continued| S2
+  S2 -->|necessary| Q1
+  Q1 -->|necessary| Q2
+  Q2 -->|why state it| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: מְפַקְּחִין פִּקּוּחַ נֶפֶשׁ בְּשַׁבָּת, וְהַזָּרִיז הֲרֵי זֶה מְשׁוּבָּח … תִּינוֹק שֶׁנָּפַל לַיָּם … לְבוֹר"]:::statement
+  S2["② נִנְעֲלָה דֶּלֶת בִּפְנֵי תִּינוֹק — שׁוֹבְרָהּ … מְכַבִּין וּמַפְסִיקִין מִפְּנֵי הַדְּלֵיקָה … דְּקָא מְמַכֵּיךְ מַכּוֹכֵי"]:::statement
+  Q1{"③ וּצְרִיכָא: דְּאִי אַשְׁמְעִינַן יָם … אֲבָל בּוֹר דְּקָא יָתֵיב אֵימָא לָא, צְרִיכָא"}:::question
+  Q2{"④ וְאִי אַשְׁמְעִינַן בּוֹר … אֲבָל נִנְעֲלָה דֶּלֶת … וּמְשַׁבֵּישׁ לֵיהּ בְּאַמְגּוֹזֵי. צְרִיכָא"}:::question
+  S3["⑤ מְכַבִּין וּמַפְסִיקִין. לְמָה לִי? דַּאֲפִילּוּ לְחָצֵר אַחֶרֶת"]:::statement
+  S1 -->|המשך| S2
+  S2 -->|וצריכא| Q1
+  Q1 -->|וצריכא| Q2
+  Q2 -->|למה לי| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ד ב — Yoma 84b:7</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: מְפַקְּחִין פִּקּוּחַ נֶפֶשׁ בְּשַׁבָּת, וְהַזָּרִיז הֲרֵי זֶה מְשׁוּבָּח, וְאֵין צָרִיךְ לִיטּוֹל רְשׁוּת מִבֵּית דִּין. הָא כֵּיצַד? רָאָה תִּינוֹק שֶׁנָּפַל לַיָּם — פּוֹרֵשׂ מְצוּדָה וּמַעֲלֵהוּ, וְהַזָּרִיז הֲרֵי זֶה מְשׁוּבָּח, וְאֵין צָרִיךְ לִיטּוֹל רְשׁוּת מִבֵּית דִּין. וְאַף עַל גַּב דְּקָא צָיֵיד כְּווֹרֵי. רָאָה תִּינוֹק שֶׁנָּפַל לְבוֹר — עוֹקֵר חוּלְיָא וּמַעֲלֵהוּ, וְהַזָּרִיז הֲרֵי זֶה מְשׁוּבָּח, וְאֵין צָרִיךְ לִיטּוֹל רְשׁוּת מִבֵּית דִּין. אַף עַל גַּב דִּמְתַקֵּן דַּרְגָּא.</div>
+    <div class="trans" data-when="he">תנו רבנן: מפקחין (מצילים) פיקוח נפש בשבת, והזריז להציל הרי זה משובח, ואין צריך ליטול רשות מבית דין. כיצד? ראה תינוק שנפל לים — פורש רשת ומעלהו, והזריז משובח ואין צריך רשות, אף על פי שתוך כדי כך הוא צד דגים ברשת. ראה תינוק שנפל לבור — עוקר חוּליה (אבן) ומעלהו, והזריז משובח, אף שתוך כדי כך הוא מתקן כעין מדרגה.</div>
+    <div class="trans" data-when="en">§ The Sages taught in a baraita: One engages in saving a life on Shabbat, and one who is vigilant to do so is praiseworthy. And one need not take permission from a court but hurries to act on his own. How so? If one sees a child who fell into the sea, he spreads a fisherman’s net and raises him from the water. And one who is vigilant and acts quickly is praiseworthy, and one need not seek permission from a court, although in doing so he catches fish in the net as well. Similarly, if one sees a child fall into a pit and the child cannot get out, he digs part of the ground out around the edge of the pit to create a makeshift step and raises him out. And one who is vigilant and acts quickly is praiseworthy, and one need not seek permission from a court, although in doing so he fashions a step.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ד ב — Yoma 84b:8</span></div>
+    <div class="orig">רָאָה שֶׁנִּנְעֲלָה דֶּלֶת בִּפְנֵי תִּינוֹק — שׁוֹבְרָהּ וּמוֹצִיאוֹ, וְהַזָּרִיז הֲרֵי זֶה מְשׁוּבָּח, וְאֵין צָרִיךְ לִיטּוֹל רְשׁוּת מִבֵּית דִּין. וְאַף עַל גַּב דְּקָא מִיכַּוֵּין לְמִיתְבַּר בְּשִׁיפֵי. מְכַבִּין וּמַפְסִיקִין מִפְּנֵי הַדְּלֵיקָה בְּשַׁבָּת, וְהַזָּרִיז הֲרֵי זֶה מְשׁוּבָּח, וְאֵין צָרִיךְ לִיטּוֹל רְשׁוּת מִבֵּית דִּין. וְאַף עַל גַּב דְּקָא מְמַכֵּיךְ מַכּוֹכֵי.</div>
+    <div class="trans" data-when="he">ראה שננעלה דלת בפני תינוק (והוא מבוהל) — שובר את הדלת ומוציאו, והזריז משובח ואין צריך רשות, אף שמתכוון לשבור את העץ ללוחות שיהיו ראויים לשימוש. מכבין אש ועושים מחיצה (של כלים מלאים מים) מפני הדליקה בשבת כשיש סכנת נפשות, והזריז משובח ואין צריך רשות, אף שעל ידי כך נשארים גחלים הראויות לבישול.</div>
+    <div class="trans" data-when="en">Similarly, if one sees that a door is locked before a child and the child is scared and crying, he breaks the door and takes the child out. And one who is vigilant and acts quickly is praiseworthy, and one need not seek permission from a court, although he intends to break it into boards to be used later. Similarly, one may extinguish a fire by placing a barrier of metal or clay vessels filled with water in front of it on Shabbat when life is endangered. And one who is vigilant and acts quickly is praiseworthy, and one need not seek permission from a court, although he leaves the coals, which can be used for cooking after Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ד ב — Yoma 84b:9</span></div>
+    <div class="orig">וּצְרִיכָא: דְּאִי אַשְׁמְעִינַן יָם — מִשּׁוּם דְּאַדְּהָכִי וְהָכִי אָזֵל לֵיהּ, אֲבָל בּוֹר, דְּקָא יָתֵיב — אֵימָא לָא, צְרִיכָא.</div>
+    <div class="trans" data-when="he">וצריכא — כל מקרה נחוץ ללמדנו דבר. אילו לימדנו רק את הים, היינו אומרים שמזדרזים שם משום שבינתיים הילד נשטף וייעלם; אבל בור, שהילד יושב בו ואינו בסכנה מיידית, אימא שאין צורך להזדרז וצריך רשות — לכן צריכא ללמד אף את הבור.</div>
+    <div class="trans" data-when="en">The Gemara comments: And it is necessary to teach these examples, since each one suggests an original idea. As, had it taught us the halakha of the child who fell into the sea, we would have said: He must act quickly in that case because in the meantime, if he delays, the child will be swept away by the waves and disappear, and therefore the rescuer need not seek permission; but in the case of a child who fell into a pit, who remains there and is in no further danger, one might say the rescuer need not hurry but should request permission from the court first. Therefore, the baraita explains: No, it is necessary to tell us that case, too.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ד ב — Yoma 84b:10</span></div>
+    <div class="orig">וְאִי אַשְׁמְעִינַן בּוֹר — מִשּׁוּם דְּקָא מִיבְּעִית, אֲבָל נִנְעֲלָה דֶּלֶת, אֶפְשָׁר דְּיָתֵיב בְּהַאי גִּיסָא וּמְשַׁבֵּישׁ לֵיהּ בְּאַמְגּוֹזֵי. צְרִיכָא.</div>
+    <div class="trans" data-when="he">ואילו לימדנו רק את הבור, היינו אומרים שמזדרזים משום שהילד מבוהל; אבל דלת שננעלה, אפשר לשבת בצד השני ולהשעות את הילד באגוזים (כדי שלא יבעת) עד מוצאי שבת — אימא שאין מזדרזים. לכן צריכא ללמד אף בדלת.</div>
+    <div class="trans" data-when="en">And if it had taught us the case of the pit, one might have thought it is because the child is scared at being trapped; but when a door is locked before a child, it is possible to sit on the other side of the door and amuse him with the sound of nuts until Shabbat is over. Therefore, it is necessary to teach that in this case, too, one does not delay but acts immediately because a life is possibly in danger.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ד ב — Yoma 84b:11</span></div>
+    <div class="orig">מְכַבִּין וּמַפְסִיקִין. לְמָה לִי? דַּאֲפִילּוּ לְחָצֵר אַחֶרֶת.</div>
+    <div class="trans" data-when="he">ולענין מכבין ומפסיקין מפני הדליקה — למה לי ללמדו, והרי כבר נשנה דין הצלת נפשות? לחדש שמכבין ועושין מחיצה אף כשהאש מתפשטת לעבר חצר אחרת, ולא רק להצלת מי שבחצר הבוערת.</div>
+    <div class="trans" data-when="en">It was taught in a baraita that one may extinguish a fire by placing a barrier in front of it on Shabbat. The Gemara asks: Why do I need this? What new point is taught by this additional case of a life-endangering situation? The Gemara answers: This halakha applies even if the fire is spreading toward another courtyard. Not only may this be done to save the lives of people in the courtyard on fire; it may also be done to prevent the fire from spreading to an adjacent courtyard.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">לא הלכו בפיקוח נפש אחר הרוב</span><span data-when="en">Saving a life does not follow the majority</span>
+      <span class="ref">Yoma 84b:12–85a:1</span></h2>
+  <div class="lead"><span data-when="he">שמואל: לא הלכו בפיקוח נפש אחר הרוב. בירור הציור — קבוע, פירש לחצר אחרת; קושיא מר׳ יוחנן וקושיא מתינוק מושלך, ויישובן.</span><span data-when="en">Shmuel: in saving a life one does not follow the majority. Clarifying the case — a fixed group, one who separated to another courtyard; an objection from R. Yoḥanan and from a foundling, and their resolutions.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שמואל: לא הלכו בפיקוח נפש אחר הרוב"]:::statement
+  Q1{"② היכי דמי? ט׳ ישראל וגוי — רובא ישראל; פלגא ופלגא — להקל"}:::question
+  Q2{"③ אלא ט׳ גוים וישראל — פשיטא, קבוע כמחצה על מחצה!"}:::question
+  A1["④ לא צריכא, דפריש לחצר אחרת — מהו דתימא כל דפריש מרובא, קמ״ל"]:::answer
+  Q3{"⑤ איני? והא ר׳ יוחנן: באותה חצר מפקחין, בחצר אחרת אין! · הא דפריש כולהו, הא מקצתייהו"}:::question
+  Q4{"⑥ ומי אמר שמואל? והתנן תינוק מושלך — רוב גוים גוי… ורב: לא שנו אלא להחיותו"}:::question
+  A2["⑥ ושמואל: לפקח עליו את הגל — דשמואל ארישא איתמר, ולענין פיקוח נפש אינו כן"]:::answer
+  S1 -->|היכי דמי| Q1
+  Q1 -->|אלא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|איני| Q3
+  Q3 -.->|ומי אמר שמואל| Q4
+  Q4 -->|יישוב| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Shmuel: in saving a life one does not follow the majority"]:::statement
+  Q1{"② What case? 9 Jews + 1 gentile — majority Jews; half-and-half — lenient anyway"}:::question
+  Q2{"③ Rather 9 gentiles + 1 Jew — obvious, a fixed group counts as half-and-half!"}:::question
+  A1["④ No, where one separated to another courtyard — lest you say ׳what parts, parts from the majority׳, it teaches us"]:::answer
+  Q3{"⑤ Is that so? R. Yoḥanan: same courtyard one clears, another courtyard one does not! · here all left, there only some"}:::question
+  Q4{"⑥ Did Shmuel say so? A foundling — majority gentiles, gentile… and Rav: only to sustain him"}:::question
+  A2["⑥ And Shmuel: to clear the rubble — Shmuel׳s ruling was on the first clause, but for saving a life it is not so"]:::answer
+  S1 -->|what case| Q1
+  Q1 -->|rather| Q2
+  Q2 -->|answer| A1
+  A1 -.->|is that so| Q3
+  Q3 -.->|did Shmuel say so| Q4
+  Q4 -->|resolution| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב יוֹסֵף … אָמַר שְׁמוּאֵל: לֹא הָלְכוּ בְּפִקּוּחַ נֶפֶשׁ אַחַר הָרוֹב"]:::statement
+  Q1{"② הֵיכִי דָּמֵי? … תִּשְׁעָה יִשְׂרָאֵל וְגוֹי … רוּבָּא יִשְׂרָאֵל … פַּלְגָא וּפַלְגָא, סְפֵק נְפָשׁוֹת לְהָקֵל"}:::question
+  Q2{"③ אֶלָּא דְּאִיכָּא תִּשְׁעָה גּוֹיִם וְיִשְׂרָאֵל אֶחָד … קָבוּעַ כְּמֶחֱצָה עַל מֶחֱצָה דָּמֵי!"}:::question
+  A1["④ לָא צְרִיכָא, דִּפְרוּשׁ לְחָצֵר אַחֶרֶת … כׇּל דְּפָרֵישׁ מֵרוּבָּא פָּרֵישׁ, קָא מַשְׁמַע לַן"]:::answer
+  Q3{"⑤ אִינִי?! וְהָאָמַר רַבִּי יוֹחָנָן … בְּאוֹתָהּ חָצֵר מְפַקְּחִין, בְּחָצֵר אַחֶרֶת אֵין … הָא דִּפְרוּשׁ כּוּלְּהוּ, הָא מִקְצָתַיְיהוּ"}:::question
+  Q4{"⑥ וּמִי אָמַר שְׁמוּאֵל הָכִי? וְהָתְנַן: מָצָא בָהּ תִּינוֹק מוּשְׁלָךְ … וְאָמַר רַב: לֹא שָׁנוּ אֶלָּא לְהַחְיוֹתוֹ"}:::question
+  A2["⑥ וּשְׁמוּאֵל אָמַר לְפַקֵּחַ עָלָיו אֶת הַגַּל … אַרֵישָׁא אִיתְּמַר … וּלְעִנְיַן פִּקּוּחַ נֶפֶשׁ אֵינוֹ כֵּן"]:::answer
+  S1 -->|היכי דמי| Q1
+  Q1 -->|אלא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|איני| Q3
+  Q3 -.->|ומי אמר שמואל| Q4
+  Q4 -->|יישוב| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ד ב — Yoma 84b:12</span></div>
+    <div class="orig">אָמַר רַב יוֹסֵף אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: לֹא הָלְכוּ בְּפִקּוּחַ נֶפֶשׁ אַחַר הָרוֹב. הֵיכִי דָּמֵי? אִי נֵימָא דְּאִיכָּא תִּשְׁעָה יִשְׂרָאֵל וְגוֹי אֶחָד בֵּינַיְיהוּ — רוּבָּא יִשְׂרָאֵל נִינְהוּ, (אֶלָּא) פַּלְגָא וּפַלְגָא, סְפֵק נְפָשׁוֹת לְהָקֵל.</div>
+    <div class="trans" data-when="he">אמר רב יוסף אמר רב יהודה אמר שמואל: בפיקוח נפש לא הלכו אחר הרוב (כשאר תחומי הלכה). היכי דמי? אם נאמר שיש תשעה ישראל וגוי אחד ביניהם ונפלה עליהם מפולת — הרי רוב ישראל הם, ומחללין על פי הרוב. ואם פלגא ופלגא (מחצה ומחצה) — ספק נפשות להקל, ואף זו אינה הליכה אחר המיעוט.</div>
+    <div class="trans" data-when="en">§ Rav Yosef said that Rav Yehuda said that Shmuel said: With regard to saving a life, the Sages did not follow the majority as they do in other areas of halakha. The Gemara asks: What are the circumstances? When does one not follow the majority? If we say that one does not follow the majority in a case where there are nine Jews and one gentile among them and a building collapses on one of them, then in that case the majority of people are Jews and yet one desecrates Shabbat to save the trapped person. In such a case one is in fact following the majority. Alternatively, if the group is half Jews and half gentiles, the ruling is lenient with regard to a case of uncertainty concerning a life-threatening situation. But this, too, is not a case where one follows the minority, as there is an even chance that the victim is a Jew.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ד ב — Yoma 84b:13</span></div>
+    <div class="orig">אֶלָּא דְּאִיכָּא תִּשְׁעָה גּוֹיִם וְיִשְׂרָאֵל אֶחָד. הָא נָמֵי פְּשִׁיטָא — דְּהָוֵה לֵיהּ קָבוּעַ, וְכׇל קָבוּעַ כְּמֶחֱצָה עַל מֶחֱצָה דָּמֵי!</div>
+    <div class="trans" data-when="he">אלא הציור הוא שיש תשעה גוים וישראל אחד, ונפלה מפולת על אחד מהם — שמחללין להצילו. אך גם זה פשיטא! שהרי הם ׳קבוע׳ (במקומם), וכל קבוע נחשב כמחצה על מחצה — ולא כרוב גוים; אם כן אין כאן חידוש.</div>
+    <div class="trans" data-when="en">Rather, it is referring to a case where there are nine gentiles and one Jew. However, this too is obvious. One saves the trapped individual because the group is in a fixed location, and there is a principle that whenever a group is in a fixed location it is considered as though it were evenly divided. In this case, despite the fact that the group’s majority is gentile, it is considered as though it were composed half of Jews and half of gentiles.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ד ב — Yoma 84b:14</span></div>
+    <div class="orig">לָא צְרִיכָא, דִּפְרוּשׁ לְחָצֵר אַחֶרֶת, מַהוּ דְּתֵימָא: כׇּל דְּפָרֵישׁ — מֵרוּבָּא פָּרֵישׁ, קָא מַשְׁמַע לַן דְּלָא הָלְכוּ בְּפִקּוּחַ נֶפֶשׁ אַחַר הָרוֹב.</div>
+    <div class="trans" data-when="he">תירוץ: לא נצרכא אלא לציור שאחד מהם פירש לחצר אחרת ונפלה עליו מפולת. מהו דתימא: נלך אחר הכלל ׳כל הפורש מן הקבוע — מן הרוב פירש׳, ומאחר שהרוב גוים נחשב הפורש כגוי ואין מפקחין; קא משמע לן שלא הלכו בפיקוח נפש אחר הרוב, ומפקחין מספק.</div>
+    <div class="trans" data-when="en">The Gemara answers: No, it is necessary to teach that one does not follow the majority in a case where one individual did not remain with the group in their courtyard but separated and went to another courtyard, and a building collapses on him. Lest you say: One should follow the principle that whatever is separated from a group is considered to have left from the majority, and since there was a majority of gentiles there the individual who left the group was probably a gentile, and it is not necessary to clear the debris for a gentile on Shabbat, therefore it teaches us that with regard to uncertainty in a situation of saving a life, one does not follow the majority.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ד ב — Yoma 84b:15</span></div>
+    <div class="orig">אִינִי?! וְהָאָמַר רַבִּי אַסִּי אָמַר רַבִּי יוֹחָנָן: תִּשְׁעָה גּוֹיִם וְיִשְׂרָאֵל אֶחָד בְּאוֹתָהּ חָצֵר — מְפַקְּחִין, בְּחָצֵר אַחֶרֶת — אֵין מְפַקְּחִין! לָא קַשְׁיָא: הָא דִּפְרוּשׁ כּוּלְּהוּ, הָא דִּפְרוּשׁ מִקְצָתַיְיהוּ.</div>
+    <div class="trans" data-when="he">קושיא: וכי כן? והרי אמר ר׳ אסי אמר ר׳ יוחנן: תשעה גוים וישראל אחד — באותה חצר מפקחין, אבל בחצר אחרת אין מפקחין (משמע שכן הולכים אחר הרוב)! יישוב: לא קשיא — דברי ר׳ יוחנן (שמפקחין) בשפירשו כולם לחצר אחרת, ולכן הישראל ודאי ביניהם; ודברי שמואל (אף בחצר אחרת) בשפירשו מקצתם, ואין ידוע אם הישראל פירש.</div>
+    <div class="trans" data-when="en">The Gemara asks: Is that so? But didn’t Rav Asi say that Rabbi Yoḥanan said: If there are nine gentiles and one Jew and a building collapses on one of them, if it is in that same courtyard one removes the debris, but in another courtyard one does not remove the debris? The Gemara answers: This is not difficult; there is no contradiction between the halakhot. This case, where one removes the debris, is when they all left for another courtyard and it is clear that the Jew was among them. Consequently, the principle of being in a fixed location still applies, and it is considered a case of uncertainty. That other situation is when only a minority of them left for the other courtyard, and it is unknown whether the Jew left with them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ד ב — Yoma 84b:16</span></div>
+    <div class="orig">וּמִי אָמַר שְׁמוּאֵל הָכִי? וְהָתְנַן: מָצָא בָהּ תִּינוֹק מוּשְׁלָךְ, אִם רוֹב גּוֹיִם — גּוֹי, וְאִם רוֹב יִשְׂרָאֵל — יִשְׂרָאֵל, מֶחֱצָה עַל מֶחֱצָה — יִשְׂרָאֵל. וְאָמַר רַב: לֹא שָׁנוּ אֶלָּא לְהַחְיוֹתוֹ, אֲבָל לְיַיחֲסוֹ לֹא.</div>
+    <div class="trans" data-when="he">קושיא נוספת: וכי שמואל אמר כן שאין הולכים אחר הרוב? והרי שנינו במשנה: מצא בעיר תינוק מושלך — אם רוב גוים גוי, אם רוב ישראל ישראל, מחצה על מחצה ישראל. ואמר רב: לא שנו שהוא ישראל אלא להחיותו (לסעדו), אבל ליַחֲסוֹ לא — שספק לעניין יוחסין, וכאן הולכים אחר הרוב.</div>
+    <div class="trans" data-when="en">The Gemara asks: Did Shmuel actually say this, that one does not follow the majority with regard to saving a life? Didn’t we learn in a mishna: If one finds an abandoned child in a city and his parents are unknown, if the majority of the city are gentiles the child is considered a gentile; and if the majority of the city are Jews the child is considered a Jew; if the city is composed of half gentiles and half Jews, the child is considered a Jew? And Rav said: They taught this, that he is a Jew, only with respect to sustaining him but not with respect to attributing a lineage to him. One does not say that he is definitely Jewish based on the majority. Therefore, with regard to the halakhot of marriage, his status remains uncertain. If the abandoned child is a girl, she is not permitted to marry a priest, who may marry only a woman of certain lineage.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ה א — Yoma 85a:1</span></div>
+    <div class="orig">וּשְׁמוּאֵל אָמַר לְפַקֵּחַ עָלָיו אֶת הַגַּל. כִּי אִיתְּמַר דִּשְׁמוּאֵל — אַרֵישָׁא אִיתְּמַר: אִם רוֹב גּוֹיִם — גּוֹי, אָמַר שְׁמוּאֵל: וּלְעִנְיַן פִּקּוּחַ נֶפֶשׁ אֵינוֹ כֵּן.</div>
+    <div class="trans" data-when="he">ושמואל אמר על אותה משנה: ׳לפקח עליו את הגל׳ — כלומר אף ברוב גוים מפקחין עליו את המפולת בשבת, ומשמע שכן הולכים אחר הרוב גם בפיקוח נפש (לסתור את שמואל הראשון). יישוב: כשנאמר דין שמואל — על הרישא נאמר: ׳אם רוב גוים גוי׳ — אמר שמואל, ולענין פיקוח נפש אינו כן, אלא מפקחין עליו מספק.</div>
+    <div class="trans" data-when="en">And Shmuel said: This halakha of the status of a found child is with regard to removing debris from on top of him, implying that if there is a majority of gentiles in the city where he is found, one does not violate Shabbat by removing the debris from the child to save his life. This implies that one does follow the majority in the case of saving a life. The Gemara answers: When this statement of Shmuel was stated, it was stated with regard to the first halakha. Shmuel’s intent was to be lenient, and his statement should be understood as follows: If the majority are gentiles, he is a gentile. Shmuel said: But with regard to the matter of saving a life it is not so. Rather, one saves him based on the uncertainty.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
