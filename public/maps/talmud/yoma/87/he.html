@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ״ז</title>
+<meta name="description" content="מפת הסוגיא של יומא פ״ז: שכר הצדיקים ועונש הרשעים לדורות; ׳אחטא ואשוב׳ ו׳אחטא ויום הכיפורים מכפר׳; עבירות שבין אדם לחבירו ומצוות פיוס; סדר הווידוי וערכי תפילת נעילה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="87">
+<meta name="gemara-map:sefaria-ref" content="Yoma 87">
+<meta name="gemara-map:topic-he" content="פיוס חבירו וסדר הווידוי">
+<meta name="gemara-map:topic-en" content="Appeasing one's fellow; the confession">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ״ז">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 87">
+<meta name="gemara-map:blurb-he" content="יום הכיפורים אינו מכפר על עבירות שבין אדם לחבירו עד שיפייסנו; כיצד מפייסים, מתי וכמה מתוודים, ומהי תפילת נעילה.">
+<meta name="gemara-map:blurb-en" content="Yom Kippur does not atone for sins against one's fellow until he appeases him; how to appease, when and how often to confess, and what the ne'ila prayer is.">
+<meta name="gemara-map:sugya-count" content="6">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ״ז</span><span data-when="en">Sugya map — Yoma 87</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ״ז א — פ״ח א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 87a–88a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שש סוגיות בסיום ׳יום הכיפורים׳: <b>שכר הצדיקים ועונש הרשעים</b> מגיעים גם לדורות הבאים; <b>״אחטא ואשוב״</b> ו״אחטא ויום הכיפורים מכפר״ — אין כיפרה למי שחוטא על דעת שיתכפר; <b>עבירות שבין אדם לחבירו</b> אין יום הכיפורים מכפר <b>עד שירצה את חבירו</b> — וכיצד מפייסים (שלוש שורות, שלוש פעמים); וסוף הפרק עוסק ב<b>סדר הווידוי</b> ובמהותה של <b>תפילת נעילה</b>.</span>
+    <span data-when="en"><b>Bottom line:</b> Six sugyot closing chapter ‘Yom HaKippurim’: the <b>reward of the righteous and punishment of the wicked</b> reach future generations; <b>“I will sin and repent”</b> and “I will sin and Yom Kippur will atone” — there is no atonement for one who sins counting on it; <b>sins between a person and his fellow</b> are not atoned by Yom Kippur <b>until he appeases his fellow</b> — and how one appeases (three rows, three times); and the chapter closes on the <b>order of confession</b> and the nature of the <b>ne‘ila prayer</b>.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ״ז</span><span data-when="en">Overview — Yoma 87</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · שכר צדיקים ועונש רשעים לדורות"]:::statement
+  O2["2 · ׳אחטא ואשוב׳ ויוה״כ מכפר"]:::statement
+  O3["3 · בין אדם לחבירו — ׳ופללו אלהים׳"]:::statement
+  O4["4 · פיוס חבירו — שורות, פעמים, ומעשים"]:::statement
+  O5["5 · מצוות הווידוי וסדרו"]:::statement
+  O6["6 · תפילת נעילה — מהותה וזמנה"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Reward of the righteous, punishment of the wicked — for generations"]:::statement
+  O2["2 · ׳I will sin and repent׳ and Yom Kippur atoning"]:::statement
+  O3["3 · Between a person and his fellow — ׳God shall judge׳"]:::statement
+  O4["4 · Appeasing one׳s fellow — rows, times, deeds"]:::statement
+  O5["5 · The mitzva of confession and its order"]:::statement
+  O6["6 · The ne׳ila prayer — its nature and time"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">שכר הצדיקים ועונש הרשעים — לדורות</span><span data-when="en">The reward of the righteous, the punishment of the wicked — for generations</span>
+      <span class="ref">Yoma 87a:2-6</span></h2>
+  <div class="lead"><span data-when="he">דרשות על שכר ועונש: טוב לרשע שאין נושאים לו פנים? אדרבה — רע לו; וזכות אבות (או חובתם) מגיעה עד סוף הדורות.</span><span data-when="en">Homilies on reward and punishment: is it good for the wicked to be favored? On the contrary — it is bad for him; and a father's merit (or guilt) reaches all generations.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① ׳שאת פני רשע לא טוב׳ — רע לרשע שנושאים לו פנים (אחאב)"]:::statement
+  S2["② ׳להטות צדיק במשפט׳ — טוב לצדיק שאין נושאים לו פנים (משה)"]:::statement
+  S3["③ אשרי הצדיקים — מזכים בניהם עד סוף הדורות (בני אהרן)"]:::statement
+  S4["④ אוי לרשעים — מחייבים בניהם עד סוף הדורות (בני כנען)"]:::statement
+  S5["⑤ מזכה הרבים — אין חטא בא לידו; מחטיא הרבים — אין מספיקין בידו לשוב"]:::statement
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① ׳Respecting the wicked is not good׳ — bad for the wicked to be favored (Ahab)"]:::statement
+  S2["② ׳turning aside the righteous׳ — good for the righteous not to be favored (Moses)"]:::statement
+  S3["③ Fortunate are the righteous — they give merit to children to all generations (Aaron׳s sons)"]:::statement
+  S4["④ Woe to the wicked — they render children liable to all generations (Canaan׳s sons)"]:::statement
+  S5["⑤ One who gives merit to the public — no sin comes to his hand; who causes the public to sin — cannot repent"]:::statement
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① ׳שְׂאֵת פְּנֵי רָשָׁע לֹא טוֹב׳ … לֹא טוֹב לוֹ לְאַחְאָב שֶׁנָּשְׂאוּ לוֹ פָּנִים"]:::statement
+  S2["② ׳לְהַטּוֹת צַדִּיק בַּמִּשְׁפָּט׳ … טוֹב לוֹ לְמֹשֶׁה שֶׁלֹּא נָשְׂאוּ לוֹ פָּנִים"]:::statement
+  S3["③ אַשְׁרֵיהֶם לַצַּדִּיקִים … שֶׁמְּזַכִּין לִבְנֵיהֶם … עַד סוֹף כׇּל הַדּוֹרוֹת"]:::statement
+  S4["④ אוֹי לָהֶם לָרְשָׁעִים … שֶׁמְּחַיְּיבִין לִבְנֵיהֶם … עַד סוֹף כׇּל הַדּוֹרוֹת"]:::statement
+  S5["⑤ כׇּל הַמְזַכֶּה אֶת הָרַבִּים — אֵין חֵטְא בָּא עַל יָדוֹ … וְכׇל הַמַּחְטִיא … אֵין מַסְפִּיקִין בְּיָדוֹ לַעֲשׂוֹת תְּשׁוּבָה"]:::statement
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ז א — Yoma 87a:2</span></div>
+    <div class="orig">״שְׂאֵת פְּנֵי רָשָׁע לֹא טוֹב״ — לֹא טוֹב לָהֶם לָרְשָׁעִים שֶׁנּוֹשְׂאִין לָהֶם פָּנִים בָּעוֹלָם הַזֶּה. לֹא טוֹב לוֹ לְאַחְאָב שֶׁנָּשְׂאוּ לוֹ פָּנִים בָּעוֹלָם הַזֶּה, שֶׁנֶּאֱמַר: ״יַעַן כִּי נִכְנַע (אַחְאָב מִלְּפָנָי) לֹא אָבִיא הָרָעָה בְּיָמָיו״.</div>
+    <div class="trans" data-when="he">הגמרא דורשת את הפסוק ״שאת פני רשע לא טוב״: אין זה טוב לרשעים שנושאים להם פנים בעולם הזה ואינם נענשים על חטאם. דוגמה: לא היה טוב לאחאב שנשאו לו פנים בעולם הזה (שנדחה עונשו), שנאמר ״יען כי נכנע… לא אביא הרעה בימיו״ — ובכך הפסיד את חלקו לעולם הבא.</div>
+    <div class="trans" data-when="en">§ It was further taught: “It is not good to respect the person of the wicked” (Proverbs 18:5), meaning, it is not good for wicked people when they are respected in this world and are not punished for their sins. For example, it was not good for Ahab to be respected in this world, as it is stated: “Because he humbled himself before Me, I will not bring the evil in his days” (I Kings 21:29), and Ahab thereby lost his share in the World-to-Come.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ז א — Yoma 87a:3</span></div>
+    <div class="orig">״לְהַטּוֹת צַדִּיק בַּמִּשְׁפָּט״ — טוֹב לָהֶם לַצַּדִּיקִים שֶׁאֵין נוֹשְׂאִין לָהֶם פָּנִים בָּעוֹלָם הַזֶּה. טוֹב לוֹ לְמֹשֶׁה שֶׁלֹּא נָשְׂאוּ לוֹ פָּנִים בָּעוֹלָם הַזֶּה, שֶׁנֶּאֱמַר: ״יַעַן לֹא הֶאֱמַנְתֶּם בִּי לְהַקְדִּישֵׁנִי״, הָא אִילּוּ הֶאֱמַנְתֶּם בִּי — עֲדַיִין לֹא הִגִּיעַ זְמַנָּם לִיפָּטֵר מִן הָעוֹלָם.</div>
+    <div class="trans" data-when="he">להפך: ״להטות צדיק במשפט״ — טוב לצדיקים שאין נושאים להם פנים בעולם הזה ונענשים כאן על חטאם הקל. דוגמה: טוב למשה שלא נשאו לו פנים ונענש, שנאמר ״יען לא האמנתם בי״; משמע — אילו האמינו, עדיין לא היה מגיע זמנם להיפטר מן העולם.</div>
+    <div class="trans" data-when="en">The opposite is also true. The complete verse states: “It is not good to respect the person of the wicked, to turn aside the righteous in judgment” (Proverbs 18:5), meaning: It is good for the righteous when they are not respected in this world and are punished in this world for their sins. For example, it was good for Moses that he was not respected in this world, as it is stated: “Because you did not believe in Me, to sanctify Me” (Numbers 20:12). The Gemara analyzes this: Had you believed in Me, your time still would not have come to depart the world.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ז א — Yoma 87a:4</span></div>
+    <div class="orig">אַשְׁרֵיהֶם לַצַּדִּיקִים, לֹא דַּיָּין שֶׁהֵן זוֹכִין, אֶלָּא שֶׁמְּזַכִּין לִבְנֵיהֶם וְלִבְנֵי בְנֵיהֶם עַד סוֹף כׇּל הַדּוֹרוֹת. שֶׁכַּמָּה בָּנִים הָיוּ לוֹ לְאַהֲרֹן שֶׁרְאוּיִין לִישָּׂרֵף כְּנָדָב וַאֲבִיהוּא, שֶׁנֶּאֱמַר: ״הַנּוֹתָרִים״, אֶלָּא שֶׁעָמַד לָהֶם זְכוּת אֲבִיהֶם.</div>
+    <div class="trans" data-when="he">אשרי הצדיקים — לא די שזוכים לעצמם, אלא מזכים בניהם ובני בניהם עד סוף כל הדורות. כמה בנים היו לאהרן שראויים היו להישרף כנדב ואביהוא, שנאמר ״הנותרים״ (משמע שהיו ראויים להישרף עמם), אלא שזכות אביהם עמדה להם.</div>
+    <div class="trans" data-when="en">They said: Fortunate are the righteous because not only do they accumulate merit for themselves, but they accumulate merit for their children and their children’s children until the end of all generations; as there were several sons of Aaron who essentially deserved to be burned like Nadav and Avihu, as it is stated: “The sons of Aaron who were left” (Leviticus 10:16), implying that others were left as well although they deserved to be burned with their brothers. But the merit of their father protected them, and they and their descendants were priests for all time.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ז א — Yoma 87a:5</span></div>
+    <div class="orig">אוֹי לָהֶם לָרְשָׁעִים, לֹא דַּיָּין שֶׁמְּחַיְּיבִין עַצְמָן, אֶלָּא שֶׁמְּחַיְּיבִין לִבְנֵיהֶם וְלִבְנֵי בְנֵיהֶם עַד סוֹף כׇּל הַדּוֹרוֹת. הַרְבֵּה בָּנִים הָיוּ לוֹ לִכְנַעַן שֶׁרְאוּיִין לִיסָּמֵךְ כְּטָבִי עַבְדּוֹ שֶׁל רַבָּן גַּמְלִיאֵל, אֶלָּא שֶׁחוֹבַת אֲבִיהֶם גָּרְמָה לָהֶן.</div>
+    <div class="trans" data-when="he">ולעומת זה: אוי לרשעים — לא די שמחייבים את עצמם, אלא מחייבים בניהם ובני בניהם עד סוף הדורות. הרבה בנים היו לכנען שראויים היו להיסמך (כחכמים) כטבי עבדו של רבן גמליאל, אלא שחובת אביהם גרמה להם להישאר עבדים.</div>
+    <div class="trans" data-when="en">On the other hand: Woe to the wicked, as not only do they render themselves liable, but they also render their children and children’s children liable until the end of all generations. For example, Canaan had many children who deserved to be ordained as rabbis and instructors of the public due to their great stature in Torah study, like Tavi, the servant of Rabban Gamliel, who was famous for his wisdom; but their father’s liability caused them to remain as slaves.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ז א — Yoma 87a:6</span></div>
+    <div class="orig">כׇּל הַמְזַכֶּה אֶת הָרַבִּים — אֵין חֵטְא בָּא עַל יָדוֹ, וְכׇל הַמַּחְטִיא אֶת הָרַבִּים — כִּמְעַט אֵין מַסְפִּיקִין בְּיָדוֹ לַעֲשׂוֹת תְּשׁוּבָה. כׇּל הַמְזַכֶּה אֶת הָרַבִּים — אֵין חֵטְא בָּא עַל יָדוֹ, מַאי טַעְמָא? כְּדֵי שֶׁלֹּא יְהֵא הוּא בְּגֵיהִנָּם וְתַלְמִידָיו בְּגַן עֵדֶן, שֶׁנֶּאֱמַר: ״כִּי לֹא תַעֲזוֹב נַפְשִׁי לִשְׁאוֹל לֹא תִתֵּן חֲסִידְךָ לִרְאוֹת שָׁחַת״. וְכׇל הַמַּחְטִיא אֶת הָרַבִּים — אֵין מַסְפִּיקִין בְּיָדוֹ לַעֲשׂוֹת תְּשׁוּבָה, שֶׁלֹּא יְהֵא הוּא בְּגַן עֵדֶן וְתַלְמִידָיו בְּגֵיהִנָּם, שֶׁנֶּאֱמַר: ״אָדָם עָשׁוּק בְּדַם נָפֶשׁ עַד בּוֹר יָנוּס אַל יִתְמְכוּ בוֹ״.</div>
+    <div class="trans" data-when="he">כל המזכה את הרבים אין חטא בא לידו — כדי שלא יהא הוא בגיהינום ותלמידיו בגן עדן, שנאמר ״כי לא תעזב נפשי לשאול״. וכל המחטיא את הרבים אין מספיקין בידו לעשות תשובה — כדי שלא יהא הוא בגן עדן ותלמידיו בגיהינום, שנאמר ״אדם עשק בדם נפש… אל יתמכו בו״.</div>
+    <div class="trans" data-when="en">Furthermore: Whoever accumulates merit for the public will not have sin come to his hand, and God protects him from failing; but whoever causes the public to sin has almost no ability to repent. The Gemara explains: What is the reason that whoever accumulates merit for the public will not have sin come to his hand? It is so that he will not be in Gehenna while his students are in the Garden of Eden, as it is stated: “For You will not abandon my soul to the nether-world; neither will You suffer Your godly one to see the pit” (Psalms 16:10). On the other hand, whoever causes the public to sin has almost no ability to repent, so that he will not be in the Garden of Eden while his students are in Gehenna, as it is stated: “A man who is laden with the blood of any person shall hasten his steps to the pit; none will support him” (Proverbs 28:17). Since he oppressed others and caused them to sin, he shall have no escape.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">״אחטא ואשוב״ ו״אחטא ויום הכיפורים מכפר״</span><span data-when="en">“I will sin and repent” and “I will sin and Yom Kippur will atone”</span>
+      <span class="ref">Yoma 87a:7-8</span></h2>
+  <div class="lead"><span data-when="he">המשנה: האומר ׳אחטא ואשוב׳ אין מספיקין בידו לשוב. מדוע כפלה המשנה? ומדוע ׳אחטא ויוה״כ מכפר׳ אינו מתכפר — אף לרבי שיוה״כ מכפר בלא תשובה.</span><span data-when="en">The mishna: one who says ‘I will sin and repent’ is not given the chance to repent. Why does the mishna repeat it? And why is ‘I will sin and Yom Kippur will atone’ not atoned — even per Rabbi, who holds Yom Kippur atones without repentance.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ׳אחטא ואשוב׳ — למה כפל הלשון פעמיים?"}:::question
+  A1["① כדרב הונא: עבר ושנה — נעשית לו כהיתר"]:::answer
+  Q2{"② ׳אחטא ויוה״כ מכפר׳ אין מכפר — לימא דלא כרבי?"}:::question
+  A2["② אפילו תימא רבי — אגב (חוטא על דעת לחזור) שאני"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 --> Q2
+  Q2 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ׳I will sin and repent׳ — why is the phrase doubled?"}:::question
+  A1["① Per Rav Huna: once repeated, it becomes to him as permitted"]:::answer
+  Q2{"② ׳I will sin and Yom Kippur atones׳ does not atone — say it is not Rabbi?"}:::question
+  A2["② Even say it is Rabbi — sinning on the basis of atonement is different"]:::answer
+  Q1 -->|answer| A1
+  A1 --> Q2
+  Q2 -->|answer| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① הָאוֹמֵר אֶחֱטָא וְאָשׁוּב … לְמָה לִי לְמֵימַר … תְּרֵי זִימְנֵי?"}:::question
+  A1["① כֵּיוָן שֶׁעָבַר אָדָם עֲבֵירָה וְשָׁנָה בָּהּ … נַעֲשֵׂית לוֹ כְּהֶיתֵּר"]:::answer
+  Q2{"② אֶחֱטָא וְיוֹם הַכִּפּוּרִים מְכַפֵּר — אֵין יוֹם הַכִּפּוּרִים מְכַפֵּר. לֵימָא מַתְנִיתִין דְּלָא כְּרַבִּי"}:::question
+  A2["② אֲפִילּוּ תֵּימָא רַבִּי, אַגַּב שָׁאנֵי"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 --> Q2
+  Q2 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ז א — Yoma 87a:7</span></div>
+    <div class="orig">הָאוֹמֵר אֶחֱטָא וְאָשׁוּב אֶחֱטָא וְאָשׁוּב. לְמָה לִי לְמֵימַר ״אֶחֱטָא וְאָשׁוּב, אֶחֱטָא וְאָשׁוּב״ תְּרֵי זִימְנֵי? כִּדְרַב הוּנָא אָמַר רַב. דְּאָמַר רַב הוּנָא אָמַר רַב: כֵּיוָן שֶׁעָבַר אָדָם עֲבֵירָה וְשָׁנָה בָּהּ — הוּתְּרָה לוֹ. הוּתְּרָה לוֹ סָלְקָא דַּעְתָּךְ?! אֶלָּא: נַעֲשֵׂית לוֹ כְּהֶיתֵּר.</div>
+    <div class="trans" data-when="he">המשנה אומרת שהאומר ׳אחטא ואשוב אחטא ואשוב׳ אין מספיקין בידו לעשות תשובה. הגמרא שואלת: למה כפלה המשנה את הלשון פעמיים? כדרב הונא בשם רב: כיון שעבר אדם עבירה ושנה בה — נעשית לו כהיתר (הוא מתרגל לחטא ושוב אינו רואה בו איסור), ולכן קשה לו לחזור בו, וכפילות החטא משתקפת בכפילות הלשון.</div>
+    <div class="trans" data-when="en">§ The Gemara returns to interpreting the mishna. It states there that one who says: I will sin and I will repent, I will sin and I will repent, is not given the opportunity to repent.The Gemara asks: Why do I need the mishna to say twice: I will sin and I will repent, I will sin and repent? The Gemara explains that this is in accordance with that which Rav Huna said that Rav said, as Rav Huna said that Rav said: Once a person commits a transgression and repeats it, it becomes permitted to him. The Gemara is surprised at this: Can it enter your mind that it becomes permitted to him? Rather, say that it becomes to him as though it were permitted. Consequently, the sinner who repeats his sin has difficulty abandoning his sin, and the repetition of his sin is reflected in the repetition of the phrase.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ז א — Yoma 87a:8</span></div>
+    <div class="orig">אֶחֱטָא וְיוֹם הַכִּפּוּרִים מְכַפֵּר — אֵין יוֹם הַכִּפּוּרִים מְכַפֵּר. לֵימָא מַתְנִיתִין דְּלָא כְּרַבִּי. דְּתַנְיָא, רַבִּי אוֹמֵר: עַל כׇּל עֲבֵירוֹת שֶׁבַּתּוֹרָה, בֵּין עָשָׂה תְּשׁוּבָה בֵּין לֹא עָשָׂה תְּשׁוּבָה — יוֹם הַכִּפּוּרִים מְכַפֵּר! אֲפִילּוּ תֵּימָא רַבִּי, אַגַּב שָׁאנֵי.</div>
+    <div class="trans" data-when="he">המשנה: האומר ׳אחטא ויום הכיפורים מכפר׳ — אין יום הכיפורים מכפר. הגמרא: נאמר שהמשנה אינה כרבי, שהרי שנינו שרבי אומר על כל עבירות שבתורה, בין עשה תשובה בין לא עשה — יום הכיפורים מכפר! תירוץ: אפילו תאמר שהמשנה כרבי — ׳אגב׳ (החוטא על דעת שיתכפר ביוה״כ) שאני; אף רבי מודה שאין יוה״כ מכפר על מה שחטא דווקא מתוך הסתמכות על כפרתו.</div>
+    <div class="trans" data-when="en">It is stated in the mishna that if one says: I will sin and Yom Kippur will atone for my sins, Yom Kippur does not atone for his sins. The Gemara comments: Let us say that the mishna is not in accordance with the opinion of Rabbi Yehuda HaNasi, as it was taught in a baraita that Rabbi Yehuda HaNasi says: Yom Kippur atones for all transgressions of the Torah, whether one repented or did not repent. The Gemara answers: Even if you say that the mishna is in accordance with the opinion of Rabbi Yehuda HaNasi, it is different when it is on the basis of being permitted to sin. Even Rabbi Yehuda HaNasi agrees that Yom Kippur does not atone for the transgressions one commits only because he knows that Yom Kippur will atone for them.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">עבירות שבין אדם לחבירו — ״ופללו אלהים״</span><span data-when="en">Sins between a person and his fellow — “God shall judge”</span>
+      <span class="ref">Yoma 87a:9-10</span></h2>
+  <div class="lead"><span data-when="he">רב יוסף בר חבו מקשה על המשנה מפסוק ״ופללו אלהים״; ר׳ אבהו: ״אלהים״ — דיין, ולשון פיוס; ובסיפא — תשובה ומעשים טובים.</span><span data-when="en">Rav Yosef bar Ḥavu objects from “God shall judge him”; R. Abbahu: “Elohim” means a judge, and the verse speaks of appeasement; the latter clause — repentance and good deeds.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: בין אדם לחבירו אין יוה״כ מכפר עד שירצה חבירו"]):::mishnah
+  Q1{"① קושיא: והכתיב ׳ופללו אלהים׳? · אלהים = דיין"}:::question
+  Q2{"② קושיא מסיפא: ׳ואם לה׳ יחטא… מי יתפלל לו׳?"}:::question
+  A1["② תירוץ: ׳ופללו אלהים׳ — ימחל לו (פיוס); ׳ואם לה׳ יחטא׳ — תשובה ומעשים טובים"]:::answer
+  M1 -.->|קושיא| Q1
+  Q1 --> Q2
+  Q2 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: between a person and his fellow Yom Kippur does not atone until he appeases him"]):::mishnah
+  Q1{"① Objection: but it is written ׳God shall judge him׳? · Elohim = a judge"}:::question
+  Q2{"② Objection from the end: ׳if a man sin against the Lord… who shall entreat for him׳?"}:::question
+  A1["② Answer: ׳God shall judge him׳ — he will forgive (appease); ׳sin against the Lord׳ — repentance and good deeds"]:::answer
+  M1 -.->|objection| Q1
+  Q1 --> Q2
+  Q2 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① עֲבֵירוֹת שֶׁבֵּין אָדָם לַמָּקוֹם וְכוּ׳"]):::mishnah
+  Q1{"① וְהָא כְּתִיב: ׳אִם יֶחֱטָא אִישׁ לְאִישׁ וּפִלְלוֹ אֱלֹהִים׳! מַאן אֱלֹהִים — דַּיָּינָא"}:::question
+  Q2{"② אִי הָכִי … ׳וְאִם לַה׳ יֶחֱטָא אִישׁ מִי יִתְפַּלֶּל לוֹ׳!"}:::question
+  A1["② ׳וּפִלְלוֹ אֱלֹהִים׳ — יִמְחוֹל לוֹ … ׳וְאִם לַה׳ יֶחֱטָא׳ — תְּשׁוּבָה וּמַעֲשִׂים טוֹבִים"]:::answer
+  M1 -.->|קושיא| Q1
+  Q1 --> Q2
+  Q2 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ז א — Yoma 87a:9</span></div>
+    <div class="orig">עֲבֵירוֹת שֶׁבֵּין אָדָם לַמָּקוֹם וְכוּ׳. רָמֵי לֵיהּ רַב יוֹסֵף בַּר חָבוּ לְרַבִּי אֲבָהוּ: עֲבֵירוֹת שֶׁבֵּין אָדָם לַחֲבֵירוֹ אֵין יוֹם הַכִּפּוּרִים מְכַפֵּר? וְהָא כְּתִיב: ״אִם יֶחֱטָא אִישׁ לְאִישׁ וּפִלְלוֹ אֱלֹהִים״! מַאן אֱלֹהִים — דַּיָּינָא.</div>
+    <div class="trans" data-when="he">המשנה: עבירות שבין אדם למקום יוה״כ מכפר, אך שבין אדם לחבירו אין יוה״כ מכפר עד שירצה את חבירו. רב יוסף בר חבו הקשה לר׳ אבהו: וכי אין יוה״כ מכפר על שבין אדם לחבירו? והרי כתוב ״אם יחטא איש לאיש ופללו אלהים״ — משמע שאם יתפלל ימחל לו! תירוץ: ״אלהים״ שבפסוק אינו הקב״ה אלא דיין, והכפרה באה רק לאחר שעשו דין עם הנפגע.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: Yom Kippur atones for sins committed against God but does not atone for sins committed against another person. Rav Yosef bar Ḥavu raised a contradiction before Rabbi Abbahu: The mishna states that Yom Kippur does not atone for sins committed against a fellow person, but isn’t it written: “If one man sin against another, God [Elohim] shall judge him [ufilelo]” (I Samuel 2:25). The word ufilelo, which may also refer to prayer, implies that if he prays, God will grant the sinner forgiveness. He answered him: Who is Elohim mentioned in the verse? It is referring to a judge [elohim] and not to God, and the word ufilelo in the verse indicates judgment. Atonement occurs only after justice has been done toward the injured party by means of a court ruling.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ז א — Yoma 87a:10</span></div>
+    <div class="orig">אִי הָכִי, אֵימָא סֵיפָא: ״וְאִם לַה׳ יֶחֱטָא אִישׁ מִי יִתְפַּלֶּל לוֹ״! הָכִי קָאָמַר: ״אִם יֶחֱטָא אִישׁ לְאִישׁ וּפִלְלוֹ אֱלֹהִים״ — יִמְחוֹל לוֹ. ״וְאִם לַה׳ יֶחֱטָא אִישׁ מִי יִתְפַּלֶּל בַּעֲדוֹ״ — תְּשׁוּבָה וּמַעֲשִׂים טוֹבִים.</div>
+    <div class="trans" data-when="he">רב יוסף בר חבו הקשה: אם ״ופללו״ פירושו דין, אמור את סוף הפסוק ״ואם לה׳ יחטא איש מי יתפלל לו״ — משמע שאין לו דיין? תירוץ ר׳ אבהו: כך כוונת הפסוק — ״אם יחטא איש לאיש ופללו אלהים״ — שיפייסנו וימחל לו; ״ואם לה׳ יחטא איש״ — מי יתפלל בעדו? תשובה ומעשים טובים; ושורש ׳פלל׳ כאן לשון מחילה ולא דין.</div>
+    <div class="trans" data-when="en">Rav Yosef bar Ḥavu said to him: If so, say the following with regard to the latter clause of the verse: “But if a man sin against the Lord, who shall entreat [yitpallel] for him?” (I Samuel 2:25). This is difficult, since it has been established that the root pll is interpreted in this verse as indicating judgment, and therefore the latter clause of the verse implies that if one sins toward God there is no one to judge him. Rabbi Abbahu answered him: This is what the verse is saying: If one man sins against another, God [Elohim] shall forgive him [ufilelo]; if the sinner appeases the person against whom he has sinned, he will be forgiven. But if a man sin against the Lord, who shall entreat [yitpallel] for him? Repentance and good deeds. The root pll is to be interpreted as indicating forgiveness rather than judgment.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">פיוס חבירו — כיצד, כמה, ומעשי אמוראים</span><span data-when="en">Appeasing one's fellow — how, how often, and amoraic incidents</span>
+      <span class="ref">Yoma 87a:11-87b:3</span></h2>
+  <div class="lead"><span data-when="he">המקניט חבירו אפילו בדברים צריך לפייסו: שלוש שורות, ולא יותר משלוש פעמים; ומעשי ר׳ ירמיה, ר׳ זירא ורב — וכיצד רב ביקש י״ג שנה.</span><span data-when="en">One who offends his fellow even verbally must appease him: three rows, no more than three times; incidents of R. Yirmeya, R. Zeira and Rav — and how Rav appeased for thirteen years.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ר׳ יצחק: המקניט חבירו אפילו בדברים — צריך לפייסו"]:::statement
+  S2["② רב חסדא: בשלוש שורות של שלושה בני אדם"]:::statement
+  S3["③ ר׳ יוסי בר חנינא: לא יבקש יותר משלוש פעמים; מת — עשרה על קברו"]:::statement
+  S4["④ ר׳ ירמיה ישב בפתח ר׳ אבא; ר׳ זירא ממציא עצמו"]:::statement
+  S5["⑤ רב הלך לפייס טבח, ׳אזיל אבא למיקטל נפשא׳ — ונהרג הטבח"]:::statement
+  S6["⑥ רב פסק לפני רבי; הקפיד ר׳ חנינא — י״ג שנה ולא נתפייס"]:::statement
+  Q1{"⑦ והיכי עביד הכי? יותר משלוש! · רב שאני · ור׳ חנינא? המעביר על מידותיו!"}:::question
+  A1["⑧ אלא: ר׳ חנינא ראה בחלום שרב יהיה ראש — לא נתפייס כדי שילך לבבל"]:::answer
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+  S5 --> S6
+  S6 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① R. Yitzḥak: one who offends his fellow even verbally must appease him"]:::statement
+  S2["② Rav Ḥisda: with three rows of three people"]:::statement
+  S3["③ R. Yosei bar Ḥanina: ask no more than three times; if he died — ten at his grave"]:::statement
+  S4["④ R. Yirmeya sat at R. Abba׳s door; R. Zeira made himself available"]:::statement
+  S5["⑤ Rav went to appease a butcher, ׳Abba goes to kill a man׳ — the butcher was killed"]:::statement
+  S6["⑥ Rav read before Rabbi; R. Ḥanina was offended — thirteen years, not appeased"]:::statement
+  Q1{"⑦ How could he? More than three! · Rav is different · And R. Ḥanina? who forgives is pardoned!"}:::question
+  A1["⑧ Rather: R. Ḥanina saw in a dream Rav would be head — refused so Rav would go to Babylonia"]:::answer
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+  S5 --> S6
+  S6 -.->|objection| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① כׇּל הַמַּקְנִיט אֶת חֲבֵירוֹ, אֲפִילּוּ בִּדְבָרִים — צָרִיךְ לְפַיְּיסוֹ"]:::statement
+  S2["② רַב חִסְדָּא: וְצָרִיךְ לְפַיְּיסוֹ בְּשָׁלֹשׁ שׁוּרוֹת שֶׁל שְׁלֹשָׁה בְּנֵי אָדָם"]:::statement
+  S3["③ רַבִּי יוֹסֵי בַּר חֲנִינָא: אַל יְבַקֵּשׁ … יוֹתֵר מִשָּׁלֹשׁ פְּעָמִים … וְאִם מֵת — מֵבִיא עֲשָׂרָה … עַל קִבְרוֹ"]:::statement
+  S4["④ רַבִּי יִרְמְיָה … אִיתִּיב אַדַּשָּׁא דְּרַבִּי אַבָּא … רַבִּי זֵירָא … מַמְצֵי לֵיהּ"]:::statement
+  S5["⑤ רַב … אֵיזִיל אֲנָא לְפַיּוֹסֵי לֵיהּ … אִישְׁתְּמִיט גַּרְמָא וּמַחְיֵיהּ בְּקוֹעֵיהּ וְקַטְלֵיהּ"]:::statement
+  S6["⑥ רַב הֲוָה פָּסֵיק סִידְרָא קַמֵּיהּ דְּרַבִּי … אֲזַל רַב לְגַבֵּיהּ תְּלֵיסַר מַעֲלֵי יוֹמֵי דְּכִפּוּרֵי וְלָא אִיפַּיַּיס"]:::statement
+  Q1{"⑦ וְהֵיכִי עָבֵיד הָכִי? … יוֹתֵר מִשָּׁלֹשׁ פְּעָמִים! רַב שָׁאנֵי … כׇּל הַמַּעֲבִיר עַל מִדּוֹתָיו!"}:::question
+  A1["⑧ אֶלָּא: רַבִּי חֲנִינָא חֶלְמָא חָזֵי לֵיהּ לְרַב דְּזַקְפוּהוּ בְּדִיקְלָא … לָא אִיפַּיַּיס … דְּלֵיזִיל וְלִגְמַר אוֹרָיְיתָא בְּבָבֶל"]:::answer
+  S1 --> S2
+  S2 --> S3
+  S3 --> S4
+  S4 --> S5
+  S5 --> S6
+  S6 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ז א — Yoma 87a:11</span></div>
+    <div class="orig">אָמַר רַבִּי יִצְחָק: כׇּל הַמַּקְנִיט אֶת חֲבֵירוֹ, אֲפִילּוּ בִּדְבָרִים — צָרִיךְ לְפַיְּיסוֹ, שֶׁנֶּאֱמַר: ״בְּנִי אִם עָרַבְתָּ לְרֵעֶךָ תָּקַעְתָּ לַזָּר כַּפֶּיךָ נוֹקַשְׁתָּ בְאִמְרֵי פִיךָ עֲשֵׂה זֹאת אֵפוֹא בְּנִי וְהִנָּצֵל כִּי בָאתָ בְכַף רֵעֶךָ לֵךְ הִתְרַפֵּס וּרְהַב רֵעֶיךָ״. אִם מָמוֹן יֵשׁ בְּיָדְךָ — הַתֵּר לוֹ פִּסַּת יָד, וְאִם לָאו — הַרְבֵּה עָלָיו רֵיעִים.</div>
+    <div class="trans" data-when="he">ר׳ יצחק: כל המקניט (מצער) את חבירו אפילו בדברים בלבד — צריך לפייסו, שנאמר ״בני אם ערבת לרעך… לך התרפס ורהב רעיך״. ודרשו: אם ממון אתה חייב לו — ׳התר לו פיסת יד׳ ושלם; ואם בדברים חטאת — ׳הרבה עליו ריעים׳, שלח אליו אנשים רבים לבקש מחילה.</div>
+    <div class="trans" data-when="en">§ Rabbi Yitzḥak said: One who angers his friend, even only verbally, must appease him, as it is stated: “My son, if you have become a guarantor for your neighbor, if you have struck your hands for a stranger, you are snared by the words of your mouth… Do this now, my son, and deliver yourself, seeing you have come into the hand of your neighbor. Go, humble yourself [hitrapes] and urge [rehav] your neighbor” (Proverbs 6:1–3). This should be understood as follows: If you have money that you owe him, open the palm of [hater pisat] your hand to your neighbor and pay the money that you owe; and if not, if you have sinned against him verbally, increase [harbe] friends for him, i.e., send many people as your messengers to ask him for forgiveness.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ז א — Yoma 87a:12</span></div>
+    <div class="orig">(וְאָמַר) רַב חִסְדָּא: וְצָרִיךְ לְפַיְּיסוֹ בְּשָׁלֹשׁ שׁוּרוֹת שֶׁל שְׁלֹשָׁה בְּנֵי אָדָם, שֶׁנֶּאֱמַר: ״יָשׁוֹר עַל אֲנָשִׁים וַיֹּאמֶר חָטָאתִי וְיָשָׁר הֶעֱוֵיתִי וְלֹא שָׁוָה לִי״.</div>
+    <div class="trans" data-when="he">רב חסדא: וצריך לפייסו בשלוש שורות של שלושה בני אדם, שנאמר ״ישֹׁר על אנשים ויאמר חטאתי…״ — שדרש ׳ישֹׁר׳ מלשון שורה. הפסוק מזכיר חטא שלוש פעמים (חטאתי, העויתי, ולא שווה לי), ומכאן שלוש שורות.</div>
+    <div class="trans" data-when="en">Rav Ḥisda said: And one must appease the one he has insulted with three rows of three people, as it is stated: “He comes [yashor] before men, and says: I have sinned, and perverted that which was right, and it profited me not” (Job 33:27). Rav Ḥisda interprets the word yashor as related to the word shura, row. The verse mentions sin three times: I have sinned, and perverted, and it profited me not. This implies that one should make three rows before the person from whom he is asking forgiveness.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ז א — Yoma 87a:13</span></div>
+    <div class="orig">(וְאָמַר) רַבִּי יוֹסֵי בַּר חֲנִינָא: כׇּל הַמְבַקֵּשׁ מָטוּ מֵחֲבֵירוֹ, אַל יְבַקֵּשׁ מִמֶּנּוּ יוֹתֵר מִשָּׁלֹשׁ פְּעָמִים, שֶׁנֶּאֱמַר: ״אָנָּא שָׂא נָא וְעַתָּה שָׂא נָא״. וְאִם מֵת — מֵבִיא עֲשָׂרָה בְּנֵי אָדָם וּמַעֲמִידָן עַל קִבְרוֹ, וְאוֹמֵר: חָטָאתִי לַה׳ אֱלֹהֵי יִשְׂרָאֵל וְלִפְלוֹנִי שֶׁחָבַלְתִּי בּוֹ.</div>
+    <div class="trans" data-when="he">ר׳ יוסי בר חנינא: המבקש מחילה מחבירו אל יבקש יותר משלוש פעמים, שנאמר ״אנא שא נא… ועתה שא נא״ (לשון בקשה שלוש פעמים). ואם מת הנפגע קודם שנתפייס — מביא עשרה בני אדם ומעמידם על קברו ואומר: חטאתי לה׳ אלהי ישראל ולפלוני שחבלתי בו.</div>
+    <div class="trans" data-when="en">Rabbi Yosei bar Ḥanina said: Anyone who asks forgiveness of his friend should not ask more than three times, as it is stated: “Please, please forgive the transgression of your brothers and their sin, for they did evil to you. And now, please forgive” (Genesis 50:17). The verse uses the word please three times, which shows that one need not ask more than three times, after which the insulted friend must be appeased and forgive. And if the insulted friend dies before he can be appeased, one brings ten people, and stands them at the grave of the insulted friend, and says in front of them: I have sinned against the Lord, the God of Israel, and against so-and-so whom I wounded.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ז א — Yoma 87a:14</span></div>
+    <div class="orig">רַבִּי יִרְמְיָה הֲוָה לֵיהּ מִילְּתָא לְרַבִּי אַבָּא בַּהֲדֵיהּ, אֲזַל אִיתִּיב אַדַּשָּׁא דְּרַבִּי אַבָּא בַּהֲדֵי דְּשָׁדְיָא אַמְּתֵיהּ מַיָּא, מְטָא זַרְזִיפֵי דְמַיָּא אַרֵישָׁא. אָמַר: עֲשָׂאוּנִי כְּאַשְׁפָּה. קְרָא אַנַּפְשֵׁיהּ: ״מֵאַשְׁפּוֹת יָרִים אֶבְיוֹן״. שְׁמַע רַבִּי אַבָּא וּנְפֵיק לְאַפֵּיהּ, אֲמַר לֵיהּ: הַשְׁתָּא צְרִיכְנָא לְמִיפַּק אַדַּעְתָּךְ, דִּכְתִיב: ״לֵךְ הִתְרַפֵּס וּרְהַב רֵעֶיךָ״.</div>
+    <div class="trans" data-when="he">מעשה: ר׳ ירמיה הקניט את ר׳ אבא והלך לבקש מחילה; ישב בפתח בית ר׳ אבא, ובעת ששפכה השפחה מים מן הבית הגיעו זרזיפי המים על ראשו. אמר: עשאוני כאשפה, וקרא על עצמו ״מאשפות ירים אביון״. שמע ר׳ אבא ויצא אליו, אמר לו: עכשיו עליי לצאת לפייסך, שנאמר ״לך התרפס ורהב רעיך״.</div>
+    <div class="trans" data-when="en">The Gemara relates that Rabbi Yirmeya insulted Rabbi Abba, causing the latter to have a complaint against him. Rabbi Yirmeya went and sat at the threshold of Rabbi Abba’s house to beg him for forgiveness. When Rabbi Abba’s maid poured out the dirty water from the house, the stream of water landed on Rabbi Yirmeya’s head. He said about himself: They have made me into a trash heap, as they are pouring dirty water on me. He recited this verse about himself: “Who lifts up the needy out of the trash heap” (Psalms 113:7). Rabbi Abba heard what happened and went out to greet him. Rabbi Abba said to him: Now I must go out to appease you for this insult, as it is written: “Go, humble yourself [hitrapes] and urge your neighbor” (Proverbs 6:3).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ז א — Yoma 87a:15</span></div>
+    <div class="orig">רַבִּי זֵירָא כִּי הֲוָה לֵיהּ מִילְּתָא בַּהֲדֵי אִינִישׁ, הֲוָה חָלֵיף וְתָנֵי לְקַמֵּיהּ וּמַמְצֵי לֵיהּ, כִּי הֵיכִי דְּנֵיתֵי וְנִיפּוֹק לֵיהּ מִדַּעְתֵּיהּ.</div>
+    <div class="trans" data-when="he">ר׳ זירא, כשהיה לו טינה כלפי אדם שהקניטו, היה מהלך הלוך ושוב לפניו ומזמין עצמו, כדי שאותו אדם יבוא בקלות לפייסו. כך הקל ר׳ זירא על חבירו לבקש סליחתו.</div>
+    <div class="trans" data-when="en">It is related that when Rabbi Zeira had a complaint against a person who insulted him, he would pace back and forth before him and present himself, so that the person could come and appease him. Rabbi Zeira made himself available so that it would be easy for the other person to apologize to him.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ז א — Yoma 87a:16</span></div>
+    <div class="orig">רַב הֲוָה לֵיהּ מִילְּתָא בַּהֲדֵי הָהוּא טַבָּחָא, לָא אֲתָא לְקַמֵּיהּ. בְּמַעֲלֵי יוֹמָא דְכִפּוּרֵי אֲמַר אִיהוּ: אֵיזִיל אֲנָא לְפַיּוֹסֵי לֵיהּ. פְּגַע בֵּיהּ רַב הוּנָא, אֲמַר לֵיהּ: לְהֵיכָא קָא אָזֵיל מָר, אֲמַר לֵיהּ: לְפַיּוֹסֵי לִפְלָנְיָא. אָמַר: אָזֵיל אַבָּא לְמִיקְטַל נַפְשָׁא. אֲזַל וְקָם עִילָּוֵיהּ. הֲוָה יָתֵיב וְקָא פָלֵי רֵישָׁא, דַּלִּי עֵינֵיהּ וְחַזְיֵיהּ, אֲמַר לֵיהּ: אַבָּא אַתְּ? זִיל, לֵית לִי מִילְּתָא בַּהֲדָךְ. בַּהֲדֵי דְּקָא פָלֵי רֵישָׁא, אִישְׁתְּמִיט גַּרְמָא וּמַחְיֵיהּ בְּקוֹעֵיהּ וְקַטְלֵיהּ.</div>
+    <div class="trans" data-when="he">מעשה: לרב הייתה טינה עם טבח אחד שהקניטו, ולא בא הטבח להתנצל. בערב יום הכיפורים אמר רב: אלך אני לפייסו. פגש בו רב הונא ושאלו לאן, ענה: לפייס לפלוני; אמר רב הונא: ׳אזיל אבא למיקטל נפשא׳ (סופו של זה לא יהיה טוב). הלך רב ועמד לפניו; הטבח ישב ופיצל ראש בהמה, נשא עיניו וראהו, אמר: אבא אתה? לך, אין לי דבר עמך. תוך כדי שפיצל את הראש ניתזה עצם ופגעה בגרונו והרגתהו.</div>
+    <div class="trans" data-when="en">It is further related that Rav had a complaint against a certain butcher who insulted him. The butcher did not come before him to apologize. On Yom Kippur eve, Rav said: I will go and appease him. He met his student Rav Huna, who said to him: Where is my Master going? He said to him: I am going to appease so-and-so. Rav Huna called Rav by his name and said: Abba is going to kill a person, for surely that person’s end will not be good. Rav went and stood by him. He found the butcher sitting and splitting the head of an animal. The butcher raised his eyes and saw him. He said to him: Are you Abba? Go, I have nothing to say to you. While he was splitting the head, one of the bones of the head flew out and struck him in the throat and killed him, thereby fulfilling Rav Huna’s prediction.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״ז א — Yoma 87a:17</span></div>
+    <div class="orig">רַב הֲוָה פָּסֵיק סִידְרָא קַמֵּיהּ דְּרַבִּי. עֲיַיל</div>
+    <div class="trans" data-when="he">מעשה נוסף: רב היה קורא ומפרש את פרשת התורה לפני רבי. נכנס…</div>
+    <div class="trans" data-when="en">The Gemara further relates: Rav was reciting the Torah portion before Rabbi Yehuda HaNasi.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ״ז ב — Yoma 87b:1</span></div>
+    <div class="orig">אֲתָא רַבִּי חִיָּיא — הֲדַר לְרֵישָׁא. עֲיַיל בַּר קַפָּרָא — הֲדַר לְרֵישָׁא. אֲתָא רַבִּי שִׁמְעוֹן בְּרַבִּי — הֲדַר לְרֵישָׁא. אֲתָא רַבִּי חֲנִינָא (בַּר) חָמָא, אָמַר: כּוּלֵּי הַאי נֶהְדַּר וְנֵיזִיל? לָא הֲדַר. אִיקְּפִיד רַבִּי חֲנִינָא, אֲזַל רַב לְגַבֵּיהּ תְּלֵיסַר מַעֲלֵי יוֹמֵי דְּכִפּוּרֵי וְלָא אִיפַּיַּיס.</div>
+    <div class="trans" data-when="he">המשך המעשה: כשנכנס ר׳ חייא חזר רב לתחילת הפרשה מתוך כבוד; וכן כשנכנס בר קפרא, וכן כשנכנס ר׳ שמעון בר רבי. אך כשנכנס ר׳ חנינא בר חמא אמר רב: כל כך אחזור ואלך? ולא חזר. הקפיד ר׳ חנינא; הלך רב לפייסו י״ג ערבי יום הכיפורים ולא נתפייס.</div>
+    <div class="trans" data-when="en">Rabbi Ḥiyya, Rav’s uncle and teacher, came in, whereupon Rav returned to the beginning of the portion and began to read it again. Afterward, bar Kappara came in, and Rav returned to the beginning of the portion out of respect for bar Kappara. Then Rabbi Shimon, son of Rabbi Yehuda HaNasi, came in, and he returned again to the beginning of the portion. Then, Rabbi Ḥanina bar Ḥama came in, and Rav said to himself: Shall I go back and read so many times? He did not return but continued from where he was. Rabbi Ḥanina was offended because Rav showed that he was less important than the others. Rav went before Rabbi Ḥanina on Yom Kippur eve every year for thirteen years to appease him, but he would not be appeased.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא פ״ז ב — Yoma 87b:2</span></div>
+    <div class="orig">וְהֵיכִי עָבֵיד הָכִי? וְהָאָמַר רַבִּי יוֹסֵי בַּר חֲנִינָא: כׇּל הַמְבַקֵּשׁ מָטוּ מֵחֲבֵירוֹ אַל יְבַקֵּשׁ מִמֶּנּוּ יוֹתֵר מִשָּׁלֹשׁ פְּעָמִים! רַב שָׁאנֵי. וְרַבִּי חֲנִינָא, הֵיכִי עָבֵיד הָכִי? וְהָאָמַר רָבָא: כׇּל הַמַּעֲבִיר עַל מִדּוֹתָיו — מַעֲבִירִין לוֹ עַל כׇּל פְּשָׁעָיו!</div>
+    <div class="trans" data-when="he">קושיא כפולה: כיצד עשה רב כך, וביקש י״ג שנה — והרי אמר ר׳ יוסי בר חנינא שלא יבקש יותר משלוש פעמים? תירוץ: רב שאני (חסיד היה ונהג לפנים משורת הדין). וכיצד נהג ר׳ חנינא שלא להתפייס — והרי אמר רבא: כל המעביר על מידותיו מעבירין לו על כל פשעיו?</div>
+    <div class="trans" data-when="en">The Gemara asks: How could Rav act this way? Didn’t Rabbi Yosei bar Ḥanina say: Anyone who requests forgiveness from another should not ask more than three times? The Gemara answers: Rav is different, since he was very pious and forced himself to act beyond the letter of the law. The Gemara asks: And how could Rabbi Ḥanina act this way and refuse to forgive Rav, though he asked many times? Didn’t Rava say: With regard to anyone who suppresses his honor and forgives someone for hurting him, God pardons all his sins?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא פ״ז ב — Yoma 87b:3</span></div>
+    <div class="orig">אֶלָּא: רַבִּי חֲנִינָא חֶלְמָא חָזֵי לֵיהּ לְרַב דְּזַקְפוּהוּ בְּדִיקְלָא, וּגְמִירִי דְּכֹל דְּזַקְפוּהוּ בְּדִיקְלָא — רֵישָׁא הָוֵי. אָמַר: שְׁמַע מִינַּהּ בָּעֵי לְמֶעְבַּד רְשׁוּתָא וְלָא אִיפַּיַּיס, כִּי הֵיכִי דְּלֵיזִיל וְלִגְמַר אוֹרָיְיתָא בְּבָבֶל.</div>
+    <div class="trans" data-when="he">תירוץ: ר׳ חנינא ראה בחלום שרב נתלה על דקל, ומסורת שכל הנתלה בדקל בחלום — נעשה ראש (מנהיג). אמר ר׳ חנינא: שמע מינה עתיד רב לעלות לגדולה; ולכן בכוונה לא נתפייס, כדי שרב ייאלץ לעזוב וילך ללמד וללמוד תורה בבבל וייעשה שם ראש ישיבה — ולא יסכנו זה את זה.</div>
+    <div class="trans" data-when="en">The Gemara explains: Rather, this is what happened: Rabbi Ḥanina saw in a dream that Rav was being hung on a palm tree, and he learned as a tradition that anyone about whom there is a dream in which he was being hung on a palm tree will become the head of a yeshiva. He said: Learn from this that providence has decreed that he must eventually become the head of the yeshiva. Therefore, I will not be appeased, so that he will have to go and study Torah in Babylonia. He was conscious of the principle that one kingdom cannot overlap with another, and he knew that once Rav was appointed leader, he, Rabbi Ḥanina, would have to abdicate his own position or die. Therefore, he delayed being appeased, so that Rav would go to Babylonia and be appointed there as head of the yeshiva. In this way, the dream would be fulfilled, as Rav would indeed be appointed as head of a yeshiva, but since he would be in Babylonia, Rabbi Ḥanina would not lose his own position.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">מצוות הווידוי — זמנו, נוסחו ועיקרו</span><span data-when="en">The mitzva of confession — its time, liturgy and essence</span>
+      <span class="ref">Yoma 87b:4-7</span></h2>
+  <div class="lead"><span data-when="he">מתוודים בכל תפילה (ולפני האכילה ולאחריה); מהו נוסח הווידוי לדעת אמוראים שונים; ועיקרו — ״אבל אנחנו חטאנו״.</span><span data-when="en">One confesses at every prayer (and before and after the meal); the liturgy of confession per various amoraim; and its essence — “but we have sinned.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: מצוות וידוי ערב יוה״כ; ומתוודה בכל תפילה ותפילה"]:::statement
+  Q1{"② והיכן אומרו? יחיד אחר תפילתו, ש״ץ באמצע; מאי אומר?"}:::question
+  S2["③ נוסחאות: רב, שמואל, לוי, ר׳ יוחנן"]:::statement
+  S3["④ נוסחאות: ר׳ יהודה, רב המנונא (׳אלהי עד שלא נוצרתי׳)"]:::statement
+  C1["④ מר זוטרא: עיקר הווידוי — ׳אבל אנחנו חטאנו׳ (ושמואל קם)"]:::conclusion
+  S1 --> Q1
+  Q1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Sages taught: the mitzva of confession on Yom Kippur eve; one confesses at every prayer"]:::statement
+  Q1{"② Where does one say it? Individual after his Amida, leader in the middle; what does he say?"}:::question
+  S2["③ Liturgies: Rav, Shmuel, Levi, R. Yoḥanan"]:::statement
+  S3["④ Liturgies: R. Yehuda, Rav Hamnuna (׳My God, before I was formed׳)"]:::statement
+  C1["④ Mar Zutra: the essence of confession — ׳but we have sinned׳ (and Shmuel stood)"]:::conclusion
+  S1 --> Q1
+  Q1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: מִצְוַת וִידּוּי עֶרֶב יוֹם הַכִּפּוּרִים … יִתְוַדֶּה בִּנְעִילָה"]:::statement
+  Q1{"② וְהֵיכָן אוֹמְרוֹ? יָחִיד אַחַר תְּפִלָּתוֹ, וּשְׁלִיחַ צִבּוּר … בָּאֶמְצַע. מַאי אָמַר?"}:::question
+  S2["③ רַב … ׳אַתָּה יוֹדֵעַ רָזֵי עוֹלָם׳ … שְׁמוּאֵל … לֵוִי … רַבִּי יוֹחָנָן … ׳רִבּוֹן הָעוֹלָמִים׳"]:::statement
+  S3["④ רַבִּי יְהוּדָה … רַב הַמְנוּנָא: ׳אֱלֹהַי, עַד שֶׁלֹּא נוֹצַרְתִּי אֵינִי כְּדַאי׳ …"]:::statement
+  C1["④ מָר זוּטְרָא … ׳אֲבָל אֲנַחְנוּ חָטָאנוּ׳ — תּוּ לָא צְרִיךְ … עִיקַּר וִידּוּי הַאי הוּא"]:::conclusion
+  S1 --> Q1
+  Q1 --> S2
+  S2 --> S3
+  S3 --> C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ז ב — Yoma 87b:4</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: מִצְוַת וִידּוּי עֶרֶב יוֹם הַכִּפּוּרִים עִם חֲשֵׁכָה. אֲבָל אָמְרוּ חֲכָמִים: יִתְוַדֶּה קוֹדֶם שֶׁיֹּאכַל וְיִשְׁתֶּה, שֶׁמָּא תִּטָּרֵף דַּעְתּוֹ בִּסְעוּדָה. וְאַף עַל פִּי שֶׁהִתְוַדָּה קוֹדֶם שֶׁאָכַל וְשָׁתָה — מִתְוַדֶּה לְאַחַר שֶׁיֹּאכַל וְיִשְׁתֶּה, שֶׁמָּא אֵירַע דְּבַר קַלְקָלָה בַּסְּעוּדָה. וְאַף עַל פִּי שֶׁהִתְוַדָּה עַרְבִית — יִתְוַדֶּה שַׁחֲרִית. שַׁחֲרִית — יִתְוַדֶּה בְּמוּסָף, בְּמוּסָף — יִתְוַדֶּה בְּמִנְחָה, בְּמִנְחָה — יִתְוַדֶּה בִּנְעִילָה.</div>
+    <div class="trans" data-when="he">ת״ר: עיקר מצוות הווידוי בערב יום הכיפורים עם חשכה. אך אמרו חכמים שיתוודה קודם שיאכל וישתה בסעודה המפסקת, שמא תיטרף דעתו בסעודה ולא יוכל להתוודות. ואף שהתוודה קודם — חוזר ומתוודה לאחר הסעודה, שמא אירע בה דבר קלקול. וכן בכל תפילה: התוודה ערבית — מתוודה שחרית, ואחר כך במוסף, במנחה ובנעילה.</div>
+    <div class="trans" data-when="en">§ The Sages taught: The main mitzva of confession is on Yom Kippur eve when darkness falls. But the Sages said: One should also confess on Yom Kippur eve before he eats and drinks at his last meal before the fast lest he become confused at the meal, due to the abundance of food and drink, and be unable to confess afterward. And although one confessed before he ate and drank, he confesses again after he eats and drinks, as perhaps he committed some sin during the meal itself. And although one confessed during the evening prayer on the night of Yom Kippur, he should confess again during the morning prayer. Likewise, although one confessed during the morning prayer, he should still confess during the additional prayer. Similarly, although one confessed during the additional prayer, he should also confess during the afternoon prayer; and although one confessed during the afternoon prayer, he should confess again during the closing prayer [ne’ila].</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ז ב — Yoma 87b:5</span></div>
+    <div class="orig">וְהֵיכָן אוֹמְרוֹ? יָחִיד אַחַר תְּפִלָּתוֹ, וּשְׁלִיחַ צִבּוּר אוֹמְרוֹ בָּאֶמְצַע. מַאי אָמַר? אָמַר רַב: ״אַתָּה יוֹדֵעַ רָזֵי עוֹלָם״. וּשְׁמוּאֵל אָמַר: ״מִמַּעֲמַקֵּי הַלֵּב״. וְלֵוִי אָמַר: ״וּבְתוֹרָתְךָ כָּתוּב לֵאמֹר״. רַבִּי יוֹחָנָן אָמַר: ״רִבּוֹן הָעוֹלָמִים״.</div>
+    <div class="trans" data-when="he">והיכן אומר את הווידוי? יחיד — אחר תפילתו (לאחר העמידה), ושליח ציבור — באמצע העמידה. ומהו נוסחו? נחלקו: רב — ״אתה יודע רזי עולם״; שמואל — ״ממעמקי הלב״; לוי — ״ובתורתך כתוב לאמר״; ר׳ יוחנן — ״ריבון העולמים״.</div>
+    <div class="trans" data-when="en">And where in the Yom Kippur prayers does one say the confession? An individual says it after his Amida prayer, and the prayer leader says it in the middle of the Amida prayer. The Gemara asks: What does one say; what is the liturgy of the confession? Rav said: One says the prayer that begins: You know the mysteries of the universe, in accordance with the standard liturgy. And Shmuel said that the prayer begins with: From the depths of the heart. And Levi said that it begins: And in your Torah it is written, saying, and one then recites the forgiveness achieved by Yom Kippur as stated in the Torah. Rabbi Yoḥanan said that it begins: Master of the Universe.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ז ב — Yoma 87b:6</span></div>
+    <div class="orig">רַבִּי יְהוּדָה אָמַר: ״כִּי עֲוֹנוֹתֵינוּ רַבּוּ מִלִּמְנוֹת וְחַטֹּאתֵינוּ עָצְמוּ מִסַּפֵּר״. רַב הַמְנוּנָא אָמַר: ״אֱלֹהַי, עַד שֶׁלֹּא נוֹצַרְתִּי אֵינִי כְּדַאי. עַכְשָׁיו שֶׁנּוֹצַרְתִּי, כְּאִילּוּ לֹא נוֹצַרְתִּי. עָפָר אֲנִי בְּחַיַּי, קַל וָחוֹמֶר בְּמִיתָתִי. הֲרֵי אֲנִי לְפָנֶיךָ כִּכְלִי מָלֵא בּוּשָׁה וּכְלִימָּה. יְהִי רָצוֹן מִלְּפָנֶיךָ שֶׁלֹּא אֶחֱטָא, וּמַה שֶׁחָטָאתִי — מְרוֹק בְּרַחֲמֶיךָ, אֲבָל לֹא עַל יְדֵי יִסּוּרִין״. וְהַיְינוּ וִידּוּיָא דְרָבָא כּוּלַּהּ שַׁתָּא, וּדְרַב הַמְנוּנָא זוּטָא בְּיוֹמָא דְכִפּוּרֵי.</div>
+    <div class="trans" data-when="he">ר׳ יהודה — ״כי עוונותינו רבו מלמנות״; רב המנונא — ״אלהי, עד שלא נוצרתי איני כדאי… הרי אני לפניך ככלי מלא בושה וכלימה… ומה שחטאתי מרק ברחמיך אבל לא על ידי ייסורין״. וזהו הווידוי שאמר רבא כל השנה כולה, ושאמרו רב המנונא זוטא ביום הכיפורים.</div>
+    <div class="trans" data-when="en">Rabbi Yehuda said that one says: For our iniquities are too many to count and our sins are too great to number. Rav Hamnuna said: This is the liturgy of the confession: My God, before I was formed I was unworthy. Now that I have been formed, it is as if I had not been formed. I am dust while alive, how much more so when I am dead. See, I am before You like a vessel filled with shame and disgrace. May it be Your will that I may sin no more, and as for the sins I have committed before You, erase them in Your compassion, but not by suffering. The Gemara comments: This is the confession that Rava used all year long; and it was the confession that Rav Hamnuna Zuta used on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ז ב — Yoma 87b:7</span></div>
+    <div class="orig">אָמַר מָר זוּטְרָא: לָא אֲמַרַן, אֶלָּא דְּלָא אָמַר: ״אֲבָל אֲנַחְנוּ חָטָאנוּ״, אֲבָל אָמַר: ״אֲבָל אֲנַחְנוּ חָטָאנוּ״ — תּוּ לָא צְרִיךְ. דְּאָמַר בַּר הַמְדּוּדֵי: הֲוָה קָאֵימְנָא קַמֵּיהּ דִּשְׁמוּאֵל, וַהֲוָה יָתֵיב, וְכִי מְטָא שְׁלִיחָא דְצִבּוּרָא וְאָמַר: ״אֲבָל אֲנַחְנוּ חָטָאנוּ״, קָם מֵיקָם, אֲמַר: שְׁמַע מִינַּהּ עִיקַּר וִידּוּי הַאי הוּא.</div>
+    <div class="trans" data-when="he">מר זוטרא: לא אמרנו שצריך את כל הנוסחאות אלא כשלא אמר ״אבל אנחנו חטאנו״; אבל אם אמר ״אבל אנחנו חטאנו״ — שוב אין צריך, שזהו עיקר הווידוי. ראיה: בר המדודי סיפר שעמד לפני שמואל בעוד שמואל יושב, וכשהגיע שליח הציבור ל״אבל אנחנו חטאנו״ — קם שמואל; שמע מינה עיקר הווידוי זהו.</div>
+    <div class="trans" data-when="en">Mar Zutra said: We said only that one must follow all these versions when he did not say the words: But we have sinned. However, if he said the words: But we have sinned, he need not say anything further because that is the essential part of the confession. As bar Hamdudei said: I was standing before Shmuel and he was sitting; and when the prayer leader reached the words: But we have sinned, Shmuel stood. Bar Hamdudei said: Learn from here that this is the main part of the confession, and Shmuel stood up to emphasize the significance of these words.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">תפילת נעילה — מהותה, זמנה וטבילה ביוה״כ</span><span data-when="en">The ne‘ila prayer — its nature, time, and immersion on Yom Kippur</span>
+      <span class="ref">Yoma 87b:8-88a:9</span></h2>
+  <div class="lead"><span data-when="he">מהי נעילה — תפילה שלמה (רב) או רק וידוי (שמואל)? תיובתא דשמואל; נעילה פוטרת ערבית; ומחלוקת בטבילת בעל קרי, התלויה אם נעילה ביום או בלילה.</span><span data-when="en">What is ne‘ila — a full prayer (Rav) or only a confession (Shmuel)? Shmuel is refuted; ne‘ila exempts the evening prayer; and a dispute over immersion, turning on whether ne‘ila is by day or night.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תנן: כהנים נושאים כפיהם ד׳ פעמים — בנעילת שערים"]:::statement
+  Q1{"② מאי נעילה? רב: צלותא יתירתא · שמואל: ׳מה אנו׳"}:::question
+  Q2{"③ מיתיבי: בנעילה מתפלל שבע ומתוודה!"}:::question
+  C1["④ תיובתא דשמואל — נעילה תפילה שלמה"]:::conclusion
+  S2["⑤ רב: נעילה פוטרת ערבית (לטעמיה)"]:::statement
+  Q3{"⑥ ומי אמר רב הכי? והאמר ערבית רשות! · לדברי האומר חובה"}:::question
+  Q4{"⑦ מיתיבי (טבילה): בעל קרי — מחלוקת ר׳ יוסי ורבנן"}:::question
+  A1["⑧ לא קשיא: דצלי נעילה / דלא צלי; טבילה בזמנה מצוה — פליגי"]:::answer
+  C2["⑨ ההיא ר׳ יוסי בר יהודה; ת״ר: הרואה קרי — מבערב ישפשף"]:::conclusion
+  S1 --> Q1
+  Q1 -.->|מיתיבי| Q2
+  Q2 -->|תיובתא| C1
+  C1 --> S2
+  S2 -.->|קושיא| Q3
+  Q3 -.->|מיתיבי| Q4
+  Q4 -->|תירוץ| A1
+  A1 --> C2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① We learned: priests bless 4 times — including the closing of the gates (ne׳ila)"]:::statement
+  Q1{"② What is ne׳ila? Rav: an added prayer · Shmuel: ׳what are we׳"}:::question
+  Q2{"③ Objection: at ne׳ila one prays seven and confesses!"}:::question
+  C1["④ Refutation of Shmuel — ne׳ila is a full prayer"]:::conclusion
+  S2["⑤ Rav: ne׳ila exempts the evening prayer (per his reasoning)"]:::statement
+  Q3{"⑥ Did Rav say so? But he holds the evening prayer is optional! · Per who holds it mandatory"}:::question
+  Q4{"⑦ Objection (immersion): one with an emission — dispute of R. Yosei and the Rabbis"}:::question
+  A1["⑧ Not difficult: prayed ne׳ila / did not; immersion at its time a mitzva — they dispute"]:::answer
+  C2["⑨ That is R. Yosei bar Yehuda; Sages taught: one who saw an emission — rubs from the evening"]:::conclusion
+  S1 --> Q1
+  Q1 -.->|objection| Q2
+  Q2 -->|refutation| C1
+  C1 --> S2
+  S2 -.->|objection| Q3
+  Q3 -.->|objection| Q4
+  Q4 -->|answer| A1
+  A1 --> C2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תְּנַן הָתָם: … כֹּהֲנִים נוֹשְׂאִין אֶת כַּפֵּיהֶן … וּבִנְעִילַת שְׁעָרִים"]:::statement
+  Q1{"② מַאי נְעִילַת שְׁעָרִים? רַב: צְלוֹתָא יַתִּירְתָּא · שְׁמוּאֵל: ׳מָה אָנוּ מֶה חַיֵּינוּ׳"}:::question
+  Q2{"③ מֵיתִיבִי: … בִּנְעִילָה מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה!"}:::question
+  C1["④ תְּיוּבְתָּא דִשְׁמוּאֵל תְּיוּבְתָּא"]:::conclusion
+  S2["⑤ אָמַר רַב: תְּפִלַּת נְעִילָה פּוֹטֶרֶת אֶת שֶׁל עַרְבִית. רַב לְטַעְמֵיהּ"]:::statement
+  Q3{"⑥ וּמִי אָמַר רַב הָכִי? וְהָאָמַר … עַרְבִית רְשׁוּת! לְדִבְרֵי הָאוֹמֵר חוֹבָה קָאָמַר"}:::question
+  Q4{"⑦ מֵיתִיבִי … בַּעַל קֶרִי … רַבִּי יוֹסֵי אוֹמֵר … וּרְמִינְהוּ"}:::question
+  A1["⑧ לָא קַשְׁיָא: הָא דְּצַלִּי תְּפִלַּת נְעִילָה, הָא דְּלָא צַלִּי … טְבִילָה בִּזְמַנָּהּ מִצְוָה פְּלִיגִי"]:::answer
+  C2["⑨ הָהִיא רַבִּי יוֹסֵי בַּר יְהוּדָה הִיא … הָרוֹאֶה קֶרִי … מִבָּעֶרֶב יְשַׁפְשֵׁף"]:::conclusion
+  S1 --> Q1
+  Q1 -.->|מיתיבי| Q2
+  Q2 -->|תיובתא| C1
+  C1 --> S2
+  S2 -.->|קושיא| Q3
+  Q3 -.->|מיתיבי| Q4
+  Q4 -->|תירוץ| A1
+  A1 --> C2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ז ב — Yoma 87b:8</span></div>
+    <div class="orig">תְּנַן הָתָם: בִּשְׁלֹשָׁה פְּרָקִים בַּשָּׁנָה כֹּהֲנִים נוֹשְׂאִין אֶת כַּפֵּיהֶן אַרְבָּעָה פְּעָמִים בַּיּוֹם: בְּשַׁחֲרִית, בְּמוּסָף, בְּמִנְחָה, וּבִנְעִילַת שְׁעָרִים. וְאֵלּוּ הֵן שְׁלֹשָׁה פְּרָקִים: בְּתַעֲנִיּוֹת, וּבְמַעֲמָדוֹת, וּבְיוֹם הַכִּפּוּרִים.</div>
+    <div class="trans" data-when="he">שנינו במשנה (תענית): בשלושה פרקים בשנה כהנים נושאים כפיהם ארבע פעמים ביום — בשחרית, במוסף, במנחה ובנעילת שערים. ואלו שלושת הפרקים: בתעניות, במעמדות, וביום הכיפורים. מכאן עולה ׳נעילת שערים׳ כתפילה רביעית.</div>
+    <div class="trans" data-when="en">§ We learned in a mishna there, in tractate Ta’anit: At three times in the year, priests raise their hands to recite the priestly benediction four times in a single day: In the morning prayer, in the additional prayer, in the afternoon prayer, and at the closing [ne’ila] of the gates. And these are the three times in the year: During communal fasts for lack of rain, on which the ne’ila prayer is recited; and during non-priestly watches [ma’amadot], when the Israelite members of the guard parallel to the priestly watch come and read the account of Creation (see Ta’anit 26a); and on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ז ב — Yoma 87b:9</span></div>
+    <div class="orig">מַאי נְעִילַת שְׁעָרִים? רַב אָמַר: צְלוֹתָא יַתִּירְתָּא. וּשְׁמוּאֵל אָמַר: ״מָה אָנוּ מֶה חַיֵּינוּ״. מֵיתִיבִי: אוֹר יוֹם הַכִּפּוּרִים מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה, בְּשַׁחֲרִית מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה, בְּמוּסָף מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה, בְּמִנְחָה מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה, בִּנְעִילָה מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה!</div>
+    <div class="trans" data-when="he">מהי נעילת שערים? רב: תפילת עמידה נוספת (שלמה). שמואל: אינה תפילה שלמה אלא וידוי הפותח ״מה אנו מה חיינו״. מיתיבי לשמואל מברייתא: בליל יוה״כ מתפלל שבע (ברכות העמידה) ומתוודה, וכן בשחרית, במוסף, במנחה — ובנעילה מתפלל שבע ומתוודה; משמע שנעילה תפילה שלמה כדעת רב.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the closing of the gates, i.e., the ne’ila prayer? Rav said: It is an added prayer of Amida. And Shmuel said: It is not a full prayer but only a confession that begins with the words: What are we, what are our lives? The Gemara raises an objection to this from a baraita, as it was taught: On the night of Yom Kippur, one prays seven blessings in the Amida prayer and confesses; during the morning prayer, one prays seven blessings and confesses; during the additional prayer, one prays seven blessings and confesses; during the afternoon prayer, one prays seven blessings and confesses; and during the ne’ila prayer, one prays seven blessings and confesses. This concurs with Rav’s opinion that ne’ila is an added prayer.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ז ב — Yoma 87b:10</span></div>
+    <div class="orig">תַּנָּאֵי הִיא, דְּתַנְיָא: יוֹם הַכִּפּוּרִים עִם חֲשֵׁיכָה מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה, וְחוֹתֵם בְּוִידּוּי — דִּבְרֵי רַבִּי מֵאִיר. וַחֲכָמִים אוֹמְרִים: מִתְפַּלֵּל שֶׁבַע, וְאִם רָצָה לַחְתּוֹם בְּוִידּוּי — חוֹתֵם. תְּיוּבְתָּא דִשְׁמוּאֵל תְּיוּבְתָּא.</div>
+    <div class="trans" data-when="he">ההבדל אם חובה להתוודות בנעילה תלוי בתנאים: ר׳ מאיר — מתפלל שבע ומתוודה וחותם בווידוי; וחכמים — מתפלל שבע, ואם רצה לחתום בווידוי חותם (רשות). על כל פנים שניהם סוברים שנעילה תפילה שלמה, ולכן: תיובתא דשמואל תיובתא.</div>
+    <div class="trans" data-when="en">This is a dispute between tanna’im They all agree that ne’ila is an added prayer but disagree about the obligation to confess at the ne’ila prayer, as it was taught in a baraita: At the end of Yom Kippur, as darkness falls, one prays seven blessings of the Amida and confesses and ends with the confession; this is the statement of Rabbi Meir. And the Rabbis say: He prays seven blessings of the Amida, and if he wishes to end his prayer with a confession, he ends it in this way. The Gemara says: If so, this is a refutation of the opinion of Shmuel, since all agree that ne’ila is a complete prayer. The Gemara concludes: Indeed, it is a conclusive refutation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ז ב — Yoma 87b:11</span></div>
+    <div class="orig">עוּלָּא בַּר רַב נְחֵית קַמֵּיהּ דְּרָבָא. פְּתַח בְּ״אַתָּה בְּחַרְתָּנוּ״ וְסַיֵּים בְּ״מָה אָנוּ מֶה חַיֵּינוּ״, וְשַׁבְּחֵיהּ. רַב הוּנָא בְּרֵיהּ דְּרַב נָתָן אָמַר: וְיָחִיד אוֹמְרָהּ אַחַר תְּפִלָּתוֹ.</div>
+    <div class="trans" data-when="he">מעשה: עולא בר רב ירד לפני התיבה להתפלל נעילה לפני רבא; פתח ב״אתה בחרתנו״ וסיים ב״מה אנו מה חיינו״, ושיבחו רבא. רב הונא בריה דרב נתן אמר: ויחיד אומר את הווידוי אחר תפילתו (ולא בתוך העמידה כשליח הציבור).</div>
+    <div class="trans" data-when="en">The Gemara relates: Ulla bar Rav went down to lead the ne’ila prayer before Rava, who was in the synagogue. He opened the prayer with: You have chosen us, and he concluded with: What are we, what are our lives? And Rava praised him. Rav Huna, son of Rav Natan, said: And an individual says it after his Amida prayer. The individual says the confession after his Amida prayer, not within the Amida prayer as the prayer leader does.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ז ב — Yoma 87b:12</span></div>
+    <div class="orig">אָמַר רַב: תְּפִלַּת נְעִילָה פּוֹטֶרֶת אֶת שֶׁל עַרְבִית. רַב לְטַעְמֵיהּ, דַּאֲמַר: צְלוֹתָא יַתִּירָה הִיא, וְכֵיוָן דְּצַלִּי לֵיהּ — תּוּ לָא צְרִיךְ.</div>
+    <div class="trans" data-when="he">רב: תפילת נעילה פוטרת את תפילת ערבית — שכיון שהתפלל תפילה נוספת לאחר המנחה משחשכה, היא עולה לו במקום ערבית. ורב לטעמו, שאמר נעילה ׳צלותא יתירה׳ (תפילה נוספת), ומשהתפללה — שוב אינו צריך להתפלל ערבית.</div>
+    <div class="trans" data-when="en">Rav said: The ne’ila prayer exempts one from the evening prayer. Since one recited an added prayer after the afternoon prayer, when darkness fell, it serves as the evening prayer. The Gemara comments that Rav conforms to his line of reasoning above, as he said: It is an added prayer, and since he has prayed it he needs no further prayer in the evening.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ז ב — Yoma 87b:13</span></div>
+    <div class="orig">וּמִי אָמַר רַב הָכִי? וְהָאָמַר רַב: הֲלָכָה כְּדִבְרֵי הָאוֹמֵר תְּפִלַּת עַרְבִית רְשׁוּת! לְדִבְרֵי הָאוֹמֵר חוֹבָה קָאָמַר.</div>
+    <div class="trans" data-when="he">קושיא: וכי אמר רב כך? והרי אמר רב שהלכה כמי שאומר תפילת ערבית רשות — ואם רשות, מדוע ׳פוטרת׳? תירוץ: רב אמר את דבריו אף לדעת הסובר ערבית חובה — שאף לדעתו, אם התפלל נעילה יצא ידי חובת ערבית.</div>
+    <div class="trans" data-when="en">The Gemara is surprised at this: And did Rav actually say this? Didn’t Rav say: The halakha is in accordance with the statement of the one who says that the evening prayer is optional? If it is optional, why would Rav use the term exempt? One is exempt even if he does not pray the closing prayer. The Gemara answers: He said this in accordance with the statement of the one who says that the evening prayer is mandatory. Even according to the opinion that maintains that the evening prayer is mandatory, if one recites ne’ila, he has fulfilled his obligation to recite the evening prayer.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״ז ב — Yoma 87b:14</span></div>
+    <div class="orig">מֵיתִיבִי: אוֹר יוֹם הַכִּפּוּרִים מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה, שַׁחֲרִית שֶׁבַע וּמִתְוַדֶּה, מוּסָף שֶׁבַע וּמִתְוַדֶּה, בִּנְעִילָה מִתְפַּלֵּל שֶׁבַע וּמִתְוַדֶּה, עַרְבִית מִתְפַּלֵּל שֶׁבַע מֵעֵין שְׁמוֹנֶה עֶשְׂרֵה. רַבִּי חֲנִינָא בֶּן גַּמְלִיאֵל מִשּׁוּם אֲבוֹתָיו: מִתְפַּלֵּל שְׁמוֹנֶה עֶשְׂרֵה שְׁלֵימוֹת,</div>
+    <div class="trans" data-when="he">מיתיבי לרב מברייתא: בליל יוה״כ, שחרית, מוסף ונעילה — מתפלל שבע ומתוודה; ובערבית (במוצאי יוה״כ) מתפלל שבע ׳מעין שמונה עשרה׳ (תפילה מקוצרת). ר׳ חנינא בן גמליאל בשם אבותיו: מתפלל שמונה עשרה שלמות —</div>
+    <div class="trans" data-when="en">The Gemara raises an objection from that which we learned in a baraita: During the evening after Yom Kippur, one prays seven blessings in the Amida and confesses; during the morning prayer, one prays seven blessings in the Amida and confesses; during the additional prayer, one prays seven blessings in the Amida and confesses; during ne’ila one prays seven blessings in the Amida and confesses; and during the evening prayer, one prays seven blessings in an abridged version of the eighteen blessings of the weekday Amida prayer. One recites the first three blessings, the final three, and a middle blessing that includes an abbreviated form of the other weekday blessings. Rabbi Ḥanina ben Gamliel says in the name of his ancestors: One prays the full eighteen blessings of the weekday Amida prayer as usual,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ״ח א — Yoma 88a:1</span></div>
+    <div class="orig">מִפְּנֵי שֶׁצָּרִיךְ לוֹמַר הַבְדָּלָה בְּחוֹנֵן הַדָּעַת! תַּנָּאֵי הִיא. דְּתַנְיָא: כׇּל חַיָּיבֵי טְבִילוֹת — טוֹבְלִין כְּדַרְכָּן בְּיוֹם הַכִּפּוּרִים. נִדָּה וְיוֹלֶדֶת — טוֹבְלוֹת כְּדַרְכָּן בְּלֵילֵי יוֹם הַכִּפּוּרִים.</div>
+    <div class="trans" data-when="he">— ר׳ חנינא בן גמליאל סובר שמתפללים שמונה עשרה שלמות בערבית, מפני שצריך לומר הבדלה בברכת ׳חונן הדעת׳ (ואין מקום לכך בתפילה מקוצרת); ומשמע שנעילה אינה פוטרת ערבית, נגד רב. תירוץ: תנאי היא (מחלוקת). ומכאן עוברת הגמרא לדין טבילה ביוה״כ: כל חייבי טבילות טובלים כדרכם ביום הכיפורים; נדה ויולדת טובלות כדרכן בלילי יום הכיפורים.</div>
+    <div class="trans" data-when="en">because he must recite havdala in the blessing: Who graciously grants knowledge, and there is nowhere to insert this prayer in the abridged Amida. This indicates that these tanna’im maintained that ne’ila does not exempt one from the evening prayer. The Gemara answers: It is a dispute between tanna’im, as it was taught in a baraita: Anyone who requires immersion immerses in his usual manner on Yom Kippur, as this act does not violate the prohibition against washing. A menstruating woman and a new mother, who immerse at night, immerse in their usual manner on the night of Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא פ״ח א — Yoma 88a:2</span></div>
+    <div class="orig">בַּעַל קֶרִי — טוֹבֵל וְהוֹלֵךְ עַד הַמִּנְחָה. רַבִּי יוֹסֵי אוֹמֵר: כׇּל הַיּוֹם כּוּלּוֹ.</div>
+    <div class="trans" data-when="he">המשך הברייתא: בעל קרי טובל והולך עד זמן המנחה (כדי שיוכל להתפלל בטהרה); אם ראה לאחר מנחה — ימתין עד הערב. ר׳ יוסי אומר: טובל כל היום כולו. ובמחלוקתם תלוי אם נעילה ביום או בלילה: לתנא קמא נעילה בלילה (ולכן פוטרת ערבית), ולר׳ יוסי נעילה ביום.</div>
+    <div class="trans" data-when="en">The baraita continues: One who had a seminal emission during Yom Kippur before the afternoon prayer may immerse at any point in the day until the afternoon prayer, in order to be able to recite it. Ezra decreed that a man who has had a seminal emission must immerse in order to pray and study Torah. If the emission occurred after the afternoon prayer, he should not immerse then but should wait until darkness falls. Since the time for ne’ila is at night, this individual should wait and immerse after the fast has concluded, so as to avoid violation of the prohibition of washing on Yom Kippur, and then pray afterward. This indicates that ne’ila is a nighttime prayer, and therefore its recitation exempts one from the weekday evening prayer. Rabbi Yosei says: He may immerse at any point in the day. According to his opinion, the ne’ila prayer is recited while it is still daytime, and therefore the individual must immerse in the daytime in order to be able to recite it. Consequently, Rabbi Yosei holds that ne’ila does not exempt one from the evening prayer.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא פ״ח א — Yoma 88a:3</span></div>
+    <div class="orig">וּרְמִינְהוּ: הַזָּב וְהַזָּבָה הַמְצוֹרָע וְהַמְצוֹרַעַת וּבוֹעֵל נִדָּה וּטְמֵא מֵת — טוֹבְלִין כְּדַרְכָּן בְּיוֹם הַכִּפּוּרִים, נִדָּה וְיוֹלֶדֶת — טוֹבְלוֹת כְּדַרְכָּן בְּלֵילֵי יוֹם הַכִּפּוּרִים. בַּעַל קֶרִי — טוֹבֵל וְהוֹלֵךְ כׇּל הַיּוֹם כּוּלּוֹ, רַבִּי יוֹסֵי אוֹמֵר: מִן הַמִּנְחָה וּלְמַעְלָה אֵין יָכוֹל לִטְבּוֹל.</div>
+    <div class="trans" data-when="he">ורמינהו (קושיא מברייתא אחרת): הזב והזבה, המצורע והמצורעת, ובועל נדה וטמא מת — טובלים כדרכם ביום הכיפורים; נדה ויולדת בלילי יום הכיפורים; בעל קרי טובל והולך כל היום כולו, ור׳ יוסי אומר: מן המנחה ולמעלה אין יכול לטבול. הרי כאן ר׳ יוסי הפוך מן הברייתא הקודמת.</div>
+    <div class="trans" data-when="en">The Gemara raises a contradiction with regard to this baraita from that which was taught: In the case of the zav, and the zava, the male and female leper, and one who had relations with a menstruating woman, and one who is ritually impure through contact with a corpse, if their time has come for purification, they immerse in their usual manner on Yom Kippur. A menstruating woman and a woman after childbirth immerse in their usual manner on the night of Yom Kippur. One who had a seminal emission immerses at any point in the day. Rabbi Yosei says: From the time of the afternoon prayer onward he is not able to immerse. This contradicts Rabbi Yosei’s statement in the previous baraita.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא פ״ח א — Yoma 88a:4</span></div>
+    <div class="orig">לָא קַשְׁיָא: הָא דְּצַלִּי תְּפִלַּת נְעִילָה, הָא דְּלָא צַלִּי.</div>
+    <div class="trans" data-when="he">תירוץ: לא קשיא — הברייתא שאומר ר׳ יוסי שאינו טובל מן המנחה ולמעלה עוסקת במי שכבר התפלל נעילה (ושוב אין טעם לטבול לתפילה); והברייתא שטובל כל היום עוסקת במי שעדיין לא התפלל נעילה, וצריך לטבול כדי להתפלל.</div>
+    <div class="trans" data-when="en">The Gemara answers: This is not difficult. This statement, in which Rabbi Yosei says that one may not immerse during the day, is referring to a case where he had already prayed the ne’ila prayer before he noticed his seminal emission. That statement, in which Rabbi Yosei says that one may immerse during the day, is referring to a case where he had not yet prayed the ne’ila prayer when he noticed his seminal emission, and he therefore immerses in order to pray ne’ila.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא פ״ח א — Yoma 88a:5</span></div>
+    <div class="orig">אִי דְּצַלִּי, מַאי טַעְמַיְיהוּ דְּרַבָּנַן? קָא סָבְרִי רַבָּנַן: טְבִילָה בִּזְמַנָּהּ מִצְוָה.</div>
+    <div class="trans" data-when="he">אם כבר התפלל נעילה, מהו טעם רבנן המתירים לטבול ביום הכיפורים (והרי אין צורך לתפילה)? סוברים רבנן שטבילה בזמנה מצוה — אף בלא צורך להתפלל; ולכן אם הגיע זמן טבילתו ביוה״כ, טובל כדרכו.</div>
+    <div class="trans" data-when="en">The Gemara asks: If he had already prayed ne’ila before he noticed his seminal emission, what is the reasoning of the Rabbis, who permit him to immerse on Yom Kippur? The immersion seems to have no purpose. The Gemara answers: The Rabbis hold that immersion at its proper time is a mitzva, even when one does not need to immerse to pray. Therefore, if the time for immersion falls on Yom Kippur, the individual should immerse as usual.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא פ״ח א — Yoma 88a:6</span></div>
+    <div class="orig">מִכְּלָל דְּרַבִּי יוֹסֵי סָבַר לָאו מִצְוָה. וְהָתַנְיָא: הֲרֵי שֶׁהָיָה שֵׁם כָּתוּב עַל בְּשָׂרוֹ — הֲרֵי זֶה לֹא יִרְחַץ וְלֹא יָסוּךְ וְלֹא יַעֲמוֹד בִּמְקוֹם הַטִּנּוֹפֶת. נִזְדַּמְּנָה לוֹ טְבִילַת מִצְוָה — כּוֹרֵךְ עָלָיו גֶּמִי וְיוֹרֵד וְטוֹבֵל. רַבִּי יוֹסֵי אוֹמֵר: יוֹרֵד וְטוֹבֵל כְּדַרְכּוֹ וּבִלְבַד שֶׁלֹּא יְשַׁפְשֵׁף.</div>
+    <div class="trans" data-when="he">מכלל זה שר׳ יוסי סובר טבילה בזמנה לאו מצוה. והקשו: והתניא במי ששם ה׳ כתוב על בשרו — לא ירחץ ולא יסוך ולא יעמוד במקום טינופת; נזדמנה לו טבילת מצוה — כורך עליו גמי (קנה) ויורד וטובל. ר׳ יוסי אומר: יורד וטובל כדרכו ובלבד שלא ישפשף — משמע שלר׳ יוסי טבילה בזמנה מצוה!</div>
+    <div class="trans" data-when="en">The Gemara asks: By inference, Rabbi Yosei holds that immersion at its proper time is not a mitzva. But wasn’t it taught in a baraita: If God’s name is written in ink on one’s flesh, he may not wash and he may not smear it with oil lest he erase the name, and he may not stand in a filthy place out of respect for the name. If his time came for an immersion that is a mitzva, he must try to ensure that the name not be erased. He therefore wraps a reed around it and descends and immerses. Rabbi Yosei says: He descends and immerses in his usual manner and need not worry about erasing the name, provided he does not rub the place where the name is written.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">יומא פ״ח א — Yoma 88a:7</span></div>
+    <div class="orig">וְקַיְימָא לַן דְּבִטְבִילָה בִּזְמַנָּהּ, מִצְוָה פְּלִיגִי.</div>
+    <div class="trans" data-when="he">וקיימא לן (מקובל בידינו) שנחלקו רבנן ור׳ יוסי בעניין אם טבילה בזמנה מצוה: לרבנן אינה מצוה, ולכן ימתין; ולר׳ יוסי מצוה, ולכן טובל בזמנה אף בלא כריכת גמי. ונמצא שדבריו כאן סותרים את הנלמד קודם.</div>
+    <div class="trans" data-when="en">And we maintain that they disagree as to whether or not immersion at its proper time is a mitzva. According to the Rabbis, immersion at its proper time is not a mitzva. Therefore, if the individual has no reed, he should wait even until the following day rather than immerse without it. However, Rabbi Yosei maintains that immersion at its proper time is a mitzva. Therefore, it must be done at its proper time, even if that requires immersion without covering God’s name.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">יומא פ״ח א — Yoma 88a:8</span></div>
+    <div class="orig">הָהִיא רַבִּי יוֹסֵי בַּר יְהוּדָה הִיא. דְּתַנְיָא, רַבִּי יוֹסֵי בַּר יְהוּדָה אוֹמֵר: דַּיָּהּ לִטְבִילָה שֶׁתְּהֵא בָּאַחֲרוֹנָה.</div>
+    <div class="trans" data-when="he">תירוץ: אותה ברייתא (של שם ה׳ על בשרו) אינה ר׳ יוסי סתם אלא ר׳ יוסי בר יהודה, ולשיטתו אין סתירה. שכן שנינו שר׳ יוסי בר יהודה אומר: דייה לטבילה שתהא באחרונה — די שתהא הטבילה האחרונה בזמנה, ואין מצוה לטבול בזמנה דווקא.</div>
+    <div class="trans" data-when="en">The Gemara answers: This Rabbi Yosei mentioned in the baraita is actually Rabbi Yosei bar Yehuda, and this resolves the contradiction, as it was taught in a baraita that Rabbi Yosei bar Yehuda says: It is sufficient for the immersion to be at the end. According to one opinion, if a menstruating woman is uncertain on which day to immerse, she immerses multiple times to ensure that the required immersion is at its proper time. However, according to Rabbi Yosei bar Yehuda, it is sufficient for her to immerse once at a point when she is certainly pure. Consequently, according to his opinion, there is no mitzva to immerse at the proper time.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">יומא פ״ח א — Yoma 88a:9</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: הָרוֹאֶה קֶרִי בְּיוֹם הַכִּפּוּרִים — יוֹרֵד וְטוֹבֵל, וְלָעֶרֶב יְשַׁפְשֵׁף. לְעֶרֶב? מַאי דַּהֲוָה הֲוָה? אֶלָּא אֵימָא: מִבָּעֶרֶב יְשַׁפְשֵׁף. (קָא סָבַר מִצְוָה לְשַׁפְשֵׁף.)</div>
+    <div class="trans" data-when="he">ת״ר: הרואה קרי ביום הכיפורים יורד וטובל, ולערב ישפשף (יקנח גופו מחציצות). הגמרא תמהה: לערב — מאי דהווה הווה? (משטבל כבר, מה תועיל הסרת חציצות אחר כך?) אלא אימא: מבערב (ערב יוה״כ) ישפשף, שמא יצטרך לטבול ביוה״כ. קא סבר שמצוה לשפשף.</div>
+    <div class="trans" data-when="en">The Sages taught: One who sees an emission of semen on Yom Kippur descends and immerses. And in the evening, he should rub his skin to remove anything that might obstruct the immersion. The Gemara is surprised at this: Why should he do that in the evening? What was, was. Since he has already immersed, how will removing interpositions afterward benefit the immersion? Rather, say that he should rub his skin from the evening before Yom Kippur to remove any obstructions, in case it becomes necessary to immerse on Yom Kippur. The Gemara comments: This Master holds that it is a mitzva to rub.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
