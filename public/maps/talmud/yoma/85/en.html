@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ״ה</title>
+<meta name="description" content="מפת הסוגיא של יומא פ״ה: דין האסופי לפי הרוב, ומשנת ׳מי שנפלה עליו מפולת׳ — מפקחין על הספק; מקור פיקוח נפש הדוחה שבת — דרשות התנאים וקל וחומר, ומסקנת שמואל ׳וחי בהם׳; ומשנת הכפרה — חטאת, אשם, מיתה, יום הכיפורים ותשובה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="85">
+<meta name="gemara-map:sefaria-ref" content="Yoma 85">
+<meta name="gemara-map:topic-he" content="פיקוח נפש דוחה שבת, וכפרה">
+<meta name="gemara-map:topic-en" content="Saving a life overrides Shabbat; atonement">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ״ה">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 85">
+<meta name="gemara-map:blurb-he" content="מפקחין את הגל על הספק להציל נפש, ומכאן לדרשות התנאים מנין שפיקוח נפש דוחה שבת — וההכרעה ׳וחי בהם ולא שימות בהם׳; ומשנת דרכי הכפרה.">
+<meta name="gemara-map:blurb-en" content="One clears debris even in doubt to save a life; the tanna’im derive that saving a life overrides Shabbat — settled by ‘live by them, not die by them’; then the modes of atonement.">
+<meta name="gemara-map:sugya-count" content="9">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ״ה</span><span data-when="en">Sugya map — Yoma 85</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ״ה א — פ״ו א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 85a–86a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשך פרק ׳יום הכיפורים׳: דין <b>האסופי</b> לפי רוב העיר — לאיזו הלכה; ומשנת <b>׳מי שנפלה עליו מפולת׳</b> — <b>מפקחין את הגל אף על הספק</b> (ספק שם, ספק חי, ספק ישראל), עד היכן בודקים, ומה עם מת. מכאן ל<b>דרשות התנאים</b>: מנין שפיקוח נפש דוחה שבת — חמש דרשות וקל וחומר, ורבא דוחה את כולן <b>חוץ מדרשת שמואל ׳וחי בהם — ולא שימות בהם׳</b>. ולבסוף <b>משנת הכפרה</b>: חטאת ואשם, מיתה ויום הכיפורים, ותשובה — על מה כל אחד מכפר.</span>
+    <span data-when="en"><b>Bottom line:</b> The chapter continues: the status of a <b>foundling</b> by the city’s majority — for what halakha; and the Mishna <b>“one upon whom a rockslide fell”</b> — <b>one clears the debris even in doubt</b> (whether he is there, alive, or a Jew), how far one checks, and the case of the dead. From there to the <b>tanna’im’s derivations</b>: from where saving a life overrides Shabbat — five derivations and an a-fortiori, all refuted by Rava <b>except Shmuel’s “live by them — and not die by them.”</b> Finally, the <b>Mishna of atonement</b>: sin- and guilt-offerings, death and Yom Kippur, and repentance — what each one atones for.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ״ה</span><span data-when="en">Overview — Yoma 85</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · אסופי לפי הרוב — לאיזו הלכה"]:::statement
+  O2["2 · מפולת — מפקחין על הספק"]:::mishnah
+  O3["3 · מצאוהו חי — אף לחיי שעה"]:::statement
+  O4["4 · מצאוהו מת, ועד היכן בודק"]:::statement
+  O5["5 · מנין שפיקוח נפש דוחה שבת"]:::statement
+  O6["6 · משנת הכפרה"]:::mishnah
+  O7["7 · אשם ודאי, ולא אשם תלוי"]:::statement
+  O8["8 · מיתה ויוה״כ — עם תשובה"]:::statement
+  O9["9 · על מה תשובה מכפרת"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Foundling by majority — for what law"]:::statement
+  O2["2 · Rockslide — clear debris in doubt"]:::mishnah
+  O3["3 · Found alive — even for fleeting life"]:::statement
+  O4["4 · Found dead, and how far one checks"]:::statement
+  O5["5 · Whence: saving a life overrides Shabbat"]:::statement
+  O6["6 · Mishna of atonement"]:::mishnah
+  O7["7 · Definite guilt-offering, not uncertain"]:::statement
+  O8["8 · Death and Yom Kippur — with repentance"]:::statement
+  O9["9 · What repentance atones for"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">האסופי לפי הרוב — לאיזו הלכה</span><span data-when="en">A foundling by the majority — for what halakha</span>
+      <span class="ref">Yoma 85a:2–4</span></h2>
+  <div class="lead"><span data-when="he">אסופי שנמצא בעיר נידון אחר הרוב; הגמרא מבררת לאיזו נפקא־מינה — רוב גויים לאכילת נבילות, רוב ישראל להשבת אבידה, ומחצה־על־מחצה לנזקין.</span><span data-when="en">A foundling is judged by the city’s majority; the Gemara clarifies the practical upshot — gentile majority to feed him non-kosher food, Jewish majority to return his lost object, and an even split for damages.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רוב גויים — גוי; רוב ישראל — ישראל"]:::statement
+  Q1{"① למאי הלכתא?"}:::question
+  A1["① רב פפא: רוב גויים — להאכילו נבילות; רוב ישראל — להשיב אבידתו"]:::answer
+  S2["② מחצה על מחצה — ישראל; ריש לקיש: לנזקין"]:::statement
+  Q2{"② היכי דמי? תורא דידן נגח לדידיה — ניתי ראיה ונשקול!"}:::question
+  A2["③ דנגחיה תורא דידיה לדידן — נותן חצי; אידך חצי — אייתי ראיה דלאו ישראל אנא"]:::answer
+  S1 -->|בירור| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|וכן| S2
+  S2 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Gentile majority — gentile; Jewish majority — Jew"]:::statement
+  Q1{"① For what halakha?"}:::question
+  A1["① Rav Pappa: gentile majority — feed him non-kosher; Jewish majority — return his lost object"]:::answer
+  S2["② Even split — a Jew; Reish Lakish: for damages"]:::statement
+  Q2{"② How so? Our ox gored his — let him bring proof and collect!"}:::question
+  A2["③ His ox gored ours — he pays half; the other half — bring proof I am not a Jew"]:::answer
+  S1 -->|clarify| Q1
+  Q1 -->|answer| A1
+  A1 -->|likewise| S2
+  S2 -.->|objection| Q2
+  Q2 -->|answer| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אִם רוֹב גּוֹיִם — גּוֹי … אִם רוֹב יִשְׂרָאֵל — יִשְׂרָאֵל"]:::statement
+  Q1{"① לְמַאי הִילְכְתָא?"}:::question
+  A1["① אָמַר רַב פָּפָּא: לְהַאֲכִילוֹ נְבֵלוֹת … לְהַחְזִיר לוֹ אֲבֵידָתוֹ"]:::answer
+  S2["② מֶחֱצָה עַל מֶחֱצָה — יִשְׂרָאֵל … אָמַר רֵישׁ לָקִישׁ: לִנְזָקִין"]:::statement
+  Q2{"② אִי נֵימָא דְּנַגְחֵיהּ תּוֹרָא דִּידַן לְתוֹרָא דִּידֵיהּ — נַיְיתֵי רְאָיָה וְנִשְׁקוֹל!"}:::question
+  A2["③ דְּנַגְחֵיהּ תּוֹרָא דִּידֵיהּ לְתוֹרָא דִּידַן, פַּלְגָא — יָהֵיב לֵיהּ … אַיְיתִי רְאָיָה דְּלָאו יִשְׂרָאֵל אֲנָא וּשְׁקוֹל"]:::answer
+  S1 -->|בירור| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|וכן| S2
+  S2 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה א — Yoma 85a:2</span></div>
+    <div class="orig">אִם רוֹב גּוֹיִם — גּוֹי, לְמַאי הִילְכְתָא? אָמַר רַב פָּפָּא: לְהַאֲכִילוֹ נְבֵלוֹת. אִם רוֹב יִשְׂרָאֵל — יִשְׂרָאֵל, לְמַאי הִילְכְתָא? לְהַחְזִיר לוֹ אֲבֵידָתוֹ.</div>
+    <div class="trans" data-when="he">המשנה לימדה שאסופי הולכים בו אחר רוב העיר. שואלת הגמרא: רוב גויים — נידון כגוי, ולאיזו הלכה? רב פפא: להאכילו נבילות, שאין צריך להפרישו מאיסור. רוב ישראל — נידון כישראל, ולאיזו הלכה? להשיב לו אבידתו (אבידת גוי אין משיבים).</div>
+    <div class="trans" data-when="en">§ It was taught that if there is a majority of gentiles in the city, a foundling is considered to have the status of a gentile. The Gemara asks: To what halakha does this statement relate? Rav Pappa said: It relates to feeding him non-kosher food. One need not protect the child from every prohibition and may even feed him non-kosher food, as though he were a gentile. It was further taught: If there is a majority of Jews, he is a Jew. The Gemara asks: To what halakha does this relate? The Gemara answers: It relates to returning a lost object to him. In such a case it is assumed that he is definitely a Jew. Consequently, Jews must return lost objects to him, whereas there is no obligation to return lost objects to gentiles.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ה א — Yoma 85a:3</span></div>
+    <div class="orig">מֶחֱצָה עַל מֶחֱצָה — יִשְׂרָאֵל, לְמַאי הִילְכְתָא? אָמַר רֵישׁ לָקִישׁ: לִנְזָקִין. הֵיכִי דָּמֵי? אִי נֵימָא דְּנַגְחֵיהּ תּוֹרָא דִּידַן לְתוֹרָא דִּידֵיהּ — נַיְיתֵי רְאָיָה וְנִשְׁקוֹל!</div>
+    <div class="trans" data-when="he">מחצה גויים ומחצה ישראל — האסופי נידון כישראל, ולאיזו הלכה? ריש לקיש: לדיני נזיקין. ומקשה: כיצד? אם שורנו (של ישראל) נגח את שורו של האסופי — הרי הבא ראיה והוצא הממון; כיון שאינו יכול להוכיח שהוא ישראל, אין לו תביעה.</div>
+    <div class="trans" data-when="en">It was further stated: If the city is half gentile and half Jewish, the foundling has the status of a Jew. The Gemara asks: To what halakha does this relate? Reish Lakish said: It is referring to halakhot of damages. The Gemara asks: What are the circumstances? If we say that our ox, i.e., an ox belonging to another Jew, gored his ox, one could ask: How can he make a claim like a Jew? Let him bring proof that he is Jewish, and only then may he take the money for damages, since the burden of proof rests upon the claimant. Since he cannot prove his Jewish status, he has no claim.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ה א — Yoma 85a:4</span></div>
+    <div class="orig">לָא צְרִיכָא, דְּנַגְחֵיהּ תּוֹרָא דִּידֵיהּ לְתוֹרָא דִּידַן, פַּלְגָא — יָהֵיב לֵיהּ, אִידַּךְ פַּלְגָא — נֵימָא לֵיהּ: אַיְיתִי רְאָיָה דְּלָאו יִשְׂרָאֵל אֲנָא וּשְׁקוֹל.</div>
+    <div class="trans" data-when="he">תירוץ: מדובר ששורו של האסופי (שור תם) נגח את שורנו. חצי הנזק — משלם, כדין ישראל בשור תם. את החצי השני (שגוי משלם בכל מקרה) — אומרים לניזק: הבא ראיה שזה אינו ישראל, וטול; הראיה על הניזק.</div>
+    <div class="trans" data-when="en">The Gemara answers: No, it is necessary when his innocuous ox, which has gored fewer than three times, gored our ox, i.e., an ox belonging to a Jew, in which case he gives him half, which is what a Jew pays for damages caused by an innocuous ox. However, a gentile must make full restitution for the damage caused. The foundling does not pay the other half, which a gentile gives to a Jew if his ox harms a Jew’s ox. Let me say to the one who suffered the damage: Bring proof that I am not a Jew and take the money. In that case, the burden of proof rests upon the one who suffered the damage.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">מפולת — מפקחין על הספק</span><span data-when="en">A rockslide — clearing the debris in doubt</span>
+      <span class="ref">Yoma 85a:5–6</span></h2>
+  <div class="lead"><span data-when="he">משנתנו ספרה שלוש ספיקות במי שנפלה עליו מפולת. הגמרא מבארת שזו לשון ׳לא מיבעיא׳ — מפקחין אף בספק הרחוק ביותר.</span><span data-when="en">Our Mishna listed three uncertainties about one buried by a rockslide. The Gemara explains it as a “needless to say” progression — one clears the debris even in the remotest doubt.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: נפלה עליו מפולת — ספק שם, ספק חי, ספק ישראל — מפקחין"]):::mishnah
+  Q1{"① מאי קאמר? למה שלוש ספיקות?"}:::question
+  A1["② לא מיבעיא: ספק שם — פשוט; אלא אף ספק חי, ואף ספק גוי — מפקחין"]:::answer
+  M1 -->|בירור| Q1
+  Q1 -->|תירוץ: דרך לא מיבעיא| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: rockslide fell — doubt if there, alive, a Jew — one clears it"]):::mishnah
+  Q1{"① What is it saying? Why three uncertainties?"}:::question
+  A1["② Needless to say: doubt if there — obvious; but even doubt alive, even doubt gentile — one clears"]:::answer
+  M1 -->|clarify| Q1
+  Q1 -->|answer: needless-to-say| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① מִי שֶׁנָּפְלָה עָלָיו מַפּוֹלֶת וְכוּ׳"]):::mishnah
+  Q1{"① מַאי קָאָמַר?"}:::question
+  A1["② לָא מִיבַּעְיָא … סָפֵק הוּא שָׁם … אֶלָּא אֲפִילּוּ סָפֵק חַי סָפֵק מֵת … אֲפִילּוּ סָפֵק גּוֹי סָפֵק יִשְׂרָאֵל — מְפַקְּחִין"]:::answer
+  M1 -->|בירור| Q1
+  Q1 -->|תירוץ: דרך לא מיבעיא| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה א — Yoma 85a:5</span></div>
+    <div class="orig">מִי שֶׁנָּפְלָה עָלָיו מַפּוֹלֶת וְכוּ׳. מַאי קָאָמַר?</div>
+    <div class="trans" data-when="he">המשנה: ׳מי שנפלה עליו מפולת, ספק הוא שם ספק אינו שם, ספק חי ספק מת, ספק גוי ספק ישראל — מפקחין עליו את הגל׳. שואלת הגמרא: מה באה המשנה ללמד בשלוש הספיקות?</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: With regard to one upon whom a rockslide fell, and there is uncertainty whether he is there under the debris or whether he is not there; and there is uncertainty whether he is still alive or whether he is dead; and there is uncertainty whether the person under the debris is a gentile or whether he is Jew, one clears the pile from atop him. The Gemara asks: What is the mishna saying? Why does it bring three different uncertainties to illustrate the principle that one violates Shabbat to save a life even in a case of uncertainty?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ה א — Yoma 85a:6</span></div>
+    <div class="orig">לָא מִיבַּעְיָא קָאָמַר: לָא מִיבַּעְיָא סָפֵק הוּא שָׁם סָפֵק אֵינוֹ שָׁם, דְּאִי אִיתֵיהּ חַי — הוּא דִּמְפַקְּחִין, אֶלָּא אֲפִילּוּ סָפֵק חַי סָפֵק מֵת — מְפַקְּחִין. וְלָא מִיבַּעְיָא סָפֵק חַי סָפֵק מֵת, דְּיִשְׂרָאֵל, אֶלָּא אֲפִילּוּ סָפֵק גּוֹי סָפֵק יִשְׂרָאֵל — מְפַקְּחִין.</div>
+    <div class="trans" data-when="he">תירוץ: המשנה נוקטת לשון ׳לא מיבעיא׳ (מן הקל אל החמור). לא מיבעיא ספק אם הוא תחת הגל — שאם הוא שם וחי, מפקחין; אלא אף בספק חי ספק מת — מפקחין. ולא מיבעיא ספק חי שהוא ישראל ודאי — אלא אף בספק גוי ספק ישראל מפקחין.</div>
+    <div class="trans" data-when="en">The Gemara explains: It is speaking using the style of: Needless to say, and the mishna should be understood as follows: Needless to say, in a case where it is uncertain whether he is there or not there, one removes the debris, since if he is there and he is alive, one must clear the debris. But even if it is uncertain whether he is alive or dead, one must clear the debris. And needless to say, when there is uncertainty whether he is alive or dead, but it is certain that he is a Jew, one must clear the debris. Rather, one must clear the debris even if there is uncertainty whether he is a gentile or a Jew.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">מצאוהו חי — אף לחיי שעה</span><span data-when="en">Found alive — even for fleeting life</span>
+      <span class="ref">Yoma 85a:7</span></h2>
+  <div class="lead"><span data-when="he">המשנה ׳מצאוהו חי מפקחין׳ נראית פשוטה; הגמרא מחדשת שהיא באה לחיי שעה.</span><span data-when="en">The Mishna’s “found alive — one clears” seems obvious; the Gemara teaches it for even a fleeting moment of life.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: מצאוהו חי — מפקחין"]):::mishnah
+  Q1{"① פשיטא!"}:::question
+  A1["① לא צריכא — אפילו לחיי שעה"]:::answer
+  M1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: found alive — one clears"]):::mishnah
+  Q1{"① Obvious!"}:::question
+  A1["① No — it is needed even for fleeting life"]:::answer
+  M1 -->|objection| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① מְצָאוּהוּ חַי — מְפַקְּחִין"]):::mishnah
+  Q1{"① מְצָאוּהוּ חַי, פְּשִׁיטָא!"}:::question
+  A1["① לָא צְרִיכָא, דַּאֲפִילּוּ לְחַיֵּי שָׁעָה"]:::answer
+  M1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה א — Yoma 85a:7</span></div>
+    <div class="orig">מְצָאוּהוּ חַי — מְפַקְּחִין. מְצָאוּהוּ חַי, פְּשִׁיטָא! לָא צְרִיכָא, דַּאֲפִילּוּ לְחַיֵּי שָׁעָה.</div>
+    <div class="trans" data-when="he">המשנה: ׳מצאוהו חי — מפקחין׳. תמהה הגמרא: פשיטא, הרי זה פיקוח נפש! תירוץ: חידושה — שמפקחין אף כשברור שלא יחיה אלא חיי שעה, ולא יאריך ימים.</div>
+    <div class="trans" data-when="en">§ The mishna taught: If they found him alive, they continue to remove the debris. The Gemara is surprised at this: If they find him alive, it is obvious that they remove the debris, since that is saving a life. The Gemara answers: No, it is necessary to teach that one must desecrate Shabbat for his sake even if it is clear that he will live only a short while and will die soon after.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">מצאוהו מת, ועד היכן בודק</span><span data-when="en">Found dead, and how far one checks</span>
+      <span class="ref">Yoma 85a:8–12</span></h2>
+  <div class="lead"><span data-when="he">׳ואם מת יניחוהו׳ — אף נגד ר׳ יהודה בן לקיש; ומחלוקת עד היכן בודקים (חוטם או לב), אם תלויה במחלוקת יצירת הוולד, והכרעת רב פפא.</span><span data-when="en">“If dead, they leave him” — even against R. Yehuda ben Lakish; and the dispute how far to check (nose or heart), whether it parallels the dispute on fetal formation, with Rav Pappa’s ruling.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: ואם מת — יניחוהו · פשיטא?"]):::mishnah
+  A1["① לר׳ יהודה בן לקיש: מצילין מת מן הדליקה — מתוך שבהול; אבל כאן מה יעשה?"]:::answer
+  S1["② ת״ר: עד היכן בודק? עד חוטמו · וי״א עד לבו"]:::statement
+  Q1{"③ נימא כתנאי יצירת הוולד? מראשו · אבא שאול: מטיבורו"}:::question
+  A2["④ אפילו אבא שאול מודה: לפיקוח נפש עיקר חיותא באף — ׳נשמת רוח חיים באפיו׳"]:::answer
+  C1["⑤ רב פפא: מחלוקת ממטה למעלה; אבל ממעלה למטה — בדק עד חוטמו, שוב אינו צריך"]:::conclusion
+  M1 -->|תירוץ| A1
+  A1 -->|ברייתא| S1
+  S1 -.->|נימא כתנאי| Q1
+  Q1 -->|דחייה| A2
+  A2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: if dead — leave him · Obvious?"]):::mishnah
+  A1["① Per R. Yehuda b. Lakish: one saves a corpse from fire — being agitated; but here, what would he do?"]:::answer
+  S1["② Baraita: how far one checks? Until the nose · some say until the heart"]:::statement
+  Q1{"③ Say it tracks the fetus dispute? From the head · Abba Shaul: from the navel"}:::question
+  A2["④ Even Abba Shaul concedes: for saving life the main vitality is in the nose — ׳breath of life in his nostrils׳"]:::answer
+  C1["⑤ Rav Pappa: dispute is bottom-up; but top-down — once checked to the nose, no need for more"]:::conclusion
+  M1 -->|answer| A1
+  A1 -->|baraita| S1
+  S1 -.->|say it tracks| Q1
+  Q1 -->|rejected| A2
+  A2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① וְאִם מֵת יַנִּיחוּהוּ. הָא נָמֵי פְּשִׁיטָא?"]):::mishnah
+  A1["① לְרַבִּי יְהוּדָה בֶּן לָקִישׁ … מִתּוֹךְ שֶׁאָדָם בָּהוּל עַל מֵתוֹ … אֲבָל הָכָא … מַאי אִית לֵיהּ לְמֶעְבַּד?"]:::answer
+  S1["② תָּנוּ רַבָּנַן: עַד הֵיכָן הוּא בּוֹדֵק? עַד חוֹטְמוֹ. וְיֵשׁ אוֹמְרִים: עַד לִבּוֹ"]:::statement
+  Q1{"③ נֵימָא הָנֵי תַּנָּאֵי כִּי הָנֵי תַּנָּאֵי … מֵהֵיכָן הַוָּלָד נוֹצָר — מֵרֹאשׁוֹ … אַבָּא שָׁאוּל אוֹמֵר: מִטִּיבּוּרוֹ"}:::question
+  A2["④ אֲפִילּוּ תֵּימָא אַבָּא שָׁאוּל … לְעִנְיַן פִּקּוּחַ נֶפֶשׁ … עִיקַּר חַיּוּתָא בְּאַפֵּיהּ … ׳נִשְׁמַת רוּחַ חַיִּים בְּאַפָּיו׳"]:::answer
+  C1["⑤ אָמַר רַב פָּפָּא: מַחְלוֹקֶת מִמַּטָּה לְמַעְלָה, אֲבָל מִמַּעְלָה לְמַטָּה … עַד חוֹטְמוֹ — שׁוּב אֵינוֹ צָרִיךְ"]:::conclusion
+  M1 -->|תירוץ| A1
+  A1 -->|ברייתא| S1
+  S1 -.->|נימא כתנאי| Q1
+  Q1 -->|דחייה| A2
+  A2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה א — Yoma 85a:8</span></div>
+    <div class="orig">וְאִם מֵת יַנִּיחוּהוּ. הָא נָמֵי פְּשִׁיטָא? לָא צְרִיכָא, לְרַבִּי יְהוּדָה בֶּן לָקִישׁ. דְּתַנְיָא: אֵין מַצִּילִין אֶת הַמֵּת מִפְּנֵי הַדְּלֵיקָה, אָמַר רַבִּי יְהוּדָה בֶּן לָקִישׁ: שָׁמַעְתִּי שֶׁמַּצִּילִין אֶת הַמֵּת מִפְּנֵי הַדְּלֵיקָה. וַאֲפִילּוּ רַבִּי יְהוּדָה בֶּן לָקִישׁ לָא קָאָמַר אֶלָּא מִתּוֹךְ שֶׁאָדָם בָּהוּל עַל מֵתוֹ, אִי לָא שָׁרֵית לֵיהּ — אָתֵי לְכַבּוֹיֵי. אֲבָל הָכָא, אִי לָא שָׁרֵית לֵיהּ — מַאי אִית לֵיהּ לְמֶעְבַּד?</div>
+    <div class="trans" data-when="he">המשנה: ׳ואם מת — יניחוהו׳. פשיטא, שאין מחללים שבת על מת? תירוץ: צריך, לדעת ר׳ יהודה בן לקיש שאמר ׳שמעתי שמצילין את המת מפני הדליקה׳. אך אף הוא לא התיר אלא בדליקה, מתוך שאדם בהול על מתו ושמא יבוא לכבות; אבל כאן, אם לא תתיר לו — מה יש לו לעשות? אין חשש שיחלל, ולכן יניחוהו.</div>
+    <div class="trans" data-when="en">§ The mishna taught: If they found him dead, they should leave him. The Gemara is surprised at this: Isn’t this also obvious? What allowance might there be to desecrate Shabbat for the sake of a corpse? The Gemara answers: No, this ruling is necessary according to the opinion of Rabbi Yehuda ben Lakish, as it was taught in a baraita: One may not save a corpse from a fire, since one may not violate Shabbat for the sake of the dead. Rabbi Yehuda ben Lakish said: I heard that one may save a corpse from a fire. The Gemara challenges: Even Rabbi Yehuda ben Lakish said this only with regard to a fire because a person is agitated over his dead relative, whose body might burn in the fire. If you do not permit him to remove the corpse he may come to extinguish the fire and transgress a severe Torah prohibition. However, here, in the case of a rockslide or building collapse, if you do not permit him to remove the debris, what might he do? In this case, there is no concern of Shabbat desecration, and preserving the dignity of the dead does not override Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ה א — Yoma 85a:9</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: עַד הֵיכָן הוּא בּוֹדֵק? עַד חוֹטְמוֹ. וְיֵשׁ אוֹמְרִים: עַד לִבּוֹ. בָּדַק וּמָצָא עֶלְיוֹנִים מֵתִים, לֹא יֹאמַר: כְּבָר מֵתוּ הַתַּחְתּוֹנִים. מַעֲשֶׂה הָיָה וּמָצְאוּ עֶלְיוֹנִים מֵתִים וְתַחְתּוֹנִים חַיִּים.</div>
+    <div class="trans" data-when="he">ברייתא: עד היכן בודק אם נשאר בו רוח חיים? עד חוטמו (אם נושם) — ויש אומרים עד לבו (לבדוק דפיקת הלב). בדק ומצא את העליונים (שמעליו בגל) מתים — לא יאמר ׳כבר מתו התחתונים׳ ויפסיק; מעשה היה שמצאו עליונים מתים ותחתונים חיים.</div>
+    <div class="trans" data-when="en">The Rabbis taught: If a person is buried under a collapsed building, until what point does one check to clarify whether the victim is still alive? Until what point is he allowed to continue clearing the debris? They said: One clears until the victim’s nose. If there is no sign of life, i.e., if he is not breathing, he is certainly dead. And some say: One clears until the victim’s heart to check for a heartbeat. If several people are buried and one checked and found the upper ones under the debris dead, he should not say: The lower ones are likely also already dead, and there is no point in continuing to search. There was an incident where they found the upper ones dead and the lower ones alive.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ה א — Yoma 85a:10</span></div>
+    <div class="orig">נֵימָא הָנֵי תַּנָּאֵי כִּי הָנֵי תַּנָּאֵי. דְּתַנְיָא: מֵהֵיכָן הַוָּלָד נוֹצָר — מֵרֹאשׁוֹ, שֶׁנֶּאֱמַר: ״מִמְּעֵי אִמִּי אַתָּה גוֹזִי״, וְאוֹמֵר: ״גׇּזִּי נִזְרֵךְ וְהַשְׁלִיכִי״. אַבָּא שָׁאוּל אוֹמֵר: מִטִּיבּוּרוֹ, וּמְשַׁלֵּחַ שׇׁרָשָׁיו אֵילָךְ וְאֵילָךְ.</div>
+    <div class="trans" data-when="he">תהיית הגמרא: נאמר שמחלוקת התנאים (חוטם/לב) תלויה במחלוקת אחרת — מהיכן נוצר הוולד? תנא קמא: מראשו, שנאמר ׳ממעי אמי אתה גוזי׳ (מקום השיער שבראש). אבא שאול: מטיבורו, ומשם משלח שורשיו לכל צד עד שנגמרת צורתו.</div>
+    <div class="trans" data-when="en">The Gemara comments: Let us say that the dispute between these tanna’im who disagree about checking for signs of life is like the dispute between these tanna’im who disagree about the formation of the fetus. As it was taught in a baraita: From what point is the fetus created? It is from its head, as it is stated: “You are He Who took me [gozi] out of my mother’s womb” (Psalms 71:6), and it says: “Cut off [gozi] your hair, and cast it away” (Jeremiah 7:29). These verses suggest that one is created from the head, the place of the hair. Abba Shaul says: A person is created from his navel, and he sends his roots in every direction until he attains the image of a person. The tanna who says that the presence of life is determined based on the nose holds in accordance with the opinion of the tanna who maintains that the formation of a fetus begins with its head. Likewise, the tanna who says the presence of life is determined based on the heart holds in accordance with the opinion of the one who thinks the formation of a fetus begins with its navel.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ה א — Yoma 85a:11</span></div>
+    <div class="orig">אֲפִילּוּ תֵּימָא אַבָּא שָׁאוּל, עַד כָּאן לָא קָא אָמַר אַבָּא שָׁאוּל הָתָם אֶלָּא לְעִנְיַן יְצִירָה, דְּכֹל מִידֵּי מִמְּצִיעֲתֵיהּ מִיתְּצַר, אֲבָל לְעִנְיַן פִּקּוּחַ נֶפֶשׁ — אֲפִילּוּ אַבָּא שָׁאוּל מוֹדֵי דְּעִיקַּר חַיּוּתָא בְּאַפֵּיהּ הוּא, דִּכְתִיב: ״כׇּל אֲשֶׁר נִשְׁמַת רוּחַ חַיִּים בְּאַפָּיו״.</div>
+    <div class="trans" data-when="he">דחייה: אפשר שאף אבא שאול מודה שבודקים עד החוטם. עד כאן לא אמר אבא שאול ׳מטיבורו׳ אלא לעניין יצירה, שכל דבר נוצר מאמצעו; אבל לעניין פיקוח נפש — אף אבא שאול מודה שעיקר החיות באף, שנאמר ׳כל אשר נשמת רוח חיים באפיו׳.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: Even if you say that the formation of a fetus from the navel is the opinion of Abba Shaul, he may nevertheless require one to check the nose for signs of life. Until now, Abba Shaul spoke there only about formation, saying that everything is created from its middle; however, as for saving a life, even Abba Shaul admits that the main sign of life is in the nose, as it is written: “All in whose nostrils was the breath of the spirit of life” (Genesis 7:22).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ה א — Yoma 85a:12</span></div>
+    <div class="orig">אָמַר רַב פָּפָּא: מַחְלוֹקֶת מִמַּטָּה לְמַעְלָה, אֲבָל מִמַּעְלָה לְמַטָּה, כֵּיוָן דִּבְדַק לֵיהּ עַד חוֹטְמוֹ — שׁוּב אֵינוֹ צָרִיךְ, דִּכְתִיב: ״כֹּל אֲשֶׁר נִשְׁמַת רוּחַ חַיִּים בְּאַפָּיו״.</div>
+    <div class="trans" data-when="he">מסקנת רב פפא: המחלוקת (חוטם/לב) רק כשמפנה את הגל מלמטה למעלה (מן הרגליים), שאז עד הלב אינו די ויש להמשיך עד החוטם. אבל כשמפנה מלמעלה למטה — כיון שבדק עד חוטמו ואין נשימה, שוב אינו צריך, שנאמר ׳כל אשר נשמת רוח חיים באפיו׳.</div>
+    <div class="trans" data-when="en">Rav Pappa said: The dispute with regard to how far to check for signs of life applies when the digger begins removing the rubble from below, starting with the feet, to above. In such a case it is insufficient to check until his heart; rather, one must continue removing rubble until he is able to check his nose for breath. But if one cleared the rubble from above to below, once he checked as far as the victim’s nose he is not required to check further, as it is written: “All in whose nostrils was the breath of the spirit of life” (Genesis 7:22).</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">מנין שפיקוח נפש דוחה שבת</span><span data-when="en">Whence: saving a life overrides Shabbat</span>
+      <span class="ref">Yoma 85a:13–85b:6</span></h2>
+  <div class="lead"><span data-when="he">המעשה המפורסם בדרך: חמישה תנאים דורשים מנין שפיקוח נפש דוחה שבת — ושמואל מוסיף ׳וחי בהם׳. רבא: לכולם יש פירכא (שאינם אלא בוודאי), חוץ מדשמואל.</span><span data-when="en">The famous roadside scene: five tanna’im derive that saving a life overrides Shabbat — and Shmuel adds “live by them.” Rava: all are refutable (they prove only certain danger), save Shmuel’s.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בדרך: מנין שפיקוח נפש דוחה שבת?"}:::question
+  S1["② ר׳ ישמעאל: בא במחתרת — ק״ו לפיקוח נפש"]:::statement
+  S2["③ ר׳ עקיבא: ׳מעם מזבחי תקחנו׳ — ולא מעל; להחיות אף מעל המזבח — ק״ו"]:::statement
+  S3["③ ר׳ אלעזר: מילה דוחה שבת — ק״ו לכל גופו"]:::statement
+  S4["④ ר׳ יוסי בר׳ יהודה: ׳אך׳ חלק · ר׳ יונתן: ׳קודש היא לכם׳ — מסורה בידכם"]:::statement
+  S5["⑤ ר׳ שמעון בן מנסיא: חלל שבת אחת כדי שישמור שבתות הרבה"]:::statement
+  S6["⑤ שמואל: ׳וחי בהם׳ — ולא שימות בהם"]:::statement
+  C1["⑥ רבא: לכולן פירכא (וודאי, ספק מנלן?) — חוץ מדשמואל; טבא חדא פלפלתא חריפא"]:::conclusion
+  Q1 -->|דרשה| S1
+  S1 -->|דרשה| S2
+  S2 -->|וכן| S3
+  S3 -->|ועוד| S4
+  S4 -->|ועוד| S5
+  S5 -->|הוספת שמואל| S6
+  S6 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① On the road: whence does saving a life override Shabbat?"}:::question
+  S1["② R. Yishmael: the burglar — a fortiori to saving a life"]:::statement
+  S2["③ R. Akiva: ׳take him from My altar׳ — not from upon it; to save, even from the altar — a fortiori"]:::statement
+  S3["③ R. Elazar: circumcision overrides Shabbat — a fortiori the whole body"]:::statement
+  S4["④ R. Yosei b. R. Yehuda: ׳but׳ qualifies · R. Yonatan: ׳sacred to you׳ — given into your hands"]:::statement
+  S5["⑤ R. Shimon b. Menasya: desecrate one Shabbat so he keep many"]:::statement
+  S6["⑤ Shmuel: ׳live by them׳ — and not die by them"]:::statement
+  C1["⑥ Rava: all are refutable (certain only; whence doubt?) — except Shmuel; one sharp pepper bests a basket of squash"]:::conclusion
+  Q1 -->|derivation| S1
+  S1 -->|derivation| S2
+  S2 -->|likewise| S3
+  S3 -->|further| S4
+  S4 -->|further| S5
+  S5 -->|Shmuel adds| S6
+  S6 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① נִשְׁאֲלָה … מִנַּיִין לְפִקּוּחַ נֶפֶשׁ שֶׁדּוֹחֶה אֶת הַשַּׁבָּת?"}:::question
+  S1["② נַעֲנָה רַבִּי יִשְׁמָעֵאל … ׳אִם בַּמַּחְתֶּרֶת יִמָּצֵא הַגַּנָּב׳ … קַל וָחוֹמֶר לְפִקּוּחַ נֶפֶשׁ"]:::statement
+  S2["③ נַעֲנָה רַבִּי עֲקִיבָא … ׳מֵעִם מִזְבְּחִי תִּקָּחֶנּוּ׳ … אֲבָל לְהַחֲיוֹת — אֲפִילּוּ מֵעַל מִזְבְּחִי … קַל וָחוֹמֶר"]:::statement
+  S3["③ נַעֲנָה רַבִּי אֶלְעָזָר … מִילָה … דּוֹחָה אֶת הַשַּׁבָּת — קַל וָחוֹמֶר לְכׇל גּוּפוֹ"]:::statement
+  S4["④ רַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה … ׳אַךְ׳ חָלַק · רַבִּי יוֹנָתָן … ׳כִּי קוֹדֶשׁ הִיא לָכֶם׳"]:::statement
+  S5["⑤ רַבִּי שִׁמְעוֹן בֶּן מְנַסְיָא … חַלֵּל עָלָיו שַׁבָּת אַחַת כְּדֵי שֶׁיִּשְׁמוֹר שַׁבָּתוֹת הַרְבֵּה"]:::statement
+  S6["⑤ אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל … ׳וְחַי בָּהֶם׳ — וְלֹא שֶׁיָּמוּת בָּהֶם"]:::statement
+  C1["⑥ אָמַר רָבָא: לְכוּלְּהוּ אִית לְהוּ פִּירְכָא … בַּר מִדִּשְׁמוּאֵל … טָבָא חֲדָא פִּלְפַּלְתָּא חֲרִיפָא מִמְּלָא צַנָּא דְקָרֵי"]:::conclusion
+  Q1 -->|דרשה| S1
+  S1 -->|דרשה| S2
+  S2 -->|וכן| S3
+  S3 -->|ועוד| S4
+  S4 -->|ועוד| S5
+  S5 -->|הוספת שמואל| S6
+  S6 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה א — Yoma 85a:13</span></div>
+    <div class="orig">וּכְבָר הָיָה רַבִּי יִשְׁמָעֵאל וְרַבִּי עֲקִיבָא וְרַבִּי אֶלְעָזָר בֶּן עֲזַרְיָה מְהַלְּכִין בַּדֶּרֶךְ, וְלֵוִי הַסַּדָּר וְרַבִּי יִשְׁמָעֵאל בְּנוֹ שֶׁל רַבִּי אֶלְעָזָר בֶּן עֲזַרְיָה מְהַלְּכִין אַחֲרֵיהֶן. נִשְׁאֲלָה שְׁאֵלָה זוֹ בִּפְנֵיהֶם: מִנַּיִין לְפִקּוּחַ נֶפֶשׁ שֶׁדּוֹחֶה אֶת הַשַּׁבָּת?</div>
+    <div class="trans" data-when="he">מעשה שהיו ר׳ ישמעאל, ר׳ עקיבא ור׳ אלעזר בן עזריה מהלכים בדרך, ולוי הסדר ור׳ ישמעאל בנו של ראב״ע מהלכים אחריהם (מתוך כבוד). נשאלה בפניהם שאלה זו: מנין שפיקוח נפש דוחה את השבת?</div>
+    <div class="trans" data-when="en">§ The Gemara relates: It once happened that Rabbi Yishmael, and Rabbi Akiva, and Rabbi Elazar ben Azarya were walking on the road, and Levi HaSadar and Rabbi Yishmael, son of Rabbi Elazar ben Azarya, were walking respectfully behind them, since they were younger and did not walk alongside their teachers. This question was asked before them: From where is it derived that saving a life overrides Shabbat?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ה א — Yoma 85a:14</span></div>
+    <div class="orig">נַעֲנָה רַבִּי יִשְׁמָעֵאל וְאָמַר: ״אִם בַּמַּחְתֶּרֶת יִמָּצֵא הַגַּנָּב״ — וּמָה זֶה, שֶׁסָּפֵק עַל מָמוֹן בָּא סָפֵק עַל נְפָשׁוֹת בָּא, וּשְׁפִיכוּת דָּמִים מְטַמֵּא אֶת הָאָרֶץ, וְגוֹרֵם לַשְּׁכִינָה שֶׁתִּסְתַּלֵּק מִיִּשְׂרָאֵל, נִיתָּן לְהַצִּילוֹ בְּנַפְשׁוֹ — קַל וָחוֹמֶר לְפִקּוּחַ נֶפֶשׁ שֶׁדּוֹחֶה אֶת הַשַּׁבָּת.</div>
+    <div class="trans" data-when="he">ר׳ ישמעאל דרש: ׳אם במחתרת ימצא הגנב והוכה ומת אין לו דמים׳. ומה הבא במחתרת — שספק בא על ממון ספק על נפשות, ושפיכות דמים מטמאת את הארץ ומסלקת שכינה — בכל זאת ניתן להצילו (הנגזל) בנפש הגנב; קל וחומר שפיקוח נפש (ודאי) דוחה שבת.</div>
+    <div class="trans" data-when="en">Rabbi Yishmael answered and said that it is stated: “If a thief be found breaking in and be struck so that he dies, there shall be no blood-guiltiness for him” (Exodus 22:1). Now, if this is true for the thief, where there is uncertainty whether he comes to take money or to take lives, and it is known that bloodshed renders the land impure, since it is stated about a murderer: “And you shall not defile the land” (Numbers 35:34), and it causes the Divine Presence to depart from the Jewish people, as the verse continues: “In the midst of which I dwell, for I the Lord dwell in the midst of the children of Israel” (Numbers 35:34), and even so the home owner is permitted to save himself at the cost of the thief’s life, then a fortiori saving a life overrides Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ה א — Yoma 85a:15</span></div>
+    <div class="orig">נַעֲנָה רַבִּי עֲקִיבָא וְאָמַר: ״וְכִי יָזִיד אִישׁ עַל רֵעֵהוּ וְגוֹ׳ מֵעִם מִזְבְּחִי תִּקָּחֶנּוּ לָמוּת״. ״מֵעִם מִזְבְּחִי״ — וְלֹא מֵעַל מִזְבְּחִי. וְאָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: לֹא שָׁנוּ אֶלָּא לְהָמִית,</div>
+    <div class="trans" data-when="he">ר׳ עקיבא דרש: ׳מעם מזבחי תקחנו למות׳ — דווקא ׳מעם׳ ולא ׳מעל׳ המזבח; כהן רוצח שכבר התחיל בעבודה, אין מורידים אותו להמיתו עד שיגמור. ואמר רבה בר בר חנה בשם ר׳ יוחנן: לא שנו (שאין נוטלים אותו מעל המזבח) אלא להמיתו —</div>
+    <div class="trans" data-when="en">Rabbi Akiva answered and said that it is stated: “And if a man comes purposefully upon his neighbor to slay him with guile, you shall take him from My altar, that he may die” (Exodus 21:14). The phrase “take him from My altar” implies that if the murderer is a priest and comes to perform the service, one does not wait for him to do so but takes him to his execution immediately. But one should not take him from on top of My altar. If he already began the service and is in the midst of it, one does not take him down from the altar immediately but instead allows him to finish his service. And Rabba bar bar Ḥana said that Rabbi Yoḥanan said: They taught only that a priest is not removed from the altar in order to execute him for murder,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ה ב — Yoma 85b:1</span></div>
+    <div class="orig">אֲבָל לְהַחֲיוֹת — אֲפִילּוּ מֵעַל מִזְבְּחִי. וּמָה זֶה, שֶׁסָּפֵק יֵשׁ מַמָּשׁ בִּדְבָרָיו סָפֵק אֵין מַמָּשׁ בִּדְבָרָיו, וַעֲבוֹדָה דּוֹחָה שַׁבָּת — קַל וָחוֹמֶר לְפִקּוּחַ נֶפֶשׁ שֶׁדּוֹחֶה אֶת הַשַּׁבָּת. נַעֲנָה רַבִּי אֶלְעָזָר וְאָמַר: וּמָה מִילָה שֶׁהִיא אֶחָד מִמָּאתַיִם וְאַרְבָּעִים וּשְׁמוֹנָה אֵיבָרִים שֶׁבָּאָדָם דּוֹחָה אֶת הַשַּׁבָּת — קַל וָחוֹמֶר לְכׇל גּוּפוֹ שֶׁדּוֹחֶה אֶת הַשַּׁבָּת.</div>
+    <div class="trans" data-when="he">אבל להחיות (כגון כהן הבא להעיד ולהציל נידון) — נוטלים אותו אף מעל המזבח. ומה זה — שספק יש ממש בעדותו ספק אין — בכל זאת מפסיקים את העבודה (הדוחה שבת) כדי להחיות; קל וחומר לפיקוח נפש שדוחה שבת. ר׳ אלעזר דרש: ומה מילה, שהיא רק אחד מרמ״ח איברים, דוחה שבת — ק״ו לכל גופו.</div>
+    <div class="trans" data-when="en">but to preserve a life, e.g., if the priest can testify to the innocence of one who is sentenced to death, one removes him even from on top of My altar, even while he is sacrificing an offering. Just as this priest, about whom there is uncertainty whether there is substance to his words of testimony or whether there is no substance to his words, is taken from the Temple service in order to save a life, and Temple service overrides Shabbat, so too, a fortiori, saving a life overrides Shabbat. Rabbi Elazar ben Azarya answered and said: Just as the mitzva of circumcision, which rectifies only one of the 248 limbs of the body, overrides Shabbat, so too, a fortiori, saving one’s whole body, which is entirely involved in mitzvot, overrides Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ה ב — Yoma 85b:2</span></div>
+    <div class="orig">רַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה אוֹמֵר: ״אֶת שַׁבְּתוֹתַי תִּשְׁמוֹרוּ״, יָכוֹל לַכֹּל — תַּלְמוּד לוֹמַר: ״אַךְ״ חָלַק. רַבִּי יוֹנָתָן בֶּן יוֹסֵף אוֹמֵר: ״כִּי קוֹדֶשׁ הִיא לָכֶם״, הִיא מְסוּרָה בְּיֶדְכֶם וְלֹא אַתֶּם מְסוּרִים בְּיָדָהּ.</div>
+    <div class="trans" data-when="he">תנאים נוספים: ר׳ יוסי בר׳ יהודה — ׳את שבתותי תשמורו׳, יכול בכל אופן? ת״ל ׳אך׳ (לשון מיעוט) — חילק, יש שבת שנדחית. ר׳ יונתן בן יוסף — ׳כי קודש היא לכם׳: השבת מסורה בידכם (לדחותה לצורך נפש), ולא אתם מסורים בידה (למות עליה).</div>
+    <div class="trans" data-when="en">Other tanna’im debated this same issue. Rabbi Yosei, son of Rabbi Yehuda, says that it is stated: “But keep my Shabbatot” (Exodus 31:13). One might have thought that this applies to everyone in all circumstances; therefore, the verse states “but,” a term that restricts and qualifies. It implies that there are circumstances where one must keep Shabbat and circumstances where one must desecrate it, i.e., to save a life. Rabbi Yonatan ben Yosef says that it is stated: “For it is sacred to you” (Exodus 31:14). This implies that Shabbat is given into your hands, and you are not given to it to die on account of Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ה ב — Yoma 85b:3</span></div>
+    <div class="orig">רַבִּי שִׁמְעוֹן בֶּן מְנַסְיָא אוֹמֵר: ״וְשָׁמְרוּ בְנֵי יִשְׂרָאֵל אֶת הַשַּׁבָּת״, אָמְרָה תּוֹרָה: חַלֵּל עָלָיו שַׁבָּת אַחַת כְּדֵי שֶׁיִּשְׁמוֹר שַׁבָּתוֹת הַרְבֵּה. אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: אִי הֲוַאי הָתָם, הֲוָה אָמֵינָא דִּידִי עֲדִיפָא מִדִּידְהוּ: ״וְחַי בָּהֶם״ — וְלֹא שֶׁיָּמוּת בָּהֶם.</div>
+    <div class="trans" data-when="he">ר׳ שמעון בן מנסיא — ׳ושמרו בני ישראל את השבת׳: אמרה תורה, חלל עליו שבת אחת כדי שישמור שבתות הרבה. אמר רב יהודה בשם שמואל: אילו הייתי שם, הייתי אומר שדרשתי עדיפה מכולן — ׳וחי בהם׳, ולא שימות בהם (שהמצוות ניתנו לחיות בהן).</div>
+    <div class="trans" data-when="en">Rabbi Shimon ben Menasya said: It is stated: “And the children of Israel shall keep Shabbat, to observe Shabbat” (Exodus 31:16). The Torah said: Desecrate one Shabbat on his behalf so he will observe many Shabbatot. Rav Yehuda said that Shmuel said: If I would have been there among those Sages who debated this question, I would have said that my proof is preferable to theirs, as it states: “You shall keep My statutes and My ordinances, which a person shall do and live by them” (Leviticus 18:5), and not that he should die by them. In all circumstances, one must take care not to die as a result of fulfilling the mitzvot.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״ה ב — Yoma 85b:4</span></div>
+    <div class="orig">אָמַר רָבָא: לְכוּלְּהוּ אִית לְהוּ פִּירְכָא, בַּר מִדִּשְׁמוּאֵל דְּלֵית לֵיהּ פִּירְכָא. דְּרַבִּי יִשְׁמָעֵאל — דִּילְמָא כִּדְרָבָא. דְּאָמַר רָבָא: מַאי טַעְמָא דְּמַחְתֶּרֶת? חֲזָקָה, אֵין אָדָם מַעֲמִיד עַצְמוֹ עַל מָמוֹנוֹ. וְהַאי מִידָּע יָדַע דְּקָאֵי לְאַפֵּיהּ, וְאָמַר אִי קָאֵי לְאַפַּאי — קָטֵילְנָא לֵיהּ, וְהַתּוֹרָה אָמְרָה: בָּא לְהׇרְגְּךָ — הַשְׁכֵּם לְהׇרְגוֹ. וְאַשְׁכְּחַן וַדַּאי, סָפֵק מְנָלַן?</div>
+    <div class="trans" data-when="he">רבא: לכל הדרשות יש פירכא, חוץ משל שמואל. דרשת ר׳ ישמעאל (מחתרת) — שמא כטעמו של רבא: חזקה שאין אדם מעמיד עצמו על ממונו, והגנב יודע שבעל הבית יעמוד מולו ואמר ׳אם יעמוד אהרגנו׳, והתורה אמרה ׳בא להרגך השכם להרגו׳ — נמצא שזה היתר בוודאי סכנה; ומנין לספק סכנה?</div>
+    <div class="trans" data-when="en">Rava commented on this: All of these arguments have refutations except for that of Shmuel, which has no refutation. The Gemara explains Rava’s claim: The proof brought by Rabbi Yishmael from the thief who breaks in could perhaps be refuted based on the principle of Rava, as Rava said: What is the reason for the halakha about the thief who breaks in? There is a presumption that while a person is being robbed he does not restrain himself with respect to his money. And this thief knows that the homeowner will rise to oppose him and said to himself from the start: If he rises against me, I will kill him. And the Torah states: If a person comes to kill you, rise to kill him first. We found a source for saving a life that is in certain danger, but from where do we derive that even in a case where there is uncertainty as to whether a life is in danger one may desecrate Shabbat? Consequently, Rabbi Yishmael’s argument is refuted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ״ה ב — Yoma 85b:5</span></div>
+    <div class="orig">דְּרַבִּי עֲקִיבָא נָמֵי — דִּילְמָא כִּדְאַבָּיֵי. דְּאָמַר אַבָּיֵי: מָסְרִינַן לֵיהּ זוּגָא דְרַבָּנַן לֵידַע אִם מַמָּשׁ בִּדְבָרָיו. וְאַשְׁכְּחַן וַדַּאי, סָפֵק מְנָא לַן?</div>
+    <div class="trans" data-when="he">אף דרשת ר׳ עקיבא (כהן הבא להעיד) ניתנת לפירכא — שמא כדברי אביי: מוסרים לו זוג חכמים לבדוק תחילה אם יש ממש בעדותו, ורק אז מורידים אותו; נמצא שזה היתר בוודאי הצלה, ומנין לספק?</div>
+    <div class="trans" data-when="en">The proof of Rabbi Akiva can also be refuted. He brought the case of removing a priest from altar service in order to have him testify on another’s behalf, since his testimony might acquit the accused and save him from execution. But perhaps that halakha is in accordance with the opinion of Abaye, as Abaye said: If the accused says he has a witness in his favor, we send a pair of rabbis on his behalf to determine if his words of testimony have substance. These rabbis would first check that the testimony of the priest is substantive before removing him from the altar. If so, we have found that one interrupts the Temple service to save a life from certain danger, but from where do we derive that one interrupts the Temple service when the likelihood of saving life is uncertain?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא פ״ה ב — Yoma 85b:6</span></div>
+    <div class="orig">וְכוּלְּהוּ אַשְׁכְּחַן וַדַּאי, סָפֵק מְנָא לַן? וְדִשְׁמוּאֵל, וַדַּאי לֵית לֵיהּ פִּירְכָא. אָמַר רָבִינָא וְאִיתֵּימָא רַב נַחְמָן בַּר יִצְחָק: טָבָא חֲדָא פִּלְפַּלְתָּא חֲרִיפָא מִמְּלָא צַנָּא דְקָרֵי.</div>
+    <div class="trans" data-when="he">וכן בכל שאר הדרשות — מצאנו היתר רק לוודאי סכנה, ומנין לספק? לכן כולן נדחות. ורק דרשת שמואל (׳וחי בהם׳) אין לה פירכא, שכוללת אף ספק. אמר רבינא (ויש אומרים רנב״י): טובה פלפלת חריפה אחת ממלוא סל של דלעות — דרשת שמואל היחידה שווה כנגד כולן.</div>
+    <div class="trans" data-when="en">And for all the other arguments as well, we have found proofs for saving a life from certain danger. But for cases of uncertainty, from where do we derive this? For this reason, all the arguments are refuted. However, the proof that Shmuel brought from the verse: “And live by them,” which teaches that one should not even put a life in possible danger to observe mitzvot, there is certainly no refutation. Ravina said, and some say it was Rav Naḥman bar Yitzḥak who said with regard to this superior proof of Shmuel: One spicy pepper is better than a whole basket of squash, since its flavor is more powerful than all the others.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">משנת הכפרה</span><span data-when="en">The Mishna of atonement</span>
+      <span class="ref">Yoma 85b:7–8</span></h2>
+  <div class="lead"><span data-when="he">המשנה מונה את דרכי הכפרה — חטאת ואשם, מיתה ויום הכיפורים, ותשובה — ומה ביד אדם לחברו; ודרשת ראב״ע ומאמר ר׳ עקיבא ׳אשריכם ישראל׳.</span><span data-when="en">The Mishna enumerates the modes of atonement — offerings, death and Yom Kippur, and repentance — and the limit for sins between people; with R. Elazar b. Azarya’s exposition and R. Akiva’s “fortunate are you, Israel.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: חטאת ואשם ודאי — מכפרים; מיתה ויוה״כ — עם תשובה; תשובה — על קלות; אין מספיקין בידו; בין אדם לחברו — עד שירצה"]):::mishnah
+  S1["② ראב״ע: ׳לפני ה׳ תטהרו׳ — בין אדם למקום; ר׳ עקיבא: אשריכם ישראל, אביכם שבשמים מטהר"]:::statement
+  M1 -->|דרשה ומאמר| S1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: sin- and definite guilt-offerings atone; death and YK — with repentance; repentance — minor sins; ׳I will sin and repent׳ denied; between people — until appeased"]):::mishnah
+  S1["② R. Elazar b. Azarya: ׳before the Lord be cleansed׳ — between man and God; R. Akiva: fortunate are you, Israel — your Father in Heaven purifies"]:::statement
+  M1 -->|exposition| S1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① מַתְנִי׳ חַטָּאת וְאָשָׁם וַדַּאי — מְכַפְּרִין … מִיתָה וְיוֹם הַכִּפּוּרִים — מְכַפְּרִין עִם הַתְּשׁוּבָה … עַד שֶׁיְּרַצֶּה אֶת חֲבֵירוֹ"]):::mishnah
+  S1["② דָּרַשׁ רַבִּי אֶלְעָזָר בֶּן עֲזַרְיָה … ׳לִפְנֵי ה׳ תִּטְהָרוּ׳ … אָמַר רַבִּי עֲקִיבָא: אַשְׁרֵיכֶם יִשְׂרָאֵל … אֲבִיכֶם שֶׁבַּשָּׁמַיִם"]:::statement
+  M1 -->|דרשה ומאמר| S1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה ב — Yoma 85b:7</span></div>
+    <div class="orig">מַתְנִי׳ חַטָּאת וְאָשָׁם וַדַּאי — מְכַפְּרִין. מִיתָה וְיוֹם הַכִּפּוּרִים — מְכַפְּרִין עִם הַתְּשׁוּבָה. תְּשׁוּבָה — מְכַפֶּרֶת עַל עֲבֵירוֹת קַלּוֹת: עַל עֲשֵׂה, וְעַל לֹא תַעֲשֶׂה. וְעַל הַחֲמוּרוֹת הוּא תּוֹלֶה, עַד שֶׁיָּבֹא יוֹם הַכִּפּוּרִים וִיכַפֵּר. הָאוֹמֵר: אֶחֱטָא וְאָשׁוּב, אֶחֱטָא וְאָשׁוּב — אֵין מַסְפִּיקִין בְּיָדוֹ לַעֲשׂוֹת תְּשׁוּבָה. אֶחֱטָא וְיוֹם הַכִּפּוּרִים מְכַפֵּר — אֵין יוֹם הַכִּפּוּרִים מְכַפֵּר. עֲבֵירוֹת שֶׁבֵּין אָדָם לַמָּקוֹם — יוֹם הַכִּפּוּרִים מְכַפֵּר, עֲבֵירוֹת שֶׁבֵּין אָדָם לַחֲבֵירוֹ — אֵין יוֹם הַכִּפּוּרִים מְכַפֵּר, עַד שֶׁיְּרַצֶּה אֶת חֲבֵירוֹ.</div>
+    <div class="trans" data-when="he">משנה: חטאת ואשם ודאי מכפרים. מיתה ויום הכיפורים מכפרים עם התשובה. התשובה לבדה מכפרת על עבירות קלות (עשה ולא תעשה), ועל החמורות היא תולה עד שיכפר יום הכיפורים. האומר ׳אחטא ואשוב׳ — אין מספיקין בידו לעשות תשובה; ׳אחטא ויום הכיפורים מכפר׳ — אין יוה״כ מכפר. עבירות שבין אדם למקום — יוה״כ מכפר; שבין אדם לחברו — אין יוה״כ מכפר עד שירצה את חברו.</div>
+    <div class="trans" data-when="en">MISHNA: A sin-offering, which atones for unwitting performance of transgressions punishable by karet, and a definite guilt-offering, which is brought for robbery and misuse of consecrated items, atone for those sins. Death and Yom Kippur atone for sins when accompanied by repentance. Repentance itself atones for minor transgressions, for both positive mitzvot and negative mitzvot. And repentance places punishment for severe transgressions in abeyance until Yom Kippur comes and completely atones for the transgression. With regard to one who says: I will sin and then I will repent, I will sin and I will repent, Heaven does not provide him the opportunity to repent, and he will remain a sinner all his days. With regard to one who says: I will sin and Yom Kippur will atone for my sins, Yom Kippur does not atone for his sins. Furthermore, for transgressions between a person and God, Yom Kippur atones; however, for transgressions between a person and another, Yom Kippur does not atone until he appeases the other person.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ה ב — Yoma 85b:8</span></div>
+    <div class="orig">דָּרַשׁ רַבִּי אֶלְעָזָר בֶּן עֲזַרְיָה: ״מִכֹּל חַטֹּאתֵיכֶם לִפְנֵי ה׳ תִּטְהָרוּ״. עֲבֵירוֹת שֶׁבֵּין אָדָם לַמָּקוֹם — יוֹם הַכִּפּוּרִים מְכַפֵּר. עֲבֵירוֹת שֶׁבֵּין אָדָם לַחֲבֵירוֹ — אֵין יוֹם הַכִּפּוּרִים מְכַפֵּר עַד שֶׁיְּרַצֶּה אֶת חֲבֵירוֹ. אָמַר רַבִּי עֲקִיבָא: אַשְׁרֵיכֶם יִשְׂרָאֵל! לִפְנֵי מִי אַתֶּם מִטַּהֲרִין, מִי מְטַהֵר אֶתְכֶם? אֲבִיכֶם שֶׁבַּשָּׁמַיִם, שֶׁנֶּאֱמַר: ״וְזָרַקְתִּי עֲלֵיכֶם מַיִם טְהוֹרִים וּטְהַרְתֶּם״, וְאוֹמֵר: ״מִקְוֵה יִשְׂרָאֵל (ה׳)״, מָה מִקְוֶה מְטַהֵר אֶת הַטְּמֵאִים — אַף הַקָּדוֹשׁ בָּרוּךְ הוּא מְטַהֵר אֶת יִשְׂרָאֵל.</div>
+    <div class="trans" data-when="he">דרש ראב״ע: ׳מכל חטאתיכם לפני ה׳ תטהרו׳ — עבירות שבין אדם למקום יוה״כ מכפר, אך שבין אדם לחברו אין יוה״כ מכפר עד שירצה את חברו. אמר ר׳ עקיבא: אשריכם ישראל! לפני מי אתם מיטהרים ומי מטהר אתכם — אביכם שבשמים, שנאמר ׳וזרקתי עליכם מים טהורים וטהרתם׳, ואומר ׳מקוה ישראל ה׳׳: מה מקוה מטהר את הטמאים, אף הקב״ה מטהר את ישראל.</div>
+    <div class="trans" data-when="en">Similarly, Rabbi Elazar ben Azarya taught that point from the verse: “From all your sins you shall be cleansed before the Lord” (Leviticus 16:30). For transgressions between a person and God, Yom Kippur atones; however, for transgressions between a person and another, Yom Kippur does not atone until he appeases the other person. In conclusion, Rabbi Akiva said: How fortunate are you, Israel; before Whom are you purified, and Who purifies you? It is your Father in Heaven, as it is stated: “And I will sprinkle purifying water upon you, and you shall be purified” (Ezekiel 36:25). And it says: “The ritual bath of Israel is God” (Jeremiah 17:13). Just as a ritual bath purifies the impure, so too, the Holy One, Blessed be He, purifies Israel.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">אשם ודאי, ולא אשם תלוי</span><span data-when="en">Definite guilt-offering, not the uncertain</span>
+      <span class="ref">Yoma 85b:9–10</span></h2>
+  <div class="lead"><span data-when="he">דקדוק במשנה: ׳אשם ודאי׳ — דווקא, ולא אשם תלוי; ואף שנכתבה בו כפרה — שני תירוצים: כפרה גמורה, ומה שאחר (יוה״כ) מכפר במקומו.</span><span data-when="en">A precise reading: “a definite guilt-offering” — but not the uncertain one; though atonement is written of it too — two answers: complete atonement, and that something else (Yom Kippur) atones in its stead.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① גמ׳: אשם ודאי — אין, אשם תלוי — לא"]:::statement
+  Q1{"① והא כפרה כתיבא ביה?"}:::question
+  A1["① הנך — כפרה גמורה; אשם תלוי — אינו מכפר כפרה גמורה"]:::answer
+  A2["② אי נמי: אין אחר מכפר כפרתן; אשם תלוי — יוה״כ פוטרו"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|אי נמי| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Gemara: definite guilt-offering — yes, uncertain — no"]:::statement
+  Q1{"① But isn׳t atonement written of it too?"}:::question
+  A1["① These — complete atonement; the uncertain — does not fully atone"]:::answer
+  A2["② Alternatively: nothing else atones for theirs; the uncertain — Yom Kippur exempts"]:::answer
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -->|alternatively| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① גְּמָ׳ אָשָׁם וַדַּאי — אִין, אָשָׁם תָּלוּי — לָא"]:::statement
+  Q1{"① וְהָא כַּפָּרָה כְּתִיבָא בֵּיהּ?"}:::question
+  A1["① הָנָךְ מְכַפְּרִי כַּפָּרָה גְּמוּרָה, אָשָׁם תָּלוּי אֵינוֹ מְכַפֵּר כַּפָּרָה גְּמוּרָה"]:::answer
+  A2["② אִי נָמֵי: הָנָךְ אֵין אַחֵר מְכַפֵּר כַּפָּרָתָן … אֲשָׁמוֹת תְּלוּיִן — פְּטוּרִין"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|אי נמי| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה ב — Yoma 85b:9</span></div>
+    <div class="orig">גְּמָ׳ אָשָׁם וַדַּאי — אִין, אָשָׁם תָּלוּי — לָא. וְהָא כַּפָּרָה כְּתִיבָא בֵּיהּ? הָנָךְ מְכַפְּרִי כַּפָּרָה גְּמוּרָה, אָשָׁם תָּלוּי אֵינוֹ מְכַפֵּר כַּפָּרָה גְּמוּרָה.</div>
+    <div class="trans" data-when="he">גמרא מדקדקת: המשנה אמרה ׳אשם ודאי׳ — דווקא ודאי כן מכפר, אבל אשם תלוי לא. ומקשה: הרי גם באשם תלוי נכתבה כפרה? תירוץ: החטאת והאשם הוודאי מכפרים כפרה גמורה, ואילו אשם תלוי אינו מכפר כפרה גמורה (אלא תולה עד שייוודע החטא).</div>
+    <div class="trans" data-when="en">GEMARA: The mishna says that a definite guilt-offering atones for sins. The Gemara analyzes this: With regard to a definite guilt-offering, yes, it does atone for sins. This implies that an uncertain guilt-offering does not. The Gemara asks: But isn’t atonement written with regard to it? Why, then, doesn’t it atone? The Gemara answers: Those, the sin-offerings and definite guilt-offerings, facilitate complete atonement, but an uncertain guilt-offering does not facilitate complete atonement. Instead, this offering provides temporary atonement for an individual, to protect him from punishment until he becomes aware of his sin and brings the appropriate offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ה ב — Yoma 85b:10</span></div>
+    <div class="orig">אִי נָמֵי: הָנָךְ אֵין אַחֵר מְכַפֵּר כַּפָּרָתָן, אָשָׁם תָּלוּי אַחֵר מְכַפֵּר כַּפָּרָתָן, דִּתְנַן: חַיָּיבֵי חַטָּאוֹת וַאֲשָׁמוֹת וַדָּאִין שֶׁעָבַר עֲלֵיהֶן יוֹם הַכִּפּוּרִים — חַיָּיבִין, אֲשָׁמוֹת תְּלוּיִן — פְּטוּרִין.</div>
+    <div class="trans" data-when="he">תירוץ נוסף: בחטאת ואשם ודאי — אין דבר אחר מכפר במקומם; באשם תלוי — דבר אחר (יום הכיפורים) מכפר כפרתו. שהרי שנינו: חייבי חטאות ואשמות ודאי שעבר עליהם יום הכיפורים — עדיין חייבים; אבל חייבי אשם תלוי — פטורים, שיוה״כ כיפר עליהם.</div>
+    <div class="trans" data-when="en">Alternatively, there is this distinction: Nothing else facilitates the atonement of those sin-offerings and definite guilt-offerings, whereas something else does facilitate the atonement of the uncertain guilt-offering, as we learned in a mishna: If Yom Kippur passed, those who are obligated to bring sin-offerings and definite guilt-offerings are still obligated to bring their offerings; however, those obligated to bring uncertain guilt-offerings are exempt because Yom Kippur atoned for them.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-8">
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">מיתה ויוה״כ — עם תשובה</span><span data-when="en">Death and Yom Kippur — with repentance</span>
+      <span class="ref">Yoma 85b:11–12</span></h2>
+  <div class="lead"><span data-when="he">׳מיתה ויוה״כ מכפרים עם התשובה׳ — עם תשובה דווקא; נימא דלא כרבי הסובר שיוה״כ מכפר אף בלא תשובה — ויישוב.</span><span data-when="en">“Death and Yom Kippur atone with repentance” — with it specifically; say this is not like Rabbi, who holds Yom Kippur atones even without repentance — and the resolution.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① מיתה ויוה״כ — עם תשובה אין, בפני עצמן לא"]:::statement
+  Q1{"① נימא דלא כרבי? רבי: יוה״כ מכפר אף בלא תשובה (חוץ מפורק עול וכו׳)"}:::question
+  A1["② אפילו תימא רבי: תשובה בעיא יוה״כ, יוה״כ לא בעיא תשובה"]:::answer
+  S1 -.->|נימא דלא כרבי| Q1
+  Q1 -->|יישוב| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Death and YK — with repentance yes, by themselves no"]:::statement
+  Q1{"① Say it is not like Rabbi? Rabbi: YK atones even without repentance (save throwing off the yoke, etc.)"}:::question
+  A1["② Even say it is Rabbi: repentance needs YK; YK does not need repentance"]:::answer
+  S1 -.->|say not like Rabbi| Q1
+  Q1 -->|resolution| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① מִיתָה וְיוֹם הַכִּפּוּרִים מְכַפְּרִין עִם הַתְּשׁוּבָה. עִם הַתְּשׁוּבָה — אִין, בִּפְנֵי עַצְמָן — לָא"]:::statement
+  Q1{"① נֵימָא דְּלָא כְּרַבִּי … רַבִּי אוֹמֵר: … בֵּין עָשָׂה תְּשׁוּבָה בֵּין לֹא עָשָׂה תְּשׁוּבָה — יוֹם הַכִּפּוּרִים מְכַפֵּר"}:::question
+  A1["② אֲפִילּוּ תֵּימָא רַבִּי: תְּשׁוּבָה בָּעֲיָא יוֹם הַכִּפּוּרִים, יוֹם הַכִּפּוּרִים לָא בָּעֲיָא תְּשׁוּבָה"]:::answer
+  S1 -.->|נימא דלא כרבי| Q1
+  Q1 -->|יישוב| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה ב — Yoma 85b:11</span></div>
+    <div class="orig">מִיתָה וְיוֹם הַכִּפּוּרִים מְכַפְּרִין עִם הַתְּשׁוּבָה. עִם הַתְּשׁוּבָה — אִין, בִּפְנֵי עַצְמָן — לָא. נֵימָא דְּלָא כְּרַבִּי. דְּתַנְיָא, רַבִּי אוֹמֵר: עַל כׇּל עֲבֵירוֹת שֶׁבַּתּוֹרָה, בֵּין עָשָׂה תְּשׁוּבָה בֵּין לֹא עָשָׂה תְּשׁוּבָה — יוֹם הַכִּפּוּרִים מְכַפֵּר, חוּץ (מִפּוֹרֵק עוֹל), וּמְגַלֶּה פָּנִים בַּתּוֹרָה, וּמֵיפֵר בְּרִית בָּשָׂר, שֶׁאִם עָשָׂה תְּשׁוּבָה — יוֹם הַכִּפּוּרִים מְכַפֵּר, וְאִם לֹא עָשָׂה תְּשׁוּבָה — אֵין יוֹם הַכִּפּוּרִים מְכַפֵּר.</div>
+    <div class="trans" data-when="he">המשנה: ׳מיתה ויום הכיפורים מכפרים עם התשובה׳ — עם תשובה כן, בפני עצמם (בלא תשובה) לא. נימא שאין משנתנו כרבי? שהרי שנינו, רבי אומר: על כל עבירות שבתורה, בין עשה תשובה בין לא — יום הכיפורים מכפר, חוץ מפורק עול, ומגלה פנים בתורה, ומיפר ברית בשר, שבהם רק אם עשה תשובה יוה״כ מכפר.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna that death and Yom Kippur atone for sins when accompanied by repentance. The Gemara analyzes this: With repentance, yes, they do atone for sins; but by themselves, without repentance, they do not. Let us say that the mishna is not in accordance with the opinion of Rabbi Yehuda HaNasi, as it was taught in a baraita: Rabbi Yehuda HaNasi says that for all transgressions in the Torah, whether one repented or did not repent, Yom Kippur atones, with the exception of rejecting the yoke of Torah and mitzvot; and denying the Holy One, Blessed be He; and interpreting the Torah falsely; and violating the covenant of the flesh, i.e., circumcision. In these cases, if one repents Yom Kippur atones for his sin, and if one does not repent Yom Kippur does not atone for his sin.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ה ב — Yoma 85b:12</span></div>
+    <div class="orig">אֲפִילּוּ תֵּימָא רַבִּי: תְּשׁוּבָה בָּעֲיָא יוֹם הַכִּפּוּרִים, יוֹם הַכִּפּוּרִים לָא בָּעֲיָא תְּשׁוּבָה.</div>
+    <div class="trans" data-when="he">יישוב: אפשר לומר שאף משנתנו כרבי. כוונת המשנה: התשובה זקוקה ליום הכיפורים כדי להשלים את הכפרה, אך יום הכיפורים עצמו אינו זקוק לתשובה ומכפר אף בלעדיה.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: This is no proof; even if you say that the mishna is in accordance with the opinion of Rabbi Yehuda HaNasi, the mishna can be understood as follows: Repentance still requires Yom Kippur in order to complete the atonement, whereas Yom Kippur does not require repentance but atones even without it.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-9">
+  <h2><span class="badge"><span data-when="he">סוגיה 9</span><span data-when="en">Sugya 9</span></span>
+      <span data-when="he">על מה תשובה מכפרת</span><span data-when="en">What repentance atones for</span>
+      <span class="ref">Yoma 85b:13–86a:4</span></h2>
+  <div class="lead"><span data-when="he">׳תשובה מכפרת על עשה ועל לא תעשה׳ — קושיא וסידור: רב יהודה מעמיד בלאו הניתק לעשה; ראיות מ׳אלו הן קלות׳ ומדרשת ׳ונקה׳, והכרעה — תנאי היא.</span><span data-when="en">“Repentance atones for a positive and a negative mitzva” — a difficulty and re-reading: Rav Yehuda limits it to a prohibition rectified by a positive act; proofs and a final ruling — it is a tannaitic dispute.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תשובה על עשה ועל לא תעשה · על ל״ת מכפרת, עשה מיבעיא?"]:::statement
+  A1["① רב יהודה: על עשה, ועל ל״ת שניתק לעשה"]:::answer
+  Q1{"② ועל ל״ת גמור לא? ורמינהו: אלו הן קלות — עשה ול״ת"}:::question
+  A2["③ חוץ מ׳לא תשא׳! · לא תשא וכל דדמי ליה"]:::answer
+  P1["④ ת״ש: ר׳ יהודה — מ׳לא תשא׳ ולמטה תשובה מכפרת · דחייה: כל דדמי ליה"]:::proof
+  P2["⑤ ת״ש: ׳ונקה׳ — שמו אינו מנקה, אבל מנקה שאר חייבי לאוין"]:::proof
+  C1["⑥ תנאי היא: על מה תשובה מכפרת — עשה ול״ת שניתק; ועל כריתות ומיתות ב״ד ול״ת גמור — תולה ויוה״כ מכפר"]:::conclusion
+  S1 -->|הכי קאמר| A1
+  A1 -.->|רמיה| Q1
+  Q1 -->|תירוץ| A2
+  A2 -->|ת״ש| P1
+  P1 -->|ת״ש| P2
+  P2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Repentance for positive and negative · if for a negative, why state positive?"]:::statement
+  A1["① Rav Yehuda: for a positive, and a negative rectified by a positive"]:::answer
+  Q1{"② And not a full negative? Contradiction: ׳these are minor׳ — positive and negative"}:::question
+  A2["③ except ׳do not take in vain׳! · that and all like it"]:::answer
+  P1["④ Come and hear: R. Yehuda — below ׳do not take׳ repentance atones · rejected: and all like it"]:::proof
+  P2["⑤ Come and hear: ׳will not absolve׳ — His name not absolved, but other prohibitions are"]:::proof
+  C1["⑥ A tannaitic dispute: repentance — positive and a negative rectified; karet, court-death, full negatives — suspended, YK atones"]:::conclusion
+  S1 -->|it means| A1
+  A1 -.->|contradiction| Q1
+  Q1 -->|answer| A2
+  A2 -->|come and hear| P1
+  P1 -->|come and hear| P2
+  P2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תְּשׁוּבָה מְכַפֶּרֶת … עַל עֲשֵׂה וְעַל לֹא תַעֲשֶׂה … עַל עֲשֵׂה מִיבַּעְיָא?"]:::statement
+  A1["① אָמַר רַב יְהוּדָה … עַל עֲשֵׂה, וְעַל לֹא תַעֲשֶׂה שֶׁנִּיתַּק לַעֲשֵׂה"]:::answer
+  Q1{"② וְעַל לֹא תַעֲשֶׂה גָּמוּר לָא? וּרְמִינְהוּ, אֵלּוּ הֵן קַלּוֹת: עֲשֵׂה וְלֹא תַעֲשֶׂה"}:::question
+  A2["③ חוּץ מִ׳לֹּא תִשָּׂא׳! ׳לֹא תִשָּׂא׳ וְכֹל דְּדָמֵי לֵיהּ"]:::answer
+  P1["④ תָּא שְׁמַע, רַבִּי יְהוּדָה … מִ׳לֹּא תִשָּׂא׳ וּלְמַטָּה — תְּשׁוּבָה מְכַפֶּרֶת … ׳לֹא תִשָּׂא׳ וְכׇל דְּדָמֵי לֵיהּ"]:::proof
+  P2["⑤ תָּא שְׁמַע: … ׳לֹא יְנַקֶּה׳ … ׳אֶת שְׁמוֹ׳ … אֲבָל מְנַקֶּה שְׁאָר חַיָּיבֵי לָאוִין"]:::proof
+  C1["⑥ תַּנָּאֵי הִיא … עַל עֲשֵׂה וְעַל לֹא תַעֲשֶׂה שֶׁנִּיתַּק לַעֲשֵׂה … עַל כָּרֵיתוֹת וְעַל מִיתוֹת בֵּית דִּין, וְעַל לֹא תַעֲשֶׂה גָּמוּר"]:::conclusion
+  S1 -->|הכי קאמר| A1
+  A1 -.->|רמיה| Q1
+  Q1 -->|תירוץ| A2
+  A2 -->|ת״ש| P1
+  P1 -->|ת״ש| P2
+  P2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ה ב — Yoma 85b:13</span></div>
+    <div class="orig">תְּשׁוּבָה מְכַפֶּרֶת עַל עֲבֵירוֹת קַלּוֹת: עַל עֲשֵׂה וְעַל לֹא תַעֲשֶׂה. הַשְׁתָּא עַל לֹא תַעֲשֶׂה מְכַפֶּרֶת, עַל עֲשֵׂה מִיבַּעְיָא? אָמַר רַב יְהוּדָה, הָכִי קָאָמַר: עַל עֲשֵׂה, וְעַל לֹא תַעֲשֶׂה שֶׁנִּיתַּק לַעֲשֵׂה.</div>
+    <div class="trans" data-when="he">המשנה: ׳תשובה מכפרת על עבירות קלות — על עשה ועל לא תעשה׳. תמיהה: אם על לא תעשה (החמור, שלוקין עליו) מכפרת, על עשה (הקל) צריך לומר? תירוץ רב יהודה: כך כוונת המשנה — על עשה, ועל לא תעשה שניתק לעשה (שהתורה קבעה לו תיקון בעשה), שדינו כעשה.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: Repentance itself atones for minor transgressions, for both a positive mitzva and for a negative mitzva. The Gemara is surprised at this: Now that it was stated that repentance atones for a negative mitzva, which is severe and warrants lashes, is it necessary to also teach that it atones for a positive mitzva, which is more lenient? Rav Yehuda said: This is what it said, i.e., the mishna should be understood as follows: Repentance atones for a positive mitzva and for a negative mitzva whose violation can be rectified by a positive mitzva. One is not punished by a court for violating a prohibition for which the Torah prescribes a positive act as a corrective measure and which thereby has the same halakha as a positive mitzva.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ה ב — Yoma 85b:14</span></div>
+    <div class="orig">וְעַל לֹא תַעֲשֶׂה גָּמוּר לָא? וּרְמִינְהוּ, אֵלּוּ הֵן קַלּוֹת: עֲשֵׂה וְלֹא תַעֲשֶׂה,</div>
+    <div class="trans" data-when="he">קושיא: ולפי זה, על לא תעשה גמור (שאינו ניתק לעשה) אין תשובה מכפרת? ורמינהו (סתירה מברייתא): ׳אלו הן עבירות קלות — עשה ולא תעשה׳ — משמע אף לא תעשה גמור.</div>
+    <div class="trans" data-when="en">The Gemara asks: But does repentance not atone for a full-fledged negative mitzva? The Gemara raises a contradiction from a separate source: It was taught that these are minor transgressions: A positive mitzva and a negative mitzva,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ו א — Yoma 86a:1</span></div>
+    <div class="orig">חוּץ מִ״לֹּא תִשָּׂא״! ״לֹא תִשָּׂא״ וְכֹל דְּדָמֵי לֵיהּ.</div>
+    <div class="trans" data-when="he">המשך הברייתא: ׳חוץ מלא תשא׳ (שבועת שווא) — שעליו אין תשובה לבדה מכפרת. תירוץ: אין ׳לא תשא׳ הלאו היחיד החמור, אלא ׳לא תשא וכל הדומה לו׳ — כל הלאווים החמורים שיש בהם עונש בית דין.</div>
+    <div class="trans" data-when="en">except for: “You shall not take the name of the Lord, your God, in vain” (Exodus 20:7), about which the Torah states: “For God will not absolve him who takes His name in vain” (Exodus 20:7). The Gemara answers: It is not that this is the only negative mitzva that is not a minor transgression; rather, it is: “You shall not take the name of the Lord, your God, in vain” and any prohibition similar to it, meaning all severe prohibitions that carry punishment by a court.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ו א — Yoma 86a:2</span></div>
+    <div class="orig">תָּא שְׁמַע, רַבִּי יְהוּדָה אוֹמֵר: כֹּל שֶׁהוּא מִ״לֹּא תִשָּׂא״ וּלְמַטָּה — תְּשׁוּבָה מְכַפֶּרֶת, מִ״לֹּא תִשָּׂא״ וּלְמַעְלָה — תְּשׁוּבָה תּוֹלָה וְיוֹם הַכִּפּוּרִים מְכַפֵּר. ״לֹא תִשָּׂא״ וְכׇל דְּדָמֵי לֵיהּ.</div>
+    <div class="trans" data-when="he">ניסיון ראיה: ר׳ יהודה אומר — כל שהוא מ׳לא תשא׳ ולמטה (עבירות קלות ממנו) תשובה מכפרת; ומ׳לא תשא׳ ולמעלה (חמורות ממנו) תשובה תולה ויוה״כ מכפר. דחייה: גם כאן הכוונה ׳לא תשא וכל הדומה לו׳, ואין ראיה.</div>
+    <div class="trans" data-when="en">The Gemara proposes: Come and hear from that which was taught: Rabbi Yehuda says: For any sin from “You shall not take the name of the Lord, your God, in vain” and below, i.e., prohibitions less severe than that, repentance atones. For any sin from “You shall not take the name of the Lord, your God, in vain” and above, repentance suspends punishment and Yom Kippur atones. The Gemara rejects this: This does not constitute proof either, since one could say that it is referring to: “You shall not take the name of the Lord, your God, in vain” and anything similar to it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ו א — Yoma 86a:3</span></div>
+    <div class="orig">תָּא שְׁמַע: לְפִי שֶׁנֶּאֱמַר בְּחוֹרֵב תְּשׁוּבָה ״וְנַקֵּה״, יָכוֹל אַף ״לֹא תִשָּׂא״ עִמָּהֶן — תַּלְמוּד לוֹמַר: ״לֹא יְנַקֶּה״. יָכוֹל אַף שְׁאָר חַיָּיבֵי לָאוִין כֵּן — תַּלְמוּד לוֹמַר: ״אֶת שְׁמוֹ״, שְׁמוֹ הוּא דְּאֵינוֹ מְנַקֶּה, אֲבָל מְנַקֶּה שְׁאָר חַיָּיבֵי לָאוִין.</div>
+    <div class="trans" data-when="he">ניסיון ראיה נוסף: לפי שנאמר בחורב על התשובה ׳ונקה׳, יכול אף ׳לא תשא׳ בכלל — ת״ל ׳לא ינקה׳ (שבועת שווא אינה מתנקה בתשובה לבדה). יכול אף שאר חייבי לאווין כן — ת״ל ׳את שמו׳: רק שמו אינו מנקה, אבל מנקה שאר חייבי לאווין — משמע ששאר הלאווין מתכפרים בתשובה.</div>
+    <div class="trans" data-when="en">Come and hear from a different source that was taught: Since it was stated at Horeb with regard to repentance: “Absolve,” one might have thought that even the transgression of: “You shall not take the name of the Lord, your God, in vain” is included among them; therefore, the verses states: “Will not absolve” (Exodus 20:6). One might have thought this is also true for those who are liable for violating all other prohibitions; therefore, the verse states: “His name.” God does not absolve the one who disrespects His name, but He absolves those who are liable for violating all other prohibitions and repent. This is proof that those who violate all other prohibitions are not comparable to one who violates: “You shall not take the name of the Lord, your God, in vain.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ו א — Yoma 86a:4</span></div>
+    <div class="orig">תַּנָּאֵי הִיא, דְּתַנְיָא: עַל מָה תְּשׁוּבָה מְכַפֶּרֶת — עַל עֲשֵׂה וְעַל לֹא תַעֲשֶׂה שֶׁנִּיתַּק לַעֲשֵׂה, וְעַל מָה תְּשׁוּבָה תּוֹלָה וְיוֹם הַכִּפּוּרִים מְכַפֵּר — עַל כָּרֵיתוֹת וְעַל מִיתוֹת בֵּית דִּין, וְעַל לֹא תַעֲשֶׂה גָּמוּר.</div>
+    <div class="trans" data-when="he">מסקנה: מחלוקת תנאים היא. שנינו בברייתא: על מה תשובה מכפרת — על עשה ועל לא תעשה שניתק לעשה; ועל מה תשובה תולה ויום הכיפורים מכפר — על כריתות, על מיתות בית דין, ועל לא תעשה גמור. הרי שיש תנא המבחין בין לאו גמור ללאו הניתק לעשה.</div>
+    <div class="trans" data-when="en">The Gemara answers: This is a dispute between tanna’im, as it was taught in a baraita: For what does repentance atone? It atones for a positive mitzva and for a negative mitzva that can be rectified through a positive mitzva. And for what does repentance suspend punishment and Yom Kippur atone? It is for sins punishable by karet, and for sins punishable by the death penalty from the earthly court, and for full-fledged negative mitzvot. This indicates that there is a tanna who distinguishes between prohibitions that warrant lashes and those that do not. Therefore, there is a tannaitic dispute as to whether or not prohibitions that warrant punishment by the courts can be rectified by repentance alone.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
