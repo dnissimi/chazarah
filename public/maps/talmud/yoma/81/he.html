@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ״א</title>
+<meta name="description" content="מפת הסוגיא של יומא פ״א: אכילה ושתייה אינן מצטרפות לשיעור — מחלוקת ר׳ יהושע ורבנן; אין חיוב על תוספת מלאכה ועינוי, ולימוד האזהרה לעינוי בגזרה שווה; ואוכלים שאינם ראויים לאכילה — פלפלין, זנגביל, חומץ.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="81">
+<meta name="gemara-map:sefaria-ref" content="Yoma 81">
+<meta name="gemara-map:topic-he" content="צירוף אכילה ושתייה, תוספת, ואוכלין שאינם ראויים">
+<meta name="gemara-map:topic-en" content="Combining, the extension, and unfit foods">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ״א">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 81">
+<meta name="gemara-map:blurb-he" content="אכילה ושתייה אינן מצטרפות; אין עונש על תוספת היום ולימוד האזהרה לעינוי; ואוכלין שאינם ראויים — פטור.">
+<meta name="gemara-map:blurb-en" content="Eating and drinking do not combine; no penalty for the day’s extension and the source for warning against eating; and unfit foods are exempt.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ״א</span><span data-when="en">Sugya map — Yoma 81</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ״א א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 81a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> חמש סוגיות בדיני יום הכיפורים: <b>אכילה ושתייה אינן מצטרפות</b> לשיעור החיוב — מחלוקת ר׳ יהושע ורבנן; משנת <b>אכל ושתה בהעלם אחד</b>; מדוע <b>לא נאמרה אזהרה</b> מפורשת בעינוי, וכיצד לומדים אותה בגזרה שווה; הברייתא ש<b>אין עונש ולא אזהרה על תוספת</b> מלאכה ועינוי, אלא על עיצומו של יום; ו<b>אוכלין שאינם ראויים</b> לאכילה — פלפלין, זנגביל, חומץ — שהאוכלם פטור.</span>
+    <span data-when="en"><b>Bottom line:</b> Five sugyot on Yom Kippur law: <b>eating and drinking do not combine</b> toward the liability measure — a dispute of R. Yehoshua and the Rabbis; the Mishna of <b>eating and drinking in one lapse</b>; why <b>no explicit warning</b> was stated for affliction and how it is derived by verbal analogy; the baraita that there is <b>no penalty or warning for the extension</b> of labor and affliction, only for the day itself; and <b>foods unfit for eating</b> — pepper, ginger, vinegar — for which one is exempt.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ״א</span><span data-when="en">Overview — Yoma 81</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · אכילה ושתייה — אין מצטרפין"]:::statement
+  O2(["2 · משנה: אכל ושתה בהעלם אחד"]):::mishnah
+  O3["3 · מדוע לא נאמרה אזהרה בעינוי"]:::statement
+  O4["4 · אין עונש ואזהרה על תוספת"]:::statement
+  O5["5 · אוכלין שאינם ראויים — פטור"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Eating and drinking — do not combine"]:::statement
+  O2(["2 · Mishna: ate and drank in one lapse"]):::mishnah
+  O3["3 · Why no warning was stated for affliction"]:::statement
+  O4["4 · No penalty or warning for the extension"]:::statement
+  O5["5 · Unfit foods — exempt"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">אכילה ושתייה אינן מצטרפות — לפי מי</span><span data-when="en">Eating and drinking do not combine — whose view</span>
+      <span class="ref">Yoma 81a:3–6</span></h2>
+  <div class="lead"><span data-when="he">המשנה שאכילה ושתייה אינן מצטרפות לשיעור החיוב — האם כר׳ יהושע (טומאה ושיעור שווים), או אף לרבנן, משום ש״יישוב הדעת״ אינו עניין לטומאה.</span><span data-when="en">The Mishna that eating and drinking do not combine — is it R. Yehoshua (matching impurity and measure), or even the Rabbis, since “settling the mind” is unlike impurity.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① האוכל והשותה אין מצטרפין — מאן תנא?"}:::question
+  S1["② רב חסדא: ר׳ יהושע — טומאתו ושיעורו שוה מצטרף"]:::statement
+  S2["③ רב נחמן: אפילו רבנן — התם בטומאה, אבל הכא יישוב הדעת"]:::statement
+  S3["④ וכן ריש לקיש כרב חסדא · ר׳ יוחנן כרב נחמן"]:::statement
+  Q1 -->|תירוץ א| S1
+  Q1 -->|תירוץ ב| S2
+  S1 -->|וכן נחלקו| S3
+  S2 -->|וכן נחלקו| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① Food and drink do not combine — who is the tanna?"}:::question
+  S1["② Rav Ḥisda: R. Yehoshua — same impurity and measure combine"]:::statement
+  S2["③ Rav Naḥman: even the Rabbis — there impurity, here settling the mind"]:::statement
+  S3["④ So too Reish Lakish like Rav Ḥisda · R. Yoḥanan like Rav Naḥman"]:::statement
+  Q1 -->|answer A| S1
+  Q1 -->|answer B| S2
+  S1 -->|likewise split| S3
+  S2 -->|likewise split| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① הָאוֹכֵל וְהַשּׁוֹתֶה אֵין מִצְטָרְפִין. מַאן תַּנָּא?"}:::question
+  S1["② רַב חִסְדָּא … רַבִּי יְהוֹשֻׁעַ … כֹּל שֶׁטּוּמְאָתוֹ וְשִׁיעוּרוֹ שָׁוֶה — מִצְטָרֵף"]:::statement
+  S2["③ רַב נַחְמָן … עַד כָּאן … אֶלָּא לְעִנְיַן טוּמְאָה … אֲבָל הָכָא, מִשּׁוּם יַתּוֹבֵי דַּעְתָּא"]:::statement
+  S3["④ וְכֵן … רֵישׁ לָקִישׁ … וְרַבִּי יוֹחָנָן אָמַר: אֲפִילּוּ תֵּימָא רַבָּנַן"]:::statement
+  Q1 -->|תירוץ א| S1
+  Q1 -->|תירוץ ב| S2
+  S1 -->|וכן נחלקו| S3
+  S2 -->|וכן נחלקו| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״א א — Yoma 81a:3</span></div>
+    <div class="orig">הָאוֹכֵל וְהַשּׁוֹתֶה אֵין מִצְטָרְפִין. מַאן תַּנָּא? אָמַר רַב חִסְדָּא: בְּמַחְלוֹקֶת שְׁנוּיָה, וְרַבִּי יְהוֹשֻׁעַ הִיא. דִּתְנַן, כְּלָל אָמַר רַבִּי יְהוֹשֻׁעַ: כֹּל שֶׁטּוּמְאָתוֹ וְשִׁיעוּרוֹ שָׁוֶה — מִצְטָרֵף.</div>
+    <div class="trans" data-when="he">המשנה לימדה שהאוכל והשותה אינם מצטרפים זה עם זה לשיעור החיוב ביוה״כ. מי שנה כך? רב חסדא: זו מחלוקת תנאים, והמשנה כר׳ יהושע, ששנה כלל: רק דבר שטומאתו ושיעורו שווים לחברו — מצטרף עמו.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna that food and drink do not combine. The Gemara asks: Who is the tanna who taught this? Rav Ḥisda said: This halakha is taught as a dispute, and the mishna is in accordance with the opinion of Rabbi Yehoshua. As we learned in a mishna: Rabbi Yehoshua stated a general principle: Any item that is identical to another item in its type of ritual impurity, e.g., impurity that lasts only until evening, and its measure for impurity, e.g., an olive-bulk, combines with the other item to reach one measure to render other items impure. Therefore, two half olive-bulk pieces of two corpses or of two animal carcasses, or two half lentil-bulk pieces from two creeping animals all combine to render other items impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״א א — Yoma 81a:4</span></div>
+    <div class="orig">טוּמְאָתוֹ וְלֹא שִׁיעוּרוֹ, שִׁיעוּרוֹ וְלֹא טוּמְאָתוֹ, לֹא טוּמְאָתוֹ וְלֹא שִׁיעוּרוֹ — אֵין מִצְטָרְפִין.</div>
+    <div class="trans" data-when="he">המשך כלל ר׳ יהושע: דבר ששווה לחברו בטומאתו ולא בשיעורו, או בשיעורו ולא בטומאתו, וכל שכן שאינו שווה לא בזה ולא בזה — אינם מצטרפים. וביוה״כ אכילה ושתייה אין שיעורן שווה, ולכן אינן מצטרפות.</div>
+    <div class="trans" data-when="en">However, if one item is identical to another in its ritual impurity but not its measure, e.g., half a lentil-bulk of a creeping animal and half an olive-bulk of an animal carcass, which both impart impurity until nightfall; or if its measure is identical but not its type of ritual impurity, e.g., half an olive-bulk from a corpse, which imparts impurity for seven days, and half an olive-bulk from an animal carcass, which imparts impurity until nightfall; and all the more so, when neither its ritual impurity nor its measure are identical, then the items do not combine. Here, too, although both eating and drinking are prohibited on their own, they do not combine because they do not have the same measure that imparts impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״א א — Yoma 81a:5</span></div>
+    <div class="orig">רַב נַחְמָן אָמַר: אֲפִילּוּ תֵּימָא רַבָּנַן, עַד כָּאן לָא קָא אָמְרִי רַבָּנַן הָתָם, אֶלָּא לְעִנְיַן טוּמְאָה, דְּשֵׁם טוּמְאָה חַד הִיא. אֲבָל הָכָא, מִשּׁוּם יַתּוֹבֵי דַּעְתָּא הוּא, וְהַאי לָא מִיַּתְּבָא דַּעְתֵּיהּ.</div>
+    <div class="trans" data-when="he">רב נחמן: אפשר להעמיד את המשנה אף כרבנן (החולקים על ר׳ יהושע ומצרפים דברים שונים): הם מצרפים רק לעניין טומאה, ששם הטומאה אחד הוא; אבל ביוה״כ השיעור נקבע משום יישוב הדעת, ואכילה עם שתייה אינה מיישבת את דעתו — לכן אינן מצטרפות.</div>
+    <div class="trans" data-when="en">Rav Naḥman said: Even if you say that the mishna is in accordance with the opinion of the Rabbis, until now we have heard the Rabbis say there that items with different measures combine only with respect to ritual impurity. Since the phenomenon of ritual impurity is one concept, different types combine. But here, in the case of Yom Kippur, the measure that determines liability is set due to settling the mind, and this combination of eating and drinking together does not settle the mind.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״א א — Yoma 81a:6</span></div>
+    <div class="orig">וְכֵן אָמַר רֵישׁ לָקִישׁ: בְּמַחְלוֹקֶת שְׁנוּיָה, וְרַבִּי יְהוֹשֻׁעַ הִיא, דִּתְנַן: כְּלָל אָמַר רַבִּי יְהוֹשֻׁעַ כּוּ׳. וְרַבִּי יוֹחָנָן אָמַר: אֲפִילּוּ תֵּימָא רַבָּנַן, עַד כָּאן לָא קָאָמְרִי רַבָּנַן הָתָם אֶלָּא לְעִנְיַן טוּמְאָה, אֲבָל הָכָא, מִשּׁוּם יַתּוֹבֵי דַּעְתֵּיהּ הוּא, וְהַאי לָא קָא מִיַּתְּבָא דַּעְתֵּיהּ.</div>
+    <div class="trans" data-when="he">וכן נחלקו אמוראי ארץ ישראל באותם שני הצדדים: ריש לקיש כרב חסדא — המשנה כר׳ יהושע דווקא; ור׳ יוחנן כרב נחמן — אף כרבנן, שכן רבנן מצרפים רק בטומאה, אבל כאן השיעור משום יישוב הדעת, ואכילה ושתייה אינן מיישבות.</div>
+    <div class="trans" data-when="en">And similarly, Reish Lakish said: This question of whether food and drink combine to reach a measure that determines liability on Yom Kippur is taught as a dispute. The approach brought in the mishna that states that they do not combine is in accordance with the opinion of Rabbi Yehoshua, as we learned in a mishna: Rabbi Yehoshua stated a general principle with regard to whether items with different types of impurity and measures combine, as Rav Ḥisda explained above. And Rabbi Yoḥanan said in accordance with the opinion of Rav Naḥman: Even if you say that the mishna is in accordance with the opinion of the Rabbis, until now we have heard the Rabbis say there that items with different measures combine only with regard to ritual impurity. But here, in the case of Yom Kippur, the measure that determines liability is set due to settling the mind, and this combination of eating and drinking together does not settle the mind.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">משנה — אכל ושתה בהעלם אחד</span><span data-when="en">Mishna — ate and drank in one lapse</span>
+      <span class="ref">Yoma 81a:7</span></h2>
+  <div class="lead"><span data-when="he">משנה: האוכל ושותה בהעלם אחד חייב חטאת אחת; אכל ועשה מלאכה — שתי חטאות; ואוכלין ומשקין שאינם ראויים, וציר או מורייס — פטור.</span><span data-when="en">Mishna: one who ate and drank in one lapse brings one sin-offering; ate and did labor — two; and unfit foods and drinks, or brine, are exempt.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① משנה: אכל ושתה בהעלם אחד — חטאת אחת; אכל ועשה מלאכה — שתי חטאות; שאינם ראויים וציר — פטור"]):::mishnah
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Mishna: ate and drank in one lapse — one sin-offering; ate and did labor — two; unfit foods and brine — exempt"]):::mishnah
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① אָכַל וְשָׁתָה בְּהֶעְלֵם אֶחָד — אֵינוֹ חַיָּיב אֶלָּא חַטָּאת אַחַת … וְשָׁתָה צִיר אוֹ מוּרְיָיס — פָּטוּר"]):::mishnah
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״א א — Yoma 81a:7</span></div>
+    <div class="orig">מַתְנִי׳ אָכַל וְשָׁתָה בְּהֶעְלֵם אֶחָד — אֵינוֹ חַיָּיב אֶלָּא חַטָּאת אַחַת. אָכַל וְעָשָׂה מְלָאכָה — חַיָּיב שְׁתֵּי חַטָּאוֹת. אָכַל אוֹכָלִין שֶׁאֵינָן רְאוּיִן לַאֲכִילָה, וְשָׁתָה מַשְׁקִין שֶׁאֵינָן רְאוּיִן לִשְׁתִיָּה, וְשָׁתָה צִיר אוֹ מוּרְיָיס — פָּטוּר.</div>
+    <div class="trans" data-when="he">משנה: האוכל ושותה ביוה״כ בהעלם אחד (ששכח שהוא יוה״כ) — אינו חייב אלא חטאת אחת. אבל אכל ועשה מלאכה — חייב שתי חטאות, ששתי עברות נפרדות הן. אכל אוכלין שאינם ראויים לאכילה, או שתה משקין שאינם ראויים לשתייה, או שתה ציר או מורייס (מי דגים מלוחים) — פטור, שאין זו דרך אכילה ושתייה.</div>
+    <div class="trans" data-when="en">MISHNA: If one ate and drank unwittingly within one lapse of awareness, e.g., he forgot that it is Yom Kippur, he is liable to bring only one sin-offering. However, if he ate and performed labor unwittingly, he is liable to bring two sin-offerings, as by doing so he violated two separate prohibitions. If he ate foods that are not fit for eating, or drank liquids that are not fit for drinking, or drank fish brine or the briny liquid in which fish are pickled, he is exempt, as that is not the typical manner of eating or drinking.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">מדוע לא נאמרה אזהרה מפורשת בעינוי</span><span data-when="en">Why no explicit warning was stated for affliction</span>
+      <span class="ref">Yoma 81a:8–10</span></h2>
+  <div class="lead"><span data-when="he">ריש לקיש: התורה לא יכלה לכתוב אזהרה ישירה על העינוי. כל ניסוח מוצע נדחה — עד שמסקנת ״אל תסור״ נשארת קשה.</span><span data-when="en">Reish Lakish: the Torah could not write a direct warning to afflict. Each proposed wording is rejected — until “do not stray” is left as a difficulty.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① ריש לקיש: מדוע לא נאמרה אזהרה בעינוי? משום דלא אפשר"}:::question
+  A1["① ׳לא יאכל׳ — רק כזית; ׳לא תעונה׳ — קום אכול משמע"]:::answer
+  Q2{"② רב הושעיא: ׳השמר פן לא תעונה׳? — נפישי לאוי"}:::question
+  Q3{"③ רב ביבי: ׳השמר במצות עינוי׳? — השמר דעשה עשה"}:::question
+  C1["③ רב אשי: ׳אל תסור מן העינוי׳! — קשיא"]:::conclusion
+  Q1 -->|הסבר| A1
+  A1 -.->|מתקיף| Q2
+  Q2 -.->|מתקיף| Q3
+  Q3 -.->|מתקיף| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Reish Lakish: why no warning for affliction? It was not possible"}:::question
+  A1["① ׳Shall not eat׳ — only an olive-bulk; ׳be not afflicted׳ — means: get up and eat"]:::answer
+  Q2{"② Rav Hoshaya: ׳guard lest you not be afflicted׳? — too many prohibitions"}:::question
+  Q3{"③ Rav Beivai: ׳guard in the mitzva of affliction׳? — guard of a positive is positive"}:::question
+  C1["③ Rav Ashi: ׳do not stray from affliction׳! — this is difficult"]:::conclusion
+  Q1 -->|explanation| A1
+  A1 -.->|objects| Q2
+  Q2 -.->|objects| Q3
+  Q3 -.->|objects| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① אָמַר רֵישׁ לָקִישׁ: מִפְּנֵי מָה לֹא נֶאֶמְרָה אַזְהָרָה בְּעִינּוּי? מִשּׁוּם דְּלָא אֶפְשָׁר"}:::question
+  A1["① נִכְתּוֹב … ׳לֹא יֵאָכֵל׳ — אֲכִילָה בִּכְזַיִת! … ׳לֹא תְעוּנֶּה׳ — קוּם אֱכוֹל מַשְׁמַע"]:::answer
+  Q2{"② רַב הוֹשַׁעְיָא: ׳הִשָּׁמֶר פֶּן לֹא תְעוּנֶּה׳! אִם כֵּן נְפִישִׁי לְהוּ לָאוֵי"}:::question
+  Q3{"③ רַב בִּיבִי … ׳הִשָּׁמֶר בְּמִצְוַת עִינּוּי׳! … ׳הִשָּׁמֶר׳ דַּעֲשֵׂה — עֲשֵׂה"}:::question
+  C1["③ רַב אָשֵׁי: נִכְתּוֹב: ׳אַל תָּסוּר מִן הָעִינּוּי׳! קַשְׁיָא"]:::conclusion
+  Q1 -->|הסבר| A1
+  A1 -.->|מתקיף| Q2
+  Q2 -.->|מתקיף| Q3
+  Q3 -.->|מתקיף| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״א א — Yoma 81a:8</span></div>
+    <div class="orig">גְּמָ׳ אָמַר רֵישׁ לָקִישׁ: מִפְּנֵי מָה לֹא נֶאֶמְרָה אַזְהָרָה בְּעִינּוּי? מִשּׁוּם דְּלָא אֶפְשָׁר. הֵיכִי נִכְתּוֹב? נִכְתּוֹב רַחֲמָנָא ״לֹא יֵאָכֵל״ — אֲכִילָה בִּכְזַיִת! נִכְתּוֹב רַחֲמָנָא ״לֹא תְעוּנֶּה״ — קוּם אֱכוֹל מַשְׁמַע.</div>
+    <div class="trans" data-when="he">גמרא: ריש לקיש שואל — מדוע לא נכתבה בתורה אזהרה (לאו) מפורשת על האכילה ביוה״כ? משום שאי אפשר לנסחה. כיצד תיכתב? אילו כתב ״לא יֵאכל״ — היה משמע שיעור כזית כבכל איסורי אכילה, ולא ככותבת; ואילו כתב ״לא תְעֻנֶּה״ — משמעו הפוך: קום ואכול.</div>
+    <div class="trans" data-when="en">GEMARA: Reish Lakish said: Why is there no warning stated about affliction; why did the Torah not state explicitly that it is prohibited to eat and drink on Yom Kippur? It is because it was not possible to write it that way. The Gemara explains: How could the Merciful One write it? Let the Merciful One write: One shall not eat on Yom Kippur. The term eat prohibits eating the amount of an olive-bulk, whereas on Yom Kippur the actual prohibited measure is a large date-bulk. Let the Merciful One write: Do not be afflicted. That indicates the opposite of affliction, and would mean: Get up and eat. Therefore, it is written: “For whatsoever soul it be that shall not be afflicted on that same day, he shall be cut off from his people” (Leviticus 23:29).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״א א — Yoma 81a:9</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב הוֹשַׁעְיָא: נִכְתּוֹב רַחֲמָנָא ״הִשָּׁמֶר פֶּן לֹא תְעוּנֶּה״! אִם כֵּן נְפִישִׁי לְהוּ לָאוֵי.</div>
+    <div class="trans" data-when="he">רב הושעיא מקשה: שתכתוב התורה ״השמר פן לא תעונה״ — שזו לשון אזהרה? תשובה: אילו כך, יהיו ריבוי לאוין (״השמר״, ״פן״, ״לא״ — שלושה לשונות אזהרה), ונמצא כאילו שלושה לאוין על האכילה.</div>
+    <div class="trans" data-when="en">Rav Hoshaya strongly objects to this: Let the Merciful One write it in this manner: Guard yourself lest you not be afflicted. The Gemara answers: If so, there would be too many negative mitzvot, as the following are all expressions of prohibition: Guard, lest, and not. One would then say that there are three prohibitions against eating.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״א א — Yoma 81a:10</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב בִּיבִי בַּר אַבָּיֵי: נִכְתּוֹב רַחֲמָנָא ״הִשָּׁמֶר בְּמִצְוַת עִינּוּי״! אִם כֵּן ״הִשָּׁמֶר״ דְּלָאו — לָאו, ״הִשָּׁמֶר״ דַּעֲשֵׂה — עֲשֵׂה! מַתְקֵיף לַהּ רַב אָשֵׁי: נִכְתּוֹב: ״אַל תָּסוּר מִן הָעִינּוּי״! קַשְׁיָא.</div>
+    <div class="trans" data-when="he">רב ביבי בר אביי מקשה: שתכתוב ״השמר במצות עינוי״? תשובה: ״השמר״ על לאו — לאו; ״השמר״ על עשה — עשה; כך היה משמע רק מצות עשה לעינוי, בלי לאו. רב אשי מקשה: שתכתוב ״אל תסור מן העינוי״ — שמשמעו לאו? על כך הגמרא מודה: קשיא — אכן יכלה לכתוב כך.</div>
+    <div class="trans" data-when="en">Rav Beivai bar Abaye strongly objects to this: Let the Merciful One write: Guard yourself in the mitzva of affliction. The Gemara rejects this: If so, there is a principle: If the words guard yourself are written about a prohibition, it is considered to be a prohibition; if the words guard yourself are written about a positive mitzva, it is considered to be a positive mitzva. Had the Torah written it that way, one would understand that there is a positive mitzva of affliction, but there is no element of prohibition. Rav Ashi strongly objects to this: Let the Merciful One write: Do not stray from afflicting yourself, which would imply a negative mitzva. The Gemara says: Indeed, this is difficult. The Gemara concedes that it could have been written in this manner.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">תוספת מלאכה ועינוי — עונש ואזהרה רק על עיצומו של יום</span><span data-when="en">The extension — penalty and warning only for the day itself</span>
+      <span class="ref">Yoma 81a:11–81b:4</span></h2>
+  <div class="lead"><span data-when="he">ברייתא ארוכה: אין עונש כרת ולא אזהרה על ה״תוספת״ (מלאכה או עינוי) — רק על עיצומו של יום. את האזהרה לעינוי לומדים מן המלאכה בגזרה שווה ״עצם״־״עצם״; ונחלקו רבינא, ר׳ ישמעאל, רב אחא ורב פפא במקור.</span><span data-when="en">A long baraita: no karet or warning for the “extension” (labor or affliction) — only for the day itself. The warning for affliction is derived from labor by a verbal analogy “that same day”; Ravina, R. Yishmael, Rav Aḥa and Rav Pappa dispute the source.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: אין עונש כרת על תוספת מלאכה — רק עיצומו של יום"]:::statement
+  S2["② וכן אין כרת על תוספת עינוי; ולא אזהרה על תוספת מלאכה"]:::statement
+  S3["③ ולא אזהרה על תוספת עינוי — קל וחומר ממלאכה"]:::statement
+  Q1{"④ אזהרה לעינוי של יום עצמו — מניין? גזרה שווה: לא ענש אלא אם כן הזהיר"}:::question
+  Q2{"⑤ איכא למיפרך: עינוי לא הותר מכללו, מלאכה הותרה!"}:::question
+  A1["⑥ אלא: גמר עינוי ממלאכה — מה מלאכה ענש והזהיר, אף עינוי"]:::answer
+  Q3{"⑦ ושוב פירכא: מלאכה נוהגת בשבת ויו״ט, עינוי לא!"}:::question
+  A2["⑧ רבינא: ׳עצם׳ ׳עצם׳ גמר — מופנה; חמשה קראי במלאכה"]:::answer
+  S4["⑨ ר׳ ישמעאל: גז״ש עינוי־עינוי · רב אחא: ׳שבת שבתון׳ · רב פפא: הוא גופיה שבת איקרי"]:::statement
+  P1["⑩ ת״ש: ׳בתשעה לחודש׳ — מתחיל ומתענה מבעוד יום, מוסיפין מחול על הקודש"]:::proof
+  C1["⑪ ולתנא ד׳עצם׳ — ׳בתשעה׳ לכדחייא בר רב: האוכל בתשיעי כאילו התענה תשיעי ועשירי"]:::conclusion
+  S1 -->|וכן| S2
+  S2 -->|וכן| S3
+  S3 -->|קושיא| Q1
+  Q1 -.->|פירכא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|פירכא| Q3
+  Q3 -->|רבינא| A2
+  A2 -->|דעות נוספות| S4
+  S4 -->|תא שמע| P1
+  P1 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: no karet for the extension of labor — only the day itself"]:::statement
+  S2["② So too no karet for the extension of affliction; no warning for extension of labor"]:::statement
+  S3["③ And no warning for extension of affliction — a fortiori from labor"]:::statement
+  Q1{"④ Warning for affliction of the day itself — whence? Analogy: punished only if warned"}:::question
+  Q2{"⑤ Refute: affliction has no exception, labor does!"}:::question
+  A1["⑥ Rather: derive affliction from labor — as labor punished and warned, so affliction"]:::answer
+  Q3{"⑦ Refute again: labor applies on Shabbat and Festivals, affliction not!"}:::question
+  A2["⑧ Ravina: derives ׳that same day׳ analogy — it is available; five verses on labor"]:::answer
+  S4["⑨ R. Yishmael: affliction-affliction analogy · Rav Aḥa: ׳Shabbat of rest׳ · Rav Pappa: it is itself called Shabbat"]:::statement
+  P1["⑩ Come and hear: ׳on the ninth׳ — one begins fasting by day, adding from weekday to sacred"]:::proof
+  C1["⑪ For the ׳that same day׳ tanna — ׳the ninth׳ per Ḥiyya bar Rav: eating on the ninth is as if he fasted ninth and tenth"]:::conclusion
+  S1 -->|likewise| S2
+  S2 -->|likewise| S3
+  S3 -->|question| Q1
+  Q1 -.->|refute| Q2
+  Q2 -->|answer| A1
+  A1 -.->|refute| Q3
+  Q3 -->|Ravina| A2
+  A2 -->|further views| S4
+  S4 -->|come and hear| P1
+  P1 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① וְתַנָּא מַיְיתֵי לַהּ … יָכוֹל יְהֵא עָנוּשׁ עַל תּוֹסֶפֶת מְלָאכָה … עַל עִיצּוּמוֹ שֶׁל יוֹם עָנוּשׁ כָּרֵת"]:::statement
+  S2["② יָכוֹל … עַל תּוֹסֶפֶת עִינּוּי … וְאֵינוֹ עָנוּשׁ כָּרֵת עַל תּוֹסֶפֶת עִינּוּי"]:::statement
+  S3["③ יָכוֹל … אֲבָל יְהֵא מוּזְהָר עַל תּוֹסֶפֶת עִינּוּי — וְדִין הוּא … אֵינוֹ דִּין שֶׁלֹּא יְהֵא מוּזְהָר"]:::statement
+  Q1{"④ אֲבָל אַזְהָרָה לְעִינּוּי שֶׁל יוֹם עַצְמוֹ … מוּפְנֶה … לֹא עָנַשׁ אֶלָּא אִם כֵּן הִזְהִיר"}:::question
+  Q2{"⑤ אִיכָּא לְמִיפְרַךְ: מָה לְעִינּוּי שֶׁלֹּא הוּתַּר מִכְּלָלוֹ, תֹּאמַר בִּמְלָאכָה שֶׁהוּתְּרָה"}:::question
+  A1["⑥ אֶלָּא … דְּגָמַר מִמְּלָאכָה … מָה מְלָאכָה עָנַשׁ וְהִזְהִיר — אַף עִינּוּי עָנַשׁ וְהִזְהִיר"]:::answer
+  Q3{"⑦ אִיכָּא לְמִיפְרַךְ: מָה לִמְלָאכָה — שֶׁכֵּן נוֹהֶגֶת בְּשַׁבָּתוֹת … תֹּאמַר בְּעִינּוּי"}:::question
+  A2["⑧ אָמַר רָבִינָא … ׳עֶצֶם׳ ׳עֶצֶם׳ גָּמַר … חַמְשָׁה קְרָאֵי כְּתִיבִי בִּמְלָאכָה"]:::answer
+  S4["⑨ רַבִּי יִשְׁמָעֵאל … עִינּוּי … לְהַלָּן עִינּוּי · רַב אַחָא … ׳שַׁבַּת שַׁבָּתוֹן׳ · רַב פָּפָּא … הוּא גּוּפֵיהּ שַׁבָּת אִיקְּרִי"]:::statement
+  P1["⑩ ׳בְּתִשְׁעָה לַחוֹדֶשׁ׳ … מַתְחִיל וּמִתְעַנֶּה מִבְּעוֹד יוֹם, מִכָּאן שֶׁמּוֹסִיפִין מֵחוֹל עַל הַקּוֹדֶשׁ"]:::proof
+  C1["⑪ וְתַנָּא דְּ׳עֶצֶם׳ … חִיָּיא בַּר רַב … כָּל הָאוֹכֵל וְשׁוֹתֶה בִּתְשִׁיעִי … כְּאִילּוּ הִתְעַנָּה תְּשִׁיעִי וַעֲשִׂירִי"]:::conclusion
+  S1 -->|וכן| S2
+  S2 -->|וכן| S3
+  S3 -->|קושיא| Q1
+  Q1 -.->|פירכא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|פירכא| Q3
+  Q3 -->|רבינא| A2
+  A2 -->|דעות נוספות| S4
+  S4 -->|תא שמע| P1
+  P1 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״א א — Yoma 81a:11</span></div>
+    <div class="orig">וְתַנָּא מַיְיתֵי לַהּ מֵהָכָא: ״וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם וְכׇל מְלָאכָה לֹא תַעֲשׂוּ״. יָכוֹל יְהֵא עָנוּשׁ עַל תּוֹסֶפֶת מְלָאכָה — תַּלְמוּד לוֹמַר: ״וְכׇל הַנֶּפֶשׁ אֲשֶׁר תַּעֲשֶׂה כׇּל מְלָאכָה בְּעֶצֶם הַיּוֹם הַזֶּה״ — עַל עִיצּוּמוֹ שֶׁל יוֹם עָנוּשׁ כָּרֵת, וְאֵינוֹ עָנוּשׁ כָּרֵת עַל תּוֹסֶפֶת מְלָאכָה.</div>
+    <div class="trans" data-when="he">ברייתא מביאה את האזהרות מן הפסוקים. הצד הראשון: יכול ייענש בכרת אף על מלאכה ב״תוספת״ (הזמן שמוסיפים מערב יוה״כ)? תלמוד לומר ״אשר תעשה כל מלאכה בעצם היום הזה״ — דווקא על עיצומו של יום נענש כרת, ולא על תוספת המלאכה.</div>
+    <div class="trans" data-when="en">§ With regard to the prohibitions against eating and labor, the Gemara says: And a tanna cites the prohibitions relating to affliction on Yom Kippur from here: It is stated: “And you shall afflict your souls, you shall do no manner of labor” (Numbers 29:7). The Gemara considers: One might have thought that performing labor during the extension of the period of prohibition of labor, added before Yom Kippur actually begins, is punishable by karet. Therefore, the verse states: “And whatsoever soul it be that does any manner of labor on that same day” (Leviticus 23:30), which teaches that performing labor on that very day is punishable by karet, but labor performed during the extension of the period of prohibition of labor is not punishable by karet.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״א א — Yoma 81a:12</span></div>
+    <div class="orig">יָכוֹל לֹא יְהֵא עָנוּשׁ כָּרֵת עַל תּוֹסֶפֶת מְלָאכָה, אֲבָל יְהֵא עָנוּשׁ כָּרֵת עַל תּוֹסֶפֶת עִינּוּי — תַּלְמוּד לוֹמַר: ״כִּי כׇל הַנֶּפֶשׁ אֲשֶׁר לֹא תְעוּנֶּה בְּעֶצֶם הַיּוֹם הַזֶּה וְנִכְרְתָה״. עַל עִיצּוּמוֹ שֶׁל יוֹם עָנוּשׁ כָּרֵת, וְאֵינוֹ עָנוּשׁ כָּרֵת עַל תּוֹסֶפֶת עִינּוּי.</div>
+    <div class="trans" data-when="he">הצד השני: יכול אין כרת על תוספת מלאכה, אבל יש כרת על תוספת עינוי? תלמוד לומר ״אשר לא תְעֻנֶּה בעצם היום הזה ונכרתה״ — דווקא על עיצומו של יום נענש כרת, ולא על תוספת העינוי.</div>
+    <div class="trans" data-when="en">The baraita continues: One might have thought that performing labor during the extension of the period of prohibition of labor is not punishable by karet, but not afflicting oneself during the extension of the period of affliction is punishable by karet. Therefore, the verse states: “For whatsoever soul it be that shall not be afflicted on that same day, he shall be cut off from his people” (Leviticus 23:29), which teaches that not afflicting oneself on that very day is punishable by karet, but not afflicting oneself during the extension of the period of affliction is not punishable by karet.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״א א — Yoma 81a:13</span></div>
+    <div class="orig">יָכוֹל לֹא יְהֵא בִּכְלַל עוֹנֶשׁ, אֲבָל יְהֵא מוּזְהָר עַל תּוֹסֶפֶת מְלָאכָה — תַּלְמוּד לוֹמַר: ״וְכׇל מְלָאכָה לֹא תַעֲשׂוּ בְּעֶצֶם הַיּוֹם הַזֶּה״. עַל עִיצּוּמוֹ שֶׁל יוֹם הוּא מוּזְהָר, וְאֵינוֹ מוּזְהָר עַל תּוֹסֶפֶת מְלָאכָה.</div>
+    <div class="trans" data-when="he">צד שלישי: יכול אין כרת, אבל יש לאו (אזהרת מלקות) על תוספת מלאכה? תלמוד לומר ״וכל מלאכה לא תעשו בעצם היום הזה״ — מוזהר רק על עיצומו של יום, ולא על תוספת המלאכה.</div>
+    <div class="trans" data-when="en">The baraita continues: One might have thought that one who performs labor during the extension would not be included in the punishment of karet, but he would be warned against performing labor during the extension of the period of prohibition of labor with a prohibition incurring the punishment of lashes; therefore, the verse states: “And you shall do no manner of labor on that same day” (Leviticus 23:28). That teaches that he is warned not to perform labor on that very day, but he is not warned against performing labor during the extension of the period of prohibition of labor, and therefore he is not liable to receive lashes for doing so.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״א א — Yoma 81a:14</span></div>
+    <div class="orig">יָכוֹל לֹא יְהֵא מוּזְהָר עַל תּוֹסֶפֶת מְלָאכָה, אֲבָל יְהֵא מוּזְהָר עַל תּוֹסֶפֶת עִינּוּי — וְדִין הוּא: וּמָה מְלָאכָה שֶׁנּוֹהֶגֶת בְּשַׁבָּתוֹת וְיוֹם טוֹב אֵינוֹ מוּזְהָר עָלֶיהָ, עִינּוּי, שֶׁאֵינוֹ נוֹהֵג בְּשַׁבָּתוֹת וְיוֹם טוֹב — אֵינוֹ דִּין שֶׁלֹּא יְהֵא מוּזְהָר עָלָיו?!</div>
+    <div class="trans" data-when="he">צד רביעי: יכול אין אזהרה על תוספת מלאכה, אבל יש אזהרה על תוספת עינוי? קל וחומר: ומה מלאכה — שנוהגת בשבתות ויו״ט — אין מוזהרים על תוספתה, עינוי — שאינו נוהג בשבתות ויו״ט — אינו דין שלא יהיה מוזהר על תוספתו?!</div>
+    <div class="trans" data-when="en">The baraita continues: One might have thought: He would not be warned with regard to performing labor during the extension of the period of prohibition of labor that it is a prohibition that incurs lashes; but he would be warned with regard to not being in a state of affliction during the extension of the period of affliction that it is a prohibition that incurs lashes. However, that is incorrect, and it is learned from a logical derivation that it is not so: Just as with regard to labor, whose prohibition is observed on both Shabbatot and Festivals, one is not warned about the extension added to the day, is it not logical that with regard to affliction, which is not observed on Shabbatot and Festivals, he should not be warned about or liable to receive lashes for the extension?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״א א — Yoma 81a:15</span></div>
+    <div class="orig">אֲבָל אַזְהָרָה לְעִינּוּי שֶׁל יוֹם עַצְמוֹ לֹא לָמַדְנוּ מִנַּיִין. לֹא יֹאמַר עוֹנֶשׁ בִּמְלָאכָה, דְּגָמַר מֵעִינּוּי: וּמָה עִינּוּי שֶׁאֵינוֹ נוֹהֵג בְּשַׁבָּתוֹת וְיוֹם טוֹב עָנוּשׁ כָּרֵת, מְלָאכָה שֶׁנּוֹהֶגֶת בְּשַׁבָּתוֹת וְיָמִים טוֹבִים — לֹא כׇּל שֶׁכֵּן? לָמָּה נֶאֱמַר — מוּפְנֶה לְהַקִּישׁ וְלָדוּן מִמֶּנּוּ גְּזֵרָה שָׁוָה: נֶאֱמַר עוֹנֶשׁ בְּעִינּוּי וְנֶאֱמַר עוֹנֶשׁ בִּמְלָאכָה, מָה מְלָאכָה — לֹא עָנַשׁ אֶלָּא אִם כֵּן הִזְהִיר, אַף עִינּוּי — לֹא עָנַשׁ אֶלָּא אִם כֵּן הִזְהִיר.</div>
+    <div class="trans" data-when="he">אבל אזהרה (לאו) לעינוי של עיצומו של יום — מניין? הברייתא: אין צורך לכתוב עונש במלאכה, שאפשר ללומדו מעינוי בקל וחומר. ואם כן למה נכתב עונש המלאכה? כדי שיהיה ״מופנה״ ללמוד ממנו גזרה שווה: כשם שבמלאכה לא ענש הכתוב אלא אם כן הזהיר (יש בה גם לאו), אף בעינוי — לא ענש אלא אם כן הזהיר, ומכאן שיש לאו לעינוי.</div>
+    <div class="trans" data-when="en">The baraita comments: But the warning about lashes during the very day itself we have not learned. From where is it derived? The Torah need not state the punishment of karet for performing labor, since one can learn it by logical derivation from the punishment of not being in a state of affliction, as follows: Just as the requirement of affliction, which is not observed on Shabbatot and Festivals, is punishable by karet on Yom Kippur, with regard to the prohibition of labor, which is observed on all Shabbatot and Festivals, is it not all the more so? If so, why is the punishment for labor stated explicitly? It is available to compare and learn a verbal analogy from it: A punishment with regard to affliction is stated, and a punishment with regard to labor is stated. Just as with regard to labor one is punished only if he was warned first with a negative mitzva, so too, with regard to affliction, one is punished only if he was warned.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״א א — Yoma 81a:16</span></div>
+    <div class="orig">אִיכָּא לְמִיפְרַךְ: מָה לְעִינּוּי שֶׁלֹּא הוּתַּר מִכְּלָלוֹ, תֹּאמַר בִּמְלָאכָה שֶׁהוּתְּרָה מִכְּלָלָהּ!</div>
+    <div class="trans" data-when="he">פירכא על הקל וחומר: יש לדחות — מה לעינוי שלא הותר מכללו (הכול חייבים בעינוי), תאמר במלאכה שהותרה מכללה (עבודת המקדש מותרת ביוה״כ)? אם כן אין ללמוד שעינוי חמור ממלאכה.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: This comparison can be refuted. How so? Whereas affliction has no permitted exceptions from its general prohibition, as the mitzva to afflict oneself applies to all the Jewish people, what can you say with regard to labor, which has permitted exceptions from its general prohibition? It is permitted to perform the Temple services on Yom Kippur, which include prohibited labors, e.g., slaughtering animals and offering incense. Consequently, there is no proof that the mitzva of affliction is more lenient than the prohibition of labor.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״א א — Yoma 81a:17</span></div>
+    <div class="orig">אֶלָּא: לֹא יֵאָמֵר עוֹנֶשׁ בְּעִינּוּי, דְּגָמַר מִמְּלָאכָה. מָה מְלָאכָה שֶׁהוּתְּרָה מִכְּלָלָהּ — עָנוּשׁ כָּרֵת, עִינּוּי שֶׁלֹּא הוּתַּר מִכְּלָלוֹ — לֹא כׇּל שֶׁכֵּן. לָמָּה נֶאֱמַר — מוּפְנֶה, לְהַקִּישׁ וְלָדוּן מִמֶּנּוּ גְּזֵירָה שָׁוָה: נֶאֱמַר עוֹנֶשׁ בְּעִינּוּי וְנֶאֱמַר עוֹנֶשׁ בִּמְלָאכָה, מָה מְלָאכָה עָנַשׁ וְהִזְהִיר — אַף עִינּוּי עָנַשׁ וְהִזְהִיר.</div>
+    <div class="trans" data-when="he">אלא להפך: אין צורך לכתוב עונש בעינוי, שאפשר ללומדו ממלאכה בקל וחומר — מה מלאכה שהותרה מכללה ענוש כרת, עינוי שלא הותר מכללו לא כל שכן. ולמה נכתב? כדי שיהיה מופנה לגזרה שווה: כשם שבמלאכה ענש והזהיר, אף בעינוי ענש והזהיר.</div>
+    <div class="trans" data-when="en">Rather, say as follows: The Torah need not say the punishment for not being in a state of affliction, since one can learn it from the punishment for performing labor through an a fortiori inference. How so? Just as labor, for which exceptions from the general prohibition are permitted, e.g., performing the Temple service on Yom Kippur, and yet labor is punishable by karet, with regard to not being in a state of affliction, which has no permitted exceptions from its general prohibition, is it not all the more so that one who does not afflict himself should be liable to receive karet? If so, why is it nevertheless stated? It is available to compare and learn a verbal analogy: Punishment is stated with regard to affliction, and punishment is stated with regard to labor. Just as for labor the Torah punished and warned, so too, for affliction the Torah punished and warned.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ״א א — Yoma 81a:18</span></div>
+    <div class="orig">אִיכָּא לְמִיפְרַךְ: מָה לִמְלָאכָה — שֶׁכֵּן נוֹהֶגֶת בְּשַׁבָּתוֹת וְיָמִים טוֹבִים. תֹּאמַר בְּעִינּוּי — שֶׁאֵינוֹ נוֹהֵג בְּשַׁבָּתוֹת וְיָמִים טוֹבִים!</div>
+    <div class="trans" data-when="he">ושוב פירכא, לצד ההפוך: מה למלאכה שחמורה — שנוהגת אף בשבתות וימים טובים, תאמר בעינוי שאינו נוהג בשבתות וימים טובים? אם כן אין ללמוד עינוי ממלאכה בקל וחומר.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: This comparison can be refuted, and one might say the opposite: Whereas the prohibition of labor is observed on Shabbatot and Festivals, can you say the same about affliction, which is not observed on Shabbatot and Festivals?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא פ״א א — Yoma 81a:19</span></div>
+    <div class="orig">אָמַר רָבִינָא: הַאי תַּנָּא, ״עֶצֶם״ ״עֶצֶם״ גָּמַר. מוּפְנֶה, דְּאִי לָא מוּפְנֶה — אִיכָּא לְמִיפְרַךְ כִּדְפָרְכִינַן!</div>
+    <div class="trans" data-when="he">רבינא מיישב: תנא זה אינו לומד בקל וחומר אלא בגזרה שווה ״בעצם היום הזה״ הנאמר בעינוי ו״בעצם היום הזה״ הנאמר במלאכה. וגזרה שווה זו מופנה היא (מיותרת בכל אחד ממקומותיה), שאם לא כן היה אפשר לפורכה כפי שפרכנו לעיל.</div>
+    <div class="trans" data-when="en">Ravina said: We did not properly understand the teaching of this baraita, as this tanna derived a verbal analogy from the words “on that same day” (Leviticus 23:29) stated with regard to affliction, and “on that same day” (Leviticus 23:28) stated with regard to labor. The Gemara comments: We must say that it is available, meaning that in both places, the phrase “on that same day” is unnecessary within its own context and comes only to teach this verbal analogy; as, if it were not available, it could be refuted, as we refuted it above.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא פ״א א — Yoma 81a:20</span></div>
+    <div class="orig">לָאיֵי, אִפְּנוֹיֵי מוּפְנֶה. חַמְשָׁה קְרָאֵי כְּתִיבִי בִּמְלָאכָה, חַד לְאַזְהָרָה דִימָמָא, וְחַד לְאַזְהָרָה דְלֵילְיָא, וְחַד לְעוֹנֶשׁ דִּימָמָא, וְחַד לְעוֹנֶשׁ דְּלֵילְיָא, וְחַד לְאַפְנוֹיֵי לְמִגְמַר עִינּוּי מִמְּלָאכָה, בֵּין דִּימָמָא בֵּין דְּלֵילְיָא.</div>
+    <div class="trans" data-when="he">ואכן מופנה: חמישה כתובים נכתבו במלאכה — אחד לאזהרת היום, אחד לאזהרת הלילה, אחד לעונש היום, אחד לעונש הלילה, והחמישי מיותר (מופנה) כדי ללמוד ממנו את העינוי מן המלאכה, בין ביום בין בלילה.</div>
+    <div class="trans" data-when="en">The Gemara responds: No, it is certainly available, and we may learn from it, as five verses are written with regard to the prohibition of labor on Yom Kippur. One to teach a warning with regard to the prohibition of labor on the day of Yom Kippur itself; and one for a warning with regard to labor on the night of Yom Kippur; and one for the punishment of karet for performing labor on the day; and one for the punishment for performing labor at night; and one verse to be available to derive the requirement of affliction from the prohibition of labor, both during the day and night, using a verbal analogy.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא פ״א א — Yoma 81a:21</span></div>
+    <div class="orig">רַבִּי יִשְׁמָעֵאל תָּנָא: נֶאֱמַר כָּאן עִינּוּי, וְנֶאֱמַר לְהַלָּן עִינּוּי. מָה לְהַלָּן — לֹא עָנַשׁ אֶלָּא אִם כֵּן הִזְהִיר, אַף כָּאן — לֹא עָנַשׁ אֶלָּא אִם כֵּן הִזְהִיר. רַב אַחָא בַּר יַעֲקֹב אָמַר: יָלֵיף ״שַׁבַּת שַׁבָּתוֹן״ מִשַּׁבַּת בְּרֵאשִׁית: מָה לְהַלָּן — לֹא עָנַשׁ אֶלָּא אִם כֵּן הִזְהִיר, אַף כָּאן — לֹא עָנַשׁ אֶלָּא אִם כֵּן הִזְהִיר.</div>
+    <div class="trans" data-when="he">דעות חלופיות למקור הגזרה שווה: בית ר׳ ישמעאל — ״עינוי״ ביוה״כ נלמד מ״עינוי״ שבאונס נערה (מה שם לא ענש אלא אם כן הזהיר, אף כאן). רב אחא בר יעקב — לומד ״שבת שבתון״ דיוה״כ מ״שבת שבתון״ דשבת בראשית.</div>
+    <div class="trans" data-when="en">The school of Rabbi Yishmael taught an alternative verbal analogy for the derivation: “Affliction” is stated here, with regard to Yom Kippur, and “affliction” is stated later, with regard to a man who rapes a woman: “Because he has afflicted his neighbor’s wife” (Deuteronomy 22:24). Just as there, in the case of rape, the Torah did not punish unless there was prior warning, so too here, in the case of Yom Kippur, the Torah did not punish unless there was prior warning. Rav Aḥa bar Ya’akov said a different proof: Derive a verbal analogy from the words “Shabbat of solemn rest” (Leviticus 16:31) written with regard to Yom Kippur from the words “Shabbat of solemn rest” (Exodus 31:15, 32:5; Leviticus 23:3) written with regard to the weekly Shabbat, which commemorates the Shabbat of Creation. Just as there, in the case of Shabbat, the Torah did not punish unless there was prior warning, so too here, in the case of Yom Kippur, the Torah did not punish unless there was prior warning.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא פ״א א — Yoma 81a:22</span></div>
+    <div class="orig">רַב פָּפָּא אָמַר:</div>
+    <div class="trans" data-when="he">רב פפא אמר (מקור נוסף, המשכו בעמוד הבא):</div>
+    <div class="trans" data-when="en">Rav Pappa said:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא פ״א ב — Yoma 81b:1</span></div>
+    <div class="orig">הוּא גּוּפֵיהּ שַׁבָּת אִיקְּרִי, דִּכְתִיב: ״תִּשְׁבְּתוּ שַׁבַּתְּכֶם״. בִּשְׁלָמָא רַב פָּפָּא לָא אָמַר כְּרַב אַחָא בַּר יַעֲקֹב — דִּקְרָא דִּכְתִיב בְּגוּפֵיהּ עֲדִיף. אֶלָּא רַב אַחָא בַּר יַעֲקֹב, מַאי טַעְמָא לָא אָמַר כְּרַב פָּפָּא?</div>
+    <div class="trans" data-when="he">רב פפא: יוה״כ עצמו נקרא ״שבת״, ככתוב ״תשבתו שבתכם״ — ובשבת עצמה למדנו שלא ענש אלא אם כן הזהיר. הגמרא משווה: מובן מדוע רב פפא לא אמר כרב אחא — שכתוב הכתוב בגוף העניין עדיף על גזרה שווה; אך מדוע רב אחא לא אמר כרב פפא?</div>
+    <div class="trans" data-when="en">Yom Kippur itself is called “Shabbat,” as it is written: “From evening until evening, you shall rest on your Shabbat” (Leviticus 23:32). The Gemara compares the various opinions. Granted, Rav Pappa did not say as Rav Aḥa bar Ya’akov did because a verse that is written about the matter itself is preferable to a verbal analogy. But what is the reason that Rav Aḥa bar Ya’akov did not state his opinion in accordance with the opinion of Rav Pappa?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">יומא פ״א ב — Yoma 81b:2</span></div>
+    <div class="orig">מִיבְּעֵי לֵיהּ לְכִדְתַנְיָא: ״וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם בְּתִשְׁעָה לַחוֹדֶשׁ״. יָכוֹל יַתְחִיל וְיִתְעַנֶּה בְּתִשְׁעָה — תַּלְמוּד לוֹמַר: ״בָּעֶרֶב״. אִי בָּעֶרֶב — יָכוֹל מִשֶּׁתֶּחְשַׁךְ? תַּלְמוּד לוֹמַר: ״בְּתִשְׁעָה״. הָא כֵּיצַד? מַתְחִיל וּמִתְעַנֶּה מִבְּעוֹד יוֹם, מִכָּאן שֶׁמּוֹסִיפִין מֵחוֹל עַל הַקּוֹדֶשׁ.</div>
+    <div class="trans" data-when="he">רב אחא צריך את הפסוק ״תשבתו שבתכם״ לדרשה אחרת (תוספת מחול על הקודש), ולכן לא אמר כרב פפא. דרשת הברייתא: ״ועניתם בתשעה לחודש בערב״ — יכול יתחיל בתשיעי? ת״ל ״בערב״; יכול משתחשך? ת״ל ״בתשעה״; הא כיצד? מתחיל להתענות מבעוד יום — מכאן שמוסיפים מחול על הקודש.</div>
+    <div class="trans" data-when="en">The Gemara answers: He requires this verse of “keep your Shabbat” for that which was taught in a baraita: The verse states: “And you shall afflict your souls on the ninth day of the month at evening, from evening until evening, you shall rest on your Shabbat” (Leviticus 23:32). One might have thought that one should start to afflict oneself on the ninth of Tishrei; therefore, the verse states “at evening.” If the Torah had stated only “at evening,” one might have thought that the fast starts only when darkness falls; therefore, the verse states “on the ninth,” implying that one begins to fast on the ninth of Tishrei. How can these verses be reconciled? One begins to fast while it is still daytime; from here it is derived that one sanctifies and extends from the non-sacred weekday to the sacred day of Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">יומא פ״א ב — Yoma 81b:3</span></div>
+    <div class="orig">וְאֵין לִי אֶלָּא בִּכְנִיסָתוֹ, בִּיצִיאָתוֹ מִנַּיִן — תַּלְמוּד לוֹמַר: ״מֵעֶרֶב עַד עֶרֶב״. וְאֵין לִי אֶלָּא יוֹם הַכִּפּוּרִים, (יָמִים טוֹבִים) מִנַּיִין — תַּלְמוּד לוֹמַר: ״תִּשְׁבְּתוּ״. אֵין לִי אֶלָּא (יָמִים טוֹבִים, שַׁבָּתוֹת) מִנַּיִן — תַּלְמוּד לוֹמַר: ״שַׁבַּתְּכֶם״. הָא כֵּיצַד? כׇּל מָקוֹם שֶׁנֶּאֱמַר שְׁבוּת, (מִכָּאן שֶׁ)מוֹסִיפִין מֵחוֹל עַל הַקּוֹדֶשׁ.</div>
+    <div class="trans" data-when="he">המשך הברייתא: אין לי אלא תוספת בכניסת יוה״כ; ביציאתו מניין? ״מערב עד ערב״. ואין לי אלא יוה״כ; ימים טובים מניין? ״תשבתו״; שבתות מניין? ״שבתכם״. הא כיצד? כל מקום שנאמרה בו לשון ״שבות״ — מוסיפים בו מחול על הקודש.</div>
+    <div class="trans" data-when="en">I have derived only that one must add time at the beginning of Yom Kippur. From where do I derive that one adds time at the conclusion of Yom Kippur? The verse states: “From evening until evening” (Leviticus 23:32), implying that one adds at the end as well, just as he does at the beginning. And I have derived only the mitzva of adding to Yom Kippur; from where is it derived that one must also sanctify and append time before and after Festivals? The verse states: “You shall rest” (Leviticus 23:32), to teach that this rule applies even to Festivals, on which one is commanded to rest. I have derived only that one adds an extension to Festivals; from where do I derive that one must also sanctify and append to Shabbatot? The verse states: “Your Shabbat” (Leviticus 23:32). How so? Every place the term: Rest [shevut] is stated, it teaches from here that one sanctifies and appends from the non-sacred weekday to the sacred.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">יומא פ״א ב — Yoma 81b:4</span></div>
+    <div class="orig">וְתַנָּא דְּ״עֶצֶם״ ״עֶצֶם״, הַאי ״בְּתִשְׁעָה לַחוֹדֶשׁ״ מַאי עָבֵיד לֵיהּ? מִיבְּעֵי לֵיהּ לְכִדְתָנֵי חִיָּיא בַּר רַב מִדִּיפְתִּי. דְּתָנֵי חִיָּיא בַּר רַב מִדִּיפְתִּי: ״וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם בְּתִשְׁעָה״, וְכִי בְּתִשְׁעָה מִתְעַנִּין? וַהֲלֹא בֶּעָשׂוֹר מִתְעַנִּין! אֶלָּא לוֹמַר לְךָ: כָּל הָאוֹכֵל וְשׁוֹתֶה בִּתְשִׁיעִי, מַעֲלֶה עָלָיו הַכָּתוּב כְּאִילּוּ הִתְעַנָּה תְּשִׁיעִי וַעֲשִׂירִי.</div>
+    <div class="trans" data-when="he">ולתנא הלומד גזרה שווה ״עצם״־״עצם״ — מה הוא דורש מ״בתשעה לחודש״? כדתני חייא בר רב מדיפתי: ״ועניתם בתשעה״ — וכי בתשעה מתענים? והלא בעשור מתענים! אלא לומר לך: כל האוכל ושותה בתשיעי (ערב יוה״כ), מעלה עליו הכתוב כאילו התענה תשיעי ועשירי.</div>
+    <div class="trans" data-when="en">The Gemara asks: And the tanna who learns a verbal analogy from the words “that same day,” “that same day,” what does he do with the phrase: “On the ninth day of the month”? The Gemara answers: He requires it, in accordance with that which Ḥiyya bar Rav of Difti taught. As Ḥiyya bar Rav of Difti taught: It states: “And you shall afflict your souls on the ninth day of the month” (Leviticus 23:32). But does one afflict oneself on the ninth of Tishrei? Doesn’t one in fact afflict oneself on the tenth of Tishrei? Rather, the verse comes to tell you: Anyone who eats and drinks on the ninth of Tishrei and then fasts on the tenth, the verse ascribes him credit as though he fasted on both the ninth and the tenth. The verse alludes to this when it states that the fast is on the ninth.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">אוכלין שאינם ראויים — פלפלין, זנגביל, חומץ</span><span data-when="en">Foods unfit for eating — pepper, ginger, vinegar</span>
+      <span class="ref">Yoma 81b:5–11</span></h2>
+  <div class="lead"><span data-when="he">רבא: הכוסס פלפלין או זנגביל ביוה״כ פטור. הברייתות מקשות שפלפלין נקראים מאכל, ומתורצות בין רטוב ליבש; ודיני עלי קנים, לולבי גפנים, ציר וחומץ.</span><span data-when="en">Rava: chewing pepper or ginger on Yom Kippur is exempt. Baraitot object that pepper is called food — resolved between fresh and dry; and the laws of reed leaves, vine shoots, brine and vinegar.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רבא: כס פלפלי או זנגבילא ביוה״כ — פטור"]:::statement
+  Q1{"② מיתיבי: ר׳ מאיר — פלפלין חייבין בערלה, הרי מאכל!"}:::question
+  A1["③ לא קשיא: הא ברטיבתא, הא ביבישתא"]:::answer
+  Q2{"④ רבינא: והאמר רב נחמן הימלתא — בורא פרי האדמה!"}:::question
+  A2["④ לא קשיא: הא ברטיבתא, הא ביבישתא"]:::answer
+  S2["⑤ ת״ר: עלי קנים פטור, לולבי גפנים חייב — מחלוקת ר׳ יצחק ורב כהנא; תניא כוותיה"]:::statement
+  S3["⑥ ציר ומורייס פטור — הא חומץ חייב; מתניתין רבי, חומץ משיב הנפש"]:::statement
+  C1["⑦ רב גידל: אין הלכה כרבי; הזהיר: דיעבד פורתא חי — לא לכתחילה טובא מזוג"]:::conclusion
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|ועוד| Q2
+  Q2 -->|תירוץ| A2
+  A2 -->|ברייתא| S2
+  S2 -->|המשך המשנה| S3
+  S3 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rava: chewing pepper or ginger on Yom Kippur — exempt"]:::statement
+  Q1{"② Objection: R. Meir — pepper is subject to orla, so it is food!"}:::question
+  A1["③ Not difficult: this is fresh, that is dry"]:::answer
+  Q2{"④ Ravina: but Rav Naḥman blessed cooked ginger — fruit of the ground!"}:::question
+  A2["④ Not difficult: this is fresh, that is dry"]:::answer
+  S2["⑤ Baraita: reed leaves exempt, vine shoots liable — R. Yitzḥak vs Rav Kahana; a baraita supports R. Yitzḥak"]:::statement
+  S3["⑥ Brine exempt — so vinegar is liable; the Mishna is Rabbi: vinegar revives the spirit"]:::statement
+  C1["⑦ Rav Giddel: halakha not like Rabbi; but warned: after the fact, a little, pure — not ab initio, a lot, diluted"]:::conclusion
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|further| Q2
+  Q2 -->|answer| A2
+  A2 -->|baraita| S2
+  S2 -->|Mishna continues| S3
+  S3 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רָבָא: כַּס פִּלְפְּלֵי בְּיוֹמָא דְכִפּוּרֵי — פָּטוּר. כַּס זַנְגְּבִילָא … פָּטוּר"]:::statement
+  Q1{"② מֵיתִיבִי … רַבִּי מֵאִיר … לְלַמֶּדְךָ שֶׁהַפִּלְפְּלִין חַיָּיבִין בְּעׇרְלָה … ׳לֹא תֶחְסַר כֹּל בָּהּ׳"}:::question
+  A1["③ לָא קַשְׁיָא: הָא — בְּרַטִּיבְתָּא, וְהָא — בְּיַבִּישְׁתָּא"]:::answer
+  Q2{"④ רָבִינָא לְמָרִימָר: וְהָאָמַר רַב נַחְמָן … הִימְלְתָא … ׳בּוֹרֵא פְּרִי הָאֲדָמָה׳"}:::question
+  A2["④ לָא קַשְׁיָא: הָא בְּרַטִּיבְתָּא, וְהָא בְּיַבִּישְׁתָּא"]:::answer
+  S2["⑤ תָּנוּ רַבָּנַן: אָכַל עֲלֵי קָנִים — פָּטוּר. לוּלְבֵי גְפָנִים — חַיָּיב … תַּנְיָא כְּווֹתֵיהּ דְּרַבִּי יִצְחָק"]:::statement
+  S3["⑥ שָׁתָה צִיר אוֹ מוּרְיָיס — פָּטוּר. הָא חוֹמֶץ — חַיָּיב … רַבִּי אוֹמֵר: חוֹמֶץ מֵשִׁיב אֶת הַנֶּפֶשׁ"]:::statement
+  C1["⑦ דָּרֵשׁ רַב גִּידֵּל … אֵין הֲלָכָה כְּרַבִּי … דִּיעֲבַד … פּוּרְתָּא … חַי, מָזוּג מִי אֲמַרִי?"]:::conclusion
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|ועוד| Q2
+  Q2 -->|תירוץ| A2
+  A2 -->|ברייתא| S2
+  S2 -->|המשך המשנה| S3
+  S3 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״א ב — Yoma 81b:5</span></div>
+    <div class="orig">אָכַל אוֹכָלִין שֶׁאֵין רְאוּיִן לַאֲכִילָה. אָמַר רָבָא: כַּס פִּלְפְּלֵי בְּיוֹמָא דְכִפּוּרֵי — פָּטוּר. כַּס זַנְגְּבִילָא בְּיוֹמָא דְכִפּוּרֵי — פָּטוּר.</div>
+    <div class="trans" data-when="he">המשנה: ״אכל אוכלין שאינם ראויים לאכילה — פטור״. רבא: הכוסס פלפלין ביום הכיפורים — פטור, שאין זו אכילה; וכן הכוסס זנגביל (ג׳ינג׳ר) ביוה״כ — פטור.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: If one ate food that is not fit for eating, he is exempt. Rava said: If one chews raw pepper on Yom Kippur, he is exempt, since this is not considered eating. Similarly, if one chews ginger [zangvila] on Yom Kippur, he is exempt.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״א ב — Yoma 81b:6</span></div>
+    <div class="orig">מֵיתִיבִי, הָיָה רַבִּי מֵאִיר אוֹמֵר: מִמַּשְׁמַע שֶׁנֶּאֱמַר: ״וַעֲרַלְתֶּם עׇרְלָתוֹ אֶת פִּרְיוֹ״, אֵינִי יוֹדֵעַ שֶׁעֵץ מַאֲכָל הוּא! אֶלָּא מָה תַּלְמוּד לוֹמַר ״עֵץ מַאֲכָל״? עֵץ שֶׁטַּעַם עֵצוֹ וּפִרְיוֹ שָׁוֶה, הֱוֵי אוֹמֵר זֶה פִּלְפְּלִין, לְלַמֶּדְךָ שֶׁהַפִּלְפְּלִין חַיָּיבִין בְּעׇרְלָה. וְאֵין אֶרֶץ יִשְׂרָאֵל חֲסֵרָה כְּלוּם, שֶׁנֶּאֱמַר ״לֹא תֶחְסַר כֹּל בָּהּ״!</div>
+    <div class="trans" data-when="he">מיתיבי על רבא: ר׳ מאיר דרש שעץ שטעם עצו ופריו שווה — היינו פלפלין — חייב בערלה, ללמדך שהפלפלין חייבים בערלה, ושאין ארץ ישראל חסרה כלום. הרי שהפלפלין נקראים מאכל, ובניגוד לרבא!</div>
+    <div class="trans" data-when="en">The Gemara raises an objection to this. Rabbi Meir would say about the verse: “And when you shall come into the land, and shall have planted all manner of trees for food, then you shall count the fruit of it as forbidden [orla]; three years it shall be forbidden to you, it shall not be eaten” (Leviticus 19:23). From the implication of what is stated: “Then you shall count the fruit of it as forbidden,” do I not know that the verse is referring to “trees for food,” since it uses the word “fruit”? Rather, what is the meaning when the verse states “trees for food”? It includes a tree whose wood and fruit taste the same, i.e., a tree that is itself eaten in addition to its fruit. One must say that this is referring to pepper that grows on a tree, to teach you that even pepper is subject to the halakha of orla. And this also teaches that Eretz Yisrael lacks nothing, as even pepper can grow there, as it is stated among the listed praises of Eretz Yisrael: “You will not lack anything in it” (Deuteronomy 8:9). In any event, it has been derived that pepper is called food, which contradicts Rava’s statement.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״א ב — Yoma 81b:7</span></div>
+    <div class="orig">לָא קַשְׁיָא: הָא — בְּרַטִּיבְתָּא, וְהָא — בְּיַבִּישְׁתָּא.</div>
+    <div class="trans" data-when="he">תירוץ: לא קשיא — מה שאמר ר׳ מאיר שהפלפל מאכל הוא בפלפל רטוב (לח), ומה שאמר רבא שפטור ביוה״כ הוא בפלפל יבש, שאינו ראוי לאכילה.</div>
+    <div class="trans" data-when="en">The Gemara answers: This is not difficult. This statement about edible pepper is referring to fresh pepper, which is moist; and that halakha pertaining to Yom Kippur is referring to dry pepper, which is not considered food.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״א ב — Yoma 81b:8</span></div>
+    <div class="orig">אֲמַר לֵיהּ רָבִינָא לְמָרִימָר: וְהָאָמַר רַב נַחְמָן, הַאי הִימְלְתָא דְּאָתֵי מִבֵּי הִנְדּוּאֵי — שַׁרְיָא, וּמְבָרְכִינַן עֲלֵיהּ: ״בּוֹרֵא פְּרִי הָאֲדָמָה״. לָא קַשְׁיָא: הָא בְּרַטִּיבְתָּא, וְהָא בְּיַבִּישְׁתָּא.</div>
+    <div class="trans" data-when="he">רבינא הקשה למרימר על זנגביל: והרי אמר רב נחמן שזנגביל מבושל הבא מהודו מותר, ומברכים עליו ״בורא פרי האדמה״ — משמע שהוא מאכל! תירוץ: לא קשיא — מאמר רב נחמן בזנגביל רטוב, ומאמר רבא (שפטור) בזנגביל יבש.</div>
+    <div class="trans" data-when="en">Ravina said to Mareimar: But didn’t Rav Naḥman say that it is permitted to eat this cooked ginger [himalta] that comes from India, and there is no concern that gentiles may have cooked it. And we recite the blessing: Who creates the fruit of the ground, over it. Apparently, ginger is edible. The Gemara answers: This is not difficult: This statement is referring to wet ginger, which is considered food; and that earlier statement pertaining to Yom Kippur, which maintained that ginger is not food, is referring to dry ginger.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״א ב — Yoma 81b:9</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: אָכַל עֲלֵי קָנִים — פָּטוּר. לוּלְבֵי גְפָנִים — חַיָּיב. אֵלּוּ הֵן לוּלְבֵי גְפָנִים? אָמַר רַבִּי יִצְחָק מִגְדְּלָאָה: כׇּל שֶׁלִּבְלְבוּ מֵרֹאשׁ הַשָּׁנָה וְעַד יוֹם הַכִּפּוּרִים. וְרַב כָּהֲנָא אָמַר: כׇּל שְׁלֹשִׁים יוֹם. תַּנְיָא כְּווֹתֵיהּ דְּרַבִּי יִצְחָק מִגְדְּלָאָה: אָכַל עֲלֵי קָנִים — פָּטוּר, וְלוּלְבֵי גְפָנִים — חַיָּיב. אֵלּוּ הֵן לוּלְבֵי גְפָנִים — כׇּל שֶׁלִּבְלְבוּ מֵרֹאשׁ הַשָּׁנָה וְעַד יוֹם הַכִּפּוּרִים.</div>
+    <div class="trans" data-when="he">ת״ר: אכל עלי קנים ביוה״כ — פטור (אינם מאכל); אכל לולבי גפנים (ענפים רכים) — חייב. ומה הם לולבי גפנים? ר׳ יצחק מגדלאה: כל שלבלבו מראש השנה ועד יוה״כ (רכים עדיין). רב כהנא: כל שלבלבו תוך שלושים יום. ותניא כר׳ יצחק.</div>
+    <div class="trans" data-when="en">The Sages taught in a baraita: If one ate leaves of reeds on Yom Kippur, he is exempt, but if one ate grapevine shoots he is liable. The Gemara clarifies: What are these grapevine shoots? Rabbi Yitzḥak from the city of Migdal said: All shoots that sprouted between Rosh HaShana and Yom Kippur and are still very soft are considered food. And Rav Kahana said: All shoots that sprouted up to thirty days before Yom Kippur are considered food. The Gemara comments: It was taught in a baraita in accordance with the opinion of Rabbi Yitzḥak from Migdal: If one ate leaves of reeds he is exempt, but if one ate grapevine shoots he is liable. What are these grapevine shoots? They are all those that sprouted between Rosh HaShana and Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״א ב — Yoma 81b:10</span></div>
+    <div class="orig">שָׁתָה צִיר אוֹ מוּרְיָיס — פָּטוּר. הָא חוֹמֶץ — חַיָּיב. מַתְנִיתִין מַנִּי? רַבִּי הִיא. דְּתַנְיָא: רַבִּי אוֹמֵר: חוֹמֶץ מֵשִׁיב אֶת הַנֶּפֶשׁ.</div>
+    <div class="trans" data-when="he">המשנה: ״שתה ציר או מורייס — פטור״; מדיוק הלשון: הא חומץ — חייב. מי שנה את המשנה? רבי. דתניא: רבי אומר — חומץ משיב את הנפש, ולכן נחשב משקה שמתחייבים עליו.</div>
+    <div class="trans" data-when="en">It was taught in the mishna that if on Yom Kippur one drank fish brine or the briny liquid in which fish are pickled, he is exempt. The Gemara comments: From the language of the mishna it may be inferred that if one drank vinegar, he is liable. Who is the tanna of the mishna? It is Rabbi Yehuda HaNasi, as it was taught in a baraita that Rabbi Yehuda HaNasi says: Vinegar revives the spirit and is therefore considered a beverage.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״א ב — Yoma 81b:11</span></div>
+    <div class="orig">דָּרֵשׁ רַב גִּידֵּל בַּר מְנַשֶּׁה מִבֵּירֵי דְנַרֶשׁ: אֵין הֲלָכָה כְּרַבִּי. לְשָׁנָה נָפְקִי כּוּלֵּי עָלְמָא מָזְגוּ וְשָׁתוּ חַלָּא. שְׁמַע רַב גִּידֵּל וְאִיקְּפַד. אֲמַר: אֵימַר דַּאֲמַרִי אֲנָא — דִּיעֲבַד, לְכַתְּחִלָּה מִי אֲמַרִי? אֵימַר דַּאֲמַרִי אֲנָא — פּוּרְתָּא, טוּבָא מִי אֲמַרִי? אֵימַר דַּאֲמַרִי אֲנָא — חַי, מָזוּג מִי אֲמַרִי?</div>
+    <div class="trans" data-when="he">רב גידל בר מנשה דרש: אין הלכה כרבי, ואין חיוב על שתיית חומץ. לשנה הבאה יצאו הכול, מזגו חומץ במים ושתו ביוה״כ. כעס רב גידל ואמר: אמרתי שפטור רק בדיעבד — לא לכתחילה! אמרתי במעט — לא בהרבה! אמרתי בחומץ חי וחזק — לא במזוג!</div>
+    <div class="trans" data-when="en">The Gemara relates: Rav Giddel bar Menashe from the town of Birei DeNeresh taught in a public lecture that the halakha is not in accordance with the opinion of Rabbi Yehuda HaNasi, and vinegar is not considered a beverage. The next year everyone went out and mixed vinegar with water and drank vinegar on Yom Kippur. Rav Giddel heard this and became angry with them for their actions. He said: Say that I said one is not liable for drinking vinegar only after the fact; however, did I say it is permitted to drink it ab initio? Furthermore: Say that I said my statement with regard to one who drinks a little, but did I say it is permitted to drink a lot? Furthermore: Say that I said my statement in reference to pure vinegar, which is very strong, but did I say anything about diluted vinegar? That is certainly prohibited.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
