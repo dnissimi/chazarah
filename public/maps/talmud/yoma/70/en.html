@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא ע׳</title>
+<meta name="description" content="מפת הסוגיא של יומא ע׳: סדר קריאת התורה של כהן גדול ביום הכיפורים — מדוע ׳ובעשור׳ נקרא על פה, שמונה הברכות, וסיום העבודה; ומחלוקת ר׳ אליעזר ור׳ עקיבא מתי קרבים המוספים, חלוקת שבעת הכבשים, וסדר הפסוקים בפרשת העבודה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="70">
+<meta name="gemara-map:sefaria-ref" content="Yoma 70">
+<meta name="gemara-map:topic-he" content="קריאת כהן גדול, שמונה ברכות, וסדר המוספים">
+<meta name="gemara-map:topic-en" content="The High Priest׳s reading, eight blessings, order of offerings">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא ע׳">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 70">
+<meta name="gemara-map:blurb-he" content="פרטי קריאת התורה של כהן גדול ביום הכיפורים — על פה, גלילה, ושמונה ברכות; וסיום עבודת היום: מתי קרבים המוספים ואילו הפסוקים שלא נאמרו על הסדר.">
+<meta name="gemara-map:blurb-en" content="The details of the High Priest’s Yom Kippur Torah reading — by heart, furling, and eight blessings; and the close of the day’s service: when the additional offerings are brought, and which verses are out of order.">
+<meta name="gemara-map:sugya-count" content="9">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא ע׳</span><span data-when="en">Sugya map — Yoma 70</span></h1>
+    <div class="subtitle"><span data-when="he">יומא ס״ט ב — ע״א א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 69b–71a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשך פירוט קריאת התורה של כהן גדול ביום הכיפורים וסיום העבודה: <b>אין מדלגים אחורנית</b>; גוללים שלא להוציא לעז; ׳ובעשור׳ נקרא <b>על פה</b> כדי שלא לגלול בציבור ולא להביא ספר אחר; <b>שמונה ברכות</b>; ולבסוף מחלוקת ר׳ אליעזר ור׳ עקיבא <b>מתי קרבים המוספים</b>, חלוקת שבעת הכבשים בין שחר לערב, וכמה פסוקים בפרשת העבודה שאינם נאמרים על הסדר — חמש טבילות ועשרה קידושין.</span>
+    <span data-when="en"><b>Bottom line:</b> The High Priest’s Yom Kippur reading and the close of the day’s service: <b>one does not skip backward</b>; he furls so as not to cast aspersions; “And on the tenth” is read <b>by heart</b> to avoid furling in public or bringing a second scroll; <b>eight blessings</b>; and finally the dispute of R. Eliezer and R. Akiva over <b>when the additional offerings are sacrificed</b>, the splitting of the seven lambs between morning and afternoon, and several verses in the service passage that are <b>not in order</b> — yielding five immersions and ten sanctifications.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא ע׳</span><span data-when="en">Overview — Yoma 70</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · אין מדלגין מסוף הספר לתחילתו"]:::statement
+  O2["2 · גולל ספר תורה — שלא להוציא לעז"]:::statement
+  O3["3 · ׳ובעשור׳ נקרא על פה — לא גוללין בציבור"]:::statement
+  O4["4 · שמונה ברכות של כהן גדול"]:::statement
+  O5["5 · הרואה כהן גדול קורא — ברב עם הדרת מלך"]:::statement
+  O6["6 · משנה: סיום העבודה — בגדים ואילים"]:::mishnah
+  O7["7 · ר׳ אליעזר ור׳ עקיבא — מתי קרבים המוספים"]:::statement
+  O8["8 · חלוקת שבעת הכבשים, ואיל אחד או שניים"]:::statement
+  O9["9 · ׳ובא אהרן׳ — פסוק שלא נאמר על הסדר"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · No skipping from a book׳s end to its start"]:::statement
+  O2["2 · Furling the scroll — not to cast aspersions"]:::statement
+  O3["3 · ׳And on the tenth׳ read by heart — no furling in public"]:::statement
+  O4["4 · The eight blessings of the High Priest"]:::statement
+  O5["5 · Seeing the High Priest read — in a multitude is glory"]:::statement
+  O6["6 · Mishna: closing the service — garments and rams"]:::mishnah
+  O7["7 · R. Eliezer vs R. Akiva — when the additions are offered"]:::statement
+  O8["8 · Splitting the seven lambs, and one ram or two"]:::statement
+  O9["9 · ׳And Aaron came׳ — a verse stated out of order"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8 --> O9
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">אין מדלגין מסוף הספר לתחילתו</span><span data-when="en">No skipping from the end of a book to its start</span>
+      <span class="ref">Yoma 70a:1</span></h2>
+  <div class="lead"><span data-when="he">סיום המשנה הקודמת: הכהן הגדול רשאי לדלג בקריאתו — ובלבד שלא ידלג מסוף הספר לתחילתו.</span><span data-when="en">A coda to the previous mishna: the High Priest may skip in his reading — provided he does not skip from the end of the book back to its beginning.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① ובלבד שלא ידלג מסוף הספר לתחילתו"]:::statement
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① Provided he does not skip from the end of the book to its start"]:::statement
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① וּבִלְבַד שֶׁלֹּא יְדַלֵּג מִסּוֹף הַסֵּפֶר לִתְחִילָּתוֹ"]:::statement
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ א — Yoma 70a:1</span></div>
+    <div class="orig">וּבִלְבַד שֶׁלֹּא יְדַלֵּג מִסּוֹף הַסֵּפֶר לִתְחִילָּתוֹ.</div>
+    <div class="trans" data-when="he">המשנה התירה לכהן הגדול לדלג בקריאתו (מ״אחרי מות״ ל״ובעשור״), אך סייגה: ובלבד שלא ידלג מסוף הספר לתחילתו — שאז הדילוג גלוי לכול.</div>
+    <div class="trans" data-when="en">All this is provided that he does not skip from the end of the book to its beginning, since then it would be clear to everyone that he is skipping text.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">גולל ספר תורה — שלא להוציא לעז</span><span data-when="en">Furling the scroll — not to cast aspersions</span>
+      <span class="ref">Yoma 70a:2</span></h2>
+  <div class="lead"><span data-when="he">מדוע גולל הכהן הגדול את ספר התורה ומכריזּ ״יותר ממה שקראתי כתוב כאן״? כדי שלא להוציא לעז על ספר התורה.</span><span data-when="en">Why does the High Priest furl the scroll and declare “more than what I read is written here”? So as not to cast aspersions on the Torah scroll.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① וכל כך למה — גולל ומכריז ׳יותר כתוב כאן׳?"}:::question
+  A1["① כדי שלא להוציא לעז על ספר התורה"]:::answer
+  Q1 -->|טעם| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① Why all this — furl and declare ׳more is written here׳?"}:::question
+  A1["① So as not to cast aspersions on the Torah scroll"]:::answer
+  Q1 -->|reason| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① וְגוֹלֵל סֵפֶר תּוֹרָה … וְכׇל כָּךְ לָמָּה"}:::question
+  A1["① כְּדֵי שֶׁלֹּא לְהוֹצִיא לַעַז עַל סֵפֶר תּוֹרָה"]:::answer
+  Q1 -->|טעם| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ א — Yoma 70a:2</span></div>
+    <div class="orig">וְגוֹלֵל סֵפֶר תּוֹרָה וְכוּ׳. וְכׇל כָּךְ לָמָּה — כְּדֵי שֶׁלֹּא לְהוֹצִיא לַעַז עַל סֵפֶר תּוֹרָה.</div>
+    <div class="trans" data-when="he">המשנה: הכהן הגדול גולל את ספר התורה, מניחו בחיקו ואומר ״יותר ממה שקראתי לפניכם כתוב כאן״. הגמרא: וכל כך למה? כדי שלא להוציא לעז על ספר התורה — שלא יחשבו שמה שקרא בעל פה אינו כתוב בו.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: The High Priest furls the Torah scroll and places it on his bosom and says: More than what I have read before you is written here. The Gemara comments: And why must he say all this? It is so as not to cast aspersions on the Torah scroll, because people might think that the portion he read by heart is not written there.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">׳ובעשור׳ נקרא על פה — לא גוללין בציבור</span><span data-when="en">“And on the tenth” read by heart — no furling in public</span>
+      <span class="ref">Yoma 70a:3–6</span></h2>
+  <div class="lead"><span data-when="he">מדוע ׳ובעשור׳ נקרא על פה ולא מתוך הכתב? שאין גוללין ספר תורה בציבור, ואין מביאין ספר שני — מפני פגם וברכה שאינה צריכה; ובירור החשש לפגם.</span><span data-when="en">Why is “And on the tenth” read by heart? One may not furl a scroll in public, nor bring a second scroll — due to suspicion of a flaw and an unnecessary blessing; and a clarification of the flaw concern.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ׳ובעשור׳ נקרא על פה — אמאי? נגלול ונקרא!"}:::question
+  A1["① רב ששת: אין גוללין ס״ת בציבור, מפני כבוד הציבור"]:::answer
+  Q2{"② וניתי אחרינא ונקרי!"}:::question
+  A2["② רב הונא בר יהודה: משום פגמו של ראשון · ריש לקיש: ברכה שאינה צריכה"]:::answer
+  Q3{"③ ומי חיישינן לפגמא? ר״ח טבת בשבת — שלוש תורות"}:::question
+  A3["④ תלתא גברי בתלתא ספרי — ליכא פגמא; חד גברא בתרי ספרי — איכא פגמא"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 -.->|וניתי אחרינא| Q2
+  Q2 -->|שני טעמים| A2
+  A2 -.->|קושיא| Q3
+  Q3 -->|חילוק| A3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ׳And on the tenth׳ by heart — why? Let him furl and read!"}:::question
+  A1["① Rav Sheshet: one may not furl a scroll in public, out of respect"]:::answer
+  Q2{"② Let another scroll be brought and read!"}:::question
+  A2["② Rav Huna bar Yehuda: lest a flaw be suspected · Reish Lakish: an unnecessary blessing"]:::answer
+  Q3{"③ Do we fear a flaw? New Moon of Tevet on Shabbat — three scrolls"}:::question
+  A3["④ Three men, three scrolls — no flaw; one man, two scrolls — a flaw is suspected"]:::answer
+  Q1 -->|answer| A1
+  A1 -.->|another scroll| Q2
+  Q2 -->|two reasons| A2
+  A2 -.->|objection| Q3
+  Q3 -->|distinction| A3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ׳וּבֶעָשׂוֹר׳ … קוֹרֵא עַל פֶּה. אַמַּאי? נִגְלוֹל וְנִיקְרֵי!"}:::question
+  A1["① אָמַר רַב שֵׁשֶׁת: לְפִי שֶׁאֵין גּוֹלְלִין סֵפֶר תּוֹרָה בְּצִיבּוּר, מִפְּנֵי כְּבוֹד צִיבּוּר"]:::answer
+  Q2{"② וְנַיְיתֵי אַחֲרִינָא וְנִקְרֵי!"}:::question
+  A2["② רַב הוּנָא בַּר יְהוּדָה: מִשּׁוּם פְּגָמוֹ שֶׁל רִאשׁוֹן · רֵישׁ לָקִישׁ: מִשּׁוּם בְּרָכָה שֶׁאֵינָהּ צְרִיכָה"]:::answer
+  Q3{"③ וּמִי חָיְישִׁינַן לִפְגָמָא? … רֹאשׁ חוֹדֶשׁ טֵבֵת שֶׁחָל … בְּשַׁבָּת מְבִיאִין שָׁלֹשׁ תּוֹרוֹת"}:::question
+  A3["④ תְּלָתָא גַּבְרֵי בִּתְלָתָא סִפְרֵי — לֵיכָּא פְּגָמָא, חַד גַּבְרָא בִּתְרֵי סִפְרֵי — אִיכָּא פְּגָמָא"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 -.->|וניתי אחרינא| Q2
+  Q2 -->|שני טעמים| A2
+  A2 -.->|קושיא| Q3
+  Q3 -->|חילוק| A3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ א — Yoma 70a:3</span></div>
+    <div class="orig">״וּבֶעָשׂוֹר״ שֶׁל חוֹמֶשׁ הַפְּקוּדִים קוֹרֵא עַל פֶּה. אַמַּאי? נִגְלוֹל וְנִיקְרֵי! אָמַר רַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ אָמַר רַב שֵׁשֶׁת: לְפִי שֶׁאֵין גּוֹלְלִין סֵפֶר תּוֹרָה בְּצִיבּוּר, מִפְּנֵי כְּבוֹד צִיבּוּר.</div>
+    <div class="trans" data-when="he">המשנה: פרשת ״ובעשור״ שבחומש הפקודים (במדבר כ״ט) נקראת על פה. הגמרא: למה על פה — נגלול את הספר לאותה פרשה ונקרא מן הכתב? רב הונא בריה דרב יהושע בשם רב ששת: לפי שאין גוללין ספר תורה בציבור, מפני כבוד הציבור — שלא להטריחם להמתין.</div>
+    <div class="trans" data-when="en">§ It was further taught in the mishna: The Torah portion beginning with the verse: “And on the tenth,” from the book of Numbers (29:7), he reads by heart. The Gemara asks: Why does he read it by heart? Let him furl the scroll to that portion and read it from the text. Rav Huna, son of Rav Yehoshua, said that Rav Sheshet said: It is because one may not furl a Torah scroll in public, out of respect for the community. It is inappropriate to make the community wait until they have reached the next section.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע׳ א — Yoma 70a:4</span></div>
+    <div class="orig">וְנַיְיתֵי אַחֲרִינָא וְנִקְרֵי! רַב הוּנָא בַּר יְהוּדָה אָמַר: מִשּׁוּם פְּגָמוֹ שֶׁל רִאשׁוֹן. וְרֵישׁ לָקִישׁ אָמַר: מִשּׁוּם בְּרָכָה שֶׁאֵינָהּ צְרִיכָה.</div>
+    <div class="trans" data-when="he">קושיא: ויביאו ספר תורה אחר הגלול כבר לאותה פרשה, ויקראו ממנו! רב הונא בר יהודה: שמא יחשבו שהביאו ספר שני מפני פגם שנמצא בראשון. ריש לקיש: משום שיצטרך לברך שוב — ברכה שאינה צריכה.</div>
+    <div class="trans" data-when="en">But why not let another Torah scroll be brought that has previously been furled to that portion and read from it? Rav Huna bar Yehuda said: People might mistakenly think the second scroll was brought due to a flaw that was found in the first one. And Reish Lakish said a different reason: A second scroll should not be brought due to the fact that doing do will cause an unnecessary blessing to be recited; before reading from a new scroll the High Priest would have to repeat the blessings required upon reading from the Torah. Therefore, it is preferable that he read by heart.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע׳ א — Yoma 70a:5</span></div>
+    <div class="orig">וּמִי חָיְישִׁינַן לִפְגָמָא? וְהָאָמַר רַבִּי יִצְחָק נַפָּחָא: רֹאשׁ חוֹדֶשׁ טֵבֵת שֶׁחָל לִהְיוֹת בְּשַׁבָּת מְבִיאִין שָׁלֹשׁ תּוֹרוֹת וְקוֹרִין אַחַת בְּעִנְיָנוֹ שֶׁל יוֹם, וְאַחַת שֶׁל רֹאשׁ חוֹדֶשׁ, וְאַחַת שֶׁל חֲנוּכָּה.</div>
+    <div class="trans" data-when="he">קושיא על טעם הפגם: וכי חוששים לפגם? והרי אמר ר׳ יצחק נפחא: ראש חודש טבת (שחל תמיד בחנוכה) שחל בשבת — מביאים שלושה ספרי תורה וקוראים: אחד בעניין היום (פרשת השבוע), אחד של ראש חודש, ואחד של חנוכה. משמע שאין חוששים לפגם בריבוי ספרים.</div>
+    <div class="trans" data-when="en">The Gemara questions Rav Huna bar Yehuda’s answer: Are we really concerned that people will think the first scroll had a flaw? Didn’t Rabbi Yitzḥak Nappaḥa say: When the New Moon of Tevet, which always occurs during Hanukkah, occurs on Shabbat, one brings and reads from three Torah scrolls. One reads from one scroll the topic of the day, i.e., the weekly portion; and from one scroll the portion of the New Moon; and from one scroll a passage related to Hanukkah. It is apparent from the statement of Rabbi Yitzḥak Nappaḥa that many Torah scrolls may be used, and there is no concern that people will mistakenly think one or more had a flaw.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע׳ א — Yoma 70a:6</span></div>
+    <div class="orig">תְּלָתָא גַּבְרֵי בִּתְלָתָא סִפְרֵי — לֵיכָּא פְּגָמָא, חַד גַּבְרָא בִּתְרֵי סִפְרֵי — אִיכָּא פְּגָמָא.</div>
+    <div class="trans" data-when="he">תירוץ: יש לחלק — שלושה אנשים הקוראים בשלושה ספרים אין בו חשש פגם, שראוי לכל אחד ספר משלו. אבל אדם אחד הקורא בשני ספרים — יש חשש שיאמרו שהשני בא מחמת פגם בראשון.</div>
+    <div class="trans" data-when="en">The Gemara explains: When three men read from three scrolls there is no concern that people will think there was a flaw, since people assume that it is befitting for each individual to receive his own scroll. But when one man reads from two scrolls, there is a concern that people will think there is a flaw, and they will not realize that this was done only to avoid forcing the community to wait while the scroll was furled.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">שמונה הברכות של כהן גדול</span><span data-when="en">The eight blessings of the High Priest</span>
+      <span class="ref">Yoma 70a:7–8</span></h2>
+  <div class="lead"><span data-when="he">ברייתא מונה את שמונה הברכות שמברך הכהן הגדול לאחר הקריאה, ונוסח ברכת ״שאר התפילה״; ואחר כך כל אחד מביא ספר תורה משלו.</span><span data-when="en">A baraita enumerates the eight blessings the High Priest recites after the reading, the wording of “the rest of the prayer,” and the custom that each person then brings his own scroll.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① ת״ר: שמונה ברכות — תורה, עבודה, הודאה, מחילת עוון, מקדש, כהנים, ישראל, שאר תפילה"]:::statement
+  S2["② נוסח שאר התפילה, חותם ב׳שומע תפילה׳; ואחר כך כל אחד מביא ספר תורה משלו"]:::statement
+  S1 --> S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① Baraita: eight blessings — Torah, service, thanks, pardon, Temple, priests, Israel, rest of prayer"]:::statement
+  S2["② Wording of the rest of prayer, sealing ׳Who hears prayer׳; then each brings his own scroll"]:::statement
+  S1 --> S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: עַל הַתּוֹרָה … עַל הָעֲבוֹדָה, וְעַל הַהוֹדָאָה, וְעַל מְחִילַת הֶעָוֹן … וְעַל הַמִּקְדָּשׁ … וְעַל הַכֹּהֲנִים … וְעַל יִשְׂרָאֵל … וְעַל שְׁאָר תְּפִלָּה"]:::statement
+  S2["② וּשְׁאָר הַתְּפִלָּה … וְחוֹתֵם בְּשׁוֹמֵעַ תְּפִלָּה. וְאַחַר כָּךְ, כׇּל אֶחָד … מֵבִיא סֵפֶר תּוֹרָה מִבֵּיתוֹ"]:::statement
+  S1 --> S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ א — Yoma 70a:7</span></div>
+    <div class="orig">וּמְבָרֵךְ עָלֶיהָ שְׁמוֹנֶה בְּרָכוֹת. תָּנוּ רַבָּנַן: עַל הַתּוֹרָה — כְּדֶרֶךְ שֶׁמְּבָרְכִים בְּבֵית הַכְּנֶסֶת, עַל הָעֲבוֹדָה, וְעַל הַהוֹדָאָה, וְעַל מְחִילַת הֶעָוֹן כְּתִיקְנָהּ. וְעַל הַמִּקְדָּשׁ בִּפְנֵי עַצְמוֹ, וְעַל הַכֹּהֲנִים בִּפְנֵי עַצְמָן, וְעַל יִשְׂרָאֵל בִּפְנֵי עַצְמָן, וְעַל שְׁאָר תְּפִלָּה.</div>
+    <div class="trans" data-when="he">המשנה: ומברך עליה שמונה ברכות. ברייתא מפרטת: על התורה — כדרך שמברכים בבית הכנסת; על העבודה; על ההודאה; על מחילת העוון כתקנה; על המקדש בפני עצמו; על הכהנים בפני עצמן; על ישראל בפני עצמן; ועל שאר התפילה.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: And the High Priest recites eight blessings after the reading. The Sages taught in a baraita that these are the eight blessings: The blessing concerning the Torah is recited in the usual way one recites a blessing in the synagogue: Who gives the Torah; The three blessings: concerning the Temple service, concerning thanksgiving, and concerning pardon of iniquity, are all recited according to their established forms in the prayers; The blessing concerning the Temple in and of itself; The blessing concerning the priests in and of themselves; The blessing concerning the Jewish people in and of itself; The blessing concerning the rest of the prayer.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע׳ א — Yoma 70a:8</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: וּשְׁאָר הַתְּפִלָּה ״רִנָּה תְּחִינָּה בַּקָּשָׁה מִלְּפָנֶיךָ עַל עַמְּךָ יִשְׂרָאֵל שֶׁצְּרִיכִין לְהִוָּשַׁע״ וְחוֹתֵם בְּשׁוֹמֵעַ תְּפִלָּה. וְאַחַר כָּךְ, כׇּל אֶחָד וְאֶחָד מֵבִיא סֵפֶר תּוֹרָה מִבֵּיתוֹ, וְקוֹרֵא בּוֹ כְּדֵי לְהַרְאוֹת חָזוּתוֹ לְרַבִּים.</div>
+    <div class="trans" data-when="he">ברייתא נוספת: נוסח ברכת ״שאר התפילה״ — ״רנה תחינה בקשה מלפניך על עמך ישראל שצריכין להיוושע״, וחותם ב״שומע תפילה״. ואחר שסיים הכהן הגדול, כל אחד ואחד מביא ספר תורה מביתו וקורא בו, כדי להראות את יופיו לרבים — נוי מצוה.</div>
+    <div class="trans" data-when="en">The Sages taught in another baraita: And the blessing concerning the rest of the prayer reads: Song, supplication, petition before You for Your people Israel, who need to be saved. And he adds an additional supplication and concludes the blessing with: The One Who hears prayer. And after the High Priest concludes his reading, each and every person present brings a Torah scroll from his house, although in fact each person had already brought one on Yom Kippur eve, and reads from it for himself in order to show its beautiful appearance to the community. This is considered beautification of the mitzva.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">הרואה כהן גדול קורא — ברב עם הדרת מלך</span><span data-when="en">Seeing the High Priest read — in a multitude is the king’s glory</span>
+      <span class="ref">Yoma 70a:9–10</span></h2>
+  <div class="lead"><span data-when="he">המשנה: הרואה את הכהן הגדול קורא אינו רואה את הפר והשעיר הנשרפים — ולא מפני איסור. פשיטא? הוצרך לאפוקי משיטת ריש לקיש שאין מעבירין על המצוות.</span><span data-when="en">The mishna: one who sees the High Priest read does not see the burnt bull and goat — and not because it is forbidden. Isn’t that obvious? It rules out Reish Lakish’s principle that one does not pass over a mitzva.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① הרואה כהן גדול קורא — לא מפני שאינו רשאי. פשיטא?"]):::mishnah
+  A1["① מהו דתימא כריש לקיש: אין מעבירין על המצוות"]:::answer
+  A2["② קמ״ל: ׳ברב עם הדרת מלך׳ — ולכן אין כאן איסור, אלא ריחוק"]:::answer
+  M1 -->|פשיטא, אלא| A1
+  A1 --> A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① One who sees the High Priest read does not see them — not because forbidden. Obvious?"]):::mishnah
+  A1["① Lest you say, per Reish Lakish: one does not pass over a mitzva"]:::answer
+  A2["② It teaches: ׳in a multitude is the king׳s glory׳ — no prohibition, only distance"]:::answer
+  M1 -->|obvious, rather| A1
+  A1 --> A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① הָרוֹאֶה כֹּהֵן גָּדוֹל … לֹא מִפְּנֵי שֶׁאֵינוֹ רַשַּׁאי. פְּשִׁיטָא?"]):::mishnah
+  A1["① מַהוּ דְּתֵימָא כִּדְרֵישׁ לָקִישׁ … אֵין מַעֲבִירִין עַל הַמִּצְוֹת"]:::answer
+  A2["② וּמַאי מִצְוָה — ׳בְּרׇב עָם הַדְרַת מֶלֶךְ׳, קָא מַשְׁמַע לַן"]:::answer
+  M1 -->|פשיטא, אלא| A1
+  A1 --> A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ א — Yoma 70a:9</span></div>
+    <div class="orig">הָרוֹאֶה כֹּהֵן גָּדוֹל כּוּ׳ לֹא מִפְּנֵי שֶׁאֵינוֹ רַשַּׁאי. פְּשִׁיטָא? מַהוּ דְּתֵימָא כִּדְרֵישׁ לָקִישׁ. דְּאָמַר רֵישׁ לָקִישׁ: אֵין מַעֲבִירִין עַל הַמִּצְוֹת.</div>
+    <div class="trans" data-when="he">המשנה: הרואה את הכהן הגדול קורא בתורה אינו רואה את הפר והשעיר הנשרפים, ולהיפך — לא מפני שאסור לראות שניהם, אלא מפני המרחק שביניהם והעשייה בעת ובעונה אחת. הגמרא: פשיטא! מה היה מקום לאסור? אלא הוצרכה המשנה לומר ״לא מפני שאינו רשאי״, שמא תאמר כריש לקיש שאמר: אין מעבירין על המצוות.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: One who sees the High Priest reading the Torah does not see the bull and goat that are burned, and vice versa. This is not because one is not permitted to see both but because there is a distance between them and they are performed simultaneously. The Gemara comments: It is obvious that this is not due to a prohibition; what possible reason could there be to prohibit this? The Gemara answers: This was taught explicitly lest you say that it is prohibited in accordance with the statement of Reish Lakish, as Reish Lakish said: One does not pass over the opportunity to perform mitzvot, even if it is in order to perform a different mitzva.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע׳ א — Yoma 70a:10</span></div>
+    <div class="orig">וּמַאי מִצְוָה — ״בְּרׇב עָם הַדְרַת מֶלֶךְ״, קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">ומה המצוה שבראיית קריאת הכהן הגדול שבגללה היה מקום לחשוש לאיסור? קיום ״ברוב עם הדרת מלך״ — שריבוי העם במצוה מכבד את ה׳. לכן השמיעה המשנה שאין כאן איסור אלא קושי מעשי בלבד.</div>
+    <div class="trans" data-when="en">The Gemara clarifies why this principle might have applied here. And what mitzva is there in hearing the reading of the High Priest? It is a fulfillment of the principle expressed in the verse: “The king’s glory is in the multitude of people” (Proverbs 14:28). Having a large assembly involved in a mitzva gives honor to God. Therefore, the mishna teaches us that the problem with seeing both events was only a practical one.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">משנה: סיום העבודה — בגדים, אילים וכבשים</span><span data-when="en">Mishna: closing the service — garments, rams and lambs</span>
+      <span class="ref">Yoma 70a:11–16</span></h2>
+  <div class="lead"><span data-when="he">משנה: סדר סיום עבודת היום — קידוש, טבילה, חילופי בגדי בוץ וזהב; הקרבת אילו ואיל העם ושבעת הכבשים (מחלוקת ר׳ אליעזר ור׳ עקיבא); הוצאת הכף והמחתה, ולבסוף חזרה לבגדי עצמו.</span><span data-when="en">Mishna: the order of closing the day’s service — sanctifications, immersions, changes between linen and golden garments; the rams and seven lambs (R. Eliezer vs R. Akiva); removing the spoon and pan; and finally his own clothing.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① קרא בבגדי בוץ — קידש, פשט, טבל, ולבש בגדי זהב"]):::mishnah
+  M2(["② יצא ועשה אילו ואיל העם ושבעת כבשים — ר׳ אליעזר · ר׳ עקיבא: עם תמיד של שחר; פר העולה ושעיר החוץ — עם תמיד הערב"]):::mishnah
+  M3(["③ קידש, פשט, טבל ולבש בגדי לבן"]):::mishnah
+  M4(["④ נכנס להוציא את הכף ואת המחתה; קידש, פשט, טבל"]):::mishnah
+  M5(["⑤ לבש בגדי זהב, הקטיר קטורת של בין הערביים והיטיב הנרות"]):::mishnah
+  M6(["⑥ לבש בגדי עצמו, מלוין אותו עד ביתו; ויום טוב היה עושה"]):::mishnah
+  M1 --> M2 --> M3 --> M4 --> M5 --> M6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① He read in linen — sanctified, removed, immersed, donned golden garments"]):::mishnah
+  M2(["② Offered his ram, the people׳s ram, seven lambs — R. Eliezer · R. Akiva: with the morning daily; the bull and outside goat with the afternoon daily"]):::mishnah
+  M3(["③ Sanctified, removed, immersed, donned the white garments"]):::mishnah
+  M4(["④ Entered to remove the spoon and pan; sanctified, removed, immersed"]):::mishnah
+  M5(["⑤ Donned golden garments, burned the afternoon incense and tended the lamps"]):::mishnah
+  M6(["⑥ Donned his own clothes, escorted home; he made a feast"]):::mishnah
+  M1 --> M2 --> M3 --> M4 --> M5 --> M6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① אִם בְּבִגְדֵי בוּץ קוֹרֵא, קִדֵּשׁ יָדָיו וְרַגְלָיו. פָּשַׁט, יָרַד וְטָבַל … וְהֵבִיאוּ לוֹ בִּגְדֵי זָהָב וְלָבַשׁ"]):::mishnah
+  M2(["② וְיָצָא וְעָשָׂה אֶת אֵילוֹ וְאֶת אֵיל הָעָם … דִּבְרֵי רַבִּי אֱלִיעֶזֶר. רַבִּי עֲקִיבָא אוֹמֵר: עִם תָּמִיד שֶׁל שַׁחַר … וּפַר הָעוֹלָה וְשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ … עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם"]):::mishnah
+  M3(["③ קִדֵּשׁ יָדָיו וְרַגְלָיו וּפָשַׁט, וְיָרַד וְטָבַל … הֵבִיאוּ לוֹ בִּגְדֵי לָבָן וְלָבַשׁ"]):::mishnah
+  M4(["④ נִכְנַס לְהוֹצִיא אֶת הַכַּף וְאֶת הַמַּחְתָּה. קִדֵּשׁ … וּפָשַׁט, וְיָרַד וְטָבַל"]):::mishnah
+  M5(["⑤ הֵבִיאוּ לוֹ בִּגְדֵי זָהָב וְלָבַשׁ … וְנִכְנַס לְהַקְטִיר קְטוֹרֶת שֶׁל בֵּין הָעַרְבָּיִם, וּלְהֵטִיב אֶת הַנֵּרוֹת"]):::mishnah
+  M6(["⑥ הֵבִיאוּ לוֹ בִּגְדֵי עַצְמוֹ וְלָבַשׁ, וּמְלַוִּין אוֹתוֹ עַד בֵּיתוֹ. וְיוֹם טוֹב הָיָה עוֹשֶׂה לְאוֹהֲבָיו"]):::mishnah
+  M1 --> M2 --> M3 --> M4 --> M5 --> M6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ א — Yoma 70a:11</span></div>
+    <div class="orig">מַתְנִי׳ אִם בְּבִגְדֵי בוּץ קוֹרֵא, קִדֵּשׁ יָדָיו וְרַגְלָיו. פָּשַׁט, יָרַד וְטָבַל, עָלָה וְנִסְתַּפַּג, וְהֵבִיאוּ לוֹ בִּגְדֵי זָהָב וְלָבַשׁ, וְקִדֵּשׁ יָדָיו וְרַגְלָיו,</div>
+    <div class="trans" data-when="he">משנה: אם קרא בתורה בבגדי בוץ (לבן), קידש ידיו ורגליו, פשט את בגדי הלבן, ירד וטבל, עלה והסתפג (התנגב), והביאו לו בגדי זהב ולבש, וקידש ידיו ורגליו.</div>
+    <div class="trans" data-when="en">MISHNA: If the High Priest read the Torah in sacred white fine linen garments, he then sanctified his hands and feet as he did each time before removing the priestly vestments. He then removed the linen garments, descended to the ritual bath, and immersed. Afterward he ascended and dried himself with a towel, and they brought him the golden garments of the High Priesthood, and he dressed in them and sanctified his hands and feet.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע׳ א — Yoma 70a:12</span></div>
+    <div class="orig">וְיָצָא וְעָשָׂה אֶת אֵילוֹ וְאֶת אֵיל הָעָם וְאֶת שִׁבְעַת כְּבָשִׂים תְּמִימִים בְּנֵי שָׁנָה, דִּבְרֵי רַבִּי אֱלִיעֶזֶר. רַבִּי עֲקִיבָא אוֹמֵר: עִם תָּמִיד שֶׁל שַׁחַר הָיוּ קְרֵבִין. וּפַר הָעוֹלָה וְשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ — הָיוּ קְרֵבִין עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם.</div>
+    <div class="trans" data-when="he">ויצא והקריב את אילו (איל הכהן) ואת איל העם ואת שבעת הכבשים תמימים בני שנה — דברי ר׳ אליעזר (שהם קרבים כאן, בסיום העבודה). ר׳ עקיבא חולק: שבעת הכבשים קרבו עם תמיד של שחר; ופר העולה והשעיר הנעשה בחוץ קרבו עם תמיד של בין הערביים.</div>
+    <div class="trans" data-when="en">The mishna addresses those offerings whose sacrifice has still not been mentioned. The verses in Leviticus, chapter 16, detail the special offerings of the atonement service of Yom Kippur. Of those offerings, the ram of the High Priest and the ram of the people have still not been addressed. In addition to this, the additional offerings of Yom Kippur detailed in Numbers, chapter 29, have not yet been discussed. These include seven one-year-old lambs and a bull to be brought as a burnt-offering and a goat to be brought as a sin-offering. The mishna continues: He emerged and offered his ram and the ram of the people and the seven unblemished year-old lambs mandated to be offered that day. This is the statement of Rabbi Eliezer. Rabbi Akiva says: Those offerings were not sacrificed at this point; rather, they were sacrificed with the daily morning offering; and the bull of the Yom Kippur burnt-offering; and the goat whose services are performed outside of the Sanctuary, i.e., in the Temple courtyard, were sacrificed with the daily afternoon offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע׳ א — Yoma 70a:13</span></div>
+    <div class="orig">קִדֵּשׁ יָדָיו וְרַגְלָיו וּפָשַׁט, וְיָרַד וְטָבַל וְעָלָה וְנִסְתַּפָּג.</div>
+    <div class="trans" data-when="he">לאחר הקרבת קרבנות אלו: קידש ידיו ורגליו ופשט את בגדי הזהב, ירד וטבל ועלה והסתפג.</div>
+    <div class="trans" data-when="en">After sacrificing these offerings, he sanctified his hands and feet and removed the golden garments, and he descended into the ritual bath and immersed and ascended and dried himself.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע׳ א — Yoma 70a:14</span></div>
+    <div class="orig">הֵבִיאוּ לוֹ בִּגְדֵי לָבָן וְלָבַשׁ, וְקִדֵּשׁ יָדָיו וְרַגְלָיו. נִכְנַס לְהוֹצִיא אֶת הַכַּף וְאֶת הַמַּחְתָּה. קִדֵּשׁ יָדָיו וְרַגְלָיו וּפָשַׁט, וְיָרַד וְטָבַל עָלָה וְנִסְתַּפָּג.</div>
+    <div class="trans" data-when="he">הביאו לו שוב בגדי לבן ולבש, וקידש ידיו ורגליו. נכנס לקודש הקודשים להוציא את הכף (שבה הקטורת) ואת המחתה. קידש ידיו ורגליו ופשט, ירד וטבל עלה והסתפג.</div>
+    <div class="trans" data-when="en">They brought him the white garments again, and he dressed in them and sanctified his hands and feet. Afterward he entered the Holy of Holies to take out the incense spoon and the coal pan, which he had brought there earlier. He again sanctified his hands and feet and removed the white garments and descended to the ritual bath and immersed and ascended and dried himself with a towel.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע׳ א — Yoma 70a:15</span></div>
+    <div class="orig">הֵבִיאוּ לוֹ בִּגְדֵי זָהָב וְלָבַשׁ, וְקִדֵּשׁ יָדָיו וְרַגְלָיו, וְנִכְנַס לְהַקְטִיר קְטוֹרֶת שֶׁל בֵּין הָעַרְבָּיִם, וּלְהֵטִיב אֶת הַנֵּרוֹת, וְקִדֵּשׁ יָדָיו וְרַגְלָיו וּפָשַׁט, וְיָרַד וְטָבַל עָלָה וְנִסְתַּפָּג.</div>
+    <div class="trans" data-when="he">הביאו לו בגדי זהב ולבש, וקידש ידיו ורגליו, ונכנס להקטיר את קטורת בין הערביים ולהיטיב את הנרות (סיום עבודת היום). וקידש ידיו ורגליו ופשט, ירד וטבל עלה והסתפג.</div>
+    <div class="trans" data-when="en">They brought him the golden garments, and he dressed in them and sanctified his hands and feet and entered the Sanctuary to burn the afternoon incense and to remove the ashes from the lamps, which signified the end of the day’s service. And he sanctified his hands and feet and removed the golden garments, and he descended to the ritual bath and immersed and ascended and dried himself.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע׳ א — Yoma 70a:16</span></div>
+    <div class="orig">הֵבִיאוּ לוֹ בִּגְדֵי עַצְמוֹ וְלָבַשׁ, וּמְלַוִּין אוֹתוֹ עַד בֵּיתוֹ. וְיוֹם טוֹב הָיָה עוֹשֶׂה לְאוֹהֲבָיו בְּשָׁעָה שֶׁיָּצָא בְּשָׁלוֹם מִן הַקּוֹדֶשׁ.</div>
+    <div class="trans" data-when="he">הביאו לו את בגדי עצמו ולבש — שכבר נסתיימה העבודה ועבר יום הכיפורים, ומלווים אותו עד ביתו לכבודו. ויום טוב (משתה ושמחה) היה עושה לאוהביו בשעה שיצא בשלום מן הקודש.</div>
+    <div class="trans" data-when="en">They then brought him his own clothing and he dressed, since the service was complete and Yom Kippur was over; and the people escort him to his house in deference to him. And the High Priest would make a feast for his loved ones and his friends when he emerged in peace from the Sanctuary.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">ר׳ אליעזר ור׳ עקיבא — מתי קרבים המוספים</span><span data-when="en">R. Eliezer vs R. Akiva — when the additional offerings are sacrificed</span>
+      <span class="ref">Yoma 70a:17–70b:4</span></h2>
+  <div class="lead"><span data-when="he">בירור לשון ר׳ עקיבא, ושאלות על פר העולה ואימורי החטאת; רבא מעמיד את שתי השיטות לפי ברייתות; וטעמיהם מן הכתובים, ומחלוקת בדרשת ״מלבד חטאת הכיפורים״.</span><span data-when="en">Clarifying R. Akiva’s wording, and questions about the bull and the sin-offering portions; Rava establishes both views per baraitot; their scriptural reasons, and a dispute over “besides the sin-offering of atonement.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① איבעיא: כיצד אמר ר׳ עקיבא — פר העולה עם שחר או עם הערב?"}:::question
+  Q2{"② או: פר העולה בהדייהו עם השחר, ושעיר החוץ עם הערב?"}:::question
+  Q3{"③ ותו: פר העולה לר׳ אליעזר ששיירו — אימת? ואימורי חטאת אימת?"}:::question
+  A1["④ רבא: לא משכחת מתוקנתא אלא או לר׳ אליעזר כדבי שמואל, או לר׳ עקיבא כתוספתא"]:::answer
+  P1["⑤ דבי שמואל (ר׳ אליעזר): אילו, איל העם ואימורי חטאת — ופר, כבשים ושעיר חוץ עם הערב"]:::proof
+  P2["⑥ תוספתא (ר׳ עקיבא): פר וז׳ כבשים עם השחר ׳מלבד עולת הבוקר׳, ואחר כך עבודת היום"]:::proof
+  P3["⑦ ואחר כך שעיר החוץ ׳מלבד חטאת הכיפורים׳; אילו ואיל העם, אימורי חטאת, תמיד הערב"]:::proof
+  S1["⑧ טעם ר׳ אליעזר: עביד כדכתיב — תורת כהנים ואחר כך חומש הפקודים"]:::statement
+  S2["⑨ טעם ר׳ עקיבא: ׳מלבד עולת הבוקר׳ — מוספין עם תמיד של שחר"]:::statement
+  A2["⑩ ולר׳ אליעזר ׳מלבד חטאת הכיפורים׳ — על מה שזה מכפר זה מכפר"]:::answer
+  Q1 --> Q2 --> Q3
+  Q3 -->|תירוץ רבא| A1
+  A1 -->|ר׳ אליעזר| P1
+  A1 -->|ר׳ עקיבא| P2
+  P2 --> P3
+  P1 -->|טעם| S1
+  P3 -->|טעם| S2
+  S2 -.->|וריבא לר׳ אליעזר| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① Dilemma: how does R. Akiva mean — the bull with morning or afternoon?"}:::question
+  Q2{"② Or: the bull with them in the morning, and the outside goat in the afternoon?"}:::question
+  Q3{"③ Further: R. Eliezer omitted the bull — when? And the sin-offering portions — when?"}:::question
+  A1["④ Rava: it works out only for R. Eliezer per Shmuel׳s school, or R. Akiva per the Tosefta"]:::answer
+  P1["⑤ Shmuel׳s school (R. Eliezer): his ram, people׳s ram, sin-portions — bull, lambs, goat with the afternoon"]:::proof
+  P2["⑥ Tosefta (R. Akiva): bull and 7 lambs with the morning ׳besides the morning burnt-offering׳, then the day׳s service"]:::proof
+  P3["⑦ Then the outside goat ׳besides the sin-offering of atonement׳; rams, sin-portions, afternoon daily"]:::proof
+  S1["⑧ R. Eliezer׳s reason: he acts as written — Leviticus first, then Numbers"]:::statement
+  S2["⑨ R. Akiva׳s reason: ׳besides the morning burnt-offering׳ — additions with the morning daily"]:::statement
+  A2["⑩ And for R. Eliezer ׳besides the sin-offering of atonement׳ — what one atones, the other atones"]:::answer
+  Q1 --> Q2 --> Q3
+  Q3 -->|Rava resolves| A1
+  A1 -->|R. Eliezer| P1
+  A1 -->|R. Akiva| P2
+  P2 --> P3
+  P1 -->|reason| S1
+  P3 -->|reason| S2
+  S2 -.->|and for R. Eliezer| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① אִיבַּעְיָא לְהוּ: הֵיכִי קָאָמַר … וּפַר הָעוֹלָה וְשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם"}:::question
+  Q2{"② אוֹ דִילְמָא … וּפַר הָעוֹלָה בַּהֲדַיְיהוּ, וְשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם"}:::question
+  Q3{"③ וְתוּ: פַּר הָעוֹלָה לְרַבִּי אֱלִיעֶזֶר דְּשַׁיְּירֵיהּ, אֵימַת עָבֵיד לֵיהּ? … אֵימוּרֵי חַטָּאת אֵימַת עָבֵיד לְהוּ?"}:::question
+  A1["④ אָמַר רָבָא: לָא מַשְׁכַּחַתְּ לַהּ מְתַקַּנְתָּא, אֶלָּא אוֹ לְרַבִּי אֱלִיעֶזֶר דְּתָנָא בִּדְבֵי שְׁמוּאֵל, אוֹ לְרַבִּי עֲקִיבָא כִּדְתוֹסֶפְתָּא"]:::answer
+  P1["⑤ דְּתָנָא דְּבֵי שְׁמוּאֵל … יָצָא וְעָשָׂה אֵילוֹ וְאֵיל הָעָם וְאֵימוּרֵי חַטָּאת, אֲבָל פַּר הָעוֹלָה וְשִׁבְעַת כְּבָשִׂים וְשָׂעִיר … עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם"]:::proof
+  P2["⑥ רַבִּי עֲקִיבָא … פַּר הָעוֹלָה וְשִׁבְעַת כְּבָשִׁים עִם תָּמִיד שֶׁל שַׁחַר … ׳מִלְּבַד עוֹלַת הַבֹּקֶר׳ … וְאַחַר כָּךְ עֲבוֹדַת הַיּוֹם"]:::proof
+  P3["⑦ וְאַחַר כָּךְ שָׂעִיר … בַּחוּץ ׳מִלְּבַד חַטַּאת הַכִּפּוּרִים׳ … אֵילוֹ וְאֵיל הָעָם … אֵימוּרֵי חַטָּאת … תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם"]:::proof
+  S1["⑧ מַאי טַעְמָא דְּרַבִּי אֱלִיעֶזֶר? עָבֵיד כְּדִכְתִיב … תּוֹרַת כֹּהֲנִים, וַהֲדַר … חוֹמֶשׁ הַפְּקוּדִים"]:::statement
+  S2["⑨ וְרַבִּי עֲקִיבָא? … ׳מִלְּבַד עוֹלַת הַבֹּקֶר׳ … מוּסָפִין עִם תָּמִיד שֶׁל שַׁחַר עָבֵיד לְהוּ"]:::statement
+  A2["⑩ וְרַבִּי אֱלִיעֶזֶר … ׳מִלְּבַד חַטַּאת הַכִּפּוּרִים׳ … עַל מָה שֶׁזֶּה מְכַפֵּר — זֶה מְכַפֵּר"]:::answer
+  Q1 --> Q2 --> Q3
+  Q3 -->|תירוץ רבא| A1
+  A1 -->|ר׳ אליעזר| P1
+  A1 -->|ר׳ עקיבא| P2
+  P2 --> P3
+  P1 -->|טעם| S1
+  P3 -->|טעם| S2
+  S2 -.->|וריבא לר׳ אליעזר| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ א — Yoma 70a:17</span></div>
+    <div class="orig">גְּמָ׳ אִיבַּעְיָא לְהוּ: הֵיכִי קָאָמַר, עִם תָּמִיד שֶׁל שַׁחַר הָיוּ קְרֵבִין, וּפַר הָעוֹלָה וְשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם,</div>
+    <div class="trans" data-when="he">גמרא: נסתפק לחכמים בלשון ר׳ עקיבא. האם כוונתו: שבעת הכבשים קרבים עם תמיד של שחר, ואילו פר העולה ושעיר החוץ קרבים עם תמיד של בין הערביים?</div>
+    <div class="trans" data-when="en">GEMARA: It was taught in the mishna: Rabbi Akiva said the seven lambs were sacrificed with the daily morning offering; and the bull of the Yom Kippur burnt-offering; and the goat whose services are performed outside of the Sanctuary, i.e., in the Temple courtyard, with the daily afternoon offering. It is unclear whether the middle clause concerning the bull should be read as a continuation of the first clause, or as relating to the latter clause. The Gemara seeks to clarify this ambiguity. A dilemma was raised before the Sages: What is Rabbi Akiva saying? Does he mean to say the seven lambs were sacrificed with the daily morning offering, whereas the bull of the Yom Kippur burnt-offering and the goat whose services are performed outside were sacrificed with the daily afternoon offering?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע׳ א — Yoma 70a:18</span></div>
+    <div class="orig">אוֹ דִילְמָא הָכִי קָאָמַר: עִם תָּמִיד שֶׁל שַׁחַר הָיוּ קְרֵבִין, וּפַר הָעוֹלָה בַּהֲדַיְיהוּ, וְשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם.</div>
+    <div class="trans" data-when="he">או שמא כך כוונתו: שבעת הכבשים קרבים עם תמיד של שחר, ופר העולה עמהם (עם השחר), ורק שעיר החוץ קרב עם תמיד של בין הערביים.</div>
+    <div class="trans" data-when="en">Or perhaps this is what he is saying: The seven lambs were sacrificed with the daily morning offering and the bull of the Yom Kippur burnt-offering together with them, whereas the goat whose services are performed outside, i.e., in the Temple courtyard, was sacrificed with the daily afternoon offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע׳ א — Yoma 70a:19</span></div>
+    <div class="orig">וְתוּ: פַּר הָעוֹלָה לְרַבִּי אֱלִיעֶזֶר דְּשַׁיְּירֵיהּ, אֵימַת עָבֵיד לֵיהּ?</div>
+    <div class="trans" data-when="he">ועוד ספק: פר העולה — שר׳ אליעזר השמיטו מרשימתו — מתי הכהן הגדול מקריבו?</div>
+    <div class="trans" data-when="en">And furthermore, another dilemma: With regard to the bull of the Yom Kippur burnt-offering, according to Rabbi Eliezer’s opinion: Since he omitted mention of it, it must be clarified when the High Priest performs its sacrifice. Is it sacrificed at this point in the day, or at another time?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע׳ א — Yoma 70a:20</span></div>
+    <div class="orig">וְתוּ: בֵּין לְרַבִּי אֱלִיעֶזֶר בֵּין לְרַבִּי עֲקִיבָא, אֵימוּרֵי חַטָּאת אֵימַת עָבֵיד לְהוּ?</div>
+    <div class="trans" data-when="he">ועוד ספק: בין לר׳ אליעזר ובין לר׳ עקיבא — שניהם לא הזכירו את אימורי החטאת (חלקי הקרבן הקרבים על המזבח) — מתי מקטירם?</div>
+    <div class="trans" data-when="en">And furthermore, another dilemma: According to both Rabbi Eliezer’s opinion and according to Rabbi Akiva’s opinion, since neither of them mentioned the portions of the sin-offering to be consumed on the altar, it must be clarified when the High Priest performs their service and places them on the altar.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע׳ א — Yoma 70a:21</span></div>
+    <div class="orig">אָמַר רָבָא: לָא מַשְׁכַּחַתְּ לַהּ מְתַקַּנְתָּא, אֶלָּא אוֹ לְרַבִּי אֱלִיעֶזֶר דְּתָנָא בִּדְבֵי שְׁמוּאֵל, אוֹ לְרַבִּי עֲקִיבָא כִּדְתוֹסֶפְתָּא.</div>
+    <div class="trans" data-when="he">רבא: אינך מוצא הסבר מתוקן ושלם לסדר אלא באחת משתי דרכים — או לשיטת ר׳ אליעזר כפי ששנו בבית מדרשו של שמואל, או לשיטת ר׳ עקיבא כפי שמובא בתוספתא.</div>
+    <div class="trans" data-when="en">Rava said: You will only find it properly explained either according to the opinion of Rabbi Eliezer as taught by the school of Shmuel, or according to the opinion of Rabbi Akiva as taught in the Tosefta.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע׳ א — Yoma 70a:22</span></div>
+    <div class="orig">דְּתָנָא דְּבֵי שְׁמוּאֵל: רַבִּי אֱלִיעֶזֶר אוֹמֵר: יָצָא וְעָשָׂה אֵילוֹ וְאֵיל הָעָם וְאֵימוּרֵי חַטָּאת, אֲבָל פַּר הָעוֹלָה וְשִׁבְעַת כְּבָשִׂים וְשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ — עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם.</div>
+    <div class="trans" data-when="he">דבי שמואל לר׳ אליעזר: יצא ועשה את אילו ואיל העם ואימורי החטאת (כאן, בסיום); אבל פר העולה, שבעת הכבשים והשעיר הנעשה בחוץ — עם תמיד של בין הערביים.</div>
+    <div class="trans" data-when="en">The school of Shmuel taught that Rabbi Eliezer says: He came out and offered his ram and the ram of the people and the portions of the sin-offering to be consumed on the altar. But the bull of the Yom Kippur burnt-offering and the seven lambs and the goat whose services are performed outside were sacrificed with the daily afternoon offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע׳ א — Yoma 70a:23</span></div>
+    <div class="orig">רַבִּי עֲקִיבָא דְּתוֹסֶפְתָּא מַאי הִיא? דְּתַנְיָא, רַבִּי עֲקִיבָא אוֹמֵר: פַּר הָעוֹלָה וְשִׁבְעַת כְּבָשִׁים עִם תָּמִיד שֶׁל שַׁחַר הָיוּ קְרֵבִין, שֶׁנֶּאֱמַר: ״מִלְּבַד עוֹלַת הַבֹּקֶר אֲשֶׁר לְעוֹלַת הַתָּמִיד״, וְאַחַר כָּךְ עֲבוֹדַת הַיּוֹם.</div>
+    <div class="trans" data-when="he">ומהי שיטת ר׳ עקיבא שבתוספתא? ר׳ עקיבא: פר העולה ושבעת הכבשים קרבו עם תמיד של שחר, שנאמר ״מלבד עולת הבוקר אשר לעולת התמיד״ — שהמוספים קרבים עם התמיד; ואחר כך עבודת היום (המיוחדת ליום הכיפורים).</div>
+    <div class="trans" data-when="en">What is Rabbi Akiva’s opinion as taught in the Tosefta? As it was taught that Rabbi Akiva says: The bull of the Yom Kippur burnt-offering and the seven lambs were sacrificed with the daily morning offering, as it is stated with regard to the additional offerings of other Festivals: “Besides the morning burnt-offering which is the daily burnt-offering you shall sacrifice these” (Numbers 28:23), indicating that the additional offerings of the day should be sacrificed together with the daily offering. And afterward the service of the day, which is unique to Yom Kippur, is performed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע׳ ב — Yoma 70b:1</span></div>
+    <div class="orig">וְאַחַר כָּךְ שָׂעִיר הַנַּעֲשֶׂה בַּחוּץ, שֶׁנֶּאֱמַר: ״שְׂעִיר עִזִּים אֶחָד חַטָּאת מִלְּבַד חַטַּאת הַכִּפּוּרִים״, וְאַחַר כָּךְ אֵילוֹ וְאֵיל הָעָם, וְאַחַר כָּךְ אֵימוּרֵי חַטָּאת, וְאַחַר כָּךְ תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם.</div>
+    <div class="trans" data-when="he">המשך התוספתא (ר׳ עקיבא): ואחר כך השעיר הנעשה בחוץ, שנאמר ״שעיר עזים אחד חטאת מלבד חטאת הכיפורים״ — שקרב לאחר עבודת היום; ואחר כך אילו ואיל העם, ואחר כך אימורי החטאת, ואחר כך תמיד של בין הערביים.</div>
+    <div class="trans" data-when="en">And afterward, the goat whose services are performed outside is sacrificed, as it is stated: “One goat for a sin-offering besides the sin-offering of atonement and the daily burnt-offering, and its meal-offering, and their libations” (Numbers 29:11), indicating that the goat sin-offering is sacrificed after the other offerings of the day. And afterward he offers his ram and the ram of the people, and afterward he places upon the altar the portions of the sin-offering to be consumed on the altar, and afterward he sacrifices the daily afternoon offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע׳ ב — Yoma 70b:2</span></div>
+    <div class="orig">מַאי טַעְמָא דְּרַבִּי אֱלִיעֶזֶר? עָבֵיד כְּדִכְתִיב: עָבֵיד בְּרֵישָׁא דְּתוֹרַת כֹּהֲנִים, וַהֲדַר עָבֵיד דְּחוֹמֶשׁ הַפְּקוּדִים.</div>
+    <div class="trans" data-when="he">מה טעם ר׳ אליעזר? הכהן הגדול עושה כסדר הכתוב בתורה: תחילה את העבודות הכתובות בתורת כהנים (ויקרא ט״ז), ואחר כך את אלו שבחומש הפקודים (במדבר כ״ט).</div>
+    <div class="trans" data-when="en">What is the reason for the opinion of Rabbi Eliezer? The High Priest acts in accordance with the order in which it is written in the Torah: First he performs the services described in Leviticus, and afterward he performs the additional offerings mentioned in the book of Numbers.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע׳ ב — Yoma 70b:3</span></div>
+    <div class="orig">וְרַבִּי עֲקִיבָא? כִּדְקָתָנֵי טַעְמָא: ״מִלְּבַד עוֹלַת הַבֹּקֶר אֲשֶׁר לְעוֹלַת הַתָּמִיד״, אַלְמָא מוּסָפִין עִם תָּמִיד שֶׁל שַׁחַר עָבֵיד לְהוּ.</div>
+    <div class="trans" data-when="he">ומה טעם ר׳ עקיבא? כפי שכבר שנינו בתוספתא: ״מלבד עולת הבוקר אשר לעולת התמיד״ — מכאן שהמוספים קרבים עם תמיד של שחר.</div>
+    <div class="trans" data-when="en">And what is Rabbi Akiva’s reasoning? His reasoning is that as the Tosefta teaches that the verse states: “Besides the morning burnt-offering which is the daily burnt-offering you shall sacrifice these” (Numbers 28:23), it is apparent that the sacrifice of the additional offerings should be performed together with the daily morning offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע׳ ב — Yoma 70b:4</span></div>
+    <div class="orig">וְרַבִּי אֱלִיעֶזֶר, הַאי ״מִלְּבַד חַטַּאת הַכִּפּוּרִים״ מַאי עָבֵיד לֵיהּ? הַהוּא מִיבְּעֵי לֵיהּ, עַל מָה שֶׁזֶּה מְכַפֵּר — זֶה מְכַפֵּר.</div>
+    <div class="trans" data-when="he">ולר׳ אליעזר, מה הוא דורש מ״מלבד חטאת הכיפורים״ (שממנו למד ר׳ עקיבא)? פסוק זה נצרך לו ללמד: על מה שזה (שעיר הפנימי שדמו ניתן בקודש) מכפר — זה (שעיר החיצון שבעזרה) מכפר.</div>
+    <div class="trans" data-when="en">The Gemara asks: And Rabbi Eliezer, what does he do with this verse: “Besides the sin-offering of atonement,” which was the basis for Rabbi Akiva’s opinion? That verse is necessary for him to derive from it that for what this one, the goat sin-offering whose blood is sprinkled inside the Holy of Holies, atones, that one, the goat sin-offering of the additional offerings whose services are performed in the Temple courtyard, also atones.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-8">
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">חלוקת שבעת הכבשים, ואיל אחד או שניים</span><span data-when="en">Splitting the seven lambs, and one ram or two</span>
+      <span class="ref">Yoma 70b:5–11</span></h2>
+  <div class="lead"><span data-when="he">שתי גרסאות בשם ר׳ עקיבא לחלוקת שבעת הכבשים בין שחר לערב, ושורש מחלוקתם (חולשת הכהן מול חשש פשיעה); ומחלוקת רבי ור׳ אלעזר ברבי שמעון אם איל אחד לעם או שניים.</span><span data-when="en">Two versions in R. Akiva’s name splitting the seven lambs between morning and afternoon, and the root of their dispute (weakness vs negligence); and whether there is one ram for the people or two.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ר׳ יהודה משמו: אחד עם שחר, שישה עם הערב · ראב״ש: שישה עם שחר, אחד עם הערב"]:::statement
+  Q1{"② מ״ט דרבנן? תרי קראי — ׳מלבד עולת הבוקר׳ ו׳ויצא ועשה עולתו׳, מנייהו הכא ומנייהו הכא"}:::question
+  S2["③ ר׳ יהודה: עביד חד, והדר עבודת היום — דלמא חולשא חליש כה״ג"]:::statement
+  S3["④ ראב״ש: כיון דאתחיל עביד שישה — דלמא פשע; ולעבודת היום זריז הוא"]:::statement
+  Q2{"⑤ דכ״ע מיהת חד איל הוא — כמאן? כרבי, דאיל כאן הוא האמור בחומש הפקודים; ראב״ש: שני אילים"}:::question
+  S4["⑥ מ״ט דרבי? ׳אחד׳; ולראב״ש ׳אחד׳ — מיוחד שבעדרו"]:::statement
+  A1["⑦ ולרבי, מיוחד מ׳מבחר נדריך׳; ולראב״ש — חד בחובה וחד בנדבה, וצריכי"]:::answer
+  S1 -->|מ״ט| Q1
+  Q1 -->|במאי פליגי| S2
+  Q1 --> S3
+  S2 -.->|נפק״מ| Q2
+  S3 -.->|נפק״מ| Q2
+  Q2 -->|מ״ט דרבי| S4
+  S4 -->|דרשה| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① R. Yehuda: one in the morning, six in the afternoon · R. Elazar b. Shimon: six in the morning, one in the afternoon"]:::statement
+  Q1{"② Rabbis׳ reason? Two verses — ׳besides the morning burnt-offering׳ and ׳he shall exit and offer׳, so some here, some there"}:::question
+  S2["③ R. Yehuda: offers one, then the day׳s service — lest the High Priest grow weak"]:::statement
+  S3["④ R. Elazar: once begun he offers six — lest he be negligent later; for the day׳s service he is diligent"]:::statement
+  Q2{"⑤ All agree there is one ram — like whom? Like Rabbi: same ram as in Numbers; R. Elazar: two rams"}:::question
+  S4["⑥ Rabbi׳s reason: ׳one׳; for R. Elazar ׳one׳ — the choicest of its flock"]:::statement
+  A1["⑦ Rabbi derives choicest from ׳your choice vows׳; R. Elazar — one obligatory, one freewill, both needed"]:::answer
+  S1 -->|reason| Q1
+  Q1 -->|where they differ| S2
+  Q1 --> S3
+  S2 -.->|ramification| Q2
+  S3 -.->|ramification| Q2
+  Q2 -->|Rabbi׳s reason| S4
+  S4 -->|derivation| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רַבִּי יְהוּדָה אוֹמֵר מִשְּׁמוֹ: אֶחָד קָרֵב עִם תָּמִיד שֶׁל שַׁחַר, וְשִׁשָּׁה עִם … הָעַרְבַּיִם. רַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן … שִׁשָּׁה … שַׁחַר, וְאֶחָד … הָעַרְבַּיִם"]:::statement
+  Q1{"② מַאי טַעְמַיְיהוּ דְּרַבָּנַן? תְּרֵי קְרָאֵי כְּתִיבִי … ׳מִלְּבַד עוֹלַת הַבֹּקֶר׳ … ׳וְיָצָא וְעָשָׂה אֶת עוֹלָתוֹ׳ … מִנַּיְיהוּ הָכָא וּמָנַיְיהוּ הָכָא"}:::question
+  S2["③ רַבִּי יְהוּדָה סָבַר: עָבֵיד חַד … וַהֲדַר עָבֵיד עֲבוֹדַת הַיּוֹם — דִּילְמָא חוּלְשָׁא חָלֵישׁ כֹּהֵן גָּדוֹל"]:::statement
+  S3["④ וְרַבִּי אֶלְעָזָר … סָבַר: כֵּיוָן דְּאַתְחֵיל — עָבֵיד שִׁשָּׁה, דִּילְמָא פָּשַׁע. דִּלְגַבֵּי עֲבוֹדַת הַיּוֹם — זָרִיז הוּא"]:::statement
+  Q2{"⑤ דְּכוּלֵּי עָלְמָא … חַד אַיִל הוּא. כְּמַאן — כְּרַבִּי … הוּא הָאָמוּר בְּחוֹמֶשׁ הַפְּקוּדִים. רַבִּי אֶלְעָזָר … שְׁנֵי אֵילִים הֵן"}:::question
+  S4["⑥ מַאי טַעְמָא דְּרַבִּי? דִּכְתִיב: ׳אֶחָד׳. וְרַבִּי אֶלְעָזָר … מַאי ׳אֶחָד׳? מְיוּחָד שֶׁבְּעֶדְרוֹ"]:::statement
+  A1["⑦ וְרַבִּי? נָפְקָא לֵיהּ: מִ׳מִּבְחַר נְדָרֶיךָ׳. וְרַבִּי אֶלְעָזָר …? חַד בְּחוֹבָה, וְחַד בִּנְדָבָה. וּצְרִיכִי"]:::answer
+  S1 -->|מ״ט| Q1
+  Q1 -->|במאי פליגי| S2
+  Q1 --> S3
+  S2 -.->|נפק״מ| Q2
+  S3 -.->|נפק״מ| Q2
+  Q2 -->|מ״ט דרבי| S4
+  S4 -->|דרשה| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ ב — Yoma 70b:5</span></div>
+    <div class="orig">רַבִּי יְהוּדָה אוֹמֵר מִשְּׁמוֹ: אֶחָד קָרֵב עִם תָּמִיד שֶׁל שַׁחַר, וְשִׁשָּׁה עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם. רַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן אוֹמֵר מִשְּׁמוֹ: שִׁשָּׁה קְרֵבִין עִם תָּמִיד שֶׁל שַׁחַר, וְאֶחָד עִם תָּמִיד שֶׁל בֵּין הָעַרְבַּיִם.</div>
+    <div class="trans" data-when="he">התוספתא (בשם ר׳ עקיבא) מביאה גרסאות בחלוקת שבעת הכבשים: ר׳ יהודה משמו — אחד קרב עם תמיד של שחר, וששה עם תמיד של בין הערביים. ר׳ אלעזר ברבי שמעון משמו — ששה קרבים עם תמיד של שחר, ואחד עם תמיד של בין הערביים.</div>
+    <div class="trans" data-when="en">§ The Tosefta cited above, which recorded the opinion of Rabbi Akiva, also records additional versions of his view: Rabbi Yehuda says in the name of Rabbi Akiva: One of the seven lambs is sacrificed with the daily morning offering, and the other six are sacrificed with the daily afternoon offering. Rabbi Elazar, son of Rabbi Shimon, says in the name of Rabbi Akiva: Six are sacrificed with the daily morning offering and one with the daily afternoon offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע׳ ב — Yoma 70b:6</span></div>
+    <div class="orig">מַאי טַעְמַיְיהוּ דְּרַבָּנַן? תְּרֵי קְרָאֵי כְּתִיבִי. כְּתִיב: ״מִלְּבַד עוֹלַת הַבֹּקֶר״, וּכְתִיב: ״וְיָצָא וְעָשָׂה אֶת עוֹלָתוֹ״, הִלְכָּךְ, עָבֵיד מִנַּיְיהוּ הָכָא וּמָנַיְיהוּ הָכָא.</div>
+    <div class="trans" data-when="he">מה טעמם (ר׳ יהודה וראב״ש שמחלקים את הכבשים)? שני כתובים סותרים נכתבו: ״מלבד עולת הבוקר״ (משמע בבוקר), ו״ויצא ועשה את עולתו״ — שעולת העם (=המוספים) קרבה בערב. לכן מקריב מקצתם כאן (בשחר) ומקצתם כאן (בערב).</div>
+    <div class="trans" data-when="en">What is the rationale of the Rabbis, i.e., Rabbi Yehuda and Rabbi Elazar, son of Rabbi Shimon, who divide the sacrifice of the seven lambs into two parts? Two verses are written that suggest different times at which the additional offerings are sacrificed: It is written with regard to the additional offerings: “Besides the morning burnt-offering which is the daily burnt-offering you shall sacrifice these” (Numbers 28:23), implying that the additional offerings are sacrificed in the morning. But it is also written that upon concluding the service of the day: “And he shall exit and make his burnt-offering and the burnt-offering of the people” (Leviticus 16:24). As the phrase: “The burnt-offering of the people,” is referring to the additional offerings, this verse implies that the additional offerings are sacrificed in the afternoon. Therefore, in order to fulfill both verses, he performs the sacrifice of some of them here, in the morning, and some of them there, in the afternoon.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע׳ ב — Yoma 70b:7</span></div>
+    <div class="orig">בְּמַאי קָא מִיפַּלְגִי? רַבִּי יְהוּדָה סָבַר: עָבֵיד חַד כְּדִכְתִיב: ״מִלְּבַד עוֹלַת הַבֹּקֶר״, וַהֲדַר עָבֵיד עֲבוֹדַת הַיּוֹם — דִּילְמָא חוּלְשָׁא חָלֵישׁ כֹּהֵן גָּדוֹל.</div>
+    <div class="trans" data-when="he">במאי פליגי ר׳ יהודה וראב״ש? ר׳ יהודה סובר: מקריב כבש אחד בבוקר כדכתיב ״מלבד עולת הבוקר״, ואחר כך עושה את עבודת היום — שמא יחלש הכהן הגדול אם יקריב יותר, ולא יוכל להשלים את עבודת היום שאי אפשר בלעדיה.</div>
+    <div class="trans" data-when="en">With regard to what do Rabbi Yehuda and Rabbi Elazar disagree? Rabbi Yehuda holds that the High Priest performs the sacrifice of one lamb in the morning, as it is written: “Besides the morning burnt-offering,” and then he performs the service of the day before he proceeds to sacrifice the other six lambs. Initially, only the minimum possible number of lambs is sacrificed lest the High Priest become weak by doing more. He might then be unable to complete the service of the day, which cannot be performed by anyone else and without which atonement cannot be achieved.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע׳ ב — Yoma 70b:8</span></div>
+    <div class="orig">וְרַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן סָבַר: כֵּיוָן דְּאַתְחֵיל — עָבֵיד שִׁשָּׁה, דִּילְמָא פָּשַׁע. דִּלְגַבֵּי עֲבוֹדַת הַיּוֹם — זָרִיז הוּא.</div>
+    <div class="trans" data-when="he">וראב״ש סובר: כיוון שהתחיל בהקרבת הכבשים, יעשה שישה ויניח אחד לערב — שמא יפשע ולא יקריב אחר כך כל כך הרבה. ואין חשש שיחלש מעבודת היום, כי לגבי עבודת היום הכהן הגדול זריז.</div>
+    <div class="trans" data-when="en">And Rabbi Elazar, son of Rabbi Shimon, holds: Since he has begun to sacrifice the lambs he performs the sacrifice of six of them, leaving over only one until the afternoon. He sacrifices the maximum possible number of lambs now lest he be negligent later and fail to sacrifice so many at the close of the day. There is no concern that by doing so he might become weak and be unable to perform the service of the day, because with regard to the service of the day, the High Priest is diligent and will always muster the energy needed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע׳ ב — Yoma 70b:9</span></div>
+    <div class="orig">דְּכוּלֵּי עָלְמָא מִיהַת, חַד אַיִל הוּא. כְּמַאן — כְּרַבִּי. דְּתַנְיָא, רַבִּי אוֹמֵר: אַיִל אֶחָד הָאָמוּר כָּאן, הוּא הָאָמוּר בְּחוֹמֶשׁ הַפְּקוּדִים. רַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן אוֹמֵר: שְׁנֵי אֵילִים הֵן, אֶחָד הָאָמוּר כָּאן, וְאֶחָד הָאָמוּר בְּחוֹמֶשׁ הַפְּקוּדִים.</div>
+    <div class="trans" data-when="he">על כל פנים, לכל הדעות יש רק איל אחד לעם. כשיטת מי? כרבי. ברייתא: רבי אומר — איל אחד האמור כאן (ויקרא ט״ז) הוא האמור בחומש הפקודים (במדבר כ״ט). ראב״ש אומר: שני אילים הם — אחד האמור כאן ואחד בחומש הפקודים.</div>
+    <div class="trans" data-when="en">The Gemara notes: Despite their disagreements, everyone agrees, however, that there is only one ram for the people. In accordance with whose opinion is this? It is in accordance with the opinion of Rabbi Yehuda HaNasi. As it was taught in a baraita that Rabbi Yehuda HaNasi says: Only one ram for the people is sacrificed, as the one stated here in Leviticus: “With this shall Aaron come into the Sanctuary: With a young bull for a sin-offering, and a ram for a burnt-offering” (Leviticus 16:3), is the same one that is stated in the Book of Numbers: “And you shall sacrifice a burnt-offering to the Lord of pleasing odor: One young bull, one ram, seven unblemished year-old lambs shall be unto you” (Numbers 29:8). Rabbi Elazar, son of Rabbi Shimon, says: There are two rams for the people: One that is stated here in Leviticus, which is part of the service of the day, and one stated in the Book of Numbers, which is part of the day’s additional offerings.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע׳ ב — Yoma 70b:10</span></div>
+    <div class="orig">מַאי טַעְמָא דְּרַבִּי? דִּכְתִיב: ״אֶחָד״. וְרַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן, מַאי ״אֶחָד״? מְיוּחָד שֶׁבְּעֶדְרוֹ.</div>
+    <div class="trans" data-when="he">מה טעם רבי? דכתיב ״אחד״ — איל אחד ולא שניים. ולראב״ש, מה הוא דורש מ״אחד״? מיוחד שבעדרו — שהאיל יהיה המובחר שבעדר.</div>
+    <div class="trans" data-when="en">What is the rationale of Rabbi Yehuda HaNasi? As it is written: “One,” implying one ram, not two. And according to Rabbi Elazar, son of Rabbi Shimon, what is the meaning of “one”? “One” indicates that the ram used should be the unique one, i.e., the best, of its flock.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע׳ ב — Yoma 70b:11</span></div>
+    <div class="orig">וְרַבִּי? נָפְקָא לֵיהּ: מִ״מִּבְחַר נְדָרֶיךָ״. וְרַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן? חַד בְּחוֹבָה, וְחַד בִּנְדָבָה. וּצְרִיכִי.</div>
+    <div class="trans" data-when="he">ולרבי, מניין שהאיל מובחר? נפקא ליה מ״מבחר נדריך״. ולראב״ש, מדוע נצרכים שני הכתובים? אחד בא לחובה ואחד לנדבה — וצריכי, שאין ללמוד אחד מחברו.</div>
+    <div class="trans" data-when="en">And from where does Rabbi Yehuda HaNasi derive the requirement that the ram be of the best stock? He derives it from the verse: “Your choice vows” (Deuteronomy 12:11), which teaches that all offerings must be from the choicest animals. And according to Rabbi Elazar, son of Rabbi Shimon, why is this additional verse necessary? One verse refers to obligatory offerings, and the other one refers to free-will offerings. And both are necessary because the requirement in one case cannot be learned from the other. It is reasonable that a free-will offering must be from the choicest animal since it is a voluntary gift; and it is also reasonable that an obligatory offering should be the choicest, since an obligation must be fulfilled in the finest possible way.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-9">
+  <h2><span class="badge"><span data-when="he">סוגיה 9</span><span data-when="en">Sugya 9</span></span>
+      <span data-when="he">׳ובא אהרן׳ — פסוק שלא נאמר על הסדר</span><span data-when="en">“And Aaron came” — a verse stated out of order</span>
+      <span class="ref">Yoma 70b:12–71a:13</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: פרשת העבודה נאמרה על הסדר חוץ מפסוק ״ובא אהרן״. הוכחת רב חסדא מחמש טבילות; קושיות מן השעיר החיצון, וראיות אביי ורבא מן הכתובים; ובסוף — אף פסוקי השריפה והשילוח שלא על הסדר.</span><span data-when="en">A baraita: the service passage is in order except for “And Aaron came.” Rav Ḥisda proves it from five immersions; objections from the outside goat, and proofs of Abaye and Rava; and finally the burning and sending verses too are out of order.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: ׳ובא אהרן׳ — להוציא כף ומחתה; כל הפרשה על הסדר, חוץ מפסוק זה"]:::statement
+  S2["② רב חסדא: חמש טבילות ועשרה קידושין; ואי כסדרן — רק שלוש טבילות ושישה קידושין"]:::statement
+  Q1{"③ מתקיף ר׳ זירא: ודלמא מפסיק ליה בשעיר הנעשה בחוץ!"}:::question
+  A1["④ אביי: ׳ויצא ועשה עולתו׳ — מיציאה ראשונה עושה אילו ואיל העם"]:::answer
+  A2["⑤ רבא: ׳ופשט אֶת בגדי הבד אשר לבש׳ — שלבש כבר, ומכאן שלא על הסדר"]:::answer
+  Q2{"⑥ מתקיף רבה בר רב שילא: ואימא מפסיק בשעיר החוץ! · הכתיב ׳ויצא ועשה׳"}:::question
+  Q3{"⑦ וכל הפרשה על הסדר? והכתיב חלב החטאת ואחר כך פר ושעיר הנשרפים — ואנן תנן הרואה!"}:::question
+  A3["⑧ אימא: חוץ מפסוק זה ואילך"]:::answer
+  Q4{"⑨ ומאי חזית דמשבשת קראי, שבּיש מתניתא!"}:::question
+  A4["⑩ אביי: ׳המשלח … והשורף׳ — מה משלח מעיקרא אף שורף מעיקרא"]:::answer
+  Q5{"⑪ אדרבה: מה שורף דהשתא אף משלח דהשתא!"}:::question
+  C1["⑫ ׳והמשלח׳ דמעיקרא משמע; רבא: ׳יעמד חי׳ — עד שעת מתן דמים, ותו לא"]:::conclusion
+  S1 --> S2
+  S2 -.->|מתקיף| Q1
+  Q1 -->|אביי| A1
+  Q1 -->|רבא| A2
+  A2 -.->|מתקיף| Q2
+  Q2 -.->|קושיא נוספת| Q3
+  Q3 -->|תירוץ| A3
+  A3 -.->|ומאי חזית| Q4
+  Q4 -->|אביי| A4
+  A4 -.->|אדרבה| Q5
+  Q5 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: ׳And Aaron came׳ — to remove spoon and pan; the whole passage in order, except this verse"]:::statement
+  S2["② Rav Ḥisda: five immersions, ten sanctifications; if in order — only three and six"]:::statement
+  Q1{"③ R. Zeira objects: but perhaps he interrupts with the outside goat!"}:::question
+  A1["④ Abaye: ׳he shall exit and offer׳ — from his first exit he does his ram and the people׳s ram"]:::answer
+  A2["⑤ Rava: ׳he shall remove the linen garments which he wore׳ — already worn; hence out of order"]:::answer
+  Q2{"⑥ Rabba bar Rav Sheila objects: say he interrupts with the outside goat! · But ׳he shall exit and offer׳"}:::question
+  Q3{"⑦ Is the whole passage in order? But ׳the fat of the sin-offering׳ precedes the burnt bull and goat — yet our mishna ׳one who sees׳!"}:::question
+  A3["⑧ Say: in order except from this verse onward"]:::answer
+  Q4{"⑨ And why rearrange the verses — rearrange the mishna instead!"}:::question
+  A4["⑩ Abaye: ׳the one who sends … and the one who burns׳ — as the sender acts first, so the burner acts first"]:::answer
+  Q5{"⑪ On the contrary: as the burner acts now, so the sender acts now!"}:::question
+  C1["⑫ ׳The one who sends׳ implies earlier; Rava: ׳it shall stand alive׳ — until the moment of atonement, no more"]:::conclusion
+  S1 --> S2
+  S2 -.->|objects| Q1
+  Q1 -->|Abaye| A1
+  Q1 -->|Rava| A2
+  A2 -.->|objects| Q2
+  Q2 -.->|further objection| Q3
+  Q3 -->|answer| A3
+  A3 -.->|why rearrange| Q4
+  Q4 -->|Abaye| A4
+  A4 -.->|on the contrary| Q5
+  Q5 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: ׳וּבָא אַהֲרֹן אֶל אֹהֶל מוֹעֵד׳ … לְהוֹצִיא אֶת הַכַּף וְאֶת הַמַּחְתָּה … כּוּלָּהּ נֶאֶמְרָה עַל הַסֵּדֶר, חוּץ מִפָּסוּק זֶה"]:::statement
+  S2["② אָמַר רַב חִסְדָּא: גְּמִירִי, חָמֵשׁ טְבִילוֹת וַעֲשָׂרָה קִידּוּשִׁין … וְאִי … כְּסִדְרָן … אֶלָּא שָׁלֹשׁ טְבִילוֹת וְשִׁשָּׁה קִידּוּשִׁין"]:::statement
+  Q1{"③ מַתְקֵיף לַהּ רַבִּי זֵירָא: וְדִילְמָא מַפְסֵיק לֵיהּ בְּשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ!"}:::question
+  A1["④ אָמַר אַבָּיֵי … ׳וְיָצָא וְעָשָׂה אֶת עוֹלָתוֹ׳, מִיצִיאָה רִאשׁוֹנָה עָבֵיד אֵילוֹ וְאֵיל הָעָם"]:::answer
+  A2["⑤ רָבָא … ׳וּפָשַׁט אֶת בִּגְדֵי הַבָּד׳ … ׳אֲשֶׁר לָבַשׁ׳ — שֶׁלָּבַשׁ כְּבָר"]:::answer
+  Q2{"⑥ מַתְקֵיף … רַבָּה בַּר רַב שֵׁילָא: וְאֵימָא דְּמַפְסֵיק … בְּשָׂעִיר … בַּחוּץ! הָכְתִיב: ׳וְיָצָא וְעָשָׂה׳"}:::question
+  Q3{"⑦ וְכׇל הַפָּרָשָׁה … עַל הַסֵּדֶר? וְהָא … ׳וְאֵת חֵלֶב הַחַטָּאת׳ … וַהֲדַר ׳וְאֵת פַּר … וְאֵת שְׂעִיר׳ … וְאִילּוּ אֲנַן תְּנַן: הָרוֹאֶה …"}:::question
+  A3["⑧ אֵימָא: חוּץ מִפָּסוּק זֶה וְאֵילָךְ"]:::answer
+  Q4{"⑨ וּמַאי חָזֵית דִּמְשַׁבְּשַׁתְּ קְרָאֵי, שַׁבֵּישׁ מַתְנִיתָא!"}:::question
+  A4["⑩ אָמַר אַבָּיֵי … ׳וְהַמְשַׁלֵּחַ … וְהַשּׂוֹרֵף׳. מָה מְשַׁלֵּחַ דְּמֵעִיקָּרָא — אַף שׂוֹרֵף דְּמֵעִיקָּרָא"]:::answer
+  Q5{"⑪ אַדְּרַבָּה: מָה שׂוֹרֵף דְּהַשְׁתָּא — אַף מְשַׁלֵּחַ דְּהַשְׁתָּא!"}:::question
+  C1["⑫ ׳וְהַמְשַׁלֵּחַ׳, דְּמֵעִיקָּרָא מַשְׁמַע. רָבָא … ׳יׇעֳמַד חַי׳ … עַד שְׁעַת כַּפָּרָה … בִּשְׁעַת מַתַּן דָּמִים, וְתוּ לָא"]:::conclusion
+  S1 --> S2
+  S2 -.->|מתקיף| Q1
+  Q1 -->|אביי| A1
+  Q1 -->|רבא| A2
+  A2 -.->|מתקיף| Q2
+  Q2 -.->|קושיא נוספת| Q3
+  Q3 -->|תירוץ| A3
+  A3 -.->|ומאי חזית| Q4
+  Q4 -->|אביי| A4
+  A4 -.->|אדרבה| Q5
+  Q5 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע׳ ב — Yoma 70b:12</span></div>
+    <div class="orig">קִידֵּשׁ יָדָיו וְרַגְלָיו. תָּנוּ רַבָּנַן: ״וּבָא אַהֲרֹן אֶל אֹהֶל מוֹעֵד״. לָמָה הוּא בָּא? לְהוֹצִיא אֶת הַכַּף וְאֶת הַמַּחְתָּה,</div>
+    <div class="trans" data-when="he">המשנה: קידש ידיו ורגליו ונכנס להוציא את הכף ואת המחתה. ברייתא קשורה: ״ובא אהרן אל אהל מועד״ (ויקרא ט״ז כ״ג) — היינו לקודש הקודשים. למה הוא בא? להוציא את הכף ואת המחתה.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: The High Priest sanctified his hands and feet and entered the Holy of Holies to take out the incense spoon and the coal pan. The Gemara cites a related baraita. The Sages taught: The verse states: “And Aaron shall come into the Tent of Meeting” (Leviticus 16:23), which is taken to mean that he enters the Holy of Holies. Why does he come? He comes in order to take out the incense spoon and the coal pan</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״א א — Yoma 71a:1</span></div>
+    <div class="orig">שֶׁכׇּל הַפָּרָשָׁה כּוּלָּהּ נֶאֶמְרָה עַל הַסֵּדֶר, חוּץ מִפָּסוּק זֶה.</div>
+    <div class="trans" data-when="he">— שכל הפרשה (סדר עבודת היום שבויקרא ט״ז) נאמרה על הסדר, חוץ מפסוק זה (״ובא אהרן״): הוא כתוב לפני הקרבת האילים, אך למעשה הכניסה להוצאת הכף נעשית רק אחריה.</div>
+    <div class="trans" data-when="en">as the whole portion of the service of the day detailed in Leviticus is written in this order, and the service must be performed in that order, except for this verse, which is stated out of order and is performed only later. The verse detailing his reentry (Leviticus 16:23) is written before the verse detailing the sacrifice of the rams (Leviticus 16:24), but in fact the reentry occurs only after the sacrifice of the rams.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״א א — Yoma 71a:2</span></div>
+    <div class="orig">מַאי טַעְמָא? אָמַר רַב חִסְדָּא: גְּמִירִי, חָמֵשׁ טְבִילוֹת וַעֲשָׂרָה קִידּוּשִׁין טוֹבֵל כֹּהֵן גָּדוֹל וּמְקַדֵּשׁ בּוֹ בַּיּוֹם,</div>
+    <div class="trans" data-when="he">מנין שפסוק זה אינו על הסדר? רב חסדא: מסורת בידינו שחמש טבילות ועשרה קידושין טובל ומקדש הכהן הגדול באותו יום (בכל חילוף בגדים).</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the reason to assume this verse is written out of order? Rav Ḥisda said: They learned as a tradition that the High Priest performs five immersions and ten sanctifications of his hands and feet when he changes clothing on that day. Each time the High Priest changes between the white and golden garments, he sanctifies his hands and feet, immerses, dresses in the new set of garments and then once again sanctifies his hands and feet.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״א א — Yoma 71a:3</span></div>
+    <div class="orig">וְאִי אָמְרַתְּ כְּסִדְרָן כְּתִיבִי, לָא מַשְׁכַּחַתְּ לַהּ אֶלָּא שָׁלֹשׁ טְבִילוֹת וְשִׁשָּׁה קִידּוּשִׁין.</div>
+    <div class="trans" data-when="he">ואם תאמר שהפסוקים כתובים על סדרם, לא תמצא אלא שלוש טבילות ושישה קידושין. כדי להגיע לחמש ועשרה צריך לומר שהכניסה (״ובא אהרן״) נעשית מאוחר יותר — ומוסיפה עוד שתי טבילות וארבעה קידושין.</div>
+    <div class="trans" data-when="en">And if you say that the verses, including this one, are written in order, you find only three immersions and six sanctifications. Read in order, the verses indicate only three changes of garments, which involve three immersions and six sanctifications. In order to arrive at the requisite numbers of five immersions and ten sanctifications one must assume that the High Priest’s reentry into the Holy of Holies takes place at a later time, after he has already changed into the golden garments. This would require him to change into the white garments and then back into the golden garments, providing an additional two immersions and four sanctifications.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״א א — Yoma 71a:4</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַבִּי זֵירָא: וְדִילְמָא מַפְסֵיק לֵיהּ בְּשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ!</div>
+    <div class="trans" data-when="he">ר׳ זירא מקשה: ושמא הפסוקים כן על הסדר, ומגיעים לחמש טבילות באופן אחר — שמפסיק את העבודה שבבגדי לבן בהקרבת השעיר הנעשה בחוץ (בבגדי זהב), המוסיפה שתי טבילות וארבעה קידושין.</div>
+    <div class="trans" data-when="en">Rabbi Zeira strongly objects to this: But perhaps the order of the verses in Leviticus can be maintained, and the requisite number of immersions and sanctifications still achieved, if he interrupts the service performed in the white garments with the goat whose services are performed outside of the Sanctuary, i.e., in the Temple courtyard, and are performed in the golden garments. The sacrifice of the goat is not mentioned in Leviticus but only in Numbers. Therefore, it could be inserted into the service of the day without compromising the order of the verses in Leviticus. The change into the golden garments and then back into the white garments would contribute an additional two immersions and four sanctifications, thus arriving at the requisite numbers.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״א א — Yoma 71a:5</span></div>
+    <div class="orig">אָמַר אַבָּיֵי, אָמַר קְרָא: ״וְיָצָא וְעָשָׂה אֶת עוֹלָתוֹ״, מִיצִיאָה רִאשׁוֹנָה עָבֵיד אֵילוֹ וְאֵיל הָעָם.</div>
+    <div class="trans" data-when="he">אביי: ברור שהפסוק אינו על הסדר, שנאמר ״ויצא ועשה את עולתו״ — מיציאה ראשונה (מקודש הקודשים) מיד עושה את אילו ואיל העם, בלא הפסק; ומכאן שהכניסה (״ובא אהרן״) רק אחר כך.</div>
+    <div class="trans" data-when="en">Abaye said: It is clear that the verse detailing the reentry must be out of order, since the verse states: “And he shall exit and make his burnt-offering and the burnt-offering of the people” (Leviticus 16:24). This is the first exit stated in the verses and implies that immediately following his first exit from the Holy of Holies, he performs the sacrifice of his ram and the ram of the people without any other interruption. If so, the reentry must occur only afterward.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״א א — Yoma 71a:6</span></div>
+    <div class="orig">רָבָא אָמַר, אָמַר קְרָא: ״וּפָשַׁט אֶת בִּגְדֵי הַבָּד״, שֶׁאֵין תַּלְמוּד לוֹמַר ״אֲשֶׁר לָבַשׁ״, כְּלוּם אָדָם פּוֹשֵׁט אֶלָּא מַה שֶּׁלּוֹבֵשׁ?! אֶלָּא מָה תַּלְמוּד לוֹמַר ״אֲשֶׁר לָבַשׁ״ — שֶׁלָּבַשׁ כְּבָר.</div>
+    <div class="trans" data-when="he">רבא מביא ראיה אחרת: ״ופשט את בגדי הבד אשר לבש בבואו אל הקודש״ — מה תלמוד לומר ״אשר לבש״? וכי אדם פושט אלא מה שלבוש בו? אלא ״אשר לבש״ — שלבש כבר קודם, פשטם וחזר ולבשם; ומכאן שהפסוק עומד במקום שכבר עבר לבגדי זהב, ובהכרח אינו על הסדר.</div>
+    <div class="trans" data-when="en">Rava said a different proof. The verse states: “And Aaron shall come into the Tent of Meeting and he shall remove the linen garments which he wore when he went into the Sanctuary” (Leviticus 16:23). Now, the verse does not need to state “which he wore,” as this is obvious; can one remove anything other than what he is wearing? Rather, what is the meaning when the verse states “which he wore”? It is referring to those garments which he had already worn previously, removed, and then worn again. It is therefore apparent that this verse occurs at a point when he had already changed out of the white garments and into the golden garments. Perforce, then, it must be out of order.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״א א — Yoma 71a:7</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַבָּה בַּר רַב שֵׁילָא: וְאֵימָא דְּמַפְסֵיק לֵיהּ בְּשָׂעִיר הַנַּעֲשֶׂה בַּחוּץ! הָכְתִיב: ״וְיָצָא וְעָשָׂה״.</div>
+    <div class="trans" data-when="he">רבה בר רב שילא מקשה: ואימא שמפסיק את עבודת הלבן בהקרבת השעיר הנעשה בחוץ (בבגדי זהב), ובכך מגיע לחמש טבילות בלא להזיז את הפסוקים. הגמרא: הכתיב ״ויצא ועשה״ — מיציאה ראשונה מיד אילו ואיל העם, בלא הפסק.</div>
+    <div class="trans" data-when="en">Rabba bar Rav Sheila strongly objects to this: Say that the order of the verses can be maintained, and the requisite number of immersions and sanctifications achieved, if he interrupts the services performed in the white garments with the goat whose services are performed outside and are performed in the golden garments. This would provide the additional two immersions and four sanctifications required. The Gemara answers: Isn’t it written: “And he shall exit and make his burnt-offering and the burnt-offering of the people” (Leviticus 16:24), which implies that immediately following his first exit he performs the sacrifice of his ram and the ram of the people and the reentry to the Holy of Holies occurs only later.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״א א — Yoma 71a:8</span></div>
+    <div class="orig">וְכׇל הַפָּרָשָׁה כּוּלָּהּ נֶאֶמְרָה עַל הַסֵּדֶר? וְהָא קְרָאֵי כְּתִיבִי: ״וְאֵת חֵלֶב הַחַטָּאת יַקְטִיר הַמִּזְבֵּחָה״, וַהֲדַר: ״וְאֵת פַּר הַחַטָּאת וְאֵת שְׂעִיר הַחַטָּאת״, וְאִילּוּ אֲנַן תְּנַן: הָרוֹאֶה אֶת כֹּהֵן גָּדוֹל כְּשֶׁהוּא קוֹרֵא — אֵינוֹ רוֹאֶה פַּר וְשָׂעִיר הַנִּשְׂרָפִין. וְאִילּוּ אֵמוּרֵי חַטָּאת בָּתַר הָכִי מַקְטֵיר לְהוּ!</div>
+    <div class="trans" data-when="he">קושיא על עצם הברייתא: וכי כל הפרשה על הסדר? והרי כתוב ״ואת חלב החטאת יקטיר המזבחה״ (אימורים) ואחר כך ״ואת פר החטאת ואת שעיר החטאת״ (הנשרפים); ואנו שנינו במשנה: הרואה כהן גדול קורא אינו רואה פר ושעיר הנשרפים — בעוד אימורי החטאת מוקטרים אחריהם. הרי גם פסוקים אלו אינם על הסדר.</div>
+    <div class="trans" data-when="en">The Gemara questions the premise of the baraita: Is the entire passage really written in order? But among the verses it is written: “And he shall burn the fat of the sin-offering upon the altar”(Leviticus 16:25), and then in a later verse it is written: “And the bull of the sin-offering, and the goat of the sin-offering, whose blood was brought to make atonement in the Sanctuary, shall be carried outside the camp; and they shall burn...” (Leviticus 16:27). Yet we learned in the mishna: One who sees the High Priest reading the Torah does not see the bull and goat that are burned, which are referred to in verse 27, while according to all opinions concerning the order of the day, the portions of the sin-offering to be consumed on the altar, which are mentioned in verse 25, are burned only afterward. Therefore, it is apparent that these verses are also not in order.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״א א — Yoma 71a:9</span></div>
+    <div class="orig">אֵימָא: חוּץ מִפָּסוּק זֶה וְאֵילָךְ.</div>
+    <div class="trans" data-when="he">תירוץ: אמור שכוונת הברייתא — הפרשה על הסדר חוץ מפסוק זה (״ובא אהרן״) ואילך; משם והלאה אין מקפידים על סדר הכתובים.</div>
+    <div class="trans" data-when="en">The Gemara answers: Say that the intent of the baraita is that the verses are in order except for this verse and onward.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״א א — Yoma 71a:10</span></div>
+    <div class="orig">וּמַאי חָזֵית דִּמְשַׁבְּשַׁתְּ קְרָאֵי, שַׁבֵּישׁ מַתְנִיתָא!</div>
+    <div class="trans" data-when="he">קושיא: ומה ראית להפוך את סדר הכתובים? אדרבה, הפוך את סדר המשנה (שתאמר שאימורי החטאת קודמים לשריפת הפר והשעיר)!</div>
+    <div class="trans" data-when="en">The Gemara asks: And what did you see that you preferred to rearrange the order of the verses? Instead, rearrange the order in the mishna.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״א א — Yoma 71a:11</span></div>
+    <div class="orig">אָמַר אַבָּיֵי, אָמַר קְרָא: ״וְהַמְשַׁלֵּחַ ... וְהַשּׂוֹרֵף״. מָה מְשַׁלֵּחַ דְּמֵעִיקָּרָא — אַף שׂוֹרֵף דְּמֵעִיקָּרָא.</div>
+    <div class="trans" data-when="he">אביי: הכתובים עצמם מלמדים שהשריפה אינה על הסדר — שנאמר ״והמשלח את השעיר לעזאזל״ ואחריו ״והשורף אותם״. כשם שהמשלח עושה מלכתחילה (לפני הקטרת האימורים), אף השורף עושה מלכתחילה, אף שפסוקו נכתב מאוחר.</div>
+    <div class="trans" data-when="en">Abaye said: It is clear that the verse detailing the burning of the remains of the bull is out of order, since the verse states: “And the one who sends the goat to Azazel” (Leviticus 16:26), and then states: “And the one who burns them” (Leviticus 16:28). The repeated use of the phrase “And the one who…” indicates that just as the one who sends the goat to Azazel does so earlier, before the portions of the sin-offering are placed on the altar to be consumed, so too, the one who burns the remains of the bull and goat does so earlier, even though the verse detailing this burning is written after the verse detailing the burning of the portions of the sin-offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא ע״א א — Yoma 71a:12</span></div>
+    <div class="orig">אַדְּרַבָּה: מָה שׂוֹרֵף דְּהַשְׁתָּא — אַף מְשַׁלֵּחַ דְּהַשְׁתָּא!</div>
+    <div class="trans" data-when="he">דחייה: אדרבה, אפשר לטעון להיפך — כשם שהשורף עושה עכשיו (מאוחר), אף המשלח עושה עכשיו, אחר שאר הקרבנות.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: On the contrary, one could make the opposite claim: Just as the one who burns the remains of the bull and goat does so now, so too, the one who sends the goat to Azazel does so only now, after the other sacrifices.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">יומא ע״א א — Yoma 71a:13</span></div>
+    <div class="orig">״וְהַמְשַׁלֵּחַ״, דְּמֵעִיקָּרָא מַשְׁמַע. רָבָא אָמַר, אָמַר קְרָא: ״יׇעֳמַד חַי״, עַד מָתַי יְהֵא זָקוּק לַעֲמוֹד חַי? עַד שְׁעַת כַּפָּרָה. וְאֵימָתַי שְׁעַת כַּפָּרָה? בִּשְׁעַת מַתַּן דָּמִים, וְתוּ לָא.</div>
+    <div class="trans" data-when="he">דחיית הדחייה: ״והמשלח״ — לשונו משמע שנעשה מעיקרא (מוקדם). רבא מוסיף ראיה: ״יעמד חי לפני ה׳ לכפר עליו״ — עד מתי זקוק השעיר לעמוד חי? עד שעת כפרה. ואימתי שעת כפרה? בשעת מתן דמים, ותו לא — ומאז נשלח לעזאזל. נמצא שהשילוח מוקדם, וממילא גם השריפה.</div>
+    <div class="trans" data-when="en">The Gemara explains a difficulty with this: The phrasing of: “And the one who sends” implies that it was performed earlier. Alternatively, Rava said: Sending the goat away definitely took place earlier, as the verse states: “But the goat on which the lot fell for Azazel shall be stood alive before the Lord, to make atonement over him” (Leviticus 16:10). This teaches: How long must it stand alive? It must do so until the moment of atonement. And when is the moment of atonement? It is at the moment of the presenting of the blood, but no later. At that point it is already sent away.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>

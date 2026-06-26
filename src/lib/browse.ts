@@ -88,6 +88,16 @@ export const MASECHTOT: readonly MasechetInfo[] = [
   },
   {
     corpus: 'talmud',
+    book: 'yoma',
+    bounds: { firstDaf: 2, lastDaf: 88 },
+    name: { he: 'יומא', en: 'Yoma' },
+    summary: {
+      he: 'כל דפי מסכת יומא (ב׳ עד פ״ח). אפשר לסקור מה כבר מופה, או לבקש מה שעדיין לא.',
+      en: "All folios of Tractate Yoma (2 through 88). Browse what's mapped, request what isn't.",
+    },
+  },
+  {
+    corpus: 'talmud',
     book: 'chullin',
     bounds: { firstDaf: 2, lastDaf: 142 },
     name: { he: 'חולין', en: 'Chullin' },
