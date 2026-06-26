@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ״ח</title>
+<meta name="description" content="מפת הסוגיא של יומא פ״ח: הרואה קרי ביום הכיפורים — האם עוונותיו מחולין או ׳סדורין׳; דרשת בית רבי ישמעאל וסימני אורך־ימים וזכות לעולם הבא; וחתימת המסכת ׳הדרן עלך יום הכיפורים׳.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="88">
+<meta name="gemara-map:sefaria-ref" content="Yoma 88">
+<meta name="gemara-map:topic-he" content="הרואה קרי ביום הכיפורים — וסיום המסכת">
+<meta name="gemara-map:topic-en" content="A seminal emission on Yom Kippur — and the close">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ״ח">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 88">
+<meta name="gemara-map:blurb-he" content="הרואה קרי ביום הכיפורים — עוונותיו מחולין (ו׳סדורין׳ פירושו סדורין לימחל); ובית רבי ישמעאל: ידאג כל השנה, ואם עלתה לו — מובטח לו חיים ועולם הבא. בכך נחתמת מסכת יומא.">
+<meta name="gemara-map:blurb-en" content="One who sees an emission on Yom Kippur — his sins are forgiven (and “arranged” means arranged to be forgiven); the school of R. Yishmael: he should worry all year, but if he survives he is assured life and the World-to-Come. With this the tractate closes.">
+<meta name="gemara-map:sugya-count" content="2">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ״ח</span><span data-when="en">Sugya map — Yoma 88</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ״ח א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 88a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שתי שמועות החותמות את מסכת יומא, אגב דיני טבילה לבעל קרי ביום הכיפורים: <b>הרואה קרי</b> ביום הכיפורים — עוונותיו מחולין לו, ו׳עוונותיו סדורין׳ פירושו סדורין לימָחֵל; ולשיטת <b>בית רבי ישמעאל</b> זהו סימן מדאיג שיש לחשוש כל השנה, אך אם עלתה לו השנה — מובטח לו אורך־ימים וחלק לעולם הבא. בכך מסתיימת המסכת בנוסחת ה<b>הדרן</b>.</span>
+    <span data-when="en"><b>Bottom line:</b> Two teachings closing tractate Yoma, apropos the laws of immersion for one who emits semen on Yom Kippur: <b>seeing an emission</b> on Yom Kippur means one’s sins are forgiven — and “his sins are arranged” means arranged to be forgiven; while the <b>school of R. Yishmael</b> reads it as a worrying sign to dread all year, yet if he survives the year he is assured long life and a share in the World-to-Come. With this the tractate ends in the <b>Hadran</b> formula.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ״ח</span><span data-when="en">Overview — Yoma 88</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · הרואה קרי — מחולין או ׳סדורין׳?"]:::statement
+  O2["2 · בית ר׳ ישמעאל — סימן וחתימת המסכת"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · One who sees an emission — forgiven or ׳arranged׳?"]:::statement
+  O2["2 · School of R. Yishmael — a sign, and the close"]:::statement
+  O1 --> O2
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">הרואה קרי ביום הכיפורים — עוונותיו מחולין</span><span data-when="en">Seeing an emission on Yom Kippur — sins forgiven</span>
+      <span class="ref">Yoma 88a:10</span></h2>
+  <div class="lead"><span data-when="he">אגב דיני טבילה לבעל קרי ביום הכיפורים: ברייתא — עוונותיו מחולין; קושיא מברייתא ׳עוונותיו סדורין׳; והיישוב — ׳סדורין׳ היינו סדורין לימָחֵל.</span><span data-when="en">Apropos immersion for one who emitted semen on Yom Kippur: a baraita — his sins are forgiven; an objection from a baraita — “his sins are arranged”; resolved — “arranged” means arranged to be forgiven.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ברייתא לפני רב נחמן: הרואה קרי ביוה״כ — עוונותיו מחולין"]:::statement
+  Q1{"① קושיא: והתניא — עוונותיו סדורין!"}:::question
+  A1["① תירוץ: מאי סדורין? סדורין לימָחֵל"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Baraita before Rav Naḥman: one who sees an emission on Yom Kippur — his sins are forgiven"]:::statement
+  Q1{"① Objection: but it was taught — his sins are arranged!"}:::question
+  A1["① Answer: what is ׳arranged׳? Arranged to be forgiven"]:::answer
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① תָּנֵי תַּנָּא קַמֵּיהּ דְּרַב נַחְמָן: הָרוֹאֶה קֶרִי בְּיוֹם הַכִּפּוּרִים — עֲוֹנוֹתָיו מְחוּלִין לוֹ"]:::statement
+  Q1{"① וְהָתַנְיָא: עֲוֹנוֹתָיו סְדוּרִין!"}:::question
+  A1["① מַאי סְדוּרִין — סְדוּרִין לִימָּחֵל"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ח א — Yoma 88a:10</span></div>
+    <div class="orig">תָּנֵי תַּנָּא קַמֵּיהּ דְּרַב נַחְמָן: הָרוֹאֶה קֶרִי בְּיוֹם הַכִּפּוּרִים — עֲוֹנוֹתָיו מְחוּלִין לוֹ. וְהָתַנְיָא: עֲוֹנוֹתָיו סְדוּרִין! מַאי סְדוּרִין — סְדוּרִין לִימָּחֵל.</div>
+    <div class="trans" data-when="he">אגב דיני הטבילה לבעל קרי ביום הכיפורים: תַנָּא שנה ברייתא לפני רב נחמן — הרואה קרי ביום הכיפורים, עוונותיו מחולין לו. הקשו: והרי שנינו בברייתא אחרת ש״עוונותיו סדורין״ (ערוכים לפניו לפורענות)? תירוץ: מהו ״סדורין״ — סדורין וערוכים כדי שיימחלו.</div>
+    <div class="trans" data-when="en">§ Apropos the halakhot of immersion for one who has had a seminal emission on Yom Kippur, the Gemara relates: A tanna taught a baraita before Rav Naḥman: With regard to one who sees an emission of semen on Yom Kippur, his sins are forgiven. The Gemara asks: But wasn’t it taught in a baraita: His sins are arranged before him? The Gemara answers: What is the meaning of arranged? They are arranged to be forgiven.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">בית רבי ישמעאל — סימן ואורך־ימים; וחתימת המסכת</span><span data-when="en">School of R. Yishmael — a sign and long life; and the close</span>
+      <span class="ref">Yoma 88a:11–12</span></h2>
+  <div class="lead"><span data-when="he">בית ר׳ ישמעאל: ידאג כל השנה, ואם עלתה לו — מובטח לו עולם הבא; רב נחמן בר יצחק ורב דימי מוסיפים סימני שובע ואורך־ימים. בכך נחתמת מסכת יומא — ׳הדרן עלך יום הכיפורים׳.</span><span data-when="en">The school of R. Yishmael: he should worry all year, but if he survives he is assured the World-to-Come; Rav Naḥman bar Yitzḥak and Rav Dimi add signs of satiety and long life. With this tractate Yoma closes — “Hadran alakh Yom HaKippurim.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① בית ר׳ ישמעאל: ידאג כל השנה; ואם עלתה לו — בן העולם הבא"]:::statement
+  S2["① רנב״י: תֵּדַע — כל העולם רעב והוא שבע · רב דימי: מַפֵּישׁ חיי, סָגֵי ומַסְגֵּי"]:::statement
+  C1["② הֲדַרַן עֲלָךְ יוֹם הַכִּפּוּרִים — וסליקא מסכת יומא"]:::conclusion
+  S1 -->|הוספה| S2
+  S2 -->|סיום המסכת| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① School of R. Yishmael: worry all year; if he survives — a son of the World-to-Come"]:::statement
+  S2["① R. Naḥman b. Yitzḥak: know it — all are hungry, he is sated · R. Dimi: he lives long, grows and raises others"]:::statement
+  C1["② Hadran alakh Yom HaKippurim — and tractate Yoma is concluded"]:::conclusion
+  S1 -->|addition| S2
+  S2 -->|close of tractate| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל: הָרוֹאֶה קֶרִי … יִדְאַג כׇּל הַשָּׁנָה … מוּבְטָח לוֹ שֶׁהוּא בֶּן הָעוֹלָם הַבָּא"]:::statement
+  S2["① אָמַר רַב נַחְמָן בַּר יִצְחָק: תֵּדַע, שֶׁכׇּל הָעוֹלָם … רָעֵב וְהוּא שָׂבֵעַ · כִּי אֲתָא רַב דִּימִי אָמַר: מַפֵּישׁ חַיֵּי סָגֵי וּמַסְגֵּי"]:::statement
+  C1["② הֲדַרַן עֲלָךְ יוֹם הַכִּפּוּרִים וּסְלִיקָא לַהּ מַסֶּכֶת יוֹמָא"]:::conclusion
+  S1 -->|הוספה| S2
+  S2 -->|סיום המסכת| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ח א — Yoma 88a:11</span></div>
+    <div class="orig">תָּנָא דְּבֵי רַבִּי יִשְׁמָעֵאל: הָרוֹאֶה קֶרִי בְּיוֹם הַכִּפּוּרִים — יִדְאַג כׇּל הַשָּׁנָה כּוּלָּהּ, וְאִם עָלְתָה לוֹ שָׁנָה — מוּבְטָח לוֹ שֶׁהוּא בֶּן הָעוֹלָם הַבָּא. אָמַר רַב נַחְמָן בַּר יִצְחָק: תֵּדַע, שֶׁכׇּל הָעוֹלָם כּוּלּוֹ רָעֵב וְהוּא שָׂבֵעַ. כִּי אֲתָא רַב דִּימִי אָמַר: מַפֵּישׁ חַיֵּי סָגֵי וּמַסְגֵּי.</div>
+    <div class="trans" data-when="he">בית מדרשו של ר׳ ישמעאל שנה: הרואה קרי ביום הכיפורים — ידאג כל השנה כולה, שמא נדחו הוא ותעניתו; ואם עלתה לו השנה (שרד ולא נענש) — מובטח לו שהוא בן העולם הבא. אמר רב נחמן בר יצחק: תֵדע שכן — שכל העולם רעב (מהינזרו מתשמיש ביום הכיפורים) והוא שָׂבע, ומאחר שהדבר בא מאליו, סימן שזכה לרחמים. כשעלה רב דימי מארץ ישראל אמר: סימן הוא שיאריך ימים, יגדל ויגדל אחרים.</div>
+    <div class="trans" data-when="en">The school of Rabbi Yishmael taught: One who sees an emission of semen on Yom Kippur should worry the whole year that perhaps he was given a sign that he and his fast were rejected. But if he survives the year, he can be assured that his good deeds protected him and ensured for him a share in the World-to-Come. Rav Naḥman bar Yitzḥak said: Know that it is so, as the whole world is hungry due to refraining from conjugal relations, and he is satiated since he emitted semen and his lust was subdued. Since the issue was involuntary and not intentional, it is a sign that he has merited divine compassion. When Rav Dimi came from Eretz Yisrael to Babylonia he said: Seeing semen on Yom Kippur is a sign that one will live a long life, grow, and raise others. An allusion to that is the verse: “That he might see his seed and prolong his days” (Isaiah 53:10).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ח א — Yoma 88a:12</span></div>
+    <div class="orig">הֲדַרַן עֲלָךְ יוֹם הַכִּפּוּרִים וּסְלִיקָא לַהּ מַסֶּכֶת יוֹמָא</div>
+    <div class="trans" data-when="he">נוסחת חתימת הפרק והמסכת: ״הֲדַרַן עֲלָךְ יוֹם הַכִּפּוּרִים״ — נשוב אליך, פרק יום הכיפורים — ״וּסְלִיקָא לַהּ מַסֶּכֶת יוֹמָא״, ובכך נשלמה מסכת יומא.</div>
+    <div class="trans" data-when="en">(הדרן — chapter division; no Davidson translation)</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
