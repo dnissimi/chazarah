@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא ע״ח</title>
+<meta name="description" content="מפת הסוגיא של יומא ע״ח: חציית מים במנעל ובסנדל בשבת וביוה״כ; ישיבה על טינא וצינון בפירות; נטילת רשות להתיר בכורות; סנדל של שעם והקיטע בקב; תינוקות בנעילת הסנדל; מלך וכלה וחיה; ושיעור ׳ככותבת הגסה׳ — גדולה או קטנה מכביצה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="78">
+<meta name="gemara-map:sefaria-ref" content="Yoma 78">
+<meta name="gemara-map:topic-he" content="חציית מים, סנדלים, ושיעור ככותבת">
+<meta name="gemara-map:topic-en" content="Crossing water, sandals, the date-measure">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא ע״ח">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 78">
+<meta name="gemara-map:blurb-he" content="פרטי עינויי יום הכיפורים: חציית מים במנעל, ישיבה על טינא, סנדלי שעם והקיטע, תינוקות, מלך וכלה וחיה; ושיעור האכילה — ׳ככותבת הגסה׳ ביחס לכביצה.">
+<meta name="gemara-map:blurb-en" content="Details of the Yom Kippur afflictions: crossing water in shoes, sitting on damp clay, cork and prosthetic footwear, children, king, bride and new mother; and the eating-measure — a ‘large date’ relative to an egg-bulk.">
+<meta name="gemara-map:sugya-count" content="7">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא ע״ח</span><span data-when="en">Sugya map — Yoma 78</span></h1>
+    <div class="subtitle"><span data-when="he">יומא ע״ח א — פ׳ א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 78a–80a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשך פרטי <b>עינויי יום הכיפורים</b>: חציית מים במנעל ובסנדל בשבת וביוה״כ (וסיפור רבינא וריש גלותא); איסור ישיבה על טינא לחה וצינון בפירות; שאלת נטילת רשות מן הנשיא להתיר בכורות; סנדל של שֵׁעַם והקיטע היוצא בקב; תינוקות מותרים בכל חוץ מנעילת הסנדל; היתר מלך, כלה וחיה; ולבסוף בירור ארוך ב<b>שיעור האכילה ׳ככותבת הגסה׳</b> — אם הוא יותר או פחות מכביצה.</span>
+    <span data-when="en"><b>Bottom line:</b> More details of the <b>Yom Kippur afflictions</b>: crossing water in shoes and sandals on Shabbat and Yom Kippur (and the tale of Ravina and the Exilarch); the ban on sitting on wet clay and cooling off with fruit; whether a scholar-Elder needs the Nasi’s permission to permit firstborns; cork sandals and the amputee’s prosthetic; children permitted in all but wearing shoes; the leniencies for a king, bride and new mother; and finally a long clarification of the eating-measure <b>“a large date”</b> — whether it is more or less than an egg-bulk.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא ע״ח</span><span data-when="en">Overview — Yoma 78</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · חציית מים במנעל ובסנדל"]:::statement
+  O2["2 · טינא לחה וצינון בפירות"]:::statement
+  O3["3 · נטילת רשות להתיר בכורות"]:::statement
+  O4["4 · סנדל של שעם והקיטע בקב"]:::statement
+  O5["5 · תינוקות בנעילת הסנדל"]:::statement
+  O6["6 · מלך, כלה וחיה"]:::statement
+  O7["7 · שיעור ׳ככותבת הגסה׳ ביחס לכביצה"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Crossing water in shoes and sandals"]:::statement
+  O2["2 · Wet clay and cooling with fruit"]:::statement
+  O3["3 · Permission to permit firstborns"]:::statement
+  O4["4 · Cork sandals and the amputee's leg"]:::statement
+  O5["5 · Children and wearing shoes"]:::statement
+  O6["6 · King, bride and new mother"]:::statement
+  O7["7 · The ׳large date׳ measure vs an egg"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">חציית מים במנעל ובסנדל בשבת וביום הכיפורים</span><span data-when="en">Crossing water in shoes and sandals on Shabbat and Yom Kippur</span>
+      <span class="ref">Yoma 78a:3–6</span></h2>
+  <div class="lead"><span data-when="he">בשבת יש מנעל — מותר לעבור מים דרך מלבוש; בסנדל נחלקו, ורב אשי אוסר לכתחילה. ומעשה ברבינא שלא בא לפרקא, ורפרם מיישב את הריש גלותא.</span><span data-when="en">On Shabbat one wears shoes — may cross water in them; sandals are disputed, and Rav Ashi forbids it ab initio. Then the tale of Ravina missing the lecture, smoothed over before the Exilarch.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① שבת דאיכא מנעל מאי? אמי ואסי עברו דרך מלבוש"}:::question
+  Q2{"② תינח מנעל, סנדל מאי? רבינא עבר; רב אשי: לכתחילה לא"}:::question
+  S1["③ מעשה: רבינא לא בא לפרקא; רפרם מברר טעמו"]:::statement
+  A1["④ כאב כרעאי; לא מנעל ולא סנדל — כרב אשי: סנדל לכתחילה לא"]:::answer
+  Q1 -->|המשך| Q2
+  Q2 -->|אגב| S1
+  S1 -->|תירוץ רבינא| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① Shabbat, when there are shoes — what? Ami and Asi crossed wearing them"}:::question
+  Q2{"② Granted shoes, but sandals? Ravina crossed; Rav Ashi: not ab initio"}:::question
+  S1["③ Incident: Ravina missed the lecture; Rafram probes why"]:::statement
+  A1["④ My foot hurt; neither shoe nor sandal — per Rav Ashi: sandals not ab initio"]:::answer
+  Q1 -->|continues| Q2
+  Q2 -->|incidentally| S1
+  S1 -->|Ravina's answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① שַׁבָּת דְּאִיכָּא מִנְעָל, מַאי? … חֲזֵיתֵיהּ לְרַבִּי אַמֵּי וְרַבִּי אַסִּי … וְעַבְרוּהּ דֶּרֶךְ מַלְבּוּשׁ"}:::question
+  Q2{"② תִּינַח מִנְעָל, סַנְדָּל מַאי … רָבִינָא דְּעָבַר דֶּרֶךְ מַלְבּוּשׁ … סַנְדָּל לְכַתְּחִלָּה לָא"}:::question
+  S1["③ רֵישׁ גָּלוּתָא אִיקְּלַע … רָבִינָא לָא אֲתָא … מַאי טַעְמָא לָא אֲתָא מָר לְפִירְקָא?"]:::statement
+  A1["④ הֲוָה כָּאֵיב לִי כַּרְעַאי … לָא סָבַר לַהּ מָר … סַנְדָּל לְכַתְּחִלָּה לָא?!"]:::answer
+  Q1 -->|המשך| Q2
+  Q2 -->|אגב| S1
+  S1 -->|תירוץ רבינא| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ח א — Yoma 78a:3</span></div>
+    <div class="orig">(תִּינַח יוֹם הַכִּפּוּרִים דְּלֵיכָּא מִנְעָל,) שַׁבָּת דְּאִיכָּא מִנְעָל, מַאי? אֲמַר נְחֶמְיָה חַתְנֵיהּ דְּבֵי נְשִׂיאָה: אֲנָא חֲזֵיתֵיהּ לְרַבִּי אַמֵּי וְרַבִּי אַסִּי דִּמְטוֹ עוּרְקוּמָא דְמַיָּא, וְעַבְרוּהּ דֶּרֶךְ מַלְבּוּשׁ.</div>
+    <div class="trans" data-when="he">הגמרא דנה בחציית מים לצורך מצוה. ניחא ביוה״כ שאין נועלים מנעל — אין חשש; אבל בשבת שנועלים מנעל, מהו לחצות מים — שמא יישמט המנעל ויטלנו ויעבור באיסור הוצאה? נחמיה חתן בית הנשיא: ראיתי את ר׳ אמי ור׳ אסי שהגיעו לבריכת מים ועברו אותה בשבת כשהם נעולים, דרך מלבוש.</div>
+    <div class="trans" data-when="en">§ The Gemara investigates the permissibility of crossing water in order to fulfill a mitzva: It works out well that on Yom Kippur it is permitted because there are no shoes, and there is no problem going through water barefoot. However, on Shabbat, when there are shoes, what is the halakha? Is one permitted to cross water wearing shoes? Is there a concern that his shoe might come off and he may pick it up, thereby violating the prohibition of carrying out? Neḥemya, the son-in-law of the Nasi, said: I saw Rabbi Ami and Rabbi Asi come to a pool of water that they had to cross on Shabbat, and they crossed it while wearing their shoes without removing them first.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ח א — Yoma 78a:4</span></div>
+    <div class="orig">תִּינַח מִנְעָל, סַנְדָּל מַאי אִיכָּא לְמֵימַר? אָמַר רַב רִיחוּמִי: אֲנָא חֲזֵיתֵיהּ לְרָבִינָא דְּעָבַר דֶּרֶךְ מַלְבּוּשׁ. רַב אָשֵׁי אָמַר: סַנְדָּל לְכַתְּחִלָּה לָא.</div>
+    <div class="trans" data-when="he">ניחא מנעל הנקשר היטב; אבל סנדל שאינו מהודק לרגל — מהו? שמא יישמט במים. רב ריחומי: ראיתי את רבינא שעבר נהר דרך מלבוש בסנדל. רב אשי: בסנדל לכתחילה לא יעבור, שמא יישמט ויטלנו.</div>
+    <div class="trans" data-when="en">The Gemara asks: It works out well that shoes are permitted, since one can tie them tightly, but what is there to say about sandals? Since they do not fit tightly on the foot, they might come off in the water. Rav Riḥumi said: I saw Ravina cross a river while wearing sandals on his feet. Rav Ashi said: If he is wearing sandals, he should not cross the water ab initio, lest the sandal fall off his foot and he violate the prohibition of carrying on Shabbat by picking it up.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ח א — Yoma 78a:5</span></div>
+    <div class="orig">רֵישׁ גָּלוּתָא אִיקְּלַע לְהַגְרוֹנְיָא לְבֵי רַב נָתָן, רַפְרָם וְכוּלְּהוּ רַבָּנַן אֲתוֹ לְפִירְקָא, רָבִינָא לָא אֲתָא. לִמְחַר, בָּעֵי רַפְרָם לְאַפּוֹקֵי לְרָבִינָא מִדַּעְתֵּיהּ דְּרֵישׁ גָּלוּתָא, אֲמַר לֵיהּ מַאי טַעְמָא לָא אֲתָא מָר לְפִירְקָא? אֲמַר לֵיהּ: הֲוָה כָּאֵיב לִי כַּרְעַאי. אִיבְּעִי לָךְ לְמֵיסַם מְסָאנֵי. גַּבָּא דְכַרְעָא הֲוָה.</div>
+    <div class="trans" data-when="he">אגב כך: ריש גלותא בא לדרוש בהגרוניא בבית רב נתן; רפרם וכל החכמים באו לדרשה, אך רבינא לא בא. למחר ביקש רפרם להסיר את כעסו של הריש גלותא מרבינא, ושאלו: מדוע לא בא מר לפרקא? השיב: כאבה לי רגלי. אמר לו: היה לך לנעול מנעלים! השיב: גב הרגל כאב — ונעילה הייתה קשה.</div>
+    <div class="trans" data-when="en">Incidental to this, the Gemara reports: The Exilarch came to deliver a lecture in Rav Natan’s study hall in Hagronya. Rafram and all the Sages came to the lecture, but Ravina did not come. The next day, when he came, Rafram wanted to remove any anger towards Ravina from the mind of the Exilarch, for missing the lecture. Rafram therefore asked Ravina: What is the reason that the Master did not come to the lecture? He said to him: My foot hurt. He said to him: You should have put shoes on. Ravina answered him: It was the back of the foot that hurt, so wearing shoes would have been hard for me.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ח א — Yoma 78a:6</span></div>
+    <div class="orig">אִיבְּעִי לָךְ לְמִרְמֵא סַנְדָּלָא. אֲמַר לֵיהּ: עוּרְקְמָא דְמַיָּא הֲוָה בְּאוֹרְחָא. אִיבְּעִי לָךְ לְמֶעְבְּרֵיהּ דֶּרֶךְ מַלְבּוּשׁ. אֲמַר לֵיהּ: לָא סָבַר לַהּ מָר לְהָא דְּאָמַר רַב אָשֵׁי: סַנְדָּל לְכַתְּחִלָּה לָא?!</div>
+    <div class="trans" data-when="he">אמר לו: היה לך לנעול סנדל, שגבו פתוח. השיב: בריכת מים הייתה בדרך. אמר לו: היה לך לעוברה דרך מלבוש בסנדל. השיב: וכי אין מר סובר כדברי רב אשי — סנדל לכתחילה לא יעבור? מכאן הבין הריש גלותא שלא הייתה בהיעדרותו כל זלזול.</div>
+    <div class="trans" data-when="en">Rafram said to Ravina: You should have worn sandals, which leave the heel exposed. He said to him: There was a pool of water on the way that I would have had to cross. He said to him: You should have crossed it wearing the sandals. He said to him: Does the Master not hold with that which Rav Ashi said: One should not wear sandals when crossing a river on Shabbat, ab initio? From this conversation, the Exilarch understood that Ravina meant no disrespect in not attending the lecture.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">ישיבה על טינא וצינון בפירות; ומנהג המטפחת</span><span data-when="en">Sitting on damp clay, cooling with fruit; and the cloth custom</span>
+      <span class="ref">Yoma 78a:7–10</span></h2>
+  <div class="lead"><span data-when="he">אסור לישב על טינא לחה ביוה״כ; מותר להצטנן בפירות, וכל אמורא בדרכו; ומנהג המטפחת השרויה במים לערב יוה״כ ולערב תשעה באב.</span><span data-when="en">One may not sit on wet clay on Yom Kippur; cooling with fruit is permitted, each sage his way; and the custom of the water-soaked cloth for the eve of Yom Kippur and of the Ninth of Av.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  S1["① יהודה בר גרוגרות: אסור לישב על טינא; מותר להצטנן בפירות"]:::statement
+  S2["② הצטננות באמוראים: ינוקא, כסא דכספא — מלא אסור, חסר מחלוקת"]:::statement
+  S3["③ מנהג ר׳ יהושע בן לוי: מטפחת שרויה לערב יוה״כ ולתשעה באב"]:::statement
+  Q1{"④ רבי יעקב: איפכא אמרת לן — ואותיבנך סחיטה"}:::question
+  S1 -->|המשך| S2
+  S2 -->|מילתא מעלייתא| S3
+  S3 -.->|השגה| Q1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  S1["① Yehuda bar Gerogarot: no sitting on damp clay; cooling with fruit permitted"]:::statement
+  S2["② Sages cool off: a baby, a silver cup — full forbidden, not-full disputed"]:::statement
+  S3["③ R. Yehoshua ben Levi's custom: a soaked cloth for the eve of Yom Kippur and Ninth of Av"]:::statement
+  Q1{"④ R. Ya'akov: you told us the reverse — and we challenged you on wringing"}:::question
+  S1 -->|continues| S2
+  S2 -->|a fine custom| S3
+  S3 -.->|objection| Q1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  S1["① תָּנֵי יְהוּדָה בַּר גְּרוֹגְרוֹת: אָסוּר לֵישֵׁב עַל גַּבֵּי טִינָא … מוּתָּר לְהִצְטַנֵּן בְּפֵירוֹת"]:::statement
+  S2["② רַבָּה מִצְטַנֵּן בְּיָנוֹקָא … כָּסָא דְכַסְפָּא, מָלֵא אָסוּר, חָסֵר שְׁרֵי … חָסֵר נָמֵי אָסוּר"]:::statement
+  S3["③ מִטְפַּחַת הָיָה לוֹ … וְשׁוֹרֶה אוֹתָהּ בְּמַיִם … לְמָחָר מְקַנֵּחַ … פָּנָיו יָדָיו וְרַגְלָיו"]:::statement
+  Q1{"④ אֲמַר לֵיהּ רַבִּי יַעֲקֹב … אִיפְּכָא אֲמַרְתְּ לַן, וְאוֹתֵיבְנָךְ סְחִיטָה"}:::question
+  S1 -->|המשך| S2
+  S2 -->|מילתא מעלייתא| S3
+  S3 -.->|השגה| Q1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ח א — Yoma 78a:7</span></div>
+    <div class="orig">תָּנֵי יְהוּדָה בַּר גְּרוֹגְרוֹת: אָסוּר לֵישֵׁב עַל גַּבֵּי טִינָא בְּיוֹם הַכִּפּוּרִים. אָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: וּבְטִינָא מְטַפַּחַת. אָמַר אַבָּיֵי: וּבְטוֹפֵחַ עַל מְנָת לְהַטְפִּיחַ. אָמַר רַב יְהוּדָה: מוּתָּר לְהִצְטַנֵּן בְּפֵירוֹת. רַב יְהוּדָה מִצְטַנֵּן בְּקָרָא.</div>
+    <div class="trans" data-when="he">יהודה בר גרוגרות שנה: אסור לישב על טינא (בוץ) ביוה״כ — משום עינוי. ר׳ יהושע בן לוי: דווקא בטינא לחה המרטיבה. אביי: לחה כדי שתרטיב דבר אחר. רב יהודה: מותר להצטנן בפירות, ואין זו רחיצה — וכך רב יהודה היה מצטנן בקרא (דלעת) כשסבל מן החום.</div>
+    <div class="trans" data-when="en">§ The Gemara continues to discuss the laws of Yom Kippur: Yehuda bar Gerogarot taught: It is prohibited to sit on damp clay on Yom Kippur. Rabbi Yehoshua ben Levi said: This prohibition applies only when the clay is dripping wet, when one feels its wetness when touching it. Abaye said in clarification: It must be dripping wet enough to make something else wet. Rav Yehuda said: One is permitted to cool off with fruit on Yom Kippur, and it is not considered bathing. Similarly, when Rav Yehuda suffered from the heat on Yom Kippur he cooled off by putting a squash on himself.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ח א — Yoma 78a:8</span></div>
+    <div class="orig">רַבָּה מִצְטַנֵּן בְּיָנוֹקָא, רָבָא מִצְטַנֵּן בְּכָסָא דְכַסְפָּא. אָמַר רַב פָּפָּא: כָּסָא דְכַסְפָּא, מָלֵא — אָסוּר, חָסֵר — שְׁרֵי. דְּפַחְרָא — אִידֵּי וְאִידֵּי אָסוּר, מִשּׁוּם דְּמִישְׁחָל שָׁחֵיל. רַב אָמַר: כָּסָא דְכַסְפָּא, חָסֵר — נָמֵי אָסוּר, מִשּׁוּם דְּמִזְדָרֵיב.</div>
+    <div class="trans" data-when="he">רבה היה מצטנן ביָנוקא (תינוק, שגופו קר), רבא בכוס כסף. רב פפא: כוס כסף מלאה — אסור (שמא ישפך וירחץ), חסרה — מותר; אך של חרס — בין מלאה בין חסרה אסורה, שהמים נוטפים דרך הדופן. רב: אף כוס כסף חסרה אסורה, שמא תישמט מידו ותישפך.</div>
+    <div class="trans" data-when="en">Rabba cooled off by placing a baby [yanuka] next to him, because a baby’s body is cold. Rava cooled off with a silver cup. Rav Pappa said: If the silver cup is full, it is prohibited; however, if it is not full, it is permitted. With regard to a ceramic cup, both this and that are prohibited, since the water seeps through the cup, causing a violation of the prohibition of bathing. Rav Ashi said: A silver cup that is not full is also prohibited because it can slip [mizderiv] from his hand and spill.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ח א — Yoma 78a:9</span></div>
+    <div class="orig">זְעֵירָא בַּר חָמָא אוּשְׁפִּיזְכָנֵיהּ דְּרַבִּי אַמֵּי וְרַבִּי אַסִּי וְרַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי וּדְכוּלְּהוּ רַבָּנַן דְּקֵיסָרִי הֲוָה. אֲמַר לֵיהּ לְרַב יוֹסֵף בְּרֵיהּ דְּרַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי: בַּר אַרְיָא! תָּא אֵימָא לָךְ מִילְּתָא מְעַלַּיְתָא דַּהֲוָה עָבֵיד אֲבוּךְ: מִטְפַּחַת הָיָה לוֹ בְּעֶרֶב יוֹם הַכִּפּוּרִים, וְשׁוֹרֶה אוֹתָהּ בְּמַיִם, וְעוֹשֶׂה אוֹתָהּ כְּמִין כֵּלִים נְגוּבִין, וּלְמָחָר מְקַנֵּחַ בָּהּ פָּנָיו יָדָיו וְרַגְלָיו. עֶרֶב תִּשְׁעָה בְּאָב, שׁוֹרֶה אוֹתָהּ בְּמַיִם, וּלְמָחָר מַעֲבִירָהּ עַל גַּבֵּי עֵינָיו.</div>
+    <div class="trans" data-when="he">זעירא בר חמא, מארחם של ר׳ אמי ור׳ אסי ור׳ יהושע בן לוי וחכמי קיסרי, אמר לרב יוסף בן ר׳ יהושע בן לוי: בן אריה! אספר לך מנהג נאה של אביך. מטפחת הייתה לו: בערב יוה״כ שורה אותה במים וסוחטה כמעט עד יובש, ולמחר מקנח בה פניו ידיו ורגליו. ובערב ט׳ באב שורה אותה (בלא סחיטה) ולמחר מעבירה על עיניו בלבד.</div>
+    <div class="trans" data-when="en">Ze’eira bar Ḥama, the host of the home where Rabbi Ami, and Rabbi Asi, and Rabbi Yehoshua ben Levi, and all the Sages of Caesarea stayed, said to Rav Yosef, son of Rabbi Yehoshua ben Levi: Son of a lion, come, I will tell you about a wonderful custom that your father used to perform. He had a cloth that he would prepare on the day before Yom Kippur by soaking it in water and wringing it out, making it almost like a dried cloth. And the next day he wiped his face, hands, and feet with it. On the day before the Ninth of Av, on which the prohibition of bathing is by rabbinic law and not Torah law, he would soak the cloth in water and the next day pass it over his eyes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ח א — Yoma 78a:10</span></div>
+    <div class="orig">וְכֵן כִּי אֲתָא רַבָּה בַּר מָרִי, אָמַר: בְּעֶרֶב תִּשְׁעָה בְּאָב מְבִיאִין לוֹ מִטְפַּחַת וְשׁוֹרֶה אוֹתָהּ בְּמַיִם וּמַנִּיחָהּ תַּחַת מְרַאֲשׁוֹתָיו, וּלְמָחָר, מְקַנֵּחַ פָּנָיו יָדָיו וְרַגְלָיו. בְּעֶרֶב יוֹם הַכִּפּוּרִים מְבִיאִין לוֹ מִטְפַּחַת וְשׁוֹרֶה אוֹתָהּ בְּמַיִם, וְעוֹשֶׂה אוֹתָהּ כְּמִין כֵּלִים נְגוּבִין, וּלְמָחָר מַעֲבִירָהּ עַל גַּבֵּי עֵינָיו. אֲמַר לֵיהּ רַבִּי יַעֲקֹב לְרַבִּי יִרְמְיָה בַּר תַּחְלִיפָא: אִיפְּכָא אֲמַרְתְּ לַן, וְאוֹתֵיבְנָךְ סְחִיטָה.</div>
+    <div class="trans" data-when="he">וכן כשבא רבה בר מרי מסר את המנהג — אך בהיפוך: בערב ט׳ באב שורה אותה (בלא סחיטה) ולמחר מקנח פניו ידיו ורגליו; בערב יוה״כ שורה וסוחט כעין יבש, ולמחר מעביר על עיניו בלבד. השיגו ר׳ יעקב לר׳ ירמיה בר תחליפא: היפך אמרת לנו, והקשינו עליך מאיסור סחיטה (שהרי ביוה״כ אסור לסחוט כבשבת).</div>
+    <div class="trans" data-when="en">Similarly, when Rabba bar Mari came from Eretz Yisrael he said: The day before the Ninth of Av they bring one a cloth, and he may soak it in water and place it under his head. The next day, when only some moisture remains, he may wipe his face, hands, and feet with it. On the day before Yom Kippur, they bring one a cloth, and he may soak it in water and wring it out to make it like a dried cloth. The next day, he may pass it over his eyes. Rabbi Ya’akov said to Rabbi Yirmeya bar Taḥlifa: You told us the opposite. What you told us about Yom Kippur was really what he did on the Ninth of Av, and we objected to you with regard to the prohibition of wringing, since Yom Kippur has the same prohibition of wringing that Shabbat has.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">זקן ויושב בישיבה — נטילת רשות להתיר בכורות</span><span data-when="en">An Elder in the yeshiva — permission to permit firstborns</span>
+      <span class="ref">Yoma 78a:11–13</span></h2>
+  <div class="lead"><span data-when="he">שאלו את ר׳ אלעזר: זקן היושב בישיבה — צריך רשות מן הנשיא להתיר בכורות? מעשה ר׳ יוסי בן זימרא; ור׳ אבא מתקן שהשאלה הייתה אחרת — בנאמנות כהן החשוד.</span><span data-when="en">They asked R. Elazar: must a scholar-Elder get the Nasi’s permission to permit firstborns? The R. Yosei ben Zimra precedent; R. Abba recasts it as a question of a suspect priest’s credibility.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① שאלו את ר׳ אלעזר: זקן ויושב בישיבה — צריך רשות להתיר בכורות?"}:::question
+  P1["② הצדדים: כבוד בית הנשיא — צריך · או כיון דזקן ויושב — אין צריך; עדות ר׳ צדוק על ר׳ יוסי בן זימרא"]:::proof
+  A1["③ ר׳ אבא: לא כך היה — כהן היה, ושאלתו: הלכה כרשב״ג, נאמן על של חבירו"]:::answer
+  Q1 -->|הצדדים והעדות| P1
+  P1 -->|תיקון ר׳ אבא| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① They asked R. Elazar: a scholar-Elder — must he get permission to permit firstborns?"}:::question
+  P1["② The sides: honoring the Nasi — yes · or since a seated Elder — no; R. Tzadok's testimony on R. Yosei ben Zimra"]:::proof
+  A1["③ R. Abba: not so — he was a priest, his question: is halakha like RSbG, believed about another's"]:::answer
+  Q1 -->|the sides and testimony| P1
+  P1 -->|R. Abba's recasting| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① שָׁאֲלוּ אֶת רַבִּי אֶלְעָזָר: זָקֵן וְיוֹשֵׁב בִּישִׁיבָה, צָרִיךְ לִיטּוֹל רְשׁוּת לְהַתִּיר בְּכוֹרוֹת, אוֹ אֵינוֹ צָרִיךְ?"}:::question
+  P1["② צָרִיךְ לִיטּוֹל רְשׁוּת; אוֹ דִילְמָא … אֵין צָרִיךְ … רַבִּי יוֹסֵי בֶּן זִימְרָא … וְנָטַל רְשׁוּת לְהַתִּיר בְּכוֹרוֹת"]:::proof
+  A1["③ לֹא כָּךְ הָיָה מַעֲשֶׂה … כֹּהֵן הָיָה … הֲלָכָה כְּרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל … נֶאֱמָן הוּא עַל שֶׁל חֲבֵירוֹ"]:::answer
+  Q1 -->|הצדדים והעדות| P1
+  P1 -->|תיקון ר׳ אבא| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ח א — Yoma 78a:11</span></div>
+    <div class="orig">אָמַר רַב מְנַשְּׁיָא בַּר תַּחְלִיפָא אָמַר רַב עַמְרָם אָמַר רַבָּה בַּר בַּר חָנָה: שָׁאֲלוּ אֶת רַבִּי אֶלְעָזָר: זָקֵן וְיוֹשֵׁב בִּישִׁיבָה, צָרִיךְ לִיטּוֹל רְשׁוּת לְהַתִּיר בְּכוֹרוֹת, אוֹ אֵינוֹ צָרִיךְ?</div>
+    <div class="trans" data-when="he">רב מנשיא בר תחליפא בשם רב עמרם בשם רבה בר בר חנה: שאלו את ר׳ אלעזר בן פדת — תלמיד חכם זקן היושב בישיבה, האם צריך ליטול רשות מן הנשיא כדי להתיר בכורות (לקבוע אם המום בבכור מתיר את אכילתו), כשאר המתירים, או אינו צריך?</div>
+    <div class="trans" data-when="en">§ Rav Menashya bar Taḥalifa said that Rav Amram said that Rabba bar bar Ḥana said: They asked Rabbi Elazar ben Pedat: Must an Elder who sits and studies Torah in a yeshiva receive permission from the Nasi to permit him to render firstborn animals permitted, like others who must get permission from the Nasi to render firstborn animals permitted, or not? A firstborn animal may not be eaten until it has a blemish. Knowing which blemishes are permanent and permit the animal to be eaten and which are temporary is specialized knowledge.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ח א — Yoma 78a:12</span></div>
+    <div class="orig">מַאי קָא מִיבְּעֵי לְהוּ? הָכִי קָא מִיבְּעֵי לְהוּ, כִּי הָא דְּאָמַר רַב אִידִי בַּר אָבִין: דָּבָר זֶה הִנִּיחוּ לָהֶם לְבֵי נְשִׂיאָה כְּדֵי לְהִתְגַּדֵּר בּוֹ: צָרִיךְ לִיטּוֹל רְשׁוּת; אוֹ דִילְמָא, כֵּיוָן דְּזָקֵן וְיוֹשֵׁב בִּישִׁיבָה, אֵין צָרִיךְ. עָמַד רַבִּי צָדוֹק בֶּן חָקוֹלָא עַל רַגְלָיו, וְאָמַר: אֲנִי רָאִיתִי אֶת רַבִּי יוֹסֵי בֶּן זִימְרָא, שֶׁזָּקֵן וְיוֹשֵׁב בִּישִׁיבָה הָיָה, וְעָמַד בְּמַעֲלָה מִזְּקֵנוֹ שֶׁל זֶה, וְנָטַל רְשׁוּת לְהַתִּיר בְּכוֹרוֹת.</div>
+    <div class="trans" data-when="he">מה היה ספקם? כדברי רב אידי בר אבין: סמכות זו הונחה לבית הנשיא כדי שיתגדלו בה (יתפרסם כבודם) — ולכן אף זקן יושב בישיבה צריך רשות, שעצם הבקשה מכבדת את הנשיא; או שמא כיון שזקן ויושב בישיבה אין צריך. עמד ר׳ צדוק בן חקולא ואמר: ראיתי את ר׳ יוסי בן זימרא, שהיה זקן יושב בישיבה, שעמד לפני סבו של הנשיא הזה ונטל ממנו רשות להתיר בכורות.</div>
+    <div class="trans" data-when="en">The Gemara asks: What are they asking? What is the basis of the question? The Gemara explains: This is what they are asking, like this statement of Rav Idi bar Avin, who said: This matter, the authority of the Nasi to grant permission, was given to the house of the Nasi to raise its stature. Therefore, must permission be received, since the request itself honors the Nasi? Or, perhaps because the individual in question is an Elder who sits and studies Torah in a yeshiva, there is no need. Rav Tzadok ben Ḥaluka rose to his feet and said: I saw Rabbi Yosei ben Zimra, who was an Elder who sat in the yeshiva and who stood before the grandfather of this current Nasi, ask permission from him to permit firstborn animals.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ח א — Yoma 78a:13</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַבִּי אַבָּא: לֹא כָּךְ הָיָה מַעֲשֶׂה, אֶלָּא כָּךְ הָיָה מַעֲשֶׂה: רַבִּי יוֹסֵי בֶּן זִימְרָא כֹּהֵן הָיָה, וְהָכִי קָא מִיבַּעְיָא לֵיהּ: הֲלָכָה כְּרַבִּי מֵאִיר, דְּאָמַר: הֶחָשׁוּד בְּדָבָר — לֹא דָּנוֹ, וְלֹא מְעִידוֹ. אוֹ דִילְמָא הֲלָכָה כְּרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל, דְּאָמַר: נֶאֱמָן הוּא עַל שֶׁל חֲבֵירוֹ וְאֵינוֹ נֶאֱמָן עַל שֶׁל עַצְמוֹ. וּפְשַׁט לֵיהּ: הֲלָכָה כְּרַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל.</div>
+    <div class="trans" data-when="he">השיב ר׳ אבא: לא כך היה המעשה, אלא: ר׳ יוסי בן זימרא כהן היה (וכהנים חשודים על הטלת מום בבכור), וזו הייתה שאלתו — הלכה כר׳ מאיר שהחשוד בדבר אינו דנו ואינו מעידו, או כרשב״ג שנאמן על של חבירו ואינו נאמן על של עצמו? ופשט לו: הלכה כרשב״ג.</div>
+    <div class="trans" data-when="en">Rabbi Abba said to him: The way you described it was not how the incident was. Rather this was the incident: Rabbi Yosei ben Zimra was a priest, and he raised the following dilemma: Is the halakha in accordance with the opinion of Rabbi Meir, who said: One who is suspect in a certain area may not judge it and may not testify about it? Priests are suspected of inflicting blemishes on firstborn animals because after the destruction of the Temple, even priests may not benefit from a firstborn animal until it becomes blemished. The question was not one of seeking permission from the Nasi, but it was a question of halakha. Are priests who are Torah scholars also suspected of inflicting blemishes? Or perhaps the halakha is in accordance with the opinion of Rabban Shimon ben Gamliel, who said: One who is suspect is believed about his fellow but is not believed about himself. He resolved the question for him: The halakha is in accordance with the opinion of Rabban Shimon ben Gamliel.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">סנדל של שֵׁעַם, והקיטע היוצא בקב</span><span data-when="en">Cork sandals, and the amputee's prosthetic leg</span>
+      <span class="ref">Yoma 78a:14–78b:4</span></h2>
+  <div class="lead"><span data-when="he">מותר לצאת בסנדל של שעם ביוה״כ ובתענית ציבור — שאינו מנעל. רמי בר חמא מקשה מן הקיטע בקב שאסור ביוה״כ; אביי מיישב ונדחה, ורבא מעמיד שהמחלוקת בשבת.</span><span data-when="en">Cork sandals may be worn on Yom Kippur and public fasts — they are not shoes. Rami bar Ḥama objects from the amputee's prosthetic, forbidden on Yom Kippur; Abaye's answer is rejected, and Rava recasts the dispute as about Shabbat.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① מהו לצאת בסנדל של שעם ביוה״כ?"}:::question
+  S1["② עדויות: יצאו בסנדל של שעם ביוה״כ ובתענית — לא שנא; ואמוראים יצאו בהיטני, הוצי, סודרא"]:::statement
+  Q2{"③ מיתיב רמי בר חמא: הקיטע בקב — ושוין שאסור לצאת בו ביוה״כ"}:::question
+  A1["③ אביי: התם דאית ביה כתיתין, ומשום תענוג"]:::answer
+  Q3{"④ רבא דוחה: וכי כתיתין משוי ליה מנא? ועוד מסיפא — דאית ליה בית קיבול"}:::question
+  C1["⑤ אלא רבא: לכו״ע מנעל הוא, ובשבת פליגי — גזרינן שמא ישתמיט"]:::conclusion
+  Q1 -->|עדויות| S1
+  S1 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|דחייה| Q3
+  Q3 -->|מסקנת רבא| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① May one go out in cork sandals on Yom Kippur?"}:::question
+  S1["② Testimonies: worn on Yom Kippur and on fasts — no difference; sages wore reed, palm, scarf"]:::statement
+  Q2{"③ Rami bar Ḥama objects: the amputee's leg — agreed it is forbidden on Yom Kippur"}:::question
+  A1["③ Abaye: there it has rags, and the issue is comfort"]:::answer
+  Q3{"④ Rava rejects: do rags make it a garment? And from the latter clause — a receptacle"}:::question
+  C1["⑤ Rather Rava: all agree it is a shoe; on Shabbat they differ — decree lest it slip"]:::conclusion
+  Q1 -->|testimonies| S1
+  S1 -.->|objection| Q2
+  Q2 -->|answer| A1
+  A1 -.->|rejection| Q3
+  Q3 -->|Rava's conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① מַהוּ לָצֵאת בְּסַנְדָּל שֶׁל שַׁעַם בְּיוֹם הַכִּפּוּרִים?"}:::question
+  S1["② יָצָא בְּסַנְדָּל שֶׁל שַׁעַם בְּיוֹם הַכִּפּוּרִים … לָא שְׁנָא … רַב יְהוּדָה נָפֵיק בִּדְהִיטָנֵי … כָּרֵיךְ סוּדָרָא אַכַּרְעֵיהּ"]:::statement
+  Q2{"③ מֵתִיב רָמֵי בַּר חָמָא: הַקִּיטֵּעַ יוֹצֵא בְּקַב שֶׁלּוֹ … וְשָׁוִין שֶׁאָסוּר לָצֵאת בּוֹ בְּיוֹם הַכִּפּוּרִים"}:::question
+  A1["③ אָמַר אַבָּיֵי: הָתָם דְּאִית בֵּיהּ כְּתִיתִין, וּמִשּׁוּם תַּעֲנוּג"]:::answer
+  Q3{"④ וְאִי לָאו מָנָא הוּא — כְּתִיתִין מְשַׁוֵּי לֵיהּ מָנָא? … אִם יֵשׁ לוֹ בֵּית קִבּוּל כְּתִיתִין — טָמֵא"}:::question
+  C1["⑤ אֶלָּא … דְּכוּלֵּי עָלְמָא מִנְעָל הוּא, וּבְשַׁבָּת … גָּזְרִינַן דִּילְמָא מִשְׁתְּמִיט"]:::conclusion
+  Q1 -->|עדויות| S1
+  S1 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|דחייה| Q3
+  Q3 -->|מסקנת רבא| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ח א — Yoma 78a:14</span></div>
+    <div class="orig">וְתוּ קָא מִבַּעְיָא לְהוּ: מַהוּ לָצֵאת בְּסַנְדָּל שֶׁל</div>
+    <div class="trans" data-when="he">ועוד שאלו אותם החכמים שאלה: מהו לצאת בסנדל של… (הקטע נמשך בעמוד הבא: ״שעם״ — שעם/פקק עץ).</div>
+    <div class="trans" data-when="en">§ They raised another dilemma before them, the same Sages mentioned: What is the halakha with regard to going out in sandals made of</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ח ב — Yoma 78b:1</span></div>
+    <div class="orig">שַׁעַם בְּיוֹם הַכִּפּוּרִים? עָמַד רַבִּי יִצְחָק בַּר נַחְמָנִי עַל רַגְלָיו, וְאָמַר: אֲנִי רָאִיתִי אֶת רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי שֶׁיָּצָא בְּסַנְדָּל שֶׁל שַׁעַם בְּיוֹם הַכִּפּוּרִים. וְאָמֵינָא לֵיהּ: בְּתַעֲנִית צִבּוּר מַאי? אֲמַר לֵיהּ: לָא שְׁנָא. אָמַר רַבָּה בַּר בַּר חָנָה: אֲנִי רָאִיתִי אֶת רַבִּי אֶלְעָזָר דְּמִן נִנְוֵה שֶׁיָּצָא בְּסַנְדָּל שֶׁל שַׁעַם בְּתַעֲנִית צִבּוּר, וְאָמֵינָא לֵיהּ: בְּיוֹם הַכִּפּוּרִים מַאי? אֲמַר לֵיהּ: לָא שְׁנָא. רַב יְהוּדָה נָפֵיק בִּדְהִיטָנֵי. אַבָּיֵי נָפֵיק בִּדְהוּצֵי. רָבָא נָפֵיק (בִּדְיַבְלֵי). רַבָּה בַּר רַב הוּנָא כָּרֵיךְ סוּדָרָא אַכַּרְעֵיהּ וְנָפֵיק.</div>
+    <div class="trans" data-when="he">…שעם (פקק עץ) ביוה״כ? עמד ר׳ יצחק בר נחמני והעיד: ראיתי את ריב״ל שיצא בסנדל של שעם ביוה״כ; שאלתיו על תענית ציבור, ואמר: לא שנא (מותר). רבה בר בר חנה: ראיתי את ר׳ אלעזר מנינוה שיצא בו בתענית ציבור, ולשאלתי על יוה״כ אמר: לא שנא. רב יהודה היה יוצא בשל קני־סוף, אביי בשל סיב הדקל, רבא בשל קליעת קנים, ורבה בר רב הונא כורך סודר על רגלו ויוצא — שכל אלו אינם מנעל.</div>
+    <div class="trans" data-when="en">cork on Yom Kippur? Is it considered a shoe, and therefore it may not be worn on Yom Kippur, or not? Rabbi Yitzḥak bar Naḥmani stood on his feet to testify and said: I saw that Rabbi Yehoshua ben Levi went out on Yom Kippur in cork sandals, and I said to him: What is the law on a communal fast that is decreed in a time of drought, when shoes are similarly prohibited? Are reed sandals permitted? He said to me: It is no different, and such sandals are permitted even on a communal fast day. Rabba bar bar Ḥana said: I saw Rabbi Elazar from Nineveh go out in cork sandals on a communal fast day, and I said to him: What is the law on Yom Kippur? He said to me: It is no different, and it is permitted. The Gemara reports: Rav Yehuda went out on Yom Kippur in reed sandals. Abaye went out in sandals made of palm fiber. Rava went out in sandals braided with reeds. None of these sandals are considered to be shoes. Rabba bar Rav Huna wrapped a scarf around his feet and went out.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ח ב — Yoma 78b:2</span></div>
+    <div class="orig">מֵתִיב רָמֵי בַּר חָמָא: הַקִּיטֵּעַ יוֹצֵא בְּקַב שֶׁלּוֹ, דִּבְרֵי רַבִּי מֵאִיר. וְרַבִּי יוֹסֵי אוֹסֵר. וְתָנֵי עֲלַהּ: וְשָׁוִין שֶׁאָסוּר לָצֵאת בּוֹ בְּיוֹם הַכִּפּוּרִים. אָמַר אַבָּיֵי: הָתָם דְּאִית בֵּיהּ כְּתִיתִין, וּמִשּׁוּם תַּעֲנוּג.</div>
+    <div class="trans" data-when="he">הקשה רמי בר חמא: שנינו — הקיטע (קטוע רגל) יוצא בשבת בקב שלו (רגל עץ), כר׳ מאיר, ור׳ יוסי אוסר; ושנו עליה: ושוין ששניהם מודים שאסור לצאת בו ביוה״כ. משמע שאף רגל עץ אסורה — ואם כן גם דברי האמוראים לעיל קשים? תירץ אביי: שם איסורו משום שיש בו כתיתין (רכים) ומשום תענוג, ולא משום מנעל.</div>
+    <div class="trans" data-when="en">Rami bar Ḥama raised an objection: We learned that an amputee may go out with his wooden prosthetic leg on Shabbat, since it is like a shoe; these are the words of Rabbi Meir. But Rabbi Yosei prohibits it. And a baraita was taught in that regard as an addendum to that mishna: And they agree that it is prohibited to go out wearing it on Yom Kippur. As this indicates that even wooden shoes are prohibited, the materials worn by the aforementioned amora’im should also be prohibited. Abaye said: There, in the case of Yom Kippur, it is prohibited because there are rags in the prosthesis. The prohibition is not due to the shoes but due to the pleasure of the comfort, which is prohibited on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ח ב — Yoma 78b:3</span></div>
+    <div class="orig">אֲמַר לֵיהּ רָבָא: וְאִי לָאו מָנָא הוּא — כְּתִיתִין מְשַׁוֵּי לֵיהּ מָנָא? וְעוֹד: כׇּל תַּעֲנוּג דְּלָאו מִנְעָל הוּא, בְּיוֹם הַכִּפּוּרִים מִי אָסוּר? וְהָא רַבָּה בַּר רַב הוּנָא הֲוָה כָּרֵיךְ סוּדָרָא אַכַּרְעֵיהּ וְנָפֵיק! וְעוֹד, מִדְּקָתָנֵי סֵיפָא: אִם יֵשׁ לוֹ בֵּית קִבּוּל כְּתִיתִין — טָמֵא, מִכְּלָל דְּרֵישָׁא לָאו בִּדְאִית לֵיהּ כְּתִיתִין עָסְקִינַן.</div>
+    <div class="trans" data-when="he">דחה רבא את אביי: אם אין הקב מנעל, וכי הכתיתין הופכים אותו למנעל? ועוד: כל תענוג שאינו דרך נעילת מנעל אינו אסור ביוה״כ — והרי רבה בר רב הונא כרך סודר ויצא! ועוד, מדשנינו בסיפא ״אם יש לו בית קיבול כתיתין — טמא״, מכלל שהרישא עוסקת בקב שאין בו כתיתין — ובכל זאת אסרוהו ביוה״כ; הרי שאיסורו משום מנעל.</div>
+    <div class="trans" data-when="en">Rava said to him: And if the prosthetic leg is not a garment, meaning that it is not a shoe, do the rags make it into a garment? Only shoes are forbidden, not other garments. And furthermore, any other kind of pleasure that is not the pleasure of wearing shoes, is it prohibited on Yom Kippur? Only certain afflictions are mandated on Yom Kippur; activities that are not specifically restricted by those afflictions are permitted. And Rabba bar Rav Huna would wrap a scarf on his feet and go out, demonstrating that the comfort provided by rags is permitted on Yom Kippur. Furthermore, the continuation of the baraita contradicts your explanation that the prohibition is due to the comfort provided by the rags. From the fact that it teaches in the latter clause: If the prosthetic leg has a receptacle designed for rags it is susceptible to ritual impurity like all wooden utensils which have receptacles, it may be inferred that in the first clause we are not dealing with a prosthetic leg that has a hollow space designed for rags. Abaye’s position is thereby rejected.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ח ב — Yoma 78b:4</span></div>
+    <div class="orig">אֶלָּא אָמַר רָבָא: לְעוֹלָם דְּכוּלֵּי עָלְמָא מִנְעָל הוּא, וּבְשַׁבָּת בְּהָא פְּלִיגִי: מָר סָבַר גָּזְרִינַן דִּילְמָא מִשְׁתְּמִיט וְאָתֵי לְאֵתוֹיֵי אַרְבַּע אַמּוֹת, וּמַר סָבַר לָא גָּזְרִינַן.</div>
+    <div class="trans" data-when="he">אלא אמר רבא: לעולם הקב מנעל הוא לכל הדעות (ולכן אסור ביוה״כ), ובשבת נחלקו: ר׳ יוסי סבר גוזרים שמא יישמט הקב ויבוא להוליכו ארבע אמות ברה״ר, ור׳ מאיר סבר אין גוזרים.</div>
+    <div class="trans" data-when="en">Rather, Rava said: Actually, according to everyone, a prosthetic leg is considered to be a shoe, and with regard to Shabbat this is what they disagree about: One Sage, Rabbi Yosei holds that we decree a prohibition of wearing a prosthetic leg on Shabbat lest the leg slip off and one come to carry it four cubits in the public domain; and one Sage, Rabbi Meir, holds that we do not decree such a rule.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">תינוקות מותרים בכל חוץ מנעילת הסנדל</span><span data-when="en">Children are permitted everything except wearing shoes</span>
+      <span class="ref">Yoma 78b:5–7</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: תינוקות מותרים בכל עינויי יוה״כ חוץ מנעילת הסנדל. הגמרא מבררת מה שונה הסנדל, ומסיקה שגזרו רק במה שאינו צורך גידול התינוק.</span><span data-when="en">A baraita: children are exempt from all Yom Kippur afflictions but wearing shoes. The Gemara asks what is unique about shoes, and concludes the decree covers only what is not needed for the child's growth.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: תינוקות מותרין בכולן, חוץ מנעילת הסנדל"]:::statement
+  Q1{"① מאי שנא סנדל? רחיצה וסיכה — אימר מאתמול עבדי ליה"}:::question
+  A1["② סנדל לא אפשר מאתמול — דהמנעיל ובא לישן טועם טעם מיתה"]:::answer
+  Q2{"③ והא מותרין לכתחילה קתני!"}:::question
+  C1["③ אלא: דלאו רביתייהו גזרו, דרביתייהו לא גזרו — אמרה לי אם"]:::conclusion
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|דחייה| Q2
+  Q2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① The Sages taught: children are permitted all, except wearing shoes"]:::statement
+  Q1{"① Why shoes? Bathing and oil — say they did it for him yesterday"}:::question
+  A1["② Shoes cannot be from yesterday — one who sleeps in shoes tastes death"]:::answer
+  Q2{"③ But it teaches: permitted ab initio!"}:::question
+  C1["③ Rather: they decreed on what is not for his growth, not on what is — mother told Abaye"]:::conclusion
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|rejection| Q2
+  Q2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: תִּינוֹקוֹת מוּתָּרִין בְּכוּלָּן, חוּץ מִנְּעִילַת הַסַּנְדָּל"]:::statement
+  Q1{"① מַאי שְׁנָא נְעִילַת הַסַּנְדָּל … רְחִיצָה וְסִיכָה, אֵימַר מֵאֶתְמוֹל עָבְדִי לֵיהּ"}:::question
+  A1["② סַנְדָּל לָא אֶפְשָׁר דְּמֵאֶתְמוֹל … הַאי מַאן דְּבָעֵי לְמִיטְעַם טַעְמָא דְמִיתוּתָא — לִיסְיַים מְסָאנֵי וְלִיגְנֵי"]:::answer
+  Q2{"③ וְהָא מוּתָּרִין לְכַתְּחִלָּה קָתָנֵי!"}:::question
+  C1["③ אֶלָּא: הָנָךְ דְּלָאו רְבִיתַיְיהוּ — גְּזַרוּ … דִּרְבִיתַיְיהוּ — לָא גְּזַרוּ … אֲמַרָה לִי אֵם"]:::conclusion
+  S1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|דחייה| Q2
+  Q2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ח ב — Yoma 78b:5</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: תִּינוֹקוֹת מוּתָּרִין בְּכוּלָּן, חוּץ מִנְּעִילַת הַסַּנְדָּל. מַאי שְׁנָא נְעִילַת הַסַּנְדָּל, דְּאָמְרִי: אִינָשֵׁי עֲבַדוּ לֵיהּ, הָנָךְ נָמֵי אָמְרִי: אִינָשֵׁי עֲבַדוּ לֵיהּ! רְחִיצָה וְסִיכָה, אֵימַר מֵאֶתְמוֹל עָבְדִי לֵיהּ.</div>
+    <div class="trans" data-when="he">ת״ר: תינוקות מותרים בכל עינויי יוה״כ, חוץ מנעילת הסנדל. ושואלת הגמרא: מה שונה נעילת הסנדל? הטעם שאם ילבישוהו יאמרו הבריות ״גדולים עשו לו״ (וייראה כעובר על יוה״כ) — אך גם בשאר (רחיצה וסיכה) יאמרו כן! ומשיבה: ברחיצה וסיכה אפשר לומר שעשו לו מאתמול.</div>
+    <div class="trans" data-when="en">§ The Sages taught: Young children are permitted to perform all of the prohibited activities on Yom Kippur, except for wearing shoes. The Gemara asks: What is different about wearing shoes? It is because observers who see a child wearing shoes will say that adults did this for him, i.e., put them on for him, since he cannot do it for himself. But if that is the reason, with regard to those other prohibitions also, like bathing and smearing oil, they will say that adults did this for him, and children should be prohibited from those activities as well. The Gemara explains: With regard to bathing and smearing oil, they could say that they did this for him yesterday, since one cannot be certain when the child was bathed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ח ב — Yoma 78b:6</span></div>
+    <div class="orig">סַנְדָּל נָמֵי, אֵימַר מֵאֶתְמוֹל עָבְדִי לֵיהּ! סַנְדָּל לָא אֶפְשָׁר דְּמֵאֶתְמוֹל עָבְדִי לֵיהּ. דַּאֲמַר שְׁמוּאֵל: הַאי מַאן דְּבָעֵי לְמִיטְעַם טַעְמָא דְמִיתוּתָא — לִיסְיַים מְסָאנֵי וְלִיגְנֵי.</div>
+    <div class="trans" data-when="he">הגמרא מקשה: אף בסנדל נאמר שעשו לו מאתמול! ומשיבה: בסנדל אי אפשר לומר זאת, שהרי לא ילין נעול — כדברי שמואל: הרוצה לטעום טעם מיתה — ינעל מנעליו וישכב לישון בהם.</div>
+    <div class="trans" data-when="en">The Gemara asks: If so, we could say this with regard to shoes as well. They could say that they did this for him yesterday. The Gemara answers: In the case of shoes, it is impossible to say an adult did it for him yesterday, since the child would not have worn shoes at night. As Shmuel said: He who desires a taste of death should put on shoes and go to sleep.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ח ב — Yoma 78b:7</span></div>
+    <div class="orig">וְהָא מוּתָּרִין לְכַתְּחִלָּה קָתָנֵי! אֶלָּא: הָנָךְ דְּלָאו רְבִיתַיְיהוּ — גְּזַרוּ בְּהוּ רַבָּנַן, הָנָךְ דִּרְבִיתַיְיהוּ הוּא — לָא גְּזַרוּ בְּהוּ רַבָּנַן. דְּאָמַר אַבָּיֵי, אֲמַרָה לִי אֵם: רְבִיתֵיהּ דְּיָנוֹקָא — מַיָּא חַמִּימֵי וּמִשְׁחָא. גְּדַל פּוּרְתָּא — בֵּיעֲתָא בְּכוּתָּחָא. גְּדַל פּוּרְתָּא — תַּבּוֹרֵי מָאנֵי. כִּי הָא דְּרַבָּה זָבֵין לְהוּ מָאנֵי גְּזִיזֵי דְּפַחְרָא לִבְנֵיהּ, וּמְתַבְּרִי לְהוּ.</div>
+    <div class="trans" data-when="he">הגמרא דוחה: הברייתא שנתה ״מותרין לכתחילה״ — משמע שמותר אף לגדולים לעשות להם בעצם היום! אלא: גזרו חכמים רק במה שאינו צורך גידול התינוק, ובמה שהוא צורך גידולו לא גזרו. כדברי אביי בשם אמו: גידולו של תינוק — מים חמים ושמן; גדל מעט — ביצה בכותח; גדל עוד — לשבור כלים (להנאתו), כרבה שקנה כלי חרס סדוקים לבניו והם שוברים אותם.</div>
+    <div class="trans" data-when="en">The Gemara asks: But the mishna is teaching that they are permitted to wear shoes ab initio. If so, it is permitted for an adult to perform these acts for a child even on the day of Yom Kippur, and the observer will not think that the adult has done anything wrong. Rather, we must explain the mishna as follows: The Sages decreed against performing those actions that are not necessary for the child’s growth, but the Sages did not decree against performing those actions that are necessary for the child’s growth. As Abaye said: My mother told me: A child’s growth requires hot water and oil for smearing. When he grows a little, he must eat egg with kutaḥa, a pickled dip made with milk. When he grows a little more, he must have vessels to break, since he will enjoy breaking them. This is like Rabba who bought cracked ceramic vessels for his children, and they broke them for their enjoyment.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">המלך והכלה ירחצו פניהם; והחיה תנעול סנדל</span><span data-when="en">The king and bride may wash; the new mother may wear shoes</span>
+      <span class="ref">Yoma 78b:8–11</span></h2>
+  <div class="lead"><span data-when="he">משנתנו (כר׳ חנניא בן תרדיון) מתירה למלך ולכלה לרחוץ פניהם ולחיה לנעול סנדל; הגמרא מבררת את הטעמים — יופי המלך, הכלה בפני בעלה, וצינה לחיה.</span><span data-when="en">Our mishna (per R. Ḥananya ben Teradyon) permits a king and bride to wash, and a new mother to wear shoes; the Gemara explains the reasons — the king's majesty, the bride before her husband, cold for the mother.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: מלך וכלה ירחצו פניהם — מתניתין כר׳ חנניא בן תרדיון"]):::mishnah
+  Q1{"② מאי טעמא? מלך — מלך ביפיו; כלה — שלא תתגנה; ועד כמה — ל׳ יום"}:::question
+  S1["③ החיה תנעול סנדל — משום צינה"]:::statement
+  A1["④ שמואל: אם מחמת סכנת עקרב — מותר"]:::answer
+  M1 -->|טעמי ההיתר| Q1
+  Q1 -->|חיה| S1
+  S1 -->|הרחבה| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: king and bride wash their faces — the mishna follows R. Ḥananya ben Teradyon"]):::mishnah
+  Q1{"② What is the reason? King — ׳in his beauty׳; bride — not to repel; how long — 30 days"}:::question
+  S1["③ The new mother may wear a sandal — due to the cold"]:::statement
+  A1["④ Shmuel: if due to danger of a scorpion — permitted"]:::answer
+  M1 -->|reasons for leniency| Q1
+  Q1 -->|new mother| S1
+  S1 -->|extension| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① הַמֶּלֶךְ וְהַכַּלָּה יִרְחֲצוּ אֶת פְּנֵיהֶם … רַבִּי חֲנַנְיָא בֶּן תְּרַדְיוֹן הִיא"]):::mishnah
+  Q1{"② מַאי טַעְמָא? מֶלֶךְ … מֶלֶךְ בְּיׇפְיוֹ … כַּלָּה … שֶׁלֹּא תִּתְגַּנֶּה עַל בַּעְלָהּ … כׇּל שְׁלֹשִׁים יוֹם"}:::question
+  S1["③ הַחַיָּה תִּנְעוֹל אֶת הַסַּנְדָּל — מִשּׁוּם צִינָּה"]:::statement
+  A1["④ אָמַר שְׁמוּאֵל: אִם מֵחֲמַת סַכָּנַת עַקְרָב — מוּתָּר"]:::answer
+  M1 -->|טעמי ההיתר| Q1
+  Q1 -->|חיה| S1
+  S1 -->|הרחבה| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ח ב — Yoma 78b:8</span></div>
+    <div class="orig">הַמֶּלֶךְ וְהַכַּלָּה יִרְחֲצוּ אֶת פְּנֵיהֶם. מַתְנִיתִין מַנִּי? רַבִּי חֲנַנְיָא בֶּן תְּרַדְיוֹן הִיא, דְּתַנְיָא: הַמֶּלֶךְ וְהַכִּלָּה לֹא יִרְחֲצוּ אֶת פְּנֵיהֶם. רַבִּי חֲנַנְיָא בֶּן תְּרַדְיוֹן אוֹמֵר מִשּׁוּם רַבִּי אֱלִיעֶזֶר: הַמֶּלֶךְ וְהַכַּלָּה יִרְחֲצוּ אֶת פְּנֵיהֶם. הַחַיָּה לֹא תִּנְעוֹל אֶת הַסַּנְדָּל. רַבִּי חֲנַנְיָא בֶּן תְּרַדְיוֹן אוֹמֵר מִשּׁוּם רַבִּי אֱלִיעֶזֶר: הַחַיָּה תִּנְעוֹל אֶת הַסַּנְדָּל.</div>
+    <div class="trans" data-when="he">משנתנו התירה למלך ולכלה לרחוץ פניהם ביוה״כ (כר׳ אליעזר). מי שנאה המשנה? ר׳ חנניא בן תרדיון, כברייתא: ת״ק — מלך וכלה לא ירחצו פניהם; ר׳ חנניא בן תרדיון משום ר׳ אליעזר — ירחצו. וכן בחיה (יולדת): ת״ק — לא תנעול סנדל; ר׳ חנניא בן תרדיון משום ר׳ אליעזר — תנעול.</div>
+    <div class="trans" data-when="en">§ We learned in the mishna that according to Rabbi Eliezer, the king and the bride may wash their faces on Yom Kippur. The Gemara asks: Who is the tanna of the mishna? The Gemara answers: It is the opinion of Rabbi Ḥananya ben Teradyon, as it was taught in a baraita: The king and the bride may not wash their faces on Yom Kippur. Rabbi Ḥananya ben Teradyon says in the name of Rabbi Eliezer: A king and a bride may wash their faces. The Rabbis said: A new mother may not wear shoes on Yom Kippur. Rabbi Ḥananya ben Teradyon says in the name of Rabbi Eliezer: A new mother may wear shoes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ח ב — Yoma 78b:9</span></div>
+    <div class="orig">מַאי טַעְמָא? מֶלֶךְ, מִשּׁוּם דִּכְתִיב: ״מֶלֶךְ בְּיׇפְיוֹ תֶּחֱזֶינָה עֵינֶיךָ״. כַּלָּה מַאי טַעְמָא — כְּדֵי שֶׁלֹּא תִּתְגַּנֶּה עַל בַּעְלָהּ. אֲמַר לֵיהּ רַב לְרַבִּי חִיָּיא: כַּלָּה עַד כַּמָּה? אֲמַר לֵיהּ, כִּדְתַנְיָא: אֵין מוֹנְעִין תַּכְשִׁיטִין מִן הַכַּלָּה כׇּל שְׁלֹשִׁים יוֹם.</div>
+    <div class="trans" data-when="he">מה הטעם? מלך — שנאמר ״מלך ביפיו תחזינה עיניך״, שצריך להיראות נאה. כלה — כדי שלא תתגנה על בעלה בתחילת נישואיה. שאל רב את ר׳ חייא: עד כמה נחשבת אישה ככלה? השיבו: כברייתא — אין מונעים תכשיטים מן הכלה כל שלושים יום.</div>
+    <div class="trans" data-when="en">The Gemara asks: According to Rabbi Eliezer’s opinion, what is the reason that the king may wash his face? Because it is written: “Your eyes shall see the king in his beauty” (Isaiah 33:17). A king should always look regal before his nation. What is the reason that a bride may wash her face? So that she should not appear repulsive to her husband. Since it is only the beginning of their marriage, her husband may be disgusted at seeing her otherwise. Rav said to Rabbi Ḥiyya: For how long after her wedding is a woman considered a bride? He said to him: As it was taught in a baraita: If she becomes a mourner, we do not prevent the bride from wearing perfumes during the entire first thirty days of her marriage. This shows that for the first thirty days, her appearance is most critical.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ח ב — Yoma 78b:10</span></div>
+    <div class="orig">הַחַיָּה תִּנְעוֹל אֶת הַסַּנְדָּל — מִשּׁוּם צִינָּה.</div>
+    <div class="trans" data-when="he">החיה (יולדת) תנעול את הסנדל ביוה״כ — מפני הצינה, שמא תצטנן ותסתכן, שהיא חלשה מן הלידה.</div>
+    <div class="trans" data-when="en">A new mother may wear shoes. What is the reason for this? Due to the cold there is concern that she will become ill, as she is weak from the birth.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ח ב — Yoma 78b:11</span></div>
+    <div class="orig">אָמַר שְׁמוּאֵל: אִם מֵחֲמַת סַכָּנַת עַקְרָב — מוּתָּר.</div>
+    <div class="trans" data-when="he">אמר שמואל: אף אדם רגיל — אם חושש ללכת יחף מחמת סכנת עקרב, מותר לו לנעול מנעליו ביוה״כ, שאין לאדם להכניס עצמו לסכנה.</div>
+    <div class="trans" data-when="en">Shmuel said: If a man is worried about walking barefoot on Yom Kippur due to the danger of scorpions, he is permitted to wear shoes, since one need not put himself in danger.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">שיעור ׳ככותבת הגסה׳ — יותר או פחות מכביצה</span><span data-when="en">The ‘large date’ measure — more or less than an egg-bulk</span>
+      <span class="ref">Yoma 78b:12–80a:2</span></h2>
+  <div class="lead"><span data-when="he">בעיות רב פפא ורב אשי בגדר השיעור; רב יהודה: יתירה מכביצה — ומובא מסייע ודחיות; רב זביד: חסרה מכביצה — והוכחות מבית שמאי ומזימון. ולבסוף ברייתא רבי על השינוי שבכתוב.</span><span data-when="en">Rav Pappa and Rav Ashi's queries on the measure; Rav Yehuda: more than an egg — with supports and rebuttals; Rav Zevid: less than an egg — proven from Beit Shammai and zimmun. Finally Rabbi's baraita on the verse's change.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: האוכל ככותבת הגסה — בעיות פפא ואשי בגרעין ובקליפה"]):::mishnah
+  S1["② רב יהודה: ככותבת יתירה מכביצה — בה מיתבא דעתיה"]:::statement
+  Q1{"③ מיתיבי: רבן יוחנן בן זכאי ורבן גמליאל — ב׳ כותבות בסוכה; ור׳ צדוק פחות מכביצה"}:::question
+  A1["④ ר׳ ירמיה: גרעין גדול — כותבת וגרעינתה יתירה; ורבא: פירי לא בעו סוכה"]:::answer
+  P1["⑤ מסייע ודחייה: מיני תרגימא — פירות; באתרא דלא שכיחי"]:::proof
+  S2["⑥ רב זביד: ככותבת חסרה מכביצה — מבית שמאי, שאור בכזית חמץ בכותבת"]:::statement
+  P2["⑦ הוכחה מזימון: עד כזית או כביצה — וכביצה משבעא, ש״מ כותבת פחותה"]:::proof
+  C1["⑧ ברייתא דרבי: כל השיעורין בכזית, חוץ מטומאת אוכלין ויוה״כ — ששינה הכתוב"]:::conclusion
+  M1 -->|בעיה| S1
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוצים| A1
+  A1 -->|מסייע| P1
+  P1 -->|דעה אחרת| S2
+  S2 -->|תא שמע| P2
+  P2 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: one who eats a large date — Pappa and Ashi query the pit and husk"]):::mishnah
+  S1["② Rav Yehuda: the large date is more than an egg — at it the mind settles"]:::statement
+  Q1{"③ Objection: R. Yoḥanan b. Zakkai and R. Gamliel — 2 dates to the sukka; R. Tzadok, less than an egg"}:::question
+  A1["④ R. Yirmeya: the pit is large — date plus pit exceeds an egg; Rava: fruit needs no sukka"]:::answer
+  P1["⑤ Support and rebuttal: ׳types of sweets׳ — fruit; where fruit is scarce"]:::proof
+  S2["⑥ Rav Zevid: the large date is less than an egg — from Beit Shammai, leaven an olive, ḥametz a date"]:::statement
+  P2["⑦ Proof from zimmun: an olive or an egg — an egg satisfies, so a date is less"]:::proof
+  C1["⑧ Rabbi's baraita: all measures an olive, except food-impurity and Yom Kippur — the verse changed"]:::conclusion
+  M1 -->|query| S1
+  S1 -.->|objection| Q1
+  Q1 -->|answers| A1
+  A1 -->|support| P1
+  P1 -->|another view| S2
+  S2 -->|come and hear| P2
+  P2 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① הָאוֹכֵל כְּכוֹתֶבֶת הַגַּסָּה … בְּגַרְעִינָתָהּ אוֹ בְּלֹא גַּרְעִינָתָהּ … עֶצֶם כִּשְׂעוֹרָה …"]):::mishnah
+  S1["② אָמַר רַב יְהוּדָה: כּוֹתֶבֶת הַגַּסָּה … יְתֵירָה מִכְּבֵיצָה … בְּהָכִי מִיַּתְּבָא דַּעְתֵּיהּ"]:::statement
+  Q1{"③ מֵיתִיבִי … לְרַבָּן גַּמְלִיאֵל שְׁתֵּי כוֹתָבוֹת … הַעֲלוּם לַסּוּכָּה … לְרַבִּי צָדוֹק … פָּחוֹת מִכְּבֵיצָה"}:::question
+  A1["④ אֲמַר רַבִּי יִרְמְיָה … כּוֹתֶבֶת הַגַּסָּה וְגַרְעִינָתָהּ הָוֵי יְתֵירָה מִכְּבֵיצָה … רָבָא … פֵּירֵי לָא בָּעוּ סוּכָּה"]:::answer
+  P1["⑤ לֵימָא מְסַיַּיע לֵיהּ … מַאי מִינֵי תַרְגִּימָא — פֵּירוֹת … בְּאַתְרָא דְּלָא שְׁכִיחִי פֵּירֵי"]:::proof
+  S2["⑥ רַב זְבִיד אָמַר: כּוֹתֶבֶת … חֲסֵרָה מִכְּבֵיצָה … שְׂאוֹר בְּכַזַּיִת, וְחָמֵץ בְּכַכּוֹתֶבֶת"]:::statement
+  P2["⑦ עַד כַּמָּה מְזַמְּנִין … עַד כְּזַיִת … עַד כְּבֵיצָה … כְּבֵיצָה מְשַׂבְּעָא, כְּכוֹתֶבֶת מִיַּתְּבָא דַּעְתֵּיהּ"]:::proof
+  C1["⑧ תַּנְיָא, רַבִּי אוֹמֵר: כׇּל הַשִּׁיעוּרִין … בִּכְזַיִת, חוּץ מִטּוּמְאַת אוֹכָלִין … וּרְאָיָה לַדָּבָר — יוֹם הַכִּפּוּרִים"]:::conclusion
+  M1 -->|בעיה| S1
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוצים| A1
+  A1 -->|מסייע| P1
+  P1 -->|דעה אחרת| S2
+  S2 -->|תא שמע| P2
+  P2 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ח ב — Yoma 78b:12</span></div>
+    <div class="orig">הָאוֹכֵל כְּכוֹתֶבֶת הַגַּסָּה. בָּעֵי רַב פָּפָּא:</div>
+    <div class="trans" data-when="he">המשנה: ״האוכל ככותבת הגסה (תמר גדול) ביוה״כ — חייב״. בעי רב פפא: (הקטע נמשך) — האם השיעור עם הגרעין או בלעדיו?</div>
+    <div class="trans" data-when="en">§ We learned in the mishna: On Yom Kippur, one who eats food the volume of a large date is liable. Rav Pappa asked:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ט א — Yoma 79a:1</span></div>
+    <div class="orig">כְּכוֹתֶבֶת שֶׁאָמְרוּ, בְּגַרְעִינָתָהּ: אוֹ בְּלֹא גַּרְעִינָתָהּ? בָּעֵי רַב אָשֵׁי: עֶצֶם כִּשְׂעוֹרָה, בִּקְלִיפָּתָהּ אוֹ בְּלֹא קְלִיפָּתָהּ, בְּלַחָה אוֹ בִּיבֵשָׁה? רַב אָשֵׁי לָא מִבַּעְיָא לֵיהּ הָא דְּרַב פָּפָּא, ״גַּסָּה״ אִיתְּמַר — כֹּל כַּמָּה דְּגַסָּה. רַב פָּפָּא לָא מִבַּעְיָא לֵיהּ הָא דְּרַב אָשֵׁי: לַחָה — שִׁבּוֹלֶת מִיקְּרֵי, שֶׁלֹּא בִּקְלִיפָּתָהּ — אוּשְׁלָא מִיקְּרֵי.</div>
+    <div class="trans" data-when="he">בעיית רב פפא: ״ככותבת״ — עם גרעינתה או בלא גרעינתה? בעיית רב אשי (במשנה אחרת): ״עצם כשעורה״ המטמא — עם קליפתה או בלעדיה, לחה או יבשה? רב אשי לא הסתפק בשל פפא: ״גסה״ נאמר — כל כמה שהיא גסה, ובכלל זה הגרעין. רב פפא לא הסתפק בשל אשי: שעורה לחה ״שיבולת״ נקראת, ובלא קליפה ״אושלא״ — אם כן מדובר ביבשה שבקליפתה.</div>
+    <div class="trans" data-when="en">The large date-bulk that they said is the measure that determines liability for eating on Yom Kippur, does this refer to the volume of a large date with its pit or without its pit? Rav Ashi asked a similar question: The mishna that states that a bone that is a barley-grain-bulk imparts ritual impurity, does this refer to the volume of a barley grain with its husk or without its husk? And is that referring to a wet kernel or a dry one? The Gemara clarifies: Rav Ashi did not ask the question that Rav Pappa asked, regarding the size of the date-bulk on Yom Kippur because the answer was clear to him. Since it is stated in the mishna: Large, it means as large as possible, which must include the pit. Conversely, Rav Pappa did not ask the question that Rav Ashi asked regarding the size of the barley-grain-bulk because the answer was clear to him. Wet barley is called shibbolet and not barley; without its shell it is no longer called barley but is called ushla. Therefore, the mishna must be referring to dry barley within its shell.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ט א — Yoma 79a:2</span></div>
+    <div class="orig">אָמַר (רָבָא) אָמַר רַב יְהוּדָה: כּוֹתֶבֶת הַגַּסָּה שֶׁאָמְרוּ, יְתֵירָה מִכְּבֵיצָה. וְקִים לְהוּ לְרַבָּנַן דִּבְהָכִי מִיַּתְּבָא דַּעְתֵּיהּ, בְּצִיר מֵהֲכִי — לָא מִיַּתְּבָא דַּעְתֵּיהּ. מֵיתִיבִי: מַעֲשֶׂה וְהֵבִיאוּ לְרַבָּן יוֹחָנָן בֶּן זַכַּאי לִטְעוֹם אֶת הַתַּבְשִׁיל, וּלְרַבָּן גַּמְלִיאֵל שְׁתֵּי כוֹתָבוֹת וּדְלִי שֶׁל מַיִם. וְאָמְרוּ: הַעֲלוּם לַסּוּכָּה. וְתָנֵי עֲלַהּ: לָא מִפְּנֵי שֶׁהֲלָכָה כָּךְ, אֶלָּא שֶׁרָצוּ לְהַחֲמִיר עַל עַצְמָן.</div>
+    <div class="trans" data-when="he">רב יהודה: ״כותבת הגסה״ גדולה מכביצה — וקבלה בידי חכמים שבשיעור זה דעתו של אדם מתיישבת (יוצא מכלל עינוי), ובפחות מכך אינה מתיישבת. מיתיבי: מעשה שהביאו לריב״ז לטעום תבשיל, ולרבן גמליאל שתי כותבות ודלי מים, ואמרו ״העלום לסוכה״ — ושנו עליה שלא משום שכך ההלכה אלא שרצו להחמיר.</div>
+    <div class="trans" data-when="en">Rava said that Rav Yehuda said: The volume of a large date that they said is larger than an egg-bulk. The Sages have an accepted tradition that with this amount of food, the mind of the one who eats is settled, and he is not afflicted. Less than this amount, the mind is not settled. The Gemara raises an objection from what we have learned: An incident happened on the festival of Sukkot. They brought a cooked dish to Rabban Yoḥanan ben Zakkai to taste, and they brought to Rabban Gamliel two dates and a tankard of water. Rabban Yoḥanan ben Zakkai and Rabban Gamliel said to them: Bring them up to the sukka, and we will eat there. And a baraita was taught in that regard: They did not act this way because that is the halakha, that such food must be eaten in the sukka. Rather, they wished to be stringent upon themselves and not eat anything outside of the sukka.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ט א — Yoma 79a:3</span></div>
+    <div class="orig">וּכְשֶׁנָּתְנוּ לוֹ לְרַבִּי צָדוֹק אוֹכֶל פָּחוֹת מִכְּבֵיצָה — נְטָלוֹ בְּמַפָּה וַאֲכָלוֹ חוּץ לַסּוּכָּה, וְלֹא בֵּירַךְ אַחֲרָיו.</div>
+    <div class="trans" data-when="he">ומאידך: כשנתנו לר׳ צדוק אוכל פחות מכביצה — נטלו במפה ואכלו חוץ לסוכה, ולא בירך אחריו (ברכת המזון) — שפחות מכביצה אינו טעון סוכה ולא ברכה.</div>
+    <div class="trans" data-when="en">On the other hand, the Gemara reports: And when they gave Rabbi Tzadok food that was less than an egg-bulk to eat, he held it in a cloth and did not wash his hands. And he ate it outside of the sukka and did not recite Grace after Meals afterward.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ט ב — Yoma 79b:1</span></div>
+    <div class="orig">הָא כְּבֵיצָה — בָּעֵי סוּכָּה. וְאִי סָלְקָא דַעְתָּךְ כּוֹתֶבֶת הַגַּסָּה שֶׁאָמְרוּ יְתֵירָה מִכְּבֵיצָה, הַשְׁתָּא שְׁתֵּי כוֹתָבוֹת בְּלֹא גַּרְעִינָן לָא הָווּ כְּבֵיצָה, כּוֹתֶבֶת הַגַּסָּה וְגַרְעִינָתָהּ מִי הָוֵי יְתֵירָה מִכְּבֵיצָה?! אֲמַר רַבִּי יִרְמְיָה: אִין, שְׁתֵּי כוֹתָבוֹת בְּלֹא גַּרְעִינָתָן לָא הָווּ כְּבֵיצָה, כּוֹתֶבֶת הַגַּסָּה וְגַרְעִינָתָהּ הָוֵי יְתֵירָה מִכְּבֵיצָה. אֲמַר רַב פָּפָּא, הַיְינוּ דְּאָמְרִי אִינָשֵׁי: תְּרֵי קַבֵּי דְּתַמְרֵי חַד קַבָּא דְּקַשְׁיָיתָא וּסְרִיחַ.</div>
+    <div class="trans" data-when="he">הדיוק: אבל כביצה טעונה סוכה. ואם תאמר שכותבת גדולה מכביצה — והרי שתי כותבות בלא גרעין אינן כביצה, וכי כותבת אחת עם גרעינה גדולה מכביצה?! תירץ ר׳ ירמיה: כן! שתיים בלא גרעין אינן כביצה, אך אחת עם גרעינה (הגדול) כן. אמר רב פפא: זהו שאומרים הבריות — בשני קבים תמרים קב אחד גרעינים וריקבון.</div>
+    <div class="trans" data-when="en">The Gemara clarifies: Food that has the volume of an egg-bulk is required to be eaten in a sukka. If it should enter your mind to say that the volume of the large date that they spoke of is larger than the volume of an egg-bulk, there is a contradiction. Now, comparing the two episodes, it seems that two dates without their pits are not the volume of an egg. If so, can the volume of a large date and its pit be greater than that of an egg-bulk? Rav Yirmeya said: Yes, although two dates without their pits are not equal to an egg-bulk, the volume of a large date and its pit are larger than an egg-bulk, since date pits are very large. Rav Pappa said: This explains the folk saying that people say: In two kav of dates there is one kav and more of pits, meaning that the volume of the pit is larger than that of the fruit itself.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ט ב — Yoma 79b:2</span></div>
+    <div class="orig">רָבָא אָמַר: הָתָם הַיְינוּ טַעְמָא מִשּׁוּם דְּהָווּ לְהוּ פֵּירֵי, וּפֵירֵי לָא בָּעוּ סוּכָּה. מֵיתִיבִי, אָמַר רַבִּי: כְּשֶׁהָיִינוּ לוֹמְדִים תּוֹרָה אֵצֶל רַבִּי אֶלְעָזָר בֶּן שַׁמּוּעַ הֵבִיאוּ לְפָנֵינוּ תְּאֵנִים וַעֲנָבִים וַאֲכַלְנוּם אֲכִילַת עֲרַאי חוּץ לְסוּכָּה. אֲכִילַת עֲרַאי — אִין, אֲכִילַת קֶבַע — לָא! אֵימָא: אֲכַלְנוּם כַּאֲכִילַת עֲרַאי חוּץ לַסּוּכָּה.</div>
+    <div class="trans" data-when="he">רבא: שם טעם אחר — שתי הכותבות פירות הן, ופירות אין טעונים סוכה; ואין ראיה לשיעור. מיתיבי על רבא: רבי אמר — כשלמדנו אצל ר׳ אלעזר בן שמוע הביאו לפנינו תאנים וענבים ואכלנום אכילת עראי חוץ לסוכה. משמע עראי אין, קבע לא — ופירות בקבע טעונים סוכה! ומשיבים: אמור ״אכלנום כאכילת עראי״ — שאכילת פירות לעולם עראי.</div>
+    <div class="trans" data-when="en">Rava said: This entire line of questioning has no basis: There, in the incident of the sukka, this is the reasoning that the halakha permits eating the dates outside of the sukka, due to the fact that dates are fruit, and fruit need not be eaten in a sukka but may be eaten outside of a sukka. The Gemara raises an objection. Rabbi Yehuda HaNasi said: When we would learn Torah with Rabbi Elazar ben Shamua, they brought before us figs and grapes, and we ate them as a casual meal outside of the sukka. The Gemara analyzes this: This implies that in the case of a casual meal, yes, it may be eaten outside of a sukka; but a fixed meal may not be eaten outside of a sukka. Therefore, a meal consisting of fruit must be eaten in a sukka. The Gemara rejects this: That is the wrong inference. Instead, say we ate them as if they were a casual meal, which may be eaten outside of the sukka, meaning that eating fruit is always considered a snack.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ט ב — Yoma 79b:3</span></div>
+    <div class="orig">אִי בָּעֵית אֵימָא: אֲכַלְנוּם אֲכִילַת קֶבַע, וְאָכַלְנוּ פַּת אֲכִילַת עֲרַאי בַּהֲדַיְיהוּ חוּץ לַסּוּכָּה.</div>
+    <div class="trans" data-when="he">ואם תרצה, תירוץ אחר: אכלנו את הפירות אכילת קבע, ואכלנו עמהם פת אכילת עראי חוץ לסוכה (להמתיק את מתיקותם) — ולכן יצאנו חוץ לסוכה.</div>
+    <div class="trans" data-when="en">If you wish, say instead that it can be understood in this way: We ate that fruit as a fixed meal, and we ate bread as a casual meal with the fruit, to temper their sweetness, outside of the sukka.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ט ב — Yoma 79b:4</span></div>
+    <div class="orig">לֵימָא מְסַיַּיע לֵיהּ: לְפִיכָךְ, אִם הִשְׁלִים בְּמִינֵי תַרְגִּימָא — יָצָא. וְאִי סָלְקָא דַעְתָּךְ פֵּירֵי בָּעוּ סוּכָּה, לִיתְנֵי פֵּירוֹת! מַאי מִינֵי תַרְגִּימָא — פֵּירוֹת. וְאִיבָּעֵית אֵימָא: בְּאַתְרָא דְּלָא שְׁכִיחִי פֵּירֵי.</div>
+    <div class="trans" data-when="he">לימא מסייע לרבא: ״לפיכך אם השלים (סעודת סוכה) במיני תרגימא — יצא״; ואם פירות טעונים סוכה, היה לו לשנות ״פירות״! ודוחים: מאי ״מיני תרגימא״ — פירות (אך לא ראיה). ואי בעית אימא: הברייתא במקום שאין פירות מצויים.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Let us say that this baraita supports Rava. It teaches: Therefore, if one completed consuming the amount that one is required to eat in the sukka with types of sweets, he has fulfilled his obligation of sitting in the sukka. If it should enter your mind to say that fruit is required to be eaten in a sukka, then it should not say sweets; let it teach fruit. The Gemara rejects this proof: What do the words types of sweets mean? It means fruit. Therefore, this baraita is not a support for Rava’s opinion. And if you wish, say that this baraita is referring to a place where fruits are uncommon, and therefore other sweet foods are eaten, but fruit can similarly complete the requirement. Consequently, no support can be brought from here.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ט ב — Yoma 79b:5</span></div>
+    <div class="orig">רַב זְבִיד אָמַר: כּוֹתֶבֶת הַגַּסָּה שֶׁאָמְרוּ — חֲסֵרָה מִכְּבֵיצָה. דִּתְנַן, בֵּית שַׁמַּאי אוֹמְרִים: שְׂאוֹר — בְּכַזַּיִת, חָמֵץ — בְּכַכּוֹתֶבֶת.</div>
+    <div class="trans" data-when="he">רב זביד חולק: ״כותבת הגסה״ קטנה מכביצה. ראיה ממשנה (ביצה): בית שמאי — שיעור שאור (להתחייב בבל ייראה) בכזית, וחמץ בכותבת.</div>
+    <div class="trans" data-when="en">Until now, the Gemara has assumed that the volume of a large date is more than that of an egg. Rav Zevid disagreed with what was mentioned earlier and said: This is not so. Rather, the volume of a large date that they spoke of is less than an egg-bulk, as we learned in a mishna: Beit Shammai say: With regard to leaven, the sourdough used to make dough rise, ownership of the volume of an olive-bulk violates the prohibitions in the following verses stated regarding Passover: “And no leavened bread shall be seen with you” (Exodus 13:7) and “Seven days shall there be no leaven found in your houses” (Exodus 12:19). However, the amount of leavened bread that must be owned to violate the prohibition is the volume of a large date.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ט ב — Yoma 79b:6</span></div>
+    <div class="orig">וְהָוֵינַן בָּהּ: מַאי טַעְמָא דְּבֵית שַׁמַּאי? נִכְתּוֹב רַחֲמָנָא ״חָמֵץ״, וְלָא בָּעֵי ״שְׂאוֹר״, וַאֲנָא אָמֵינָא: וּמָה חָמֵץ שֶׁאֵין חִמּוּצוֹ קָשֶׁה — אָסוּר בִּכְזַיִת, שְׂאוֹר שֶׁחִמּוּצוֹ קָשֶׁה — לֹא כָּל שֶׁכֵּן? מִדְּפַלְגִינְהוּ רַחֲמָנָא, לִימְּדָה לְךָ שִׁיעוּרוֹ שֶׁל זֶה לֹא כְּשִׁיעוּרוֹ שֶׁל זֶה. שְׂאוֹר בְּכַזַּיִת, וְחָמֵץ בְּכַכּוֹתֶבֶת.</div>
+    <div class="trans" data-when="he">ודנו בה: מה טעם בית שמאי? יכתוב הכתוב ״חמץ״ ואשמע שאור מק״ו — ומה חמץ שחימוצו רך אסור בכזית, שאור שחימוצו קשה לא כל שכן? מדפלגם הכתוב, לימד ששיעוריהם שונים: שאור בכזית וחמץ בכותבת — משמע שכותבת גדולה מכזית.</div>
+    <div class="trans" data-when="en">The Gemara continues. And we discussed it: What is the reason for the opinion of Beit Shammai? If both leaven and leavened bread had the same measure that determines liability, let the Merciful One write only: “Leavened bread,” and He would not need to write: “Leaven.” I would say, based on logic: If leavened bread, whose leavening ability is not as strong, is prohibited at an olive-bulk, all the more so should not leaven, whose leavening ability is strong because it causes dough to rise, be also prohibited at an olive-bulk? Since the Merciful One distinguishes between them and states both “leaven” and “leavened bread,” this taught you that the measure for one is not the same as the measure for the other. The measure that determines liability for leaven is an olive-bulk, like in the case of most prohibitions from the Torah, and the measure that determines liability for leavened bread, whose leavening ability is weaker, is the volume of a large date.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ט ב — Yoma 79b:7</span></div>
+    <div class="orig">וְאִי סָלְקָא דַּעְתָּךְ כּוֹתֶבֶת הַגַּסָּה שֶׁאָמְרוּ יְתֵירָה מִכְּבֵיצָה, מִכְּדִי בֵּית שַׁמַּאי אַשִּׁיעוּרָא דִּנְפִישׁ מִכְּזַיִת קָא מְהַדְּרִי, לִיתְנֵי כְּבֵיצָה. וְאִי נָמֵי כִּי הֲדָדֵי נִינְהוּ, נִיתְנֵי כְּבֵיצָה! אֶלָּא לָאו, שְׁמַע מִינַּהּ: כּוֹתֶבֶת פְּחוּתָה מִכְּבֵיצָה.</div>
+    <div class="trans" data-when="he">ואם תאמר כותבת גדולה מכביצה — והרי בית שמאי מחפשים שיעור גדול מכזית, אם כן יִשנו ״כביצה״ (המצוי); ואף אם שווים, יִשנו ״כביצה״! אלא שמע מינה: כותבת קטנה מכביצה.</div>
+    <div class="trans" data-when="en">The Gemara clarifies: And if it should enter your mind to say: The volume of the large date that they spoke of is greater than an egg-bulk, since Beit Shammai are searching for the measure one size larger than an olive-bulk, as they proved that leavened bread must have a larger measure than an olive-bulk, and if the measure one size larger than an olive-bulk is an egg-bulk, then let them teach an egg-bulk and not a date. Alternatively, if they are exactly the same volume, and the volume of a large date has the same volume as an egg-bulk, they should have taught an egg-bulk, which is the more commonly used measure. Rather, must one not conclude from here that the volume of a large date is less than an egg-bulk?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ט ב — Yoma 79b:8</span></div>
+    <div class="orig">מִמַּאי? דִּילְמָא לְעוֹלָם אֵימָא לְךָ כּוֹתֶבֶת הַגַּסָּה שֶׁאָמְרוּ — יְתֵירָה מִכְּבֵיצָה, הָא סְתָמָא — כְּבֵיצָה. וְאִי נָמֵי כִּי הֲדָדֵי נִינְהוּ, וַחֲדָא מִינַּיְיהוּ נְקַט.</div>
+    <div class="trans" data-when="he">הגמרא דוחה: מנין? שמא לעולם כותבת הגסה גדולה מכביצה, אך כותבת סתם (רגילה) כביצה — ובה דיברו ב״ש; ואי נמי שוות הן, ונקטו אחת מהן. אין ראיה.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: From where is your proof? Perhaps I could actually say to you that the measure of the volume of a large date that they said is larger than an egg-bulk; however, the volume of a date of normal size is the same as an egg-bulk, and Beit Shammai were referring to a normal-sized date. Alternatively, say that the volume of a large date and an egg-bulk are equal, and the mishna chose to use one of them. Either way, there is no proof from here that the volume of a large date is greater than an egg-bulk.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא ע״ט ב — Yoma 79b:9</span></div>
+    <div class="orig">אֶלָּא מֵהָכָא: עַד כַּמָּה מְזַמְּנִין? עַד כְּזַיִת, דִּבְרֵי רַבִּי מֵאִיר. רַבִּי יְהוּדָה אוֹמֵר: עַד כְּבֵיצָה. בְּמַאי קָא מִיפַּלְגִי — רַבִּי מֵאִיר סָבַר: ״וְאָכַלְתָּ״, זוֹ אֲכִילָה, ״וְשָׂבָעְתָּ״, זוֹ שְׁתִיָּה — וַאֲכִילָה בִּכְזַיִת. וְרַבִּי יְהוּדָה סָבַר: ״וְאָכַלְתָּ וְשָׂבָעְתָּ״, אֲכִילָה שֶׁיֵּשׁ בָּהּ שְׂבִיעָה, וְאֵי זֶה — זֶה כְּבֵיצָה.</div>
+    <div class="trans" data-when="he">אלא ראיה מכאן: עד כמה (שיעור אכילה) מזמנין? ר׳ מאיר — עד כזית; ר׳ יהודה — עד כביצה. במאי פליגי? ר׳ מאיר דורש ״ואכלת״ זו אכילה, ״ושבעת״ זו שתייה — ואכילה בכזית. ר׳ יהודה דורש ״ואכלת ושבעת״ אכילה שיש בה שביעה, וזו כביצה.</div>
+    <div class="trans" data-when="en">Rather, it cannot be proven from here. Proof can be found from here: How much must one eat to obligate those with whom he ate in an invitation [zimmun] for Grace After Meals? An olive-bulk of food suffices to obligate those with whom they ate in a zimmun; these are the words of Rabbi Meir. Rabbi Yehuda says: An egg-bulk is the minimum measure to obligate those with whom they ate in a zimmun. The Gemara clarifies: With regard to what do they disagree? Rabbi Meir holds that the verse “And you shall eat and be satisfied and bless the Lord your God” (Deuteronomy 8:10) should be understood as follows: “And you shall eat”; this is referring to eating. “And be satisfied”; this is referring to drinking. The definition of eating throughout the Torah is consuming an olive-bulk. Rabbi Yehuda holds: “And you shall eat and be satisfied” is referring to eating that causes satisfaction, and what is that? The volume of an egg-bulk. Less than that amount of food is not satisfying.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">יומא ע״ט ב — Yoma 79b:10</span></div>
+    <div class="orig">וְאִי סָלְקָא דַעְתָּךְ כּוֹתֶבֶת הַגַּסָּה שֶׁאָמְרוּ יְתֵירָה מִכְּבֵיצָה, הַשְׁתָּא כְּבֵיצָה שַׂבּוֹעֵי מְשַׂבְּעָא, דַּעְתָּא לָא מִיַּתְּבָא?! אֶלָּא לָאו, שְׁמַע מִינַּהּ: כּוֹתֶבֶת הַגַּסָּה שֶׁאָמְרוּ פָּחוֹת מִכְּבֵיצָה. כְּבֵיצָה — מְשַׂבְּעָא, כְּכוֹתֶבֶת — מִיַּתְּבָא דַּעְתֵּיהּ.</div>
+    <div class="trans" data-when="he">ואם תאמר כותבת גדולה מכביצה — והרי כביצה משׂביעה ממש, וכי ייתכן שלא תיישב את הדעת (ביוה״כ)?! אלא שמע מינה: כותבת הגסה קטנה מכביצה — כביצה משׂביעה, וכותבת רק מיישבת את הדעת.</div>
+    <div class="trans" data-when="en">And if it should enter your mind to say that the volume of the large date that they spoke of is larger than an egg-bulk, the following question can be asked: Now that we have said that the volume of an egg-bulk satisfies, can we say that it does not settle the mind, and thereby remove the affliction of Yom Kippur? Rather, must one not conclude from this that the volume of a large date that they said is less than the size of an egg-bulk? Eating the larger amount of an egg-bulk satisfies a person, but eating the volume of a large date only settles his mind.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">יומא ע״ט ב — Yoma 79b:11</span></div>
+    <div class="orig">תַּנְיָא, רַבִּי אוֹמֵר:</div>
+    <div class="trans" data-when="he">תניא, רבי אומר: (פתיחת ברייתא הנמשכת בעמוד הבא בעניין שיעורי האכילה).</div>
+    <div class="trans" data-when="en">It was taught in a baraita: Rabbi Yehuda HaNasi says:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">יומא פ׳ א — Yoma 80a:1</span></div>
+    <div class="orig">כׇּל הַשִּׁיעוּרִין כּוּלָּן בִּכְזַיִת, חוּץ מִטּוּמְאַת אוֹכָלִין, שֶׁשִּׁינָּה הַכָּתוּב בְּמַשְׁמָעָן, וְשִׁינּוּ חֲכָמִים בְּשִׁיעוּרָן. וּרְאָיָה לַדָּבָר — יוֹם הַכִּפּוּרִים. מַאי שִׁינָּה הַכָּתוּב בְּמַשְׁמָעוֹ — מִ״לֹּא תְעוּנֶּה״, וּמַאי שִׁינּוּ חֲכָמִים בְּשִׁיעוּרֵיהּ — כְּכוֹתֶבֶת.</div>
+    <div class="trans" data-when="he">רבי: כל שיעורי האכילה שבתורה בכזית, חוץ מטומאת אוכלין — ששינה הכתוב בלשונו, ולכן שינו חכמים בשיעורם (כביצה). וראיה לדבר — יוה״כ. במה שינה הכתוב? ב״לא תעונה״ (במקום ״לא תאכל״). ובמה שינו חכמים? בשיעור ״ככותבת״ (במקום כזית).</div>
+    <div class="trans" data-when="en">All the measures in the Torah connected to eating are the volume of an olive-bulk, except for the amount of food that renders objects impure, because the verse changed its expression in this case, and the Sages altered the measure accordingly. The proof of this, that the Sages gave it a different measure because the verse used different language for it, is from Yom Kippur. Also in the case of Yom Kippur the Sages assigned a different measure because the verse used a different phrase. The Gemara asks: How did the Sages learn that the verse changed its expression? They learned from: “Any soul which shall not be afflicted” (Leviticus 23:29). The verse does not state: Any soul that shall eat, but rather: “Any soul which shall not be afflicted.” How did the Sages change its measure? One does not violate the prohibition unless he has eaten the volume of a large date-bulk, as opposed to the usual olive-bulk.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">יומא פ׳ א — Yoma 80a:2</span></div>
+    <div class="orig">וּמַאי רְאָיָה לַדָּבָר יוֹם הַכִּפּוּרִים? דְּאִי מֵהָתָם, הֲוָה אָמֵינָא: אוֹרְחָא דִקְרָא הוּא.</div>
+    <div class="trans" data-when="he">ומדוע הוצרך להביא ראיה מיוה״כ? שאילו רק מטומאת אוכלין, הייתי אומר ״אורחא דקרא״ — כך דרך הכתוב לדבר, ואין ללמוד ממנו הלכה. לכן יוה״כ מלמד שכל שינוי לשון שבכתוב גורר שינוי בהלכה.</div>
+    <div class="trans" data-when="en">The Gemara asks: And what does the baraita mean when it says: A proof for this is from Yom Kippur? Why is the verse pertaining to ritual impurity not sufficient to show that the Sages changed the measure based on the different words in the verse? The Gemara answers: If we learned it only from there, the case of impurity, I would have said that that is the style of the verse, and no halakha can be derived from it. Therefore, the verse pertaining to Yom Kippur teaches that whenever a verse deviates from the usual language, it implies a change in the halakha as well.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
