@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא ע״ה</title>
+<meta name="description" content="מפת הסוגיא של יומא ע״ה: דרשות אגדה על הצער שבלב, קללת הנחש, ׳הדגה אשר נאכל במצרים׳ (דגים או עריות), ומסכת דרשות המָן — שמותיו, ירידתו לפי הזכות, אבנים טובות וְשְׂלָיו עמו, ותעלומת ׳לחם אבירים׳ והעיכול בכ״ח אברים.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="75">
+<meta name="gemara-map:sefaria-ref" content="Yoma 75">
+<meta name="gemara-map:topic-he" content="אגדות המָן והדגה במצרים">
+<meta name="gemara-map:topic-en" content="The manna aggadot and Egypt's fish">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא ע״ה">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 75">
+<meta name="gemara-map:blurb-he" content="רצף דרשות אגדה: הצער שבלב והנחש; ׳הדגה אשר נאכל חינם׳ — דגים או עריות; ומסכת דרשות המָן — שמותיו, ירידתו לפי המעלה, מתנותיו, ותעלומת ׳לחם אבירים׳.">
+<meta name="gemara-map:blurb-en" content="A run of aggadic homilies: worry and the serpent; the ‘fish we ate for nothing’ in Egypt — fish or forbidden unions; and a tapestry of manna teachings — its names, merit-graded fall, gifts, and the riddle of ‘bread of the mighty.’">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא ע״ה</span><span data-when="en">Sugya map — Yoma 75</span></h1>
+    <div class="subtitle"><span data-when="he">יומא ע״ה א — ע״ו א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 75a–76a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> חמש יחידות אגדה רצופות: <b>הצער שבלב</b> — להשׂיחו מדעת או לאחרים; <b>קללת הקב״ה</b> שאינה כקללת בשר ודם (הנחש, כנען, האשה, האדמה); ׳הדגה אשר נאכל במצרים <b>חינם</b>׳ — מחלוקת רב ושמואל אם <b>דגים</b> או <b>עריות</b>, ובירורה מן הכתובים; ומסכת ארוכה של <b>דרשות המָן</b> — שמותיו (גד, לבן), ירידתו לפי המעלה (צדיקים/בינונים/רשעים), מתנות שירדו עמו (אבנים טובות, תכשיטים, שְׂלָיו), ותעלומת ׳לחם <b>אבירים</b>׳ שנבלע בכ״ח אברים, וטעם ירידתו יום־יום.</span>
+    <span data-when="en"><b>Bottom line:</b> Five consecutive aggadic units: <b>worry in the heart</b> — push it out of mind, or tell it to others; <b>God’s curse</b> is unlike a mortal’s (the serpent, Canaan, the woman, the earth all still benefit); the ‘fish we ate in Egypt <b>for nothing</b>’ — Rav and Shmuel dispute whether it means <b>fish</b> or <b>forbidden unions</b>, tested verse by verse; and a long weave of <b>manna teachings</b> — its names (gad, lavan), its merit-graded fall (righteous/average/wicked), the gifts that fell with it (gems, ornaments, quail), and the riddle of ‘bread of the <b>mighty</b>’ absorbed into all 248 limbs, and why it fell day by day.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא ע״ה</span><span data-when="en">Overview — Yoma 75</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · דאגה בלב — להשׂיחה מדעת או לאחרים"]:::statement
+  O2["2 · קללת הקב״ה והדגה במצרים — דגים או עריות"]:::statement
+  O3["3 · ירידת המָן לפי המעלה"]:::statement
+  O4["4 · אבנים, שְׂלָיו ומתנות עם המָן"]:::statement
+  O5["5 · לחם אבירים — מָן וְכ״ח אברים"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Worry in the heart — banish it, or tell it"]:::statement
+  O2["2 · God’s curse and Egypt’s fish — fish or unions"]:::statement
+  O3["3 · The manna fell by merit"]:::statement
+  O4["4 · Gems, quail and gifts with the manna"]:::statement
+  O5["5 · Bread of the mighty — manna and 248 limbs"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">דאגה בלב איש — ישחנה</span><span data-when="en">Worry in the heart — quash it</span>
+      <span class="ref">Yoma 75a:2</span></h2>
+  <div class="lead"><span data-when="he">מחלוקת ר׳ אמי ור׳ אסי בפסוק ״דאגה בלב איש ישחנה״: יסיחהּ מדעתו או יסַפְּרהּ לאחרים.</span><span data-when="en">R. Ami and R. Asi dispute “let him quash worry”: push it out of mind, or tell it to others.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① דאגה בלב איש ישחנה — כיצד?"}:::question
+  S1["① דעה א׳: יַסִּיחֶנָּה מדעתו"]:::statement
+  S2["① דעה ב׳: יְשִׂיחֶנָּה לאחרים"]:::statement
+  Q1 -->|חד אמר| S1
+  Q1 -->|וחד אמר| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① ׳Let him quash worry׳ — how?"}:::question
+  S1["① View 1: push it out of his mind"]:::statement
+  S2["① View 2: tell it to others"]:::statement
+  Q1 -->|one said| S1
+  Q1 -->|one said| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① דְּאָגָה בְלֶב אִישׁ יַשְׁחֶנָּה"}:::question
+  S1["① חַד אָמַר: יַשִּׂחֶנָּה מִדַּעְתּוֹ"]:::statement
+  S2["① וְחַד אָמַר: יְשִׂיחֶנָּה לַאֲחֵרִים"]:::statement
+  Q1 -->|חד אמר| S1
+  Q1 -->|וחד אמר| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ה א — Yoma 75a:2</span></div>
+    <div class="orig">״דְּאָגָה בְלֶב אִישׁ יַשְׁחֶנָּה״, רַבִּי אַמֵּי וְרַבִּי אַסִּי, חַד אָמַר: יַשִּׂחֶנָּה מִדַּעְתּוֹ, וְחַד אָמַר: יְשִׂיחֶנָּה לַאֲחֵרִים.</div>
+    <div class="trans" data-when="he">דרשה על הפסוק במשלי ״דאגה בלב איש ישחנה״. ר׳ אמי ור׳ אסי נחלקו: אחד אומר — ישחנה מלשון השפלה והסרה, יסלק את הדאגה מדעתו; ואחד אומר — ישחנה מלשון שיחה, יספר את דאגתו לאחרים וכך תוקל.</div>
+    <div class="trans" data-when="en">§ The Gemara explains another verse in Proverbs: “If there is care in a man’s heart, let him quash it [yashḥena]” (Proverbs 12:25). Rabbi Ami and Rabbi Asi dispute the verse’s meaning. One said: He should forcefully push it [yasḥena] out of his mind. One who worries should banish his concerns from his thoughts. And one said: It means he should tell [yesiḥena] others his concerns, which will lower his anxiety.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">קללת הקב״ה והדגה במצרים — דגים או עריות</span><span data-when="en">God’s curse and Egypt’s fish — fish or forbidden unions</span>
+      <span class="ref">Yoma 75a:3–15</span></h2>
+  <div class="lead"><span data-when="he">הנחש ועונשו; קללת הקב״ה אינה ככלת בשר ודם; ׳הדגה אשר נאכל במצרים חינם׳ — מחלוקת רב ושמואל אם דגים או עריות, ובירורה; וסיום בדרשות שֵם המָן ובמעשה זיהוי הָעֹמֶר.</span><span data-when="en">The serpent and its curse; God’s curse is unlike a mortal’s; the ‘fish we ate for nothing’ — Rav vs. Shmuel, fish or forbidden unions, tested by verses; closing with the manna’s names and the omer-identification.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① ונחש עפר לחמו — טעם עפר, או דעתו לא מיושבת"]:::statement
+  S2["② ר׳ יוסי: קללת הקב״ה אינה ככלת בשר ודם — הנחש מזונותיו עמו"]:::statement
+  S3["③ קילל כנען, האשה, האדמה — וכולם נהנים"]:::statement
+  S4["④ הדגה אשר נאכל חינם — רב ושמואל: דגים או עריות"]:::statement
+  Q1{"⑤ לעריות, הא כתיב ׳נאכל׳? · לישנא מעליא; ולדגים, מאי ׳חינם׳? מהפקירא"}:::question
+  Q2{"⑥ לעריות, מאי ׳מעין חתום׳? · מהאסורין לא פריצי"}:::question
+  Q3{"⑦ לדגים, מאי ׳בוכה למשפחותיו׳? · הא והא הואי"}:::question
+  S5["⑧ את הקישואים — טעם כל המינין במָן, אך לא חמשת אלו"]:::statement
+  S6["⑨ כזרע גד לבן — עגול כגידא ולבן כמרגלית"]:::statement
+  S7["⑩ גד — דומה לפשתן · להגדה · מגיד לישראל (אֵם הולד)"]:::statement
+  S8["⑪ לבן — שמלבין עוונותיהן של ישראל"]:::statement
+  S9["⑫ ר׳ יוסי: המָן מגיד מה שבחורין — בעבד הנגנב"]:::statement
+  S10["⑬ וכן באיש ואשה — לפי בית מי נמצא העֹמֶר"]:::statement
+  S1 --> S2 --> S3
+  S3 -->|פסוק נוסף| S4
+  S4 -->|בירור| Q1
+  Q1 --> Q2
+  Q2 --> Q3
+  Q3 -->|פסוק נוסף| S5
+  S5 --> S6 --> S7 --> S8
+  S8 -->|המָן מברר| S9
+  S9 --> S10
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① ׳Dust is the serpent׳s food׳ — tastes dust, or restless without it"]:::statement
+  S2["② R. Yosei: God׳s curse is unlike a mortal׳s — serpent׳s food is always with it"]:::statement
+  S3["③ He cursed Canaan, the woman, the earth — all still benefit"]:::statement
+  S4["④ The fish we ate for nothing — Rav and Shmuel: fish or forbidden unions"]:::statement
+  Q1{"⑤ For unions, isn׳t ׳we ate׳ written? · euphemism; for fish, what is ׳for nothing׳? ownerless"}:::question
+  Q2{"⑥ For unions, what is ׳a sealed spring׳? · chaste of forbidden ones"}:::question
+  Q3{"⑦ For fish, what is ׳weeping for families׳? · both happened"}:::question
+  S5["⑧ The cucumbers — manna held every taste, but not these five"]:::statement
+  S6["⑨ White as coriander seed — round like coriander, white as a pearl"]:::statement
+  S7["⑩ Gad — like flax · like a tale · it told Israel (a child׳s paternity)"]:::statement
+  S8["⑪ Lavan — for it whitened Israel׳s sins"]:::statement
+  S9["⑫ R. Yosei: the manna disclosed hidden things — the stolen slave"]:::statement
+  S10["⑬ Likewise man and wife — by whose house held the omer"]:::statement
+  S1 --> S2 --> S3
+  S3 -->|further verse| S4
+  S4 -->|testing| Q1
+  Q1 --> Q2
+  Q2 --> Q3
+  Q3 -->|further verse| S5
+  S5 --> S6 --> S7 --> S8
+  S8 -->|the manna discloses| S9
+  S9 --> S10
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① וְנָחָשׁ עָפָר לַחְמוֹ … טוֹעֵם בָּהֶם טַעַם עָפָר … אֵין דַּעְתּוֹ מְיוּשֶּׁבֶת"]:::statement
+  S2["② אָמַר רַבִּי יוֹסֵי … שֶׁלֹּא כְּמִדַּת הַקָּדוֹשׁ בָּרוּךְ הוּא … קִלֵּל אֶת הַנָּחָשׁ … מְזוֹנוֹתָיו עִמּוֹ"]:::statement
+  S3["③ קִלֵּל אֶת כְּנַעַן … קִלֵּל אֶת הָאִשָּׁה … קִלֵּל אֶת הָאֲדָמָה — הַכֹּל נִיזּוֹנִין הֵימֶנָּה"]:::statement
+  S4["④ זָכַרְנוּ אֶת הַדָּגָה … חִנָּם … רַב וּשְׁמוּאֵל … דָּגִים … עֲרָיוֹת"]:::statement
+  Q1{"⑤ לְמַאן דְּאָמַר עֲרָיוֹת … לִישָּׁנָא מְעַלְּיָא נָקֵט … מַאי חִנָּם? מֵהֶפְקֵירָא"}:::question
+  Q2{"⑥ לְמַאן דְּאָמַר עֲרָיוֹת, מַאי מַעְיָן חָתוּם? מֵהָנָךְ דַּאֲסִירִין לָא פְּרִיצִי"}:::question
+  Q3{"⑦ לְמַאן דְּאָמַר דָּגִים, מַאי בּוֹכֶה לְמִשְׁפְּחוֹתָיו? הָא וְהָא הֲוַאי"}:::question
+  S5["⑧ אֵת הַקִּשּׁוּאִים … טַעַם כׇּל הַמִּינִין טָעֲמוּ בַּמָּן … הַלָּלוּ לֹא טָעֲמוּ"]:::statement
+  S6["⑨ כְּזֶרַע גַּד לָבָן … עָגוֹל כְּגִידָּא וְלָבָן כְּמַרְגָּלִית"]:::statement
+  S7["⑩ גַּד … דּוֹמֶה לְזֶרַע פִּשְׁתָּן … דּוֹמֶה לְהַגָּדָה … שֶׁמַּגִּיד לָהֶם לְיִשְׂרָאֵל"]:::statement
+  S8["⑪ לָבָן — שֶׁמַּלְבִּין עֲוֹנוֹתֵיהֶן שֶׁל יִשְׂרָאֵל"]:::statement
+  S9["⑫ רַבִּי יוֹסֵי … הַמָּן מַגִּיד … מַה שֶּׁבְּחוֹרִין … עַבְדִּי גָּנַבְתָּ"]:::statement
+  S10["⑬ וְכֵן אִישׁ וְאִשָּׁה … אִם נִמְצָא עוֹמְרָהּ בְּבֵית בַּעְלָהּ … בְּבֵית אָבִיהָ"]:::statement
+  S1 --> S2 --> S3
+  S3 -->|פסוק נוסף| S4
+  S4 -->|בירור| Q1
+  Q1 --> Q2
+  Q2 --> Q3
+  Q3 -->|פסוק נוסף| S5
+  S5 --> S6 --> S7 --> S8
+  S8 -->|המָן מברר| S9
+  S9 --> S10
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ה א — Yoma 75a:3</span></div>
+    <div class="orig">״וְנָחָשׁ עָפָר לַחְמוֹ״, רַבִּי אַמֵּי וְרַבִּי אַסִּי, חַד אָמַר: אֲפִילּוּ אוֹכֵל כָּל מַעֲדַנֵּי עוֹלָם — טוֹעֵם בָּהֶם טַעַם עָפָר, וְחַד אָמַר: אֲפִילּוּ אוֹכֵל כׇּל מַעֲדַנֵּי עוֹלָם — אֵין דַּעְתּוֹ מְיוּשֶּׁבֶת עָלָיו עַד שֶׁיֹּאכַל עָפָר.</div>
+    <div class="trans" data-when="he">דרשה על ״ונחש עפר לחמו״. מחלוקת ר׳ אמי ור׳ אסי: אחד אומר — אף שהנחש אוכל כל מעדני עולם, טעם עפר הוא טועם בהם; ואחד אומר — אין דעתו מיושבת עליו עד שיאכל גם עפר.</div>
+    <div class="trans" data-when="en">§ Another verse states: “And dust shall be the serpent’s food” (Isaiah 65:25). Rabbi Ami and Rabbi Asi dispute the verse’s meaning. One said: Even if the serpent eats all the delicacies in the world, they will still taste like dust. And one said: Even if it eats all the delicacies in the world, its mind is unsettled until it also eats some dust.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ה א — Yoma 75a:4</span></div>
+    <div class="orig">תַּנְיָא, אָמַר רַבִּי יוֹסֵי: בּוֹא וּרְאֵה שֶׁלֹּא כְּמִדַּת הַקָּדוֹשׁ בָּרוּךְ הוּא מִדַּת בָּשָׂר וָדָם. מִדַּת בָּשָׂר וָדָם: מַקְנִיט אֶת חֲבֵירוֹ — יוֹרֵד עִמּוֹ לְחַיָּיו. אֲבָל הַקָּדוֹשׁ בָּרוּךְ הוּא אֵינוֹ כֵּן: קִלֵּל אֶת הַנָּחָשׁ, עוֹלֶה לַגָּג — מְזוֹנוֹתָיו עִמּוֹ, יוֹרֵד לְמַטָּה — מְזוֹנוֹתָיו עִמּוֹ.</div>
+    <div class="trans" data-when="he">ברייתא: ר׳ יוסי — מידת הקב״ה אינה כמידת בשר ודם. אדם המקניט את חברו יורד עמו עד לחייו; אך הקב״ה קילל את הנחש, ואף בקללתו מזונותיו (העפר) מצויים לו תמיד — עולה לגג ויורד למטה.</div>
+    <div class="trans" data-when="en">With regard to the same topic, it was taught in a baraita: Rabbi Yosei said: Come and see that the attribute of the Holy One, Blessed be He, is different than the attribute of flesh and blood. The attribute of flesh and blood is that one who seeks to provoke another harasses him in all aspects of his life, but the Holy One, Blessed be He, does not act in this way. He cursed the serpent and what happened? When the serpent goes up to the roof its food is with it, and when it comes down its food is with it. Consequently, the curse that it suffers does not ruin its life but rather benefits it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ה א — Yoma 75a:5</span></div>
+    <div class="orig">קִלֵּל אֶת כְּנַעַן, אוֹכֵל מַה שֶּׁרַבּוֹ אוֹכֵל וְשׁוֹתֶה מַה שֶּׁרַבּוֹ שׁוֹתֶה. קִלֵּל אֶת הָאִשָּׁה — הַכֹּל רָצִין אַחֲרֶיהָ. קִלֵּל אֶת הָאֲדָמָה — הַכֹּל נִיזּוֹנִין הֵימֶנָּה.</div>
+    <div class="trans" data-when="he">המשך: קילל את כנען (להיות עבד) — ובכל זאת אוכל ושותה ממה שרבו אוכל ושותה; קילל את האשה — והכל רצים אחריה לשאתה; קילל את האדמה — והכל ניזונים ממנה. אף בקללתו מיטיב הקב״ה.</div>
+    <div class="trans" data-when="en">Similarly, He cursed Canaan that he should be the servant of servants, but he benefits somewhat from this. He eats what his master eats, and drinks what his master drinks, and does not worry like a free man does. He cursed the woman and everyone pursues her to marry her. He cursed the land after the sin of Adam and Eve, yet everyone is sustained from it. Even when God is angry, He does not punish His creations severely.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ה א — Yoma 75a:6</span></div>
+    <div class="orig">״זָכַרְנוּ אֶת הַדָּגָה אֲשֶׁר נֹאכַל בְּמִצְרַיִם חִנָּם״, רַב וּשְׁמוּאֵל, חַד אָמַר: דָּגִים, וְחַד אָמַר: עֲרָיוֹת. מַאן דְּאָמַר דָּגִים, דִּכְתִיב: ״נֹאכַל״. וּמַאן דְּאָמַר עֲרָיוֹת, דִּכְתִיב: ״חִנָּם״.</div>
+    <div class="trans" data-when="he">דרשה על ״זכרנו את הדגה אשר נאכל במצרים חינם״. רב ושמואל נחלקו: אחד — דגים ממש; ואחד — עריות שהותרו עד מתן תורה. הראיה לדגים: ״נאכל״ (אכילה ממש); הראיה לעריות: ״חינם״ (שאין אוכלים דגים בחינם).</div>
+    <div class="trans" data-when="en">The Gemara cites more verses that pertain to the same issue. Rav and Shmuel disagree with regard to the following verse: “We remember the fish which we ate in Egypt for nothing” (Numbers 11:5). One said: The verse is referring literally to fish. And one said: The verse is referring to incestuous relations that the Torah had not yet forbidden. The people cried once the Torah prohibited certain relatives to them. The Gemara explains: The one who said that the verse is referring to fish bases his explanation on the verse, as it is written “which we ate.” This means what they actually ate. And the one who said that the verse is referring to forbidden sexual relations also bases his explanation on the verse, as it is written “for nothing.” Certainly, the people did not actually eat fish for free.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ה א — Yoma 75a:7</span></div>
+    <div class="orig">וּלְמַאן דְּאָמַר עֲרָיוֹת, הָא כְּתִיב: ״נֹאכַל״! לִישָּׁנָא מְעַלְּיָא נָקֵט, דִּכְתִיב: ״אָכְלָה וּמָחֲתָה פִיהָ וְאָמְרָה לֹא פָעַלְתִּי אָוֶן״. וּלְמַאן דְּאָמַר דָּגִים, מַאי ״חִנָּם״? דַּהֲווֹ מַיְיתִין לְהוּ מֵהֶפְקֵירָא. דְּאָמַר מָר: כְּשֶׁהָיוּ יִשְׂרָאֵל שׁוֹאֲבִין מַיִם, הַקָּדוֹשׁ בָּרוּךְ הוּא מַזְמִין לָהֶם בְּתוֹךְ הַמַּיִם דָּגִים קְטַנִּים בְּכַדֵּיהֶן.</div>
+    <div class="trans" data-when="he">בירור: לסובר עריות, הרי כתוב ״נאכל״? הכתוב נקט לשון נקייה — שהאכילה כינוי לעריות, כמו ״אכלה ומחתה פיה״. ולסובר דגים, מהו ״חינם״? שהיו מביאים אותם מן ההפקר; שהקב״ה הזמין דגים קטנים בכדי המים ששאבו.</div>
+    <div class="trans" data-when="en">The Gemara asks: And according to the one who said that it is referring to forbidden relations, but isn’t it written “which we ate”? The Gemara answers: The Torah employed a euphemistic expression. Eating is used as a euphemism for sexual relations, as it is written: “So is the way of an adulterous woman; she eats, and wipes her mouth, and says I have done no wickedness” (Proverbs 30:20). And according to the one who said it is referring to fish, what is the meaning of the phrase “for nothing”? The people brought the fish from the river, which was ownerless property, since the Egyptians obviously would not have given them free food. The Master said: When the Jews drew water from the river, the Holy One, Blessed be He, prepared little fish for them in the water. They swam into their jugs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ה א — Yoma 75a:8</span></div>
+    <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר דָּגִים, אֲבָל עֲרָיוֹת לָא פְּרִיצִי בְּהוּ — הַיְינוּ דִּכְתִב: ״גַּן נָעוּל אֲחוֹתִי כַלָּה [גּוֹ׳]״. אֶלָּא לְמַאן דְּאָמַר עֲרָיוֹת, מַאי ״מַעְיָן חָתוּם״? מֵהָנָךְ דַּאֲסִירִין לָא פְּרִיצִי בְּהוּ.</div>
+    <div class="trans" data-when="he">בירור נוסף: לסובר דגים — שלא נכשלו בעריות — מתאים הכתוב ״גן נעול… מעין חתום״ שמשבח את צניעות ישראל. אך לסובר עריות, מהו ״מעין חתום״? שאף בעריות לא היו פרוצים באלו שכבר נאסרו להם (משבע מצוות בני נח).</div>
+    <div class="trans" data-when="en">The Gemara comments: Granted, according to the one who said that they cried over actual fish but were not promiscuous in having forbidden relations in Egypt, this is what is written to praise the Jewish people: “A garden enclosed is my sister the bride; a locked fountain, a sealed spring” (Song of Songs 4:12). This figurative language teaches that Jewish women are chaste. However, according to the one who said the Jewish people cried over forbidden sexual relations, what does the phrase “a sealed spring” mean? The Gemara answers: It means that they were not promiscuous with those relatives who were already forbidden to them. In Egypt, the Jewish people observed the laws of forbidden sexual relations that are included in the seven Noahide commandments. In the desert, they cried over the additional prohibitions imposed when the Torah was given.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ה א — Yoma 75a:9</span></div>
+    <div class="orig">בִּשְׁלָמָא לְמַאן דְּאָמַר עֲרָיוֹת, הַיְינוּ דִּכְתִיב: ״וַיִּשְׁמַע מֹשֶׁה אֶת הָעָם בּוֹכֶה לְמִשְׁפְּחוֹתָיו״, עַל עִסְקֵי מִשְׁפְּחוֹתָיו, שֶׁנֶּאֶסְרוּ לָהֶם לִשְׁכַּב אֶצְלָם. אֶלָּא לְמַאן דְּאָמַר דָּגִים, מַאי ״בּוֹכֶה לְמִשְׁפְּחוֹתָיו״? הָא וְהָא הֲוַאי.</div>
+    <div class="trans" data-when="he">בירור נוסף: לסובר עריות — מתאים ״ויבך העם… בוכה למשפחותיו״, על עסקי המשפחות שנאסרו עליהם. אך לסובר דגים, מהו ״בוכה למשפחותיו״? תשובה: הא והא הואי — בכו גם על איסור העריות וגם על הדגים.</div>
+    <div class="trans" data-when="en">The Gemara asks further: Granted, according to the one who said that they cried over the new prohibitions of forbidden sexual relations, this is as it is written: “And Moses heard the people weeping for their families” (Numbers 11:10). They cried with regard to the issue of their families, because now it became prohibited for them to cohabit with them. But according to the one who says that they cried over fish what does “weeping for their families” mean? The Gemara answers: Both this and that happened. They cried about the laws of forbidden sexual relations, and they also cried because they no longer had the fish of Egypt.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ה א — Yoma 75a:10</span></div>
+    <div class="orig">״אֵת הַקִּשּׁוּאִים וְאֵת הָאֲבַטִּיחִים״, רַבִּי אַמֵּי וְרַבִּי אַסִּי, חַד אָמַר: טַעַם כׇּל הַמִּינִין טָעֲמוּ בַּמָּן, טַעַם חֲמֵשֶׁת הַמִּינִין הַלָּלוּ לֹא טָעֲמוּ בּוֹ, וְחַד אָמַר: טַעַם כָּל הַמִּינִין טָעֲמוּ טַעְמָן וּמַמָּשָׁן, וְהַלָּלוּ טַעְמָן וְלֹא מַמָּשָׁן.</div>
+    <div class="trans" data-when="he">דרשה על ״את הקישואים ואת האבטיחים״. מחלוקת ר׳ אמי ור׳ אסי: אחד — טעם כל המינין טעמו במָן, אך לא את טעם חמשת המינין שמנו; ואחד — בכל המינין טעמו גם טעם וגם ממשות, ואילו באלו טעמו טעם בלבד ולא ממשות.</div>
+    <div class="trans" data-when="en">The Gemara returns to the same verse: It states: “We remember…the cucumbers, and the melons, and the leeks, and the onions, and the garlic” (Numbers 11:5). Rabbi Ami and Rabbi Asi debate the verse’s meaning. One said: They tasted the flavor of all types of food in the manna, but they cried because they could not taste the tastes of these five foods that they mentioned. And one said: They tasted the flavor of all types of food, as well as their textures. The sensation was so strong that it seemed to them like they were eating those very foods. However, with the foods they listed, the people tasted only their flavor but not their texture.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ה א — Yoma 75a:11</span></div>
+    <div class="orig">״(וְהַמָּן) כְּזֶרַע גַּד לָבָן (וְטַעְמוֹ)״. אָמַר רַבִּי אַסִּי: עָגוֹל כְּגִידָּא וְלָבָן כְּמַרְגָּלִית. (תַּנְיָא נָמֵי הָכִי:) גַּד — שֶׁדּוֹמֶה לְזֶרַע פִּשְׁתָּן בַּגִּבְעוֹלִין.</div>
+    <div class="trans" data-when="he">דרשה על ״והמן כזרע גד לבן״. ר׳ אסי: המָן היה עגול כזרע גד (כוסבר) ולבן כמרגלית. וכן בברייתא: ״גד״ — על שם שדומה לזרע פשתן שבגבעולים, שאגוד בחבילות.</div>
+    <div class="trans" data-when="en">With regard to the manna, the Torah further states: “And it was white [lavan] like coriander seed; and its flavor was like wafers made of honey” (Exodus 16:31). The Gemara questions this, since coriander is brown, not white. Rabbi Asi said: The manna was round like coriander seed but white like a pearl. This was also taught in a baraita: Coriander [gad] is so named because it is similar to flax seeds on their stalks, which are bound [agud] in a bundle.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ה א — Yoma 75a:12</span></div>
+    <div class="orig">אֲחֵרִים אוֹמְרִים: גַּד — שֶׁדּוֹמֶה לְהַגָּדָה שֶׁמּוֹשֶׁכֶת לִבּוֹ שֶׁל אָדָם כַּמַּיִם. תַּנְיָא אִידַּךְ: גַּד — שֶׁמַּגִּיד לָהֶם לְיִשְׂרָאֵל אִי בֶּן תִּשְׁעָה לָרִאשׁוֹן וְאִי בֶּן שִׁבְעָה לָאַחֲרוֹן.</div>
+    <div class="trans" data-when="he">דרשות נוספות על ״גד״: אחרים — שדומה להגדה המושכת את לב האדם כמים. ברייתא אחרת — שהמָן ״מגיד״ לישראל ספקות, כגון אם הולד בן תשעה לבעל הראשון או בן שבעה לאחרון (לפי כמות המָן שירדה).</div>
+    <div class="trans" data-when="en">Others say: It was called coriander [gad] because it is similar to a tale [haggada], which draws a person’s heart toward it, just like water, which is essential for life, draws one. It was taught in another baraita: Why is it called gad? Because it told [maggid] the Jewish people the answer to issues of uncertainty, such as the paternity of a baby. If a woman remarries within two months after her divorce or the death of her husband and gives birth seven months after her remarriage, it is unclear if the baby gestated for seven months and is the son of the second husband or for nine months and is the son of the first husband. The manna would tell them if the baby was born after nine months and belongs to the first husband, or if the baby was born after seven months and belongs to the second husband. Since the manna was collected by each family based on the number of its biological members, the manna established the baby’s paternity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ה א — Yoma 75a:13</span></div>
+    <div class="orig">״לָבָן״ — שֶׁמַּלְבִּין עֲוֹנוֹתֵיהֶן שֶׁל יִשְׂרָאֵל.</div>
+    <div class="trans" data-when="he">דרשה על ״לבן״: שהמָן מלבין (מכפר) את עוונותיהם של ישראל — שמתוך פחד שמא לא ירד אם יחטאו, היו פושפשים במעשיהם ושבים בתשובה.</div>
+    <div class="trans" data-when="en">The manna was called white because it whitened Israel’s sins. The people feared that if they sinned the manna would not continue to fall. Consequently, they devoted themselves to introspection and repentance.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ה א — Yoma 75a:14</span></div>
+    <div class="orig">תַּנְיָא, רַבִּי יוֹסֵי אוֹמֵר: כְּשֵׁם שֶׁהַנָּבִיא הָיָה מַגִּיד לָהֶם לְיִשְׂרָאֵל מַה שֶּׁבְּחוֹרִין וּמַה שֶּׁבִּסְדָקִין, כָּךְ הַמָּן מַגִּיד לָהֶם לְיִשְׂרָאֵל מַה שֶּׁבְּחוֹרִין וּמַה שֶּׁבִּסְדָקִין. כֵּיצַד? שְׁנַיִם שֶׁבָּאוּ לִפְנֵי מֹשֶׁה לְדִין, זֶה אוֹמֵר: עַבְדִּי גָּנַבְתָּ, וְזֶה אוֹמֵר: אַתָּה מְכַרְתּוֹ לִי. אָמַר לָהֶם מֹשֶׁה: לַבּוֹקֶר מִשְׁפָּט. לְמָחָר, אִם נִמְצָא עוֹמְרוֹ בְּבֵית רַבּוֹ רִאשׁוֹן — בְּיָדוּעַ שֶׁזֶּה גְּנָבוֹ. אִם נִמְצָא עוֹמְרוֹ בְּבֵית רַבּוֹ שֵׁנִי — בְּיָדוּעַ שֶׁזֶּה מְכָרוֹ לוֹ.</div>
+    <div class="trans" data-when="he">ברייתא: ר׳ יוסי — כשם שהנביא מגלה לישראל את הנסתר, כך המָן בירר ספקות דין. כיצד? שניים שבאו למשפט על עבד — זה טוען ״גנבת״ וזה ״מכרתו לי״; משה דחה ל״לבוקר משפט״, ולמחר נבדק בבית מי נמצא עומר המָן של העבד, ובכך הוכרע.</div>
+    <div class="trans" data-when="en">Similarly, it was taught in a baraita: Rabbi Yosei says: Just like the prophet would tell the Jewish people what was in the holes and what was in the cracks of their souls, highlighting the sins of the people, so too, the manna clarified for Israel what was in the holes and what was in the cracks. How so? If two people came before Moses for a judgment, one saying: You stole my slave, and the other one saying: I did not steal him, rather you sold him to me, Moses would say to them: In the morning there will be a judgment. How was the matter resolved? If on the following day the slave found his omer of manna in his first master’s house, it would be clear that he was stolen, because the manna still came to the first owner. And if on the following day he found his omer of manna in his second master’s house, it would be clear that he had been sold.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא ע״ה א — Yoma 75a:15</span></div>
+    <div class="orig">וְכֵן אִישׁ וְאִשָּׁה שֶׁבָּאוּ לִפְנֵי מֹשֶׁה לַדִּין, זֶה אוֹמֵר הִיא סָרְחָה עָלַי, וְהִיא אוֹמֶרֶת הוּא סָרַח עָלַי. אָמַר לָהֶם מֹשֶׁה: לַבֹּקֶר מִשְׁפָּט. לְמָחָר, אִם נִמְצָא עוֹמְרָהּ בְּבֵית בַּעְלָהּ — בְּיָדוּעַ שֶׁהִיא סָרְחָה עָלָיו, נִמְצָא עוֹמְרָהּ בְּבֵית אָבִיהָ — בְּיָדוּעַ שֶׁהוּא סָרַח עָלֶיהָ.</div>
+    <div class="trans" data-when="he">וכן איש ואשה שבאו לדין — הוא טוען שהיא סרחה עליו (ופטור מכתובה) והיא טוענת שהוא סרח עליה; משה דחה ל״לבוקר משפט״, ולמחר נבדק: נמצא עומרה בבית בעלה — היא סרחה; בבית אביה — הוא סרח עליה.</div>
+    <div class="trans" data-when="en">Similarly, if a man and a woman came to Moses for a judgment, he saying: She sinned against me, and therefore I may divorce her and am not obligated to pay her divorce settlement, and she saying: He sinned against me and therefore I am entitled to the full settlement from the marriage contract, Moses would say to them: In the morning there will be a judgment. The following day, if her omer of manna was found in her husband’s house, it would be clear that she sinned against him. The fact that her nourishment was given to his household signifies the fact that he has respected her appropriately and is worthy of nourishing her. If her omer of manna was found in her father’s house, it would be clear that he sinned against her. Her nourishment has not been given to his household, signifying that he has been disrespectful to her and is not worthy of nourishing her.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">ירידת המָן לפי המעלה</span><span data-when="en">The manna fell according to merit</span>
+      <span class="ref">Yoma 75a:16–18</span></h2>
+  <div class="lead"><span data-when="he">יישוב סתירות הכתובים על אופן ירידת המָן וצורתו — צדיקים, בינונים, רשעים; ומה שירד עמו (תכשיטים, ציקי קדירה).</span><span data-when="en">Reconciling the verses on how the manna fell and its form — for the righteous, average, and wicked; and what fell with it (ornaments, spices).</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ירד / יצאו / שטו — הא כיצד?"}:::question
+  A1["① צדיקים — על פתח; בינונים — יצאו; רשעים — שטו"]:::answer
+  Q2{"② לחם / עוגות / טחנו — הא כיצד?"}:::question
+  A2["② צדיקים לחם, בינונים עוגות, רשעים טחנו"]:::answer
+  S1["③ או דכו במדוכה — ירדו תכשיטי נשים וציקי קדירה"]:::statement
+  Q1 -->|תירוץ| A1
+  A1 --> Q2
+  Q2 -->|תירוץ| A2
+  A2 --> S1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ׳fell׳ / ׳went out׳ / ׳roamed׳ — how reconciled?"}:::question
+  A1["① Righteous — at the door; average — went out; wicked — roamed"]:::answer
+  Q2{"② ׳bread׳ / ׳cakes׳ / ׳ground׳ — how reconciled?"}:::question
+  A2["② Righteous bread, average cakes, wicked ground it"]:::answer
+  S1["③ ׳beat in a mortar׳ — ornaments and cooking-spices fell too"]:::statement
+  Q1 -->|resolution| A1
+  A1 --> Q2
+  Q2 -->|resolution| A2
+  A2 --> S1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① וּבְרֶדֶת הַטַּל … וְיָצָא הָעָם … שָׁטוּ הָעָם … הָא כֵּיצַד?"}:::question
+  A1["① צַדִּיקִים, יָרַד עַל פֶּתַח … בֵּינוֹנִים, יָצְאוּ … רְשָׁעִים, שָׁטוּ וְלָקְטוּ"]:::answer
+  Q2{"② כְּתִיב לֶחֶם … עוּגוֹת … וְטָחֲנוּ, הָא כֵּיצַד?"}:::question
+  A2["② צַדִּיקִים לֶחֶם, בֵּינוֹנִים עוּגוֹת, רְשָׁעִים טָחֲנוּ בָּרֵיחַיִם"]:::answer
+  S1["③ אוֹ דָכוּ בַּמְּדוֹכָה … תַּכְשִׁיטֵי נָשִׁים … צִיקֵי קְדֵירָה"]:::statement
+  Q1 -->|תירוץ| A1
+  A1 --> Q2
+  Q2 -->|תירוץ| A2
+  A2 --> S1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ה א — Yoma 75a:16</span></div>
+    <div class="orig">כְּתִיב: ״וּבְרֶדֶת הַטַּל עַל הַמַּחֲנֶה לָיְלָה [יֵרֵד הַמָּן עָלָיו]״, וּכְתִיב: ״וְיָצָא הָעָם וְלָקְטוּ״, וּכְתִיב: ״שָׁטוּ הָעָם וְלָקְטוּ״, הָא כֵּיצַד? צַדִּיקִים, יָרַד עַל פֶּתַח בָּתֵּיהֶם. בֵּינוֹנִים, יָצְאוּ וְלָקְטוּ. רְשָׁעִים, שָׁטוּ וְלָקְטוּ.</div>
+    <div class="trans" data-when="he">יישוב שלושה כתובים על ירידת המָן: ״ובְרֶדֶת הטל… ירד המן״, ״ויצא העם ולקטו״, ״שטו העם ולקטו״. הא כיצד? לצדיקים ירד על פתח בתיהם; בינונים יצאו ולקטו; רשעים נצרכו לשוטט ולקט.</div>
+    <div class="trans" data-when="en">§ The Gemara continues to discuss the manna: It is written: “And when the dew fell upon the camp in the night, the manna fell upon it” (Numbers 11:9). And it is written: “And the people shall go out and gather a day’s portion every day” (Exodus 16:4). And it is written: “The people went about and gathered it” (Numbers 11:8). How can these texts be reconciled? For the righteous, the manna fell at the opening of their homes. They expended no effort at all. The average people went out of the camp and gathered what fell there. The wicked had to go about farther to gather.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ה א — Yoma 75a:17</span></div>
+    <div class="orig">כְּתִיב ״לֶחֶם״, וּכְתִיב ״עוּגוֹת״, וּכְתִיב ״וְטָחֲנוּ״, הָא כֵּיצַד? צַדִּיקִים — לֶחֶם, בֵּינוֹנִים — עוּגוֹת, רְשָׁעִים — טָחֲנוּ בָּרֵיחַיִם.</div>
+    <div class="trans" data-when="he">יישוב שלושה כתובים על צורת המָן: ״לחם״, ״עוגות״, ״וְטחנו״. הא כיצד? לצדיקים ירד כלחם אפוי; לבינונים כעוגות; ולרשעים ירד גולמי והוצרכו לטחנו ברחיים.</div>
+    <div class="trans" data-when="en">With regard to the manna, it is written “bread” (Exodus 16:4); and it is written “cakes” (Numbers 11:8); and it is also written “and ground it in mills,” (Numbers 11:8), implying that it was neither bread nor a cake. How can these texts be reconciled? For the righteous, it fell as baked bread; for average people, it fell as unbaked cakes; for the wicked it came in an unprocessed form and consequently they ground it in a mill.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ה א — Yoma 75a:18</span></div>
+    <div class="orig">״אוֹ דָכוּ בַּמְּדוֹכָה״, אָמַר רַבִּי יְהוּדָה אָמַר רַב, וְאִיתֵּימָא רַבִּי חָמָא בְּרַבִּי חֲנִינָא: מְלַמֵּד שֶׁיָּרַד לָהֶם לְיִשְׂרָאֵל עִם הַמָּן תַּכְשִׁיטֵי נָשִׁים, דָּבָר שֶׁנִּידּוֹךְ בִּמְדוֹכָה. ״וּבִשְּׁלוּ בַּפָּרוּר״, אָמַר רַבִּי חָמָא: מְלַמֵּד שֶׁיָּרַד לָהֶם לְיִשְׂרָאֵל עִם הַמָּן צִיקֵי קְדֵירָה.</div>
+    <div class="trans" data-when="he">דרשה על ״או דכו במדוכה״: ר׳ יהודה בשם רב (ויש אומרים ר׳ חמא ב״ר חנינא) — שירד עם המָן תכשיטי נשים, דבר שנידוך במדוכה. ועל ״ובשלו בפרור״: ר׳ חמא — שירדו עם המָן ציקי קדירה (תבלינים לבישול).</div>
+    <div class="trans" data-when="en">The verse states: “Or beat it in a mortar” (Numbers 11:8). Rabbi Yehuda said that Rav said, and some say it was Rabbi Ḥama, son of Rabbi Ḥanina: This teaches that women’s perfumes fell for the Jewish people with the manna because they are an item that is beaten in a mortar. The verse continues: “And cooked it in a pot” (Numbers 11:8). Rabbi Ḥama said: This teaches that cooking spices fell for the Jewish people with the manna.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">אבנים טובות, בשר ושְׂלָיו עם המָן</span><span data-when="en">Gems, meat and quail with the manna</span>
+      <span class="ref">Yoma 75a:19–75b:8</span></h2>
+  <div class="lead"><span data-when="he">אבנים טובות שירדו עם המָן; טעמיו המתחלפים; הבשר שנשאל שלא כהוגן; הסְלָיו, סוגיו ומעשי האמוראים.</span><span data-when="en">Gems that fell with the manna; its shifting flavors; meat asked for improperly; the quail, its kinds, and amoraic tales.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① בבוקר בבוקר — אבנים טובות ירדו עם המָן; נשיאים — עננים"]:::statement
+  S2["② כטעם לשד השמן — טעמים מתחלפים, או לשון שֵד"]:::statement
+  S3["③ בשר נשאל שלא כהוגן — ניתן שלא כהוגן; לחם כהוגן"]:::statement
+  Q1{"④ והאמר אביי: יאכל סעודתו ביום? · כעין יממא קאמרינן"}:::question
+  Q2{"⑤ הבשר בין שיניהם / עד חודש ימים — הא כיצד?"}:::question
+  A1["⑤ בינונים מתו מיד, רשעים מצטערים עד חודש"]:::answer
+  S4["⑥ וישטחו — אל תקרי, שחיטה / שטוח; ומחלוקת רבי"]:::statement
+  S5["⑦ לחם/שמן/דבש — לנערים, לזקנים, לתינוקות"]:::statement
+  S6["⑧ שָלֵיו / סְלָיו — צדיקים בשלוה, רשעים כסילוין; ד׳ מיני סְלָיו"]:::statement
+  S7["⑨ מעשי האמוראים בסְלָיו — נח נפשיה דרב חסדא"]:::statement
+  S1 --> S2 --> S3
+  S3 -.->|קושיא| Q1
+  Q1 --> Q2
+  Q2 -->|תירוץ| A1
+  A1 --> S4
+  S4 --> S5 --> S6 --> S7
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ׳every morning׳ — gems fell with the manna; nesi׳im = clouds"]:::statement
+  S2["② ׳taste of a cake of oil׳ — shifting flavors, or ׳demon׳"]:::statement
+  S3["③ Meat asked improperly — given improperly; bread properly"]:::statement
+  Q1{"④ But Abaye: eat one׳s meal by day? · ׳like day׳ is meant"}:::question
+  Q2{"⑤ ׳meat between their teeth׳ / ׳a month׳ — how reconciled?"}:::question
+  A1["⑤ Average died at once, the wicked suffered a month"]:::answer
+  S4["⑥ vayishteḥu — read as ׳slaughter׳ / ׳spread׳; Rabbi disputes"]:::statement
+  S5["⑦ bread/oil/honey — for youth, elders, children"]:::statement
+  S6["⑧ shalev / slav — righteous in peace, wicked as thorns; four kinds"]:::statement
+  S7["⑨ Amoraic tales of quail — Rav Ḥisda has died"]:::statement
+  S1 --> S2 --> S3
+  S3 -.->|objection| Q1
+  Q1 --> Q2
+  Q2 -->|resolution| A1
+  A1 --> S4
+  S4 --> S5 --> S6 --> S7
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① בַּבֹּקֶר בַּבֹּקֶר … אֲבָנִים טוֹבוֹת וּמַרְגָּלִיּוֹת עִם הַמָּן … נְשִׂיאִים מַמָּשׁ"]:::statement
+  S2["② כְּטַעַם לְשַׁד הַשָּׁמֶן … מוֹצְאִין בּוֹ כַּמָּה טְעָמִים … לְשֵׁד מַמָּשׁ"]:::statement
+  S3["③ בָּשָׂר שֶׁשָּׁאֲלוּ שֶׁלֹּא כַּהוֹגֶן … לֶחֶם שֶׁשָּׁאֲלוּ כַּהוֹגֶן — נִיתַּן לָהֶם כַּהוֹגֶן"]:::statement
+  Q1{"④ וְהָאָמַר אַבָּיֵי … לָא לֵאכְלַיהּ אֶלָּא בִּימָמָא! כְּעֵין יְמָמָא קָא אָמְרִינַן"}:::question
+  Q2{"⑤ הַבָּשָׂר עוֹדֶנּוּ בֵּין שִׁינֵּיהֶם … עַד חֹדֶשׁ יָמִים, הָא כֵּיצַד?"}:::question
+  A1["⑤ בֵּינוֹנִים, לְאַלְתַּר מֵתוּ. רְשָׁעִים, מִצְטַעֲרִין … עַד חֹדֶשׁ יָמִים"]:::answer
+  S4["⑥ וַיִּשְׁטְחוּ … אֶלָּא וַיִּשְׁחֲטוּ … שָׁחוּט … מַשְׁטִיחִין מַשְׁטִיחִין"]:::statement
+  S5["⑦ לֶחֶם … שֶׁמֶן … דְּבַשׁ … לִנְעָרִים … לִזְקֵנִים … לְתִינוֹקוֹת"]:::statement
+  S6["⑧ שָׁלֵיו וְקָרֵינַן סְלָיו … אַרְבָּעָה מִינֵי סְלָיו הֵן"]:::statement
+  S7["⑨ רַב יְהוּדָה … רָבָא … נָח נַפְשֵׁיהּ דְּרַב חִסְדָּא … אָכֵיל תַּלְמִידָא"]:::statement
+  S1 --> S2 --> S3
+  S3 -.->|קושיא| Q1
+  Q1 --> Q2
+  Q2 -->|תירוץ| A1
+  A1 --> S4
+  S4 --> S5 --> S6 --> S7
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ה א — Yoma 75a:19</span></div>
+    <div class="orig">״וְהֵם הֵבִיאוּ אֵלָיו עוֹד נְדָבָה בַּבֹּקֶר בַּבֹּקֶר״, מַאי ״בַּבֹּקֶר בַּבֹּקֶר״? אָמַר רַבִּי שְׁמוּאֵל בַּר נַחְמָנִי אָמַר רַבִּי יוֹנָתָן: מִדָּבָר שֶׁיָּרַד לָהֶם ״בַּבֹּקֶר בַּבֹּקֶר״. מְלַמֵּד שֶׁיָּרְדוּ לָהֶם לְיִשְׂרָאֵל אֲבָנִים טוֹבוֹת וּמַרְגָּלִיּוֹת עִם הַמָּן. ״וְהַנְּשִׂיאִים הֵבִיאוּ אֵת אַבְנֵי הַשֹּׁהַם״, תָּנָא: נְשִׂיאִים מַמָּשׁ. וְכֵן הוּא אוֹמֵר: ״נְשִׂיאִים וְרוּחַ וְגֶשֶׁם אָיִן״.</div>
+    <div class="trans" data-when="he">דרשה על נדבת המשכן ״והם הביאו… בבוקר בבוקר״: ר׳ שמואל בר נחמני בשם ר׳ יונתן — מן הדבר שירד להם בבוקר בבוקר (המָן). מלמד שירדו לישראל אבנים טובות ומרגליות עם המָן. ״והנשיאים הביאו את אבני השהם״ — תנא: ״נשיאים״ ממש, היינו עננים, שהביאון; וכן ״נשיאים ורוח וגשם אין״.</div>
+    <div class="trans" data-when="en">§ With regard to donations for the Tabernacle, the verse states: “And they brought yet to him free-will offerings every morning” (Exodus 36:3). The Gemara asks: What is the meaning of “every morning”? Rabbi Shmuel bar Naḥmani said that Rabbi Yonatan said: They brought donations from that which fell every morning with the manna. This teaches that pearls and precious stones fell for the Israelites with the manna. It states: “And the rulers [nesi’im] brought the onyx [shoham] stones” (Exodus 35:27). A tanna taught that the word nesi’im means actual clouds brought them. As it states: “As clouds [nesi’im] and wind without rain so is he that boasts himself of a false gift” (Proverbs 25:14). We learn from this that the precious stones fell from the clouds with the manna.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ה א — Yoma 75a:20</span></div>
+    <div class="orig">״וְהָיָה טַעְמוֹ כְּטַעַם לְשַׁד הַשָּׁמֶן״. אָמַר רַבִּי אֲבָהוּ: מָה שַׁד זֶה תִּינוֹק טוֹעֵם בָּהּ כַּמָּה טְעָמִים, אַף הַמָּן, כׇּל זְמַן שֶׁיִּשְׂרָאֵל אוֹכְלִין אוֹתוֹ מוֹצְאִין בּוֹ כַּמָּה טְעָמִים. אִיכָּא דְּאָמְרִי: לְשֵׁד מַמָּשׁ. מָה שֵׁד זֶה מִתְהַפֵּךְ לְכַמָּה גְּווֹנִין — אַף הַמָּן מִתְהַפֵּךְ לְכַמָּה טְעָמִים.</div>
+    <div class="trans" data-when="he">דרשה על ״והיה טעמו כטעם לְשַד השמן״. ר׳ אבהו: כשם שתינוק טועם בשַד (חזה) כמה טעמים לפי מאכל אמו, כך המָן — כל זמן שישראל אוכלים אותו מוצאים בו טעמים רבים. ויש אומרים ״לְשֵד״ ממש (שֵד): כשם ששֵד מתהפך לכמה גוונים, כך המָן לכמה טעמים.</div>
+    <div class="trans" data-when="en">It was also said with regard to the manna: “And its taste was as the taste of a cake [shad] baked with oil [hashamen]” (Numbers 11:8). Rabbi Abbahu said: Shad means breast. Just as a baby tastes different flavors from the breast, since the taste of the milk changes somewhat depending on what foods his mother eats, so too with the manna, every time that the Jewish people ate the manna, they found in it many different flavors, based on their preferences. There are those who say that the word is written as shed and means literally a demon. How so? Just as a demon changes into different forms and colors, so too, the manna changed into different flavors.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ה א — Yoma 75a:21</span></div>
+    <div class="orig">״וַיֹּאמֶר מֹשֶׁה בְּתֵת ה׳ לָכֶם בָּעֶרֶב בָּשָׂר לֶאֱכוֹל וְלֶחֶם בַּבֹּקֶר לִשְׂבּוֹעַ״, תָּנָא מִשְּׁמֵיהּ דְּרַבִּי יְהוֹשֻׁעַ בֶּן קָרְחָה: בָּשָׂר שֶׁשָּׁאֲלוּ שֶׁלֹּא כַּהוֹגֶן — נִיתַּן לָהֶם שֶׁלֹּא כַּהוֹגֶן,</div>
+    <div class="trans" data-when="he">דרשה על ״בתת ה׳ לכם בערב בשר… ולחם בבוקר״. תנא בשם ר׳ יהושע בן קרחה: בשר שנשאל שלא כהוגן (שהרי היה להם המָן) — ניתן להם בערב, שלא כהוגן.</div>
+    <div class="trans" data-when="en">The verse states: “And Moses said: This shall be, when the Lord will give you in the evening meat to eat, and in the morning bread to the full” (Exodus 16:8). A tanna taught in the name of Rabbi Yehoshua ben Korḥa: The meat that the Jewish people asked for inappropriately, since they had the manna and did not need meat, was given to them inappropriately, in a way that was unpleasant; they were punished afterward (Rabbeinu Elyakim).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ה ב — Yoma 75b:1</span></div>
+    <div class="orig">לֶחֶם שֶׁשָּׁאֲלוּ כַּהוֹגֶן — נִיתַּן לָהֶם כַּהוֹגֶן. מִכָּאן לִמְּדָה תּוֹרָה דֶּרֶךְ אֶרֶץ שֶׁלֹּא יֹאכַל אָדָם בָּשָׂר אֶלָּא בַּלַּיְלָה. וְהָאָמַר אַבָּיֵי: הַאי מַאן דְּאִית לֵיהּ סְעוֹדְתָּא — לָא לֵאכְלַיהּ אֶלָּא בִּימָמָא! כְּעֵין יְמָמָא קָא אָמְרִינַן. אָמַר רַב אַחָא בַּר יַעֲקֹב: בַּתְּחִלָּה הָיוּ יִשְׂרָאֵל דּוֹמִין כְּתַרְנְגוֹלִים שֶׁמְּנַקְּרִין בָּאַשְׁפָּה, עַד שֶׁבָּא מֹשֶׁה וְקָבַע לָהֶם זְמַן סְעוּדָה.</div>
+    <div class="trans" data-when="he">לחם שנשאל כהוגן — ניתן להם כהוגן, בבוקר. מכאן למדה תורה דרך ארץ שלא יאכל אדם בשר אלא בלילה. קושיא: והרי אמר אביי שאדם יאכל סעודתו ביום? תירוץ: ״כעין יממא״ — כל שיכול לראות מאכלו. ר׳ אחא בר יעקב: בתחילה היו ישראל כתרנגולים המנקרים באשפה, עד שבא משה וקבע להם זמן סעודה.</div>
+    <div class="trans" data-when="en">However, bread, which is essential, they asked for appropriately. Therefore, it was given to them appropriately, in the morning, when there was time to prepare it. The Gemara comments: From here, the Torah teaches etiquette, that it is proper to eat meat only at night, as Moses said to the children of Israel: “This shall be, when the Lord will give you in the evening meat to eat” (Exodus 16:8). The Gemara asks: But didn’t Abaye say that someone who has a meal should eat it only in the day? The Gemara answers: We mean to say: Like day. It is not necessary to eat the food in the daytime, as long as one can see what he eats. Rabbi Aḥa bar Ya’akov said: At the beginning, the Jewish people were like chickens pecking at the garbage; any time there was food they grabbed it and ate it, until Moses came and set specific times to eat, as the verse implies. He set mealtimes for them in the morning and in the evening.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ה ב — Yoma 75b:2</span></div>
+    <div class="orig">״הַבָּשָׂר עוֹדֶנּוּ בֵּין שִׁינֵּיהֶם״, וּכְתִיב: ״עַד חֹדֶשׁ יָמִים״, הָא כֵּיצַד? בֵּינוֹנִים, לְאַלְתַּר מֵתוּ. רְשָׁעִים, מִצְטַעֲרִין וְהוֹלְכִין עַד חֹדֶשׁ יָמִים.</div>
+    <div class="trans" data-when="he">יישוב סתירת הכתובים על מות הנענשים בְּשְׂלָיו: ״הבשר עודנו בין שיניהם״ (מתו מיד) מול ״עד חודש ימים״. הא כיצד? הבינונים מתו לאלתר, והרשעים מצטערים והולכים עד חודש ימים.</div>
+    <div class="trans" data-when="en">It was stated with regard to the quail: “While the meat was yet between their teeth, before it was chewed, the anger of the Lord was kindled against the people” (Numbers 11:33), which means that they died immediately. However, it also states: “You shall not eat it for only one day…but for an entire month until it comes out of your nostrils and becomes loathsome to you” (Numbers 11:19–20). How can these texts be reconciled? The average people died immediately, but the wicked continued to suffer in pain for a month and then died.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ה ב — Yoma 75b:3</span></div>
+    <div class="orig">״וַיִּשְׁטְחוּ״, אָמַר רֵישׁ לָקִישׁ: אַל תִּקְרֵי ״וַיִּשְׁטְחוּ״, אֶלָּא ״וַיִּשְׁחֲטוּ״ — מְלַמֵּד שֶׁנִּתְחַיְּיבוּ שׂוֹנְאֵיהֶן שֶׁל יִשְׂרָאֵל שְׁחִיטָה. ״שָׁטוֹחַ״, תָּנָא מִשְּׁמֵיהּ דְּרַבִּי יְהוֹשֻׁעַ בֶּן קָרְחָה: אַל תִּיקְרֵי ״שָׁטוֹחַ״, אֶלָּא ״שָׁחוּט״, מְלַמֵּד שֶׁיָּרַד לָהֶם לְיִשְׂרָאֵל עִם הַמָּן דָּבָר שֶׁטָּעוּן שְׁחִיטָה. אָמַר רַבִּי: וְכִי מִכָּאן אַתָּה לָמֵד? וַהֲלֹא כְּבָר נֶאֱמַר: ״וַיַּמְטֵר עֲלֵיהֶם כֶּעָפָר שְׁאֵר וּכְחוֹל (הַיָּם) עוֹף כָּנָף״.</div>
+    <div class="trans" data-when="he">דרשות על ״וישטחו… שטוח״. ריש לקיש: אל תקרי ״וישטחו״ אלא ״וישחטו״ — שנתחייבו ישראל שחיטה (עונש). תנא בשם ר׳ יהושע בן קרחה: אל תקרי ״שטוח״ אלא ״שחוט״ — שירד עם המָן דבר הטעון שחיטה (עוף). רבי חולק: וכי מכאן לומדים? והרי כבר נאמר ״וימטר עליהם… עוף כנף״.</div>
+    <div class="trans" data-when="en">The verse states: “And they spread them [vayishteḥu] out for themselves round about the camp” (Numbers 11:32). Reish Lakish said: Do not read it as vayishteḥu. Rather, read it as vayishḥatu. This teaches that the enemies of the Jewish people, a euphemism for the Jewish people themselves, were liable to receive the punishment of slaughter due to their demand. The verse states: “Spread out [shato’aḥ]” (Numbers 11:32). A tanna taught in the name of Rabbi Yehoshua ben Korḥa: Do not read it as shato’aḥ but as shaḥot. This teaches that other food fell for the Jewish people along with the manna. The food was something that requires ritual slaughtering [sheḥita], referring to birds. Rabbi Yehuda HaNasi said: And do you learn this from here? Do we need to alter the word for this purpose? Isn’t it already stated explicitly: “And he rained meat upon them like dust, and winged birds like the sand of the seas” (Psalms 78:27)?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ה ב — Yoma 75b:4</span></div>
+    <div class="orig">וְתַנְיָא, רַבִּי אוֹמֵר: ״וְזָבַחְתָּ כַּאֲשֶׁר צִוִּיתִיךְ״, מְלַמֵּד שֶׁנִּצְטַוָּה מֹשֶׁה עַל הַוֶּשֶׁט וְעַל הַקָּנֶה, עַל רוֹב אֶחָד בָּעוֹף, וְעַל רוֹב שְׁנַיִם בַּבְּהֵמָה. אֶלָּא מָה תַּלְמוּד לוֹמַר ״שָׁטוֹחַ״ — מְלַמֵּד שֶׁיָּרַד לָהֶם מַשְׁטִיחִין מַשְׁטִיחִין.</div>
+    <div class="trans" data-when="he">ברייתא: רבי — ״וזבחת כאשר צויתיך״ מלמד שנצטווה משה על הלכות שחיטה: על הוושט והקנה, רוב אחד בעוף ורוב שניים בבהמה. ואם כן, מה בא ללמד ״שטוח״? שירד המָן משטיחין משטיחין (בשורות מסודרות).</div>
+    <div class="trans" data-when="en">And it was taught in a related baraita: Rabbi Yehuda HaNasi says: The verse states: “Then you shall slaughter of your herd and of your flock which the Lord has given you, as I have commanded you” (Deuteronomy 12:21). This teaches that Moses was commanded in the laws of ritual slaughter to cut the gullet and the windpipe in the neck. And with a bird one must cut through the majority of one pipe, and with an animal one must cut through the majority of both pipes. Moses was commanded these laws along with the other details of slaughtering. According to Rabbi Yehuda HaNasi, the word shatoaḥ does not teach us about ritual slaughter. Rather, what is the meaning when the verse states: Shatoaḥ? It teaches that the manna fell in layers [mashtiḥin] in a straight row.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ה ב — Yoma 75b:5</span></div>
+    <div class="orig">כְּתִיב ״לֶחֶם״, וּכְתִיב ״שֶׁמֶן״, וּכְתִיב ״דְּבַשׁ״. אֲמַר רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: לִנְעָרִים — לֶחֶם, לִזְקֵנִים — שֶׁמֶן, לְתִינוֹקוֹת — דְּבַשׁ.</div>
+    <div class="trans" data-when="he">יישוב כתובים על טעם המָן: ״לחם״, ״שמן״, ״דבש״. ר׳ יוסי בר חנינא: לנערים היה כלחם, לזקנים כשמן, ולתינוקות כדבש — כל אחד כפי הראוי לו.</div>
+    <div class="trans" data-when="en">With regard to the manna, it is written “bread” (Exodus 16:4), and it is written “oil” (Numbers 11:8), and it is written “honey” (Exodus 16:31). How can we reconcile these verses? Rabbi Yosei, son of Rabbi Ḥanina, said: For the youth it was like bread, for the elderly it was like oil, and for the children it was like honey. Each received what was appropriate.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ה ב — Yoma 75b:6</span></div>
+    <div class="orig">כְּתִיב: ״שָׁלֵיו״ וְקָרֵינַן סְלָיו? אָמַר רַבִּי חֲנִינָא: צַדִּיקִים אוֹכְלִין אוֹתוֹ בְּשַׁלְוָה, רְשָׁעִים אוֹכְלִין אוֹתוֹ וְדוֹמֶה לָהֶן כְּסִילְוִין.</div>
+    <div class="trans" data-when="he">דרשה על כתיב ״שָׁלֵיו״ וקרי ״סְלָיו״. ר׳ חנינא: הצדיקים אוכלים את העוף בשלוה (על פי הכתיב); הרשעים אוכלים אותו ודומה להם כקוצים (סילוין, על פי הקרי).</div>
+    <div class="trans" data-when="en">The Gemara comments further: The word quail is written shlav, with the letter shin, but we read it as slav, with the letter samekh. What does this teach us? Rabbi Ḥanina said: The righteous eat it in peace [shalva], based on the written form of the word; whereas the wicked eat it, and it seems to them like thorns [silvin], based on the way the word is read.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ה ב — Yoma 75b:7</span></div>
+    <div class="orig">אָמַר רַב חָנָן בַּר רָבָא: אַרְבָּעָה מִינֵי סְלָיו הֵן, וְאֵלּוּ הֵן: שִׁיכְלִי, וְקִיבְלִי, וּפַסְיוֹנִי, וּשְׂלָיו. מְעַלְּיָא דְּכוּלְּהוּ: שִׂיכְלִי, גְּרִיעָא דְּכוּלְּהוּ: שְׂלָיו. וְהָוֵי כְּצִיפַּורְתָּא, וּמוֹתְבִינַן לֵהּ בְּתַנּוּרָא וְתָפַח וְהָוֵה מְלֵי תַּנּוּרָא, וּמַסְּקִינַן לֵיהּ אַתְּלֵיסַר רִיפֵי, וְאַחֲרוֹנָה אֵינָהּ נֶאֱכֶלֶת אֶלָּא עַל יְדֵי תַּעֲרוֹבֶת.</div>
+    <div class="trans" data-when="he">רב חנן בר רבא: ארבעה מיני סְלָיו הם — שיכלי, קיבלי, פסיוני ושְׂלָיו; המשובח שבכולם שיכלי, והגרוע שבהם שְׂלָיו. וכמה היה משובח אותו שאכלו במדבר: היה קטן כציפור, ומניחים אותו בתנור והוא תופח עד שממלא את התנור, ומעמידים אותו על שלוש עשרה ככרות, והאחרונה אינה נאכלת אלא בתערובת (מרוב שומנו).</div>
+    <div class="trans" data-when="en">Furthermore, with regard to the quail: Rav Ḥanan bar Rava said: There are four types of quail and these are they: Sikhli, and kivli, and pasyoni, and slav. The best tasting of all is the sikhli. The worst of all is the slav. The Gemara relates how tasty even the quail was that the Jews ate in the desert: It was as small as a sparrow, and they would place it in the oven to roast, and it expanded until it filled the entire oven. They would place it upon thirteen loaves of bread, and even the last loaf on the bottom could be eaten only when mixed with other food, due to all the fat it had absorbed from the quail.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ה ב — Yoma 75b:8</span></div>
+    <div class="orig">רַב יְהוּדָה מִשְׁתְּכַח לֵיהּ בֵּי דַנֵּי, רַב חִסְדָּא מִשְׁתְּכַח לֵיהּ בֵּי צִיבֵי. רָבָא מַיְיתֵי לֵיהּ אֲרִיסֵיהּ כׇּל יוֹמָא. יוֹמָא חַד לָא אַיְיתִי. אֲמַר: מַאי הַאי? סְלֵיק לְאִיגָּרָא, שַׁמְעֵיהּ לְיָנוֹקָא דְּקָאָמַר: ״שָׁמַעְתִּי וַתִּרְגַּז בִּטְנִי״. אֲמַר: שְׁמַע מִנֵּיהּ נָח נַפְשֵׁיהּ דְּרַב חִסְדָּא, וּבְדִיל רַבָּה אָכֵיל תַּלְמִידָא.</div>
+    <div class="trans" data-when="he">מעשי אמוראים בסְלָיו: רב יהודה היה מוצאו בין החביות, רב חסדא בין העצים, ולרבא היה אריסו מביא לו בכל יום. יום אחד לא הביא; עלה רבא לגג ושמע ילד קורא ״שמעתי ותרגז בטני״. אמר: שמע מינה נפטר רב חסדא — שבזכות הרב אוכל התלמיד, ושוב איני זוכה לכך.</div>
+    <div class="trans" data-when="en">It is told that Rav Yehuda found quail among his barrels of wine, and Rav Ḥisda found quail among logs of wood in his storeroom. Every day Rava’s sharecropper brought him a quail that he found in his fields. One day, he did not bring him one because he failed to find any. Rava said to himself: What is this, why is today different? He went up to the roof to think about it. He heard a child say the verse: “When I heard, my innards trembled, my lips quivered at the voice, rottenness enters into my bones, and I tremble where I stand; that I should wait for the day of trouble when he comes up against the people that he invades” (Habakkuk 3:16). Rava said: Learn from this that Rav Ḥisda has died. I am therefore not worthy to receive the quail anymore, since it is on account of the teacher that the student eats. When Rav Ḥisda was alive, Rava received the quail due to Rav Ḥisda’s merit; now that he had died, Rava was not worthy to receive the quail.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">לחם אבירים — המָן ועיכולו בכ״ח אברים</span><span data-when="en">Bread of the mighty — the manna and its absorption</span>
+      <span class="ref">Yoma 75b:9–76a:4</span></h2>
+  <div class="lead"><span data-when="he">דרשות סיום על המָן: הטל מסביב לו; ״דק מחֻספס״; ״לחם אבירים״ — לחם מלאכים או הנבלע בכ״ח אברים; ומדוע ירד יום־יום.</span><span data-when="en">Closing manna homilies: dew around it; ‘fine flaky’; ‘bread of the mighty’ — angels’ bread or absorbed by 248 limbs; and why it fell day by day.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① טל מלמעלה וטל מלמטה — כמונח בקופסא"]:::statement
+  S2["② דק מחֻספס — נימוח על היד, או נבלע בכ״ח אברים"]:::statement
+  S3["③ לחם אבירים — ר׳ עקיבא: לחם מלאכים; ר׳ ישמעאל: נבלע בכ״ח אברים"]:::statement
+  Q1{"④ ויתד… (פסולת!) — דברים שתגרי אומות מכרו"}:::question
+  S4["⑤ ר׳ אלעזר בן פרטא: מן מפיגן; לאחר שסרחו — מטריח ג׳ פרסאות"]:::statement
+  S5["⑥ ויחנו… ג׳ פרסי; ומקום היפנותם לאחוריהם"]:::statement
+  S6["⑦ נפשנו יבשה — מן מכניס ואינו מוציא"]:::statement
+  S7["⑧ ר׳ ישמעאל: איברים; ויתד — מדברים שממדינת הים"]:::statement
+  S8["⑨ דבר אחר: לחם אבירים — זה יהושע; גזרה שווה איש מאיש"]:::statement
+  Q2{"⑩ ולמה לא ירד פעם אחת בשנה? · משל למלך ובנו"}:::question
+  A1["⑪ דבר אחר: שיאכלוהו חם; דבר אחר: משאוי הדרך"]:::answer
+  S1 --> S2 --> S3
+  S3 -.->|קושיא| Q1
+  Q1 --> S4
+  S4 --> S5 --> S6
+  S6 --> S7 --> S8
+  S8 --> Q2
+  Q2 -->|משל| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Dew above and below — as if set in a box"]:::statement
+  S2["② ׳fine flaky׳ — dissolved on the hand, or absorbed by 248 limbs"]:::statement
+  S3["③ Bread of the mighty — R. Akiva: angels׳ bread; R. Yishmael: 248 limbs"]:::statement
+  Q1{"④ ׳a spade…׳ (waste!) — from food the merchants sold"}:::question
+  S4["⑤ R. Elazar b. Perata: manna digested it; after they sinned — 3 parasangs"]:::statement
+  S5["⑥ ׳they camped…׳ 3 parasangs; they relieved themselves behind"]:::statement
+  S6["⑦ ׳our soul is dry׳ — manna takes in but expels nothing"]:::statement
+  S7["⑧ R. Yishmael: eivarim (limbs); the spade — from overseas food"]:::statement
+  S8["⑨ Alternatively: bread of the mighty — Joshua; analogy ׳man׳ from ׳man׳"]:::statement
+  Q2{"⑩ Why not fall once a year? · parable of the king and his son"}:::question
+  A1["⑪ Alt.: to eat it hot; Alt.: spared the burden of carrying"]:::answer
+  S1 --> S2 --> S3
+  S3 -.->|objection| Q1
+  Q1 --> S4
+  S4 --> S5 --> S6
+  S6 --> S7 --> S8
+  S8 --> Q2
+  Q2 -->|parable| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① טַל מִלְמַעְלָה, וְטַל מִלְּמַטָּה, וְדוֹמֶה כְּמוֹ שֶׁמּוּנָּח בְּקוּפְסָא"]:::statement
+  S2["② דַּק מְחוּסְפָּס … שֶׁנִּימּוֹחַ עַל פִּיסַּת הַיָּד … שֶׁנִּבְלָע בְּמָאתַיִם וְאַרְבָּעִים וּשְׁמוֹנָה אֵבָרִים"]:::statement
+  S3["③ לֶחֶם אַבִּירִים … לֶחֶם שֶׁמַּלְאֲכֵי הַשָּׁרֵת אוֹכְלִין … עֲקִיבָא טָעִיתָ … שֶׁנִּבְלַע בְּמָאתַיִם וְאַרְבָּעִים וּשְׁמוֹנֶה אֵבָרִים"]:::statement
+  Q1{"④ וְיָתֵד תִּהְיֶה לְךָ עַל אֲזֵנֶיךָ … דְּבָרִים שֶׁתַּגָּרֵי אוּמּוֹת הָעוֹלָם מוֹכְרִין"}:::question
+  S4["⑤ רַבִּי אֶלְעָזָר בֶּן פַּרְטָא … מָן מְפִיגָן … מַטְרִיחַ אוֹתָם שָׁלֹשׁ פַּרְסָאוֹת"]:::statement
+  S5["⑥ וַיַּחֲנוּ עַל הַיַּרְדֵּן … תְּלָתָא פַּרְסֵי … אֶלָּא לַאֲחוֹרֵיהֶן"]:::statement
+  S6["⑦ וְעַתָּה נַפְשֵׁנוּ יְבֵשָׁה … שֶׁמַּכְנִיס וְאֵינוֹ מוֹצִיא"]:::statement
+  S7["⑧ אַל תִּקְרֵי אַבִּירִים אֶלָּא אֵיבָרִים … בִּדְבָרִים שֶׁבָּאִין … מִמְּדִינַת הַיָּם"]:::statement
+  S8["⑨ דָּבָר אַחֵר … זֶה יְהוֹשֻׁעַ … דָּנִין אִישׁ מֵאִישׁ, וְאֵין דָּנִין אִישׁ מִוְּהָאִישׁ"]:::statement
+  Q2{"⑩ מִפְּנֵי מָה לֹא יָרַד … פַּעַם אַחַת בַּשָּׁנָה? … אֶמְשׁוֹל לָכֶם מָשָׁל"}:::question
+  A1["⑪ דָּבָר אַחֵר: כְּשֶׁהוּא חַם … דָּבָר אַחֵר: מִפְּנֵי מַשּׂאוֹי הַדֶּרֶךְ"]:::answer
+  S1 --> S2 --> S3
+  S3 -.->|קושיא| Q1
+  Q1 --> S4
+  S4 --> S5 --> S6
+  S6 --> S7 --> S8
+  S8 --> Q2
+  Q2 -->|משל| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ה ב — Yoma 75b:9</span></div>
+    <div class="orig">כְּתִיב: ״וַתַּעַל שִׁכְבַת הַטָּל״, וּכְתִיב: ״וּבְרֶדֶת הַטַּל״? אָמַר רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: טַל מִלְמַעְלָה, וְטַל מִלְּמַטָּה, וְדוֹמֶה כְּמוֹ שֶׁמּוּנָּח בְּקוּפְסָא.</div>
+    <div class="trans" data-when="he">יישוב סתירת הכתובים על הטל והמָן: ״ותעל שכבת הטל״ (הטל מעל המָן) מול ״ובְרֶדֶת הטל… ירד המן עליו״ (המָן על הטל). ר׳ יוסי בר חנינא: טל מלמעלה וטל מלמטה, והמָן ביניהם — כמונח בתוך קופסא של טל.</div>
+    <div class="trans" data-when="en">§ Furthermore, with regard to the manna it is written: “And when the layer of dew lifted, behold, upon the face of the wilderness there lay a fine flaky substance, as fine as frost on the ground” (Exodus 16:14), indicating that the dew covered the manna. And it is written: “And when the dew fell upon the camp in the night, the manna fell upon it” (Numbers 11:9), meaning that the manna fell on top of the dew. How can these verses be reconciled? Rabbi Yosei, son of Rabbi Ḥanina, said: There was dew above and dew below, with the manna in between, and the manna appeared as if it were placed in a box [kufsa] of dew.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ה ב — Yoma 75b:10</span></div>
+    <div class="orig">״דַּק מְחוּסְפָּס״, אָמַר רֵישׁ לָקִישׁ: דָּבָר שֶׁנִּימּוֹחַ עַל פִּיסַּת הַיָּד. רַבִּי יוֹחָנָן אָמַר: דָּבָר שֶׁנִּבְלָע בְּמָאתַיִם וְאַרְבָּעִים וּשְׁמוֹנָה אֵבָרִים. מְחוּסְפָּס — טוּבָא הָוֵי! אָמַר רַב נַחְמָן בַּר יִצְחָק: ״מְחֻסְפָּס״ כְּתִיב.</div>
+    <div class="trans" data-when="he">דרשה על ״דק מחֻספס״. ריש לקיש: דבר שנימוח על פס היד (מח+פס). ר׳ יוחנן: דבר שנבלע בכל רמ״ח (248) אברים, כגימטריית ״מחספס״. קושיא: ״מחֻספס״ עולה יותר (254)! תירוץ ר״נ בר יצחק: ״מְחֻספס״ כתיב חסר וי״ו — ועולה רמ״ח בדיוק.</div>
+    <div class="trans" data-when="en">The verse describes the manna as “a fine flaky [meḥuspas] substance” (Exodus 16:14). Reish Lakish said: Meḥuspas means it was a substance that dissolved [maḥ] on the palm [pas] of the hand. Since it was so fine, it dissolved upon contact. Rabbi Yoḥanan said: It was a substance that was absorbed in all 248 limbs, the numerical equivalent of the word meḥuspas. The Gemara expresses surprise at this: If one calculates the value of the letters in the word meḥuspas, it is more, totaling 254. Rabbi Naḥman bar Yitzḥak said: Meḥuspas is written in the Torah without the letter vav. Therefore, the total is exactly 248.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ה ב — Yoma 75b:11</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״לֶחֶם אַבִּירִים אָכַל אִישׁ״, לֶחֶם שֶׁמַּלְאֲכֵי הַשָּׁרֵת אוֹכְלִין אוֹתוֹ, דִּבְרֵי רַבִּי עֲקִיבָא. וּכְשֶׁנֶּאְמְרוּ דְּבָרִים לִפְנֵי רַבִּי יִשְׁמָעֵאל, אָמַר לָהֶם: צְאוּ וְאִמְרוּ לוֹ לַעֲקִיבָא: עֲקִיבָא טָעִיתָ! וְכִי מַלְאֲכֵי הַשָּׁרֵת אוֹכְלִין לֶחֶם? וַהֲלֹא כְּבָר נֶאֱמַר: ״לֶחֶם לֹא אָכַלְתִּי וּמַיִם לֹא שָׁתִיתִי״! אֶלָּא, מָה אֲנִי מְקַיֵּים ״אַבִּירִים״ — לֶחֶם שֶׁנִּבְלַע בְּמָאתַיִם וְאַרְבָּעִים וּשְׁמוֹנֶה אֵבָרִים.</div>
+    <div class="trans" data-when="he">ברייתא על ״לחם אבירים אכל איש״. ר׳ עקיבא: לחם שמלאכי השרת אוכלים אותו. ר׳ ישמעאל חולק: ״עקיבא טעית! וכי מלאכי השרת אוכלים לחם? והרי נאמר במשה ׳לחם לא אכלתי׳״. אלא מהו ״אבירים״? לחם שנבלע בכל רמ״ח אברים (אֵבָרים).</div>
+    <div class="trans" data-when="en">The Sages taught: The Torah states: “And He caused manna to rain upon them for food, and He gave them of the grain of heaven. Man did eat the bread of the mighty [abirim]” (Psalms 78:24–25). “Bread of the mighty” is bread that the ministering angels eat; this is the statement of Rabbi Akiva. When these words were said before Rabbi Yishmael, he said to them to go and tell Akiva: Akiva you have erred. Do the ministering angels eat bread? It is already stated about Moses, when he ascended on high: “Bread I did not eat and water I did not drink” (Deuteronomy 9:9). If even a man who ascends on high does not need to eat, certainly the ministering angels do not need to eat. Rather, how do I establish the meaning of the word abirim? It can be explained as bread that was absorbed into all 248 limbs [eivarim], so that there was no waste.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ה ב — Yoma 75b:12</span></div>
+    <div class="orig">אֶלָּא מָה אֲנִי מְקַיֵּים: ״וְיָתֵד תִּהְיֶה לְךָ עַל אֲזֵנֶיךָ (וְיָצָאתָ שָׁמָּה חוּץ)״, דְּבָרִים שֶׁתַּגָּרֵי אוּמּוֹת הָעוֹלָם מוֹכְרִין אוֹתָן לָהֶם.</div>
+    <div class="trans" data-when="he">קושיא: אם המָן נבלע לגמרי, מהו ״ויתד תהיה לך… ויצאת שמה חוץ״ — שמשמע שהיתה להם פסולת ויצאו להיפנות? תירוץ: הפסולת לא מן המָן באה, אלא מדברים שתגרי אומות העולם מכרו להם.</div>
+    <div class="trans" data-when="en">The Gemara asks: But if so, how do I establish the verses: “And you shall have a spade among your weapons, and it shall be that when you relieve yourself outside, you shall dig with it, and shall turn back and cover your excrement” (Deuteronomy 23:14) and “You shall have a place also outside the camp where you can relieve yourself ” (Deuteronomy 23:13). From here we learn that there was waste in their bowels, as they had to leave the camp to relieve themselves. The Gemara explains: This waste was not a byproduct of the manna; it was from food items that the gentile merchants sold them.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ה ב — Yoma 75b:13</span></div>
+    <div class="orig">רַבִּי אֶלְעָזָר בֶּן פַּרְטָא אוֹמֵר: אַף דְּבָרִים שֶׁתַּגָּרֵי אוּמּוֹת הָעוֹלָם מוֹכְרִין לָהֶן — מָן מְפִיגָן. אֶלָּא מָה אֲנִי מְקַיֵּים ״וְיָתֵד תִּהְיֶה לְךָ עַל אֲזֵנֶיךָ״ — לְאַחַר שֶׁסָּרְחוּ אָמַר הַקָּדוֹשׁ בָּרוּךְ הוּא: אֲנִי אָמַרְתִּי יִהְיוּ כְּמַלְאֲכֵי הַשָּׁרֵת, עַכְשָׁיו אֲנִי מַטְרִיחַ אוֹתָם שָׁלֹשׁ פַּרְסָאוֹת.</div>
+    <div class="trans" data-when="he">ר׳ אלעזר בן פרטא חולק: אף הדברים שתגרי האומות מכרו — המָן עיכלם (״מפיגן״) ולא נותרה פסולת. ואם כן מהו ״ויתד תהיה לך״? לאחר שסרחו אמר הקב״ה: אני אמרתי שיהיו כמלאכי השרת (בלא פסולת), ועכשיו אטריח אותם לצאת שלוש פרסאות.</div>
+    <div class="trans" data-when="en">Rabbi Elazar ben Perata disagrees and says: The manna caused even items that the gentile merchants sold them to be completely digested, so that even other food that they ate produced no waste. But then how do I establish the verse: “And you shall have a spade among your weapons”? After they sinned, the manna was not as effective. The Holy One, Blessed be He, said: I initially said that they would be like ministering angels who do not produce waste; now I will trouble them to walk three parasangs to leave the camp in order to relieve themselves.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ה ב — Yoma 75b:14</span></div>
+    <div class="orig">דִּכְתִיב: ״וַיַּחֲנוּ עַל הַיַּרְדֵּן מִבֵּית הַיְשִׁימוֹת עַד אָבֵל הַשִּׁטִּים״, וְאָמַר רַבָּה בַּר בַּר חָנָה: לְדִידִי חֲזֵי לִי הָהוּא אַתְרָא וְהָוְיָא תְּלָתָא פַּרְסֵי. וְתָנָא: כְּשֶׁנִּפְנִין, אֵין נִפְנִין לֹא לִפְנֵיהֶן, וְלֹא לְצִדְדֵיהֶן, אֶלָּא לַאֲחוֹרֵיהֶן.</div>
+    <div class="trans" data-when="he">ראיה שהמחנה היה שלוש פרסאות: ״ויחנו על הירדן מבית הישימות עד אבל השטים״; ורבה בר בר חנה — אני ראיתי אותו מקום והיה שלוש פרסאות. ותנא: כשנפנים, אין נפנים לפניהם ולא לצדדיהם אלא לאחוריהם — ולכן צריך מי שבחזית להרחיק שלוש פרסאות.</div>
+    <div class="trans" data-when="en">How do we know that the Israelite camp was three parasangs? As it is written: “And they camped by the Jordan from Beth-Jeshimoth to Abel-shittim” (Numbers 33:49), and Rabba bar bar Ḥana said: I saw that site and it was three parasangs in length. And a baraita taught: When the Jews relieved themselves in the desert, they did not relieve themselves ahead of themselves, i.e., in the direction of their travel, nor to the side of the camp, but behind the camp, in a place that they had already traveled. Consequently, those near the front of the camp had to walk a distance of three parasangs from their homes to leave the camp.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ה ב — Yoma 75b:15</span></div>
+    <div class="orig">״וְעַתָּה נַפְשֵׁנוּ יְבֵשָׁה אֵין כֹּל״. אָמְרוּ: עָתִיד מָן זֶה שֶׁתִּיפַּח בְּמֵעֵיהֶם, כְּלוּם יֵשׁ יְלוּד אִשָּׁה שֶׁמַּכְנִיס וְאֵינוֹ מוֹצִיא?</div>
+    <div class="trans" data-when="he">דרשה על תלונת ישראל ״ועתה נפשנו יבשה אין כל״: אמרו — עתיד המָן הזה לתפוח במעינו ולהזיק, שהרי אין ילוד אשה שמכניס מאכל ואינו מוציא פסולת. תלונתם מסייעת לכך שהמָן לא הותיר פסולת.</div>
+    <div class="trans" data-when="en">Furthermore, with regard to the manna, the verse states Israel’s complaint: “But now our soul is dry, there is nothing at all; we have nothing beside this manna to look to” (Numbers 11:6). They said: This manna will eventually swell in our stomachs and kill us; is there anyone born of a woman who ingests food but does not expel waste? This supports the Gemara’s claim that the manna did not create waste.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ה ב — Yoma 75b:16</span></div>
+    <div class="orig">וּכְשֶׁנֶּאְמְרוּ דְּבָרִים לִפְנֵי רַבִּי יִשְׁמָעֵאל, אָמַר לָהֶם: אַל תִּקְרֵי ״אַבִּירִים״, אֶלָּא ״אֵיבָרִים״ — דָּבָר שֶׁנִּבְלַע בְּמָאתַיִם וְאַרְבָּעִים וּשְׁמוֹנָה אֵיבָרִים. אֶלָּא מָה אֲנִי מְקַיֵּים ״וְיָתֵד תִּהְיֶה לְךָ עַל אֲזֵנֶיךָ״ — בִּדְבָרִים שֶׁבָּאִין לָהֶם מִמְּדִינַת הַיָּם.</div>
+    <div class="trans" data-when="he">גרסה אחרת לדברי ר׳ ישמעאל: אל תקרי ״אבירים״ אלא ״איברים״ — דבר שנבלע בכל רמ״ח אברים. ואם כן מהו ״ויתד תהיה לך״? מן הדברים שהגיעו אליהם ממדינת הים (חוץ למחנה). ר׳ ישמעאל חולק על ר׳ אלעזר בן פרטא בעניין השפעת המָן על שאר המאכלים.</div>
+    <div class="trans" data-when="en">When these words were said before Rabbi Yishmael, he said to them: Do not read it as abirim. Rather, read it as eivarim, limbs. The manna was something that was absorbed by 248 limbs. But, how do I establish “And you shall have a spade among your weapons”? From the food items that came to them from overseas lands. Rabbi Yishmael disagrees with Rabbi Elazar ben Perata with regard to the effect the manna had on the digestion of other foods.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ה ב — Yoma 75b:17</span></div>
+    <div class="orig">דָּבָר אַחֵר: ״לֶחֶם אַבִּירִים אָכַל אִישׁ״ —</div>
+    <div class="trans" data-when="he">פתיחה לדרשה נוספת על ״לחם אבירים אכל איש״ — לשון יחיד ״איש״, שתתבאר בהמשך כרומזת ליהושע.</div>
+    <div class="trans" data-when="en">Alternatively, “Man [ish] did eat the bread of the mighty” (Psalms 78:25);</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ו א — Yoma 76a:1</span></div>
+    <div class="orig">זֶה יְהוֹשֻׁעַ שֶׁיָּרַד לוֹ מָן כְּנֶגֶד כׇּל יִשְׂרָאֵל. כְּתִיב הָכָא ״אִישׁ״, וּכְתִיב הָתָם: ״קַח לְךָ אֶת יְהוֹשֻׁעַ בִּן נוּן אִישׁ אֲשֶׁר רוּחַ בּוֹ״. וְאֵימָא מֹשֶׁה, דִּכְתִיב: ״וְהָאִישׁ מֹשֶׁה עָנָו מְאֹד״? דָּנִין ״אִישׁ״ מֵ״אִישׁ״, וְאֵין דָּנִין ״אִישׁ״ מִ״וְּהָאִישׁ״.</div>
+    <div class="trans" data-when="he">״איש״ הוא יהושע, שירד לו מָן כנגד כל ישראל (כשהמתין למשה בהר). גזרה שווה: כתיב כאן ״איש״ וכתיב שם ״יהושע בן נון איש אשר רוח בו״. שאלה: ואימא משה, שכתוב ״והאיש משה ענו מאד״? תשובה: דנים ״איש״ מ״איש״, ואין דנים ״איש״ מ״והאיש״.</div>
+    <div class="trans" data-when="en">the verse is referring to Joshua, for whom manna fell corresponding to all the rest of the Jewish people, when he waited for Moses at Mount Sinai during the forty days Moses was on the mountain. The verses allude to this: “Man” is written here, and “man” is written there: “Take to you Joshua, the son of Nun, a man in whom there is spirit, and lay your hand upon him” (Numbers 27:18). From here, the Gemara learns that the “man” is Joshua. The Gemara asks: Say that the verse is referring to Moses, about whom it is written: “Now the man Moses was very humble” (Numbers 12:3). The Gemara answers: We can learn a verbal analogy to the word “man” from the word “man,” but we cannot learn a verbal analogy to the word “man” from the phrase “the man,” which is used to refer to Moses.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ו א — Yoma 76a:2</span></div>
+    <div class="orig">שָׁאֲלוּ תַּלְמִידָיו אֶת רַבִּי שִׁמְעוֹן בֶּן יוֹחַי: מִפְּנֵי מָה לֹא יָרַד לָהֶם לְיִשְׂרָאֵל מָן פַּעַם אַחַת בַּשָּׁנָה? אָמַר לָהֶם: אֶמְשׁוֹל לָכֶם מָשָׁל: לְמָה הַדָּבָר דּוֹמֶה? לְמֶלֶךְ בָּשָׂר וָדָם שֶׁיֵּשׁ לוֹ בֵּן אֶחָד, פָּסַק לוֹ מְזוֹנוֹתָיו פַּעַם אַחַת בַּשָּׁנָה, וְלֹא הָיָה מַקְבִּיל פְּנֵי אָבִיו אֶלָּא פַּעַם אַחַת בַּשָּׁנָה. עָמַד וּפָסַק מְזוֹנוֹתָיו בְּכׇל יוֹם, וְהָיָה מַקְבִּיל פְּנֵי אָבִיו כׇּל יוֹם.</div>
+    <div class="trans" data-when="he">תלמידי רשב״י שאלוהו: מדוע לא ירד המָן לישראל פעם אחת בשנה? המשיל להם: מלך שהיה לו בן אחד, ופסק לו מזונותיו פעם אחת בשנה — והבן בא לקבל פני אביו רק פעם אחת בשנה. עמד ופסק לו מזונותיו בכל יום, ושוב היה הבן מקבל פני אביו בכל יום.</div>
+    <div class="trans" data-when="en">Furthermore, with regard to the manna: The students of Rabbi Shimon ben Yoḥai asked him: Why didn’t the manna fall for the Jewish people just once a year to take care of all their needs, instead of coming down every day? He said to them: I will give you a parable: To what does this matter compare? To a king of flesh and blood who has only one son. He granted him an allowance for food once a year and the son greeted his father only once a year, when it was time for him to receive his allowance. So he arose and granted him his food every day, and his son visited him every day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ו א — Yoma 76a:3</span></div>
+    <div class="orig">אַף יִשְׂרָאֵל, מִי שֶׁיֵּשׁ לוֹ אַרְבָּעָה וַחֲמִשָּׁה בָּנִים הָיָה דּוֹאֵג וְאוֹמֵר: שֶׁמָּא לֹא יֵרֵד מָן לְמָחָר, וְנִמְצְאוּ כּוּלָּן מֵתִים בָּרָעָב, נִמְצְאוּ כּוּלָּן מְכַוְּונִים אֶת לִבָּם לַאֲבִיהֶן שֶׁבַּשָּׁמַיִם.</div>
+    <div class="trans" data-when="he">הנמשל: אף ישראל — מי שהיו לו ארבעה או חמשה בנים היה דואג שמא לא ירד מָן למחר וימותו כולם ברעב; ונמצא שכולם מכוונים את לבם בכל יום לאביהם שבשמים, ומבקשים מזון ליום המחרת.</div>
+    <div class="trans" data-when="en">So too, in the case of the Jewish people, someone who had four or five children would be worried and say: Perhaps the manna will not fall tomorrow and we will all die of starvation. Consequently, everyone directed their hearts to their Father in heaven every day. The manna that fell each day was sufficient only for that day, so that all of the Jewish people would pray to God for food for the next day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא ע״ו א — Yoma 76a:4</span></div>
+    <div class="orig">דָּבָר אַחֵר: שֶׁהָיוּ אוֹכְלִין אוֹתוֹ כְּשֶׁהוּא חַם. דָּבָר אַחֵר: מִפְּנֵי מַשּׂאוֹי הַדֶּרֶךְ.</div>
+    <div class="trans" data-when="he">שני טעמים נוספים לירידת המָן יום־יום: דבר אחר — כדי שיאכלוהו חם וטרי; דבר אחר — כדי לחסוך מהם את משאוי הדרך, שלא יצטרכו לשאת מלאי גדול ממקום למקום.</div>
+    <div class="trans" data-when="en">Alternatively, they received manna daily so that they would be able to eat it while it was hot and fresh. Alternatively, they received manna daily due to the hardship of carrying on the journey. They did not stay in the same place all those years, and it would have been difficult for them to carry the manna from one place to another. Therefore, the manna fell wherever they went.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
