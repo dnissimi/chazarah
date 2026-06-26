@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ״ג</title>
+<meta name="description" content="מפת הסוגיא של יומא פ״ג: חולה ורופא ביום הכיפורים — את מי שומעים; מי שאחזו בולמוס מאכילים אותו הקל הקל; דירוג טבל, נבילה, שביעית ותרומה; מעשי החכמים בבולמוס וסיפור כידור; וסימני כלב שוטה ותקנתו.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="83">
+<meta name="gemara-map:sefaria-ref" content="Yoma 83">
+<meta name="gemara-map:topic-he" content="חולה ביום הכיפורים, בולמוס, וכלב שוטה">
+<meta name="gemara-map:topic-en" content="The ill on Yom Kippur, bulmos, a mad dog">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ״ג">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 83">
+<meta name="gemara-map:blurb-he" content="ספק נפשות דוחה את יום הכיפורים והשבת: שומעים לחולה, מאכילים את הבולמוס ׳הקל הקל׳, ומחפשים תקנה למוכה כלב שוטה.">
+<meta name="gemara-map:blurb-en" content="Saving life overrides Yom Kippur and Shabbat: heed the ill person, feed a bulmos sufferer the least-forbidden food, and seek a remedy for a mad-dog bite.">
+<meta name="gemara-map:sugya-count" content="8">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ״ג</span><span data-when="en">Sugya map — Yoma 83</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ״ג א — פ״ד א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 83a–84a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> פיקוח נפש דוחה את יום הכיפורים ואת השבת. כשחולה ורופא חולקים אם להאכיל — <b>שומעים למקֵל</b> (״לב יודע מרת נפשו״); המשנה דורשת ״בקיאין״ — והגמרא מיישבת זאת עם דברי ר׳ ינאי. את מי <b>שאחזו בולמוס</b> מאכילים אפילו דברים אסורים, ומדרגים אותם <b>״הקל הקל״</b> (נבילה, שביעית, תרומה מול טבל). לבסוף: סיפורי חכמים בבולמוס וסיפור כידור הרשע, וסימני <b>כלב שוטה</b> ותקנת הנשוך.</span>
+    <span data-when="en"><b>Bottom line:</b> Saving a life overrides Yom Kippur and Shabbat. When an ill person and a doctor disagree about eating, <b>one heeds whoever is lenient</b> (“the heart knows its own bitterness”); the Mishna’s “experts” is reconciled with Rabbi Yannai. One seized with <b>bulmos</b> is fed even forbidden food, ranked <b>least-severe-first</b> (neveila, Sabbatical produce, teruma vs. untithed produce). Finally: sages’ bulmos episodes, the tale of wicked Kidor, and the signs of a <b>mad dog</b> and the cure for its bite.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ״ג</span><span data-when="en">Overview — Yoma 83</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · חולה ורופא — שומעים למקֵל"]:::statement
+  O2["2 · קושיות על ר׳ ינאי מן המשנה"]:::statement
+  O3(["3 · משנה: בולמוס, כלב שוטה, מפולת"]):::mishnah
+  O4["4 · מאימתי האירו עיניו"]:::statement
+  O5["5 · בולמוס — מאכילים הקל הקל"]:::statement
+  O6["6 · טבל מול תרומה — מחלוקת תנאים"]:::statement
+  O7["7 · מעשי בולמוס וסיפור כידור"]:::statement
+  O8["8 · כלב שוטה — סימנים ותקנה"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Ill person vs doctor — heed the lenient"]:::statement
+  O2["2 · Objections to R. Yannai from the Mishna"]:::statement
+  O3(["3 · Mishna: bulmos, mad dog, rockslide"]):::mishnah
+  O4["4 · When are the eyes known to recover"]:::statement
+  O5["5 · Bulmos — feed the least-forbidden first"]:::statement
+  O6["6 · Untithed vs teruma — tannaitic dispute"]:::statement
+  O7["7 · Bulmos episodes and the Kidor tale"]:::statement
+  O8["8 · Mad dog — signs and remedy"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">חולה ורופא ביום הכיפורים — את מי שומעים</span><span data-when="en">Ill person vs doctor on Yom Kippur — whom to heed</span>
+      <span class="ref">Yoma 83a:2–3</span></h2>
+  <div class="lead"><span data-when="he">ר׳ ינאי: בכל מחלוקת בין חולה לרופא על אכילה ביום הכיפורים — שומעים למקֵל, שכן ספק נפשות.</span><span data-when="en">R. Yannai: in any clash between ill person and doctor over eating, one follows whichever says to eat — saving a life is at stake.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ר׳ ינאי: חולה אומר צריך, רופא אומר אינו צריך — שומעים לחולה"]:::statement
+  Q1{"① פשיטא! מהו דתימא רופא קים ליה טפי"}:::question
+  A1["① קא משמע לן — לב יודע מרת נפשו"]:::answer
+  S2["② רופא אומר צריך, חולה אומר אינו צריך — שומעים לרופא, תונבא נקיט ליה"]:::statement
+  S1 -->|פשיטא?| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|מקרה הפוך| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① R. Yannai: ill says he needs, doctor says no — heed the ill person"]:::statement
+  Q1{"① Obvious! Lest you say the doctor is more certain"}:::question
+  A1["① It teaches us — the heart knows its bitterness"]:::answer
+  S2["② Doctor says he needs, ill says no — heed the doctor, confusion grips him"]:::statement
+  S1 -->|obvious?| Q1
+  Q1 -->|answer| A1
+  A1 -->|reverse case| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① חוֹלֶה אוֹמֵר צָרִיךְ, וְרוֹפֵא אוֹמֵר אֵינוֹ צָרִיךְ — שׁוֹמְעִין לַחוֹלֶה … לֵב יוֹדֵעַ מׇרַּת נַפְשׁוֹ"]:::statement
+  Q1{"① פְּשִׁיטָא! מַהוּ דְּתֵימָא: רוֹפֵא קִים לֵיהּ טְפֵי"}:::question
+  A1["① קָא מַשְׁמַע לַן"]:::answer
+  S2["② רוֹפֵא אוֹמֵר צָרִיךְ, וְחוֹלֶה אוֹמֵר אֵינוֹ צָרִיךְ — שׁוֹמְעִין לָרוֹפֵא … תּוּנְבָּא הוּא דְּנָקֵיט לֵיהּ"]:::statement
+  S1 -->|פשיטא?| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|מקרה הפוך| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ג א — Yoma 83a:2</span></div>
+    <div class="orig">חוֹלֶה מַאֲכִילִין אוֹתוֹ עַל פִּי בְּקִיאִין. אָמַר רַבִּי יַנַּאי: חוֹלֶה אוֹמֵר צָרִיךְ, וְרוֹפֵא אוֹמֵר אֵינוֹ צָרִיךְ — שׁוֹמְעִין לַחוֹלֶה. מַאי טַעְמָא — ״לֵב יוֹדֵעַ מׇרַּת נַפְשׁוֹ״. פְּשִׁיטָא! מַהוּ דְּתֵימָא: רוֹפֵא קִים לֵיהּ טְפֵי, קָא מַשְׁמַע לַן.</div>
+    <div class="trans" data-when="he">המשנה: חולה (שיש בו סכנה) מאכילים אותו ביום הכיפורים על פי בקיאין. ר׳ ינאי: אם החולה אומר ׳צריך אני לאכול׳ והרופא אומר ׳אינו צריך׳ — שומעים לחולה, שנאמר ״לב יודע מרת נפשו״. הגמרא: פשיטא — אדם מכיר את עצמו! ומתרצת: סלקא דעתך שהרופא בקי יותר, לכן צריך להשמיענו.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: If a person is ill and requires food due to potential danger, one feeds him according to the advice of medical experts. Rabbi Yannai said: If an ill person says he needs to eat, and a doctor says he does not need to eat, one listens to the ill person. What is the reason for this halakha? It is because the verse states: “The heart knows the bitterness of its soul” (Proverbs 14:10), meaning an ill person knows the intensity of his pain and weakness, and doctors cannot say otherwise. The Gemara asks: It is obvious that a person knows himself better than anyone else does. Why does this need to be stated explicitly? The Gemara answers: It is lest you say that the doctor is more certain because he has had more experience with this condition. Therefore, the verse teaches us that even so, it is the ill person who knows his own suffering better than anyone else.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ג א — Yoma 83a:3</span></div>
+    <div class="orig">רוֹפֵא אוֹמֵר צָרִיךְ, וְחוֹלֶה אוֹמֵר אֵינוֹ צָרִיךְ — שׁוֹמְעִין לָרוֹפֵא. מַאי טַעְמָא — תּוּנְבָּא הוּא דְּנָקֵיט לֵיהּ.</div>
+    <div class="trans" data-when="he">המקרה ההפוך: אם הרופא אומר ׳צריך׳ והחולה אומר ׳אינו צריך׳ — שומעים לרופא ומאכילים. הטעם: בלבול (תונבא) אחז בחולה מחמת חוליו, ודעתו אינה צלולה לדעת כמה הוא צריך.</div>
+    <div class="trans" data-when="en">However, in the opposite case, if a doctor says that the ill person needs food, but the ill person himself says he does not need to eat, one listens to the doctor. What is the reason for this halakha? It is because confusion [tunba] has taken hold of the ill person on account of his illness, and his judgment is impaired. Consequently, he himself does not know how much he needs food.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">קושיות על ר׳ ינאי מלשון המשנה</span><span data-when="en">Objections to R. Yannai from the Mishna’s wording</span>
+      <span class="ref">Yoma 83a:4–10</span></h2>
+  <div class="lead"><span data-when="he">לשון המשנה ״על פי בקיאין״ נראית כסותרת את ר׳ ינאי — והגמרא מעמידה ומיישבת בכמה שלבים, עד מסקנת מר בר רב אשי.</span><span data-when="en">The Mishna’s “experts” seems to contradict R. Yannai; the Gemara reinterprets it in stages, up to Mar bar Rav Ashi’s ruling.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① תנן: על פי בקיאין — אִין, על פי עצמו ובקי אחד — לא!"}:::question
+  A1["② מדובר באומר ׳לא צריך׳, ויש שלישי שאומר ׳לא צריך׳"]:::answer
+  Q2{"③ פשיטא, ספק נפשות להקל! · יש שניים נוספים שאומרים ׳לא צריך׳"}:::question
+  A2["③ באומדנא הולכים אחר הרוב — דרב ספרא: תרי כמאה"]:::answer
+  A3["④ ההוא לאומדנא דממונא, אבל כאן ספק נפשות"]:::answer
+  Q3{"⑤ והרי הסיפא ׳אין בקיאין׳ מכלל שהרישא ׳אמר צריך׳! · חסורי מיחסרא"}:::question
+  S1["⑥ מר בר רב אשי: אמר ׳צריך׳ — אפילו מאה אומרים לא, שומעים לו"]:::statement
+  Q4{"⑦ תנן: אין בקיאין — על פי עצמו; הא איכא בקיאין לא! · הכי קאמר"}:::question
+  Q1 -->|תירוץ| A1
+  A1 -.->|פשיטא| Q2
+  Q2 -->|תירוץ| A2
+  A2 -->|דחייה| A3
+  A3 -.->|קושיא מהסיפא| Q3
+  Q3 -->|מסקנה| S1
+  S1 -.->|קושיא מהסיפא| Q4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Mishna: only by experts, not by himself or one expert!"}:::question
+  A1["② It speaks where he says ׳I don׳t need׳, and a third also says ׳no׳"]:::answer
+  Q2{"③ Obvious, danger to life is lenient! · Two others also say ׳no׳"}:::question
+  A2["③ In assessment we follow the majority — Rav Safra: two are like a hundred"]:::answer
+  A3["④ That is monetary assessment, but here life is at stake"]:::answer
+  Q3{"⑤ The end clause ׳no experts׳ implies the start is ׳he said he needs׳! · text is incomplete"}:::question
+  S1["⑥ Mar bar Rav Ashi: if he says ׳I need׳, even a hundred saying no — heed him"]:::statement
+  Q4{"⑦ Mishna: no experts, by himself; so with experts, no! · This is its meaning"}:::question
+  Q1 -->|answer| A1
+  A1 -.->|obvious| Q2
+  Q2 -->|answer| A2
+  A2 -->|rejoinder| A3
+  A3 -.->|objection from end| Q3
+  Q3 -->|ruling| S1
+  S1 -.->|objection from end| Q4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① תְּנַן … עַל פִּי בְּקִיאִין — אִין, עַל פִּי עַצְמוֹ — לָא! … עַל פִּי בָּקִי אֶחָד — לָא!"}:::question
+  A1["② דְּאָמַר לָא צְרִיכְנָא … דְּאִיכָּא אַחֲרִינָא בַּהֲדֵיהּ דְּאָמַר לָא צְרִיךְ"]:::answer
+  Q2{"③ פְּשִׁיטָא, סְפֵק נְפָשׁוֹת … לְהָקֵל! … דְּאִיכָּא תְּרֵי אַחֲרִינֵי … דְּאָמְרִי לָא צְרִיךְ"}:::question
+  A2["③ אֲבָל לְעִנְיַן אוּמְדָּנָא — בָּתַר דֵּעוֹת אָזְלִינַן … תְּרֵי כִּמְאָה"]:::answer
+  A3["④ וְהָנֵי מִילֵּי לְעִנְיַן אוּמְדָּנָא דְמָמוֹנָא, אֲבָל הָכָא סְפֵק נְפָשׁוֹת הוּא"]:::answer
+  Q3{"⑤ וְהָא מִדְּקָתָנֵי סֵיפָא … מִכְּלָל דְּרֵישָׁא דְּאָמַר צָרִיךְ! חַסּוֹרֵי מִיחַסְּרָא"}:::question
+  S1["⑥ מָר בַּר רַב אָשֵׁי: כֹּל הֵיכָא דְּאָמַר צָרִיךְ אֲנִי, אֲפִילּוּ אִיכָּא מְאָה … לְדִידֵיהּ שָׁמְעִינַן"]:::statement
+  Q4{"⑦ תְּנַן: אִם אֵין שָׁם בְּקִיאִין … עַל פִּי עַצְמוֹ … הָא אִיכָּא בְּקִיאִין לָא! הָכִי קָאָמַר"}:::question
+  Q1 -->|תירוץ| A1
+  A1 -.->|פשיטא| Q2
+  Q2 -->|תירוץ| A2
+  A2 -->|דחייה| A3
+  A3 -.->|קושיא מהסיפא| Q3
+  Q3 -->|מסקנה| S1
+  S1 -.->|קושיא מהסיפא| Q4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ג א — Yoma 83a:4</span></div>
+    <div class="orig">תְּנַן: חוֹלֶה — מַאֲכִילִין אוֹתוֹ עַל פִּי בְּקִיאִין. עַל פִּי בְּקִיאִין — אִין, עַל פִּי עַצְמוֹ — לָא! עַל פִּי בְּקִיאִין — אִין, עַל פִּי בָּקִי אֶחָד — לָא!</div>
+    <div class="trans" data-when="he">קושיא על ר׳ ינאי מן המשנה: ״מאכילין אותו על פי בקיאין״ — משמע על פי בקיאין כן, אבל על פי עצמו לא; ועוד: על פי בקיאין (רבים) כן, אבל על פי בקי אחד לא — ושני הדיוקים סותרים את ר׳ ינאי.</div>
+    <div class="trans" data-when="en">§ We learned in the mishna: If a person is ill, one feeds him according to the advice of medical experts. This implies that if there are experts present, then according to the advice of experts, yes, one feeds the ill person; but at his own instructions, no, one does not feed him, contrary to Rabbi Yannai’s opinion. It further implies that according to the advice of several experts, yes, one feeds an ill person; however, according to the advice of only one expert, no, one does not feed him. There appears to be a requirement for at least two doctors, which also contradicts Rabbi Yannai’s opinion that the opinion of one expert is sufficient to override the opinion of the ill person.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ג א — Yoma 83a:5</span></div>
+    <div class="orig">הָכָא בְּמַאי עָסְקִינַן, דְּאָמַר לָא צְרִיכְנָא. וְלִיסְפּוֹ לֵיהּ עַל פִּי בָּקִי! לָא צְרִיכָא, דְּאִיכָּא אַחֲרִינָא בַּהֲדֵיהּ דְּאָמַר לָא צְרִיךְ — מַאֲכִילִין אוֹתוֹ עַל פִּי בְּקִיאִין.</div>
+    <div class="trans" data-when="he">תירוץ: המשנה עוסקת בחולה שאומר ׳איני צריך׳, ולכן צריך בקיאין כדי להאכילו בעל כורחו. ומקשים: ויאכילוהו על פי בקי אחד! ומתרצים: צריך שניים, במקרה שיש בקי נוסף עם החולה האומר ׳לא צריך׳ — אז שני הבקיאין מכריעים להאכילו.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: With what are we dealing here? We are dealing with a unique circumstance: The ill person says I do not need food, and the consultation of experts is required. The Gemara suggests: But let them feed him according to the advice of one expert, as Rabbi Yannai said that in such a circumstance one feeds the ill person based on the advice of one doctor. The Gemara answers: No, the requirement of two experts is necessary in a case where there is another, third expert with him who says that the ill person does not need to eat. In such a case, one feeds the ill person according to the advice of two experts who agree that he requires it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ג א — Yoma 83a:6</span></div>
+    <div class="orig">פְּשִׁיטָא, סְפֵק נְפָשׁוֹת הוּא, וּסְפֵק נְפָשׁוֹת לְהָקֵל! לָא צְרִיכָא, דְּאִיכָּא תְּרֵי אַחֲרִינֵי בַּהֲדֵיהּ דְּאָמְרִי לָא צְרִיךְ. וְאַף עַל גַּב דְּאָמַר רַב סָפְרָא: תְּרֵי כִּמְאָה וּמְאָה כִּתְרֵי, הָנֵי מִילֵּי לְעִנְיַן עֵדוּת, אֲבָל לְעִנְיַן אוּמְדָּנָא — בָּתַר דֵּעוֹת אָזְלִינַן.</div>
+    <div class="trans" data-when="he">מקשים: פשיטא — הרי ספק נפשות הוא וספק נפשות להקל! ומתרצים: צריך, במקרה שיש שני בקיאין נוספים עם החולה האומרים ׳לא צריך׳. ואף שאמר רב ספרא ׳שניים כמאה ומאה כשניים׳ — זה רק לעניין עדות, אבל באומדנא (הערכה) הולכים אחר רוב הדעות.</div>
+    <div class="trans" data-when="en">The Gemara asks: If so, this is obvious, since it is a case of uncertainty concerning a life-threatening situation, and in all cases of uncertainty concerning a life-threatening situation, the halakha is lenient. The Gemara answers: No, this halakha is necessary in a case where there are two other doctors who, along with the ill person, say that he does not need food. And although Rav Safra said that two witnesses are like one hundred witnesses, and one hundred witnesses are like two witnesses, that rule applies specifically to the matter of testimony; however, in the matter of assessing a situation, we follow the majority of opinions. Therefore, one might think in this case that the ill person should not be fed because the opinion of two doctors plus the ill person should override the opposing opinion of two other doctors.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ג א — Yoma 83a:7</span></div>
+    <div class="orig">וְהָנֵי מִילֵּי לְעִנְיַן אוּמְדָּנָא דְמָמוֹנָא, אֲבָל הָכָא סְפֵק נְפָשׁוֹת הוּא.</div>
+    <div class="trans" data-when="he">המשך התירוץ: כלל הליכה אחר הרוב באומדנא נאמר רק לעניין ממון, אבל כאן שספק נפשות הוא — מאכילים את החולה אף כנגד שני בקיאין, ואין הולכים אחר הרוב להחמיר.</div>
+    <div class="trans" data-when="en">Generally speaking, two or more witnesses constitute complete testimony, and there is no difference between the testimony of two and the testimony of a large number of people. However, this principle of following the majority applies specifically to assessing monetary issues, but here it is a case of uncertainty concerning a life-threatening situation. Therefore, although it is the opinion of two doctors against the opinion of two doctors and the ill person, the ill person must eat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ג א — Yoma 83a:8</span></div>
+    <div class="orig">וְהָא מִדְּקָתָנֵי סֵיפָא: וְאִם אֵין שָׁם בְּקִיאִין מַאֲכִילִין אוֹתוֹ עַל פִּי עַצְמוֹ, מִכְּלָל דְּרֵישָׁא דְּאָמַר צָרִיךְ! חַסּוֹרֵי מִיחַסְּרָא וְהָכִי קָתָנֵי: בַּמֶּה דְּבָרִים אֲמוּרִים — דְּאָמַר לֹא צָרִיךְ אֲנִי, אֲבָל אָמַר צָרִיךְ אֲנִי, אֵין שָׁם בְּקִיאִין תְּרֵי אֶלָּא חַד דְּאָמַר לֹא צָרִיךְ — מַאֲכִילִין אוֹתוֹ עַל פִּי עַצְמוֹ.</div>
+    <div class="trans" data-when="he">קושיא מהסיפא: ״אם אין שם בקיאין מאכילין על פי עצמו״ — משמע שהרישא עוסקת בחולה שאמר ׳צריך׳, ושלא כתירוץ הקודם! מתרצים: המשנה חסרה וכך יש לקרוא: במה דברים אמורים שצריך בקיאין — כשאמר ׳לא צריך׳; אבל אמר ׳צריך אני׳, ואין שני בקיאין אלא אחד שאומר ׳לא צריך׳ — מאכילין על פי עצמו.</div>
+    <div class="trans" data-when="en">The Gemara asks: But from the fact that it is taught in the latter clause of the mishna that if there are no experts present one feeds him according to his own opinion, by inference, the first clause of the mishna is referring to a case where the ill person said he needs to eat. In that case, the mishna states that one follows the experts’ opinion, not his own, and feeds him. The Gemara answers: The mishna is incomplete and is teaching the following: In what case is this statement that he may eat only based on the advice of experts said? It is when the ill person said: I do not need to eat. But if he said: I do need to eat, and instead of two experts there is only one who says that he does not need to eat, one feeds him according to his own opinion.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ג א — Yoma 83a:9</span></div>
+    <div class="orig">מָר בַּר רַב אָשֵׁי אָמַר: כֹּל הֵיכָא דְּאָמַר צָרִיךְ אֲנִי, אֲפִילּוּ אִיכָּא מְאָה דְּאָמְרִי לֹא צָרִיךְ לְדִידֵיהּ שָׁמְעִינַן — שֶׁנֶּאֱמַר: ״לֵב יוֹדֵעַ מׇרַּת נַפְשׁוֹ״.</div>
+    <div class="trans" data-when="he">מר בר רב אשי מוסיף: בכל מקום שהחולה אומר ׳צריך אני׳ — אפילו מאה בקיאין אומרים ׳אינו צריך׳, שומעים לו ומאכילים, שנאמר ״לב יודע מרת נפשו״.</div>
+    <div class="trans" data-when="en">Mar bar Rav Ashi said: Any instance where an ill person says: I need to eat, even if there are one hundred expert doctors who say that he does not need to eat, we listen to his own opinion and feed him, as it is stated: “The heart knows the bitterness of its soul” (Proverbs 14:10).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״ג א — Yoma 83a:10</span></div>
+    <div class="orig">תְּנַן: אִם אֵין שָׁם בְּקִיאִין — מַאֲכִילִין אוֹתוֹ עַל פִּי עַצְמוֹ. טַעְמָא דְּלֵיכָּא בְּקִיאִין, הָא אִיכָּא בְּקִיאִין לָא! הָכִי קָאָמַר: בַּמֶּה דְּבָרִים אֲמוּרִים — דְּאָמַר ״לֹא צָרִיךְ אֲנִי״, אֲבָל אָמַר ״צָרִיךְ אֲנִי״, אֵין שָׁם בְּקִיאִין כְּלָל — מַאֲכִילִין אוֹתוֹ עַל פִּי עַצְמוֹ, שֶׁנֶּאֱמַר: ״לֵב יוֹדֵעַ מׇרַּת נַפְשׁוֹ״.</div>
+    <div class="trans" data-when="he">קושיא נוספת (כשיטת מר בר רב אשי): ״אם אין בקיאין על פי עצמו״ — משמע דווקא כשאין בקיאין, אבל יש בקיאין לא! ומתרצים: כך כוונת המשנה: במה דברים אמורים שצריך בקיאין — כשאמר ׳לא צריך׳; אבל אמר ׳צריך אני׳ — כאילו אין שם בקיאין כלל, ומאכילים על פי עצמו, שנאמר ״לב יודע מרת נפשו״.</div>
+    <div class="trans" data-when="en">We learned in the mishna: If an ill person himself says he needs to eat and there are no experts present, one feeds him according to his own opinion. This implies that the reason one feeds him is because there are no experts present. One may infer from this that if there were experts present, no, one would not feed the ill person based on his own opinion but would instead listen to the advice of the experts. The Gemara rejects this: This is what the mishna is saying: In what case is this statement that one follows the opinion of the experts said? It is when the ill person said: I do not need to eat. However, if he said: I do need to eat, it is considered as if there were no experts there at all; we feed him based on his opinion, as it is stated: “The heart knows the bitterness of its soul” (Proverbs 14:10). All the experts are ignored in the face of the ill person’s own sensitivities.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">משנה: בולמוס, כלב שוטה, חושש בגרונו, מפולת</span><span data-when="en">Mishna: bulmos, mad dog, sore throat, rockslide</span>
+      <span class="ref">Yoma 83a:11–13</span></h2>
+  <div class="lead"><span data-when="he">משנה חדשה ובה ארבעה דיני פיקוח נפש: בולמוס, נשיכת כלב שוטה, חושש בגרונו, ומי שנפלה עליו מפולת.</span><span data-when="en">A new Mishna with four life-saving rulings: bulmos, a mad-dog bite, a sore throat, and one buried by a rockslide.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① משנה: מי שאחזו בולמוס — מאכילים אפילו טמאים, עד שיאורו עיניו"]):::mishnah
+  M2(["① כלב שוטה — אין מאכילים מחצר כבד; ר׳ מתיא בן חרש מתיר"]):::mishnah
+  S1["② ר׳ מתיא: חושש בגרונו — מטילים סם בשבת, ספק נפשות דוחה שבת"]:::statement
+  M3(["③ מפולת — ספק חי ספק מת, מפקחין את הגל; מצאוהו מת יניחוהו"]):::mishnah
+  M1 -->|המשך| M2
+  M2 -->|ועוד| S1
+  S1 -->|דין נוסף| M3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① Mishna: one seized with bulmos — fed even impure food till his sight returns"]):::mishnah
+  M2(["① Mad dog — not fed the liver lobe; R. Matya ben Ḥarash permits"]):::mishnah
+  S1["② R. Matya: a sore throat — give medicine on Shabbat, danger overrides Shabbat"]:::statement
+  M3(["③ Rockslide — maybe alive, maybe dead, clear the pile; if found dead, leave him"]):::mishnah
+  M1 -->|continues| M2
+  M2 -->|furthermore| S1
+  S1 -->|further ruling| M3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  M1(["① מִי שֶׁאֲחָזוֹ בּוּלְמוֹס — מַאֲכִילִין אוֹתוֹ אֲפִילּוּ דְּבָרִים טְמֵאִים, עַד שֶׁיֵּאוֹרוּ עֵינָיו"]):::mishnah
+  M2(["① מִי שֶׁנְּשָׁכוֹ כֶּלֶב שׁוֹטֶה — אֵין מַאֲכִילִין … מֵחֲצַר כָּבֵד שֶׁלּוֹ. וְרַבִּי מַתְיָא בֶּן חָרָשׁ מַתִּיר"]):::mishnah
+  S1["② הַחוֹשֵׁשׁ בִּגְרוֹנוֹ — מְטִילִין לוֹ סַם … בְּשַׁבָּת … וְכׇל סְפֵק נְפָשׁוֹת דּוֹחֶה אֶת הַשַּׁבָּת"]:::statement
+  M3(["③ מִי שֶׁנָּפְלָה עָלָיו מַפּוֹלֶת … סָפֵק חַי סָפֵק מֵת … מְפַקְּחִין עָלָיו אֶת הַגַּל … וְאִם מֵת — יְנִיחוּהוּ"]):::mishnah
+  M1 -->|המשך| M2
+  M2 -->|ועוד| S1
+  S1 -->|דין נוסף| M3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ג א — Yoma 83a:11</span></div>
+    <div class="orig">מַתְנִי׳ מִי שֶׁאֲחָזוֹ בּוּלְמוֹס — מַאֲכִילִין אוֹתוֹ אֲפִילּוּ דְּבָרִים טְמֵאִים, עַד שֶׁיֵּאוֹרוּ עֵינָיו. מִי שֶׁנְּשָׁכוֹ כֶּלֶב שׁוֹטֶה — אֵין מַאֲכִילִין אוֹתוֹ מֵחֲצַר כָּבֵד שֶׁלּוֹ. וְרַבִּי מַתְיָא בֶּן חָרָשׁ מַתִּיר.</div>
+    <div class="trans" data-when="he">משנה: מי שאחזתו מחלת הרעבון המסוכנת (בולמוס) — מאכילים אותו אפילו מאכלות אסורים (טמאים), עד שיאירו עיניו (סימן שהתרפא). מי שנשכו כלב שוטה — אין מאכילים אותו מחצר (אונת) הכבד של הכלב, שאין בכך תועלת. ור׳ מתיא בן חרש מתיר, שסבר שיש בכך רפואה.</div>
+    <div class="trans" data-when="en">MISHNA: In the case of one who is seized with the life-threatening illness bulmos, causing him unbearable hunger pangs and impaired vision, one may feed him even impure foods on Yom Kippur or any other day until his eyes recover, as the return of his sight indicates that he is recovering. In the case of one whom a mad dog bit, one may not feed him from the lobe of the dog’s liver. This was thought to be a remedy for the bite, but the Rabbis deem it ineffective. And Rabbi Matya ben Ḥarash permits feeding it to him, as he deems it effective.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ג א — Yoma 83a:12</span></div>
+    <div class="orig">וְעוֹד אָמַר רַבִּי מַתְיָא בֶּן חָרָשׁ: הַחוֹשֵׁשׁ בִּגְרוֹנוֹ — מְטִילִין לוֹ סַם בְּתוֹךְ פִּיו בְּשַׁבָּת, מִפְּנֵי שֶׁהוּא סְפֵק נְפָשׁוֹת, וְכׇל סְפֵק נְפָשׁוֹת דּוֹחֶה אֶת הַשַּׁבָּת.</div>
+    <div class="trans" data-when="he">ועוד אמר ר׳ מתיא בן חרש: החש כאב בגרונו — מטילים לו תרופה לתוך פיו בשבת, אף שרפואה אסורה בשבת; מפני שכאב פנימי הוא ספק נפשות, וכל ספק נפשות דוחה את השבת.</div>
+    <div class="trans" data-when="en">And furthermore, Rabbi Matya ben Ḥarash said: With regard to one who suffers pain in his throat, one may place medicine inside his mouth on Shabbat, although administering a remedy is prohibited on Shabbat. This is because there is uncertainty whether or not it is a life-threatening situation for him, as it is difficult to ascertain the severity of internal pain. And a case of uncertainty concerning a life-threatening situation overrides Shabbat.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ג א — Yoma 83a:13</span></div>
+    <div class="orig">מִי שֶׁנָּפְלָה עָלָיו מַפּוֹלֶת, סָפֵק הוּא שָׁם סָפֵק אֵינוֹ שָׁם, סָפֵק חַי סָפֵק מֵת, סָפֵק גּוֹי סָפֵק יִשְׂרָאֵל, מְפַקְּחִין עָלָיו אֶת הַגַּל. מְצָאוּהוּ חַי — מְפַקְּחִין, וְאִם מֵת — יְנִיחוּהוּ.</div>
+    <div class="trans" data-when="he">מי שנפל עליו גל אבנים (מפולת) בשבת — אף בספק אם הוא תחת ההריסות, ספק חי ספק מת, ספק גוי ספק ישראל — מפנים את הגל להצילו. מצאוהו חי — ממשיכים לפנות; ואם מצאוהו מת — מניחים אותו (שאין מחללים שבת לכבוד המת).</div>
+    <div class="trans" data-when="en">Similarly, with regard to one upon whom a rockslide fell, and there is uncertainty whether he is there under the debris or whether he is not there; and there is uncertainty whether he is still alive or whether he is dead; and there is uncertainty whether the person under the debris is a gentile or whether he is a Jew, one clears the pile from atop him. One may perform any action necessary to rescue him from beneath the debris. If they found him alive after beginning to clear the debris, they continue to clear the pile until they can extricate him. And if they found him dead, they should leave him, since one may not desecrate Shabbat to preserve the dignity of the dead.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">מאימתי יודעים שהאירו עיניו</span><span data-when="en">When are his eyes known to have recovered</span>
+      <span class="ref">Yoma 83a:14</span></h2>
+  <div class="lead"><span data-when="he">הגמרא מבארת את סימן ההחלמה שבמשנה: ״עד שיאורו עיניו״ — משיבחין בין טוב לרע, ואביי מוסיף: לפי הטעם.</span><span data-when="en">The Gemara explains the Mishna’s recovery sign: when he can tell good food from bad — and Abaye adds: by taste.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① תנו רבנן: מניין שהאירו עיניו — משיבחין בין טוב לרע"]:::statement
+  A1["① אביי: ובטעמא — כשמבחין בטעמי המאכלים"]:::answer
+  S1 -->|הוספה| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Sages: how was his sight known to return — when he tells good from bad"]:::statement
+  A1["① Abaye: by taste — when he can distinguish flavors"]:::answer
+  S1 -->|addition| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: מִנַּיִין הָיוּ יוֹדְעִין שֶׁהֵאִירוּ עֵינָיו — מִשֶּׁיַּבְחִין בֵּין טוֹב לָרַע"]:::statement
+  A1["① אָמַר אַבָּיֵי: וּבְטַעְמָא"]:::answer
+  S1 -->|הוספה| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ג א — Yoma 83a:14</span></div>
+    <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן: מִנַּיִין הָיוּ יוֹדְעִין שֶׁהֵאִירוּ עֵינָיו — מִשֶּׁיַּבְחִין בֵּין טוֹב לָרַע. אָמַר אַבָּיֵי: וּבְטַעְמָא.</div>
+    <div class="trans" data-when="he">גמרא: שנו חכמים — מניין היו יודעים שהאירו עיניו (שהבריא מן הבולמוס)? משעה שמבחין בין מאכל טוב לרע, שכן בשעת הבולמוס אוכל בלא הבחנה. אמר אביי: וגם לפי חוש הטעם — כשמבחין בטעמי המאכלים, אות הוא שחזרה גם ראייתו.</div>
+    <div class="trans" data-when="en">GEMARA: The Sages taught: From where would they know that his eyes had recovered their sight? It is from when he can discern between good and bad food, since under the influence of bulmos one eats food indiscriminately. Abaye said: It is with tasting. When he can distinguish the tastes of different foods his eyesight must have also recovered. For example, at night, although it is dark, the sign that his eyesight has been restored is that he is able to detect difference in tastes (Me’iri).</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">בולמוס — מאכילים ״הקל הקל״ תחילה</span><span data-when="en">Bulmos — feed the least-forbidden first</span>
+      <span class="ref">Yoma 83a:15–83b:2</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: מדרגים את האיסורים ומאכילים את הבולמוס ב״הקל הקל״ — נבילה לפני טבל, שביעית לפני טבל; ובטבל מול תרומה תלוי באפשרות לתקן.</span><span data-when="en">A baraita ranks the prohibitions: feed the least-forbidden first — neveila over untithed produce, Sabbatical produce over it; untithed vs teruma turns on whether tithing is possible.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ברייתא: בולמוס — מאכילים הקל הקל; טבל ונבילה — נבילה; טבל ושביעית — שביעית"]:::statement
+  S2["② טבל ותרומה — מחלוקת תנאים: ת״ק טבל, בן תימא תרומה"]:::statement
+  A1["② רבה: אפשר בחולין — דכו״ע מתקנים ומאכילים; פליגי בדלא אפשר"]:::answer
+  S3["③ ת״ק: טבל חמור, ותרומה חזיא לכהן · בן תימא: תרומה חמורה, וטבל אפשר לתקן"]:::statement
+  Q1{"④ אפשר בחולין — פשיטא! · לא צריכא, בשבת"}:::question
+  Q2{"⑤ בשבת נמי פשיטא, טלטול מדרבנן! · בעציץ שאינו נקוב, דרבנן"}:::question
+  S1 -->|המשך| S2
+  S2 -->|רבה| A1
+  A1 -->|במאי פליגי| S3
+  S3 -.->|קושיא| Q1
+  Q1 -.->|קושיא| Q2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Baraita: bulmos — feed least-first; untithed vs neveila — neveila; vs Sabbatical — Sabbatical"]:::statement
+  S2["② Untithed vs teruma — tannaitic dispute: first tanna untithed, ben Teima teruma"]:::statement
+  A1["② Rabba: if non-sacred food is possible — all agree tithe and feed; they differ when impossible"]:::answer
+  S3["③ First tanna: untithed severer, teruma fit for a priest · ben Teima: teruma severer, untithed fixable"]:::statement
+  Q1{"④ Non-sacred possible — obvious! · No, needed on Shabbat"}:::question
+  Q2{"⑤ On Shabbat too obvious, only a rabbinic carrying ban! · an imperforate pot, rabbinic"}:::question
+  S1 -->|continues| S2
+  S2 -->|Rabba| A1
+  A1 -->|where they differ| S3
+  S3 -.->|objection| Q1
+  Q1 -.->|objection| Q2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① מַאֲכִילִין אוֹתוֹ הַקַּל הַקַּל, טֶבֶל וּנְבֵילָה — … נְבֵילָה. טֶבֶל וּשְׁבִיעִית — שְׁבִיעִית"]:::statement
+  S2["② טֶבֶל וּתְרוּמָה — תַּנָּאֵי הִיא … מַאֲכִילִין … טֶבֶל … בֶּן תֵּימָא אוֹמֵר: תְּרוּמָה וְלֹא טֶבֶל"]:::statement
+  A1["② אָמַר רַבָּה: הֵיכָא דְּאֶפְשָׁר בְּחוּלִּין … דִּמְתַקְּנִינַן … כִּי פְּלִיגִי בִּדְלָא אֶפְשָׁר"]:::answer
+  S3["③ מָר סָבַר טֶבֶל חָמוּר — אֲבָל תְּרוּמָה חַזְיָא לְכֹהֵן … וּמַר סָבַר תְּרוּמָה חֲמוּרָה, אֲבָל טֶבֶל אֶפְשָׁר לְתַקּוֹנֵיהּ"]:::statement
+  Q1{"④ אֶפְשָׁר בְּחוּלִּין — פְּשִׁיטָא? לָא צְרִיכָא, בְּשַׁבָּת"}:::question
+  Q2{"⑤ בְּשַׁבָּת נָמֵי, פְּשִׁיטָא — טִלְטוּל מִדְּרַבָּנַן הוּא! … בְּעָצִיץ שֶׁאֵינוֹ נָקוּב, דְּרַבָּנַן"}:::question
+  S1 -->|המשך| S2
+  S2 -->|רבה| A1
+  A1 -->|במאי פליגי| S3
+  S3 -.->|קושיא| Q1
+  Q1 -.->|קושיא| Q2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ג א — Yoma 83a:15</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: מִי שֶׁאֲחָזוֹ בּוּלְמוֹס — מַאֲכִילִין אוֹתוֹ הַקַּל הַקַּל, טֶבֶל וּנְבֵילָה — מַאֲכִילִין אוֹתוֹ נְבֵילָה. טֶבֶל וּשְׁבִיעִית — שְׁבִיעִית.</div>
+    <div class="trans" data-when="he">שנו חכמים: מי שאחזו בולמוס שצריך להאכילו — מאכילים אותו את הקל שבאיסורים תחילה. אם יש לפניו טבל ונבילה — מאכילים נבילה (שעונשה מלקות) ולא טבל (שעונשו מיתה בידי שמים). טבל ושביעית — מאכילים שביעית (שאין בה עונש).</div>
+    <div class="trans" data-when="en">§ The Sages taught: In the case of one who is seized with bulmos and must be fed until his vision is restored, one feeds him the items whose prohibition is least severe first. If he must be fed forbidden foods, he should first be fed those whose level of prohibition is least severe. For instance, if there is untithed produce and an unslaughtered animal carcass [neveila] or any other non-kosher meat, one feeds him the neveila, as the prohibition of untithed produced warrants death at the hand of Heaven, but eating non-kosher meat is a transgression punishable only by lashes. If there is untithed produce and produce from the Sabbatical Year, he is fed the produce from the Sabbatical Year. Untithed produce warrants death at the hand of Heaven, whereas the produce of a Sabbatical Year is prohibited by a positive mitzva and there is no punishment associated with it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ג א — Yoma 83a:16</span></div>
+    <div class="orig">טֶבֶל וּתְרוּמָה — תַּנָּאֵי הִיא. דְּתַנְיָא: מַאֲכִילִין אוֹתוֹ טֶבֶל וְאֵין מַאֲכִילִין אוֹתוֹ תְּרוּמָה. בֶּן תֵּימָא אוֹמֵר: תְּרוּמָה וְלֹא טֶבֶל. אָמַר רַבָּה: הֵיכָא דְּאֶפְשָׁר בְּחוּלִּין, דְּכוּלֵּי עָלְמָא לָא פְּלִיגִי דִּמְתַקְּנִינַן לֵיהּ וּמַסְפִּינַן לֵיהּ.</div>
+    <div class="trans" data-when="he">טבל ותרומה — מחלוקת תנאים: ת״ק אומר מאכילים טבל ולא תרומה; בן תימא אומר תרומה ולא טבל. אמר רבה: היכא שאפשר להאכילו חולין (על ידי הפרשת תרומות ומעשרות מן הטבל) — הכל מודים שמתקנים את הטבל ומאכילים אותו חולין.</div>
+    <div class="trans" data-when="en">If they have untithed produce and teruma, there is a dispute between tanna’im as to which food they should feed him, as it was taught in a baraita: One feeds him untithed produce and does not feed him teruma. Ben Teima says: It is better to feed him teruma and not feed him untithed produce. Rabba said: Where it is possible to feed him non-sacred food by separating tithes from untithed produce and thereby rendering the remainder permitted, everyone agrees that one should make the produce fit for consumption by separating tithes and then feed it to him, even on Shabbat, when it is otherwise prohibited to separate tithes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ג א — Yoma 83a:17</span></div>
+    <div class="orig">כִּי פְּלִיגִי בִּדְלָא אֶפְשָׁר בְּחוּלִּין. מָר סָבַר טֶבֶל חָמוּר, וּמַר סָבַר תְּרוּמָה חֲמוּרָה. מָר סָבַר טֶבֶל חָמוּר — אֲבָל תְּרוּמָה חַזְיָא לְכֹהֵן. וּמַר סָבַר תְּרוּמָה חֲמוּרָה, אֲבָל טֶבֶל אֶפְשָׁר לְתַקּוֹנֵיהּ.</div>
+    <div class="trans" data-when="he">המחלוקת היא כשאי אפשר בחולין: ת״ק סובר טבל חמור — ולכן מאכיל תרומה, שהרי תרומה ראויה לכהן; ובן תימא סובר תרומה חמורה (שלזר לעולם אסורה) — ולכן מאכיל טבל, שהרי טבל אפשר לתקנו.</div>
+    <div class="trans" data-when="en">Where they disagree, it is in a case where it is impossible to feed him non-sacred food because there is no way to separate tithes. One Sage holds that the prohibition of untithed produce is more severe; and one Sage holds that the prohibition of teruma is more severe. The two sides reason as follows. One Sage holds that the prohibition of untithed produce is more severe because it is prohibited to everyone; but teruma is fit for a priest, and therefore one could say that its prohibition is less severe. And one Sage holds that teruma is more severe because non-priests may never eat it, while untithed produce can be made fit to eat, and therefore, even while it is still untithed, the prohibition against eating it is less severe.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ג ב — Yoma 83b:1</span></div>
+    <div class="orig">אֶפְשָׁר בְּחוּלִּין — פְּשִׁיטָא? לָא צְרִיכָא, בְּשַׁבָּת.</div>
+    <div class="trans" data-when="he">קושיא על דברי רבה: ״אפשר בחולין״ — פשיטא שמתקנים ומאכילים חולין! ומה החידוש? תירוץ: לא צריכא — החידוש הוא בשבת, שאף שהפרשת תרו״מ אסורה בה, מוטב לתקן בשבת מלהאכילו טבל.</div>
+    <div class="trans" data-when="en">It was stated that, according to Rabba, if it is possible to make the untithed produce fit and then feed him with non-sacred food, one should do so. The Gemara is surprised at this: It is obvious that if it is possible to tithe the produce and feed him that, one should do so. Why must it be stated? The Gemara explains: No, it is necessary to state this with regard to a case on Shabbat, when it is generally prohibited to separate terumot and tithes. Even so, the Sages said that it is better to separate terumot and tithes on Shabbat rather than feed the ill person untithed produce.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ג ב — Yoma 83b:2</span></div>
+    <div class="orig">בְּשַׁבָּת נָמֵי, פְּשִׁיטָא — טִלְטוּל מִדְּרַבָּנַן הוּא! הָכָא בְּמַאי עָסְקִינַן — בְּעָצִיץ שֶׁאֵינוֹ נָקוּב, דְּרַבָּנַן.</div>
+    <div class="trans" data-when="he">קושיא נוספת: גם בשבת פשיטא — שהרי תיקון הטבל הוא רק איסור טלטול מדרבנן, קל מאיסור אכילת טבל! תירוץ: כאן מדובר בטבל של עציץ שאינו נקוב, שאיסורו מדרבנן — והחידוש שמוטב לעבור על איסור דרבנן (לתקן) מלהאכיל טבל דרבנן.</div>
+    <div class="trans" data-when="en">The Gemara asks: With regard to Shabbat it is also obvious, since the prohibition against separating terumot and tithes is merely a prohibition against moving, which is prohibited by rabbinic law. That is certainly less severe than the prohibition against eating untithed produce. The Gemara answers: With what are we dealing here? We are dealing with fruits grown in an imperforate container, which are not subject to teruma by Torah law but by rabbinic law. The Gemara teaches that it is preferable to transgress the rabbinic prohibition of tithing the fruit on Shabbat rather than feed the ill person untithed produce, although in this case the prohibition is rabbinic.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">טבל מול תרומה — תלייה במחלוקת רבי ור׳ אלעזר</span><span data-when="en">Untithed vs teruma — tied to a tannaitic dispute</span>
+      <span class="ref">Yoma 83b:3–6</span></h2>
+  <div class="lead"><span data-when="he">הגמרא מנסה לתלות את מחלוקת ת״ק ובן תימא במחלוקת רבי ור׳ אלעזר בר״ש בנשוך נחש — ודוחה: אף רבי מודה בטבל דאורייתא.</span><span data-when="en">The Gemara tries to root the untithed-vs-teruma dispute in Rabbi vs R. Elazar on a snakebite — then rejects it: even Rabbi concedes for Torah-level untithed grain.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① חזרה: מר סבר טבל חמור, ומר סבר תרומה חמורה"]:::statement
+  P1["② לימא תנאי היא: נשכו נחש — רבי פוטר ממעשר, ר׳ אלעזר בר״ש מחייב"]:::proof
+  Q1{"③ נימא רבה כר׳ אלעזר ולא כרבי?"}:::question
+  A1["④ אפילו כרבי: רבי פטר רק במעשר ירק דרבנן, אבל טבל דגן דאורייתא — מודה"]:::answer
+  S1 -->|לימא תנאי| P1
+  P1 -->|דיוק| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Recap: one Sage holds untithed severer, the other teruma severer"]:::statement
+  P1["② Say it is a tannaitic dispute: snakebite — Rabbi exempts tithing, R. Elazar requires it"]:::proof
+  Q1{"③ Say Rabba is like R. Elazar and not like Rabbi?"}:::question
+  A1["④ Even like Rabbi: he exempted only rabbinic vegetable-tithe, but Torah-level grain — he concedes"]:::answer
+  S1 -->|say a dispute| P1
+  P1 -->|inference| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① מָר סָבַר טֶבֶל חָמוּר, וּמַר סָבַר תְּרוּמָה חֲמוּרָה"]:::statement
+  P1["② לֵימָא תַּנָּאֵי הִיא … מִי שֶׁנְּשָׁכוֹ נָחָשׁ … וְאֵין צָרִיךְ לְעַשֵּׂר, דִּבְרֵי רַבִּי … רַבִּי אֶלְעָזָר … לֹא יֹאכַל עַד שֶׁיְּעַשֵּׂר"]:::proof
+  Q1{"③ נֵימָא רַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן הִיא, וְלָא רַבִּי!"}:::question
+  A1["④ אֲפִילּוּ תֵּימָא רַבִּי … אֶלָּא לְעִנְיַן מַעְשַׂר יָרָק דְּרַבָּנַן, אֲבָל בְּמַעְשַׂר דָּגָן דְּטֶבֶל דְּאוֹרָיְיתָא … אֲפִילּוּ רַבִּי מוֹדֶה"]:::answer
+  S1 -->|לימא תנאי| P1
+  P1 -->|דיוק| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ג ב — Yoma 83b:3</span></div>
+    <div class="orig">מָר סָבַר טֶבֶל חָמוּר, וּמַר סָבַר תְּרוּמָה חֲמוּרָה.</div>
+    <div class="trans" data-when="he">הגמרא חוזרת לדון בשתי הדעות: מר (ת״ק) סובר טבל חמור — ולכן יש לתקנו אף בשבת ולא להאכיל תרומה; ומר (בן תימא) סובר תרומה חמורה.</div>
+    <div class="trans" data-when="en">§ The Gemara now discusses the aforementioned two opinions: One Sage, ben Teima, holds that untithed produce is more severe, and therefore one must tithe the fruit although it is prohibited to separate teruma on Shabbat; and one Sage, the first tanna, holds that teruma is more severe.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ג ב — Yoma 83b:4</span></div>
+    <div class="orig">לֵימָא תַּנָּאֵי הִיא. דְּתַנְיָא: מִי שֶׁנְּשָׁכוֹ נָחָשׁ — קוֹרִין לוֹ רוֹפֵא מִמָּקוֹם לְמָקוֹם, וּמְקָרְעִין לוֹ אֶת הַתַּרְנְגוֹלֶת, וְגוֹזְזִין לוֹ אֶת הַכְּרֵישִׁין, וּמַאֲכִילִין אוֹתוֹ, וְאֵין צָרִיךְ לְעַשֵּׂר, דִּבְרֵי רַבִּי. רַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן אוֹמֵר: לֹא יֹאכַל עַד שֶׁיְּעַשֵּׂר.</div>
+    <div class="trans" data-when="he">נציע שמחלוקת זו תלויה במחלוקת תנאים אחרת: ברייתא — מי שנשכו נחש (וסכנתו דחופה) בשבת, קורין לו רופא ממקום למקום, קורעים לו תרנגולת וגוזזים כרישין ומאכילים אותו, ואינו צריך לעשר — דברי רבי. ר׳ אלעזר בר״ש: לא יאכל עד שיעשר.</div>
+    <div class="trans" data-when="en">Let us say that Rabba’s view is one side of a dispute between tanna’im, as it was taught in a baraita: In the case of one whom a snake bit on Shabbat and who is in danger, one calls a doctor for him to come from one place to another; and one tears a chicken apart for him if he needs its meat for healing; and one harvests leeks from the ground and feeds them to him for healing purposes, and one need not separate tithes; this is the statement of Rabbi Yehuda HaNasi. Rabbi Elazar, son of Rabbi Shimon, says: He should not eat it unless it has been tithed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ג ב — Yoma 83b:5</span></div>
+    <div class="orig">נֵימָא רַבִּי אֶלְעָזָר בְּרַבִּי שִׁמְעוֹן הִיא, וְלָא רַבִּי!</div>
+    <div class="trans" data-when="he">נאמר אפוא שרבה (הסובר שמתקנים בשבת אף טבל דרבנן) הולך כר׳ אלעזר בר״ש המחייב לעשר, ולא כרבי הפוטר?</div>
+    <div class="trans" data-when="en">Let us say that Rabba’s statement that one must separate teruma and tithes from the fruit for the ill person on Shabbat, even from untithed produce prohibited by rabbinic law, corresponds to the view of Rabbi Elazar, son of Rabbi Shimon. He says that one must tithe the leeks for the ill person even on Shabbat, although leeks, like all other vegetables, are considered untithed produce only by rabbinic law. And Rabba’s opinion does not follow the view of Rabbi Yehuda HaNasi.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ג ב — Yoma 83b:6</span></div>
+    <div class="orig">אֲפִילּוּ תֵּימָא רַבִּי, עַד כָּאן לָא קָאָמַר רַבִּי הָתָם — אֶלָּא לְעִנְיַן מַעְשַׂר יָרָק דְּרַבָּנַן, אֲבָל בְּמַעְשַׂר דָּגָן דְּטֶבֶל דְּאוֹרָיְיתָא הוּא, אֲפִילּוּ רַבִּי מוֹדֶה, דְּאִי שָׁרֵית לֵיהּ בְּעָצִיץ שֶׁאֵינוֹ נָקוּב — אָתֵי לְמֵיכַל בְּעָצִיץ שֶׁהוּא נָקוּב.</div>
+    <div class="trans" data-when="he">דחייה: אפילו תאמר שרבה כרבי — אין סתירה. רבי פטר מלעשר רק שם, במעשר ירק (כרישין) שהוא מדרבנן; אבל במעשר דגן שטבלו מדאורייתא — אף רבי מודה שצריך לעשר, גזירה שמא יתיר לעצמו אף בעציץ נקוב (טבל גמור) אם נתיר לו בעציץ שאינו נקוב.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: Even if you say that Rabba holds in accordance with the view of Rabbi Yehuda HaNasi, Rabbi Yehuda HaNasi is saying that one should not separate tithes only there, with regard to the requirement to take the tithe from vegetables, like leeks, which is rabbinic in origin. This requirement was decreed lest one come to confuse vegetables with produce that is untithed by Torah law. However, with regard to the tithe of grains, which have the status of untithed produce by Torah law, although in this particular circumstance their untithed status is rabbinic because the grains grew in an imperforate container, even Rabbi Yehuda HaNasi concedes that the produce must be tithed. Because if it is permitted for him to eat without separating tithes from produce grown in an imperforate container, he may err and come to eat from grain grown in a perforated pot, which is considered untithed produce by Torah law. Consequently, one must separate tithes on Shabbat before feeding an ill person, even according to the opinion of Rabbi Yehuda HaNasi.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">רפואות הבולמוס ומעשי החכמים — וסיפור כידור</span><span data-when="en">Bulmos remedies, sages’ episodes — and the Kidor tale</span>
+      <span class="ref">Yoma 83b:7–17</span></h2>
+  <div class="lead"><span data-when="he">דבש ומיני מתיקה מאירים את העיניים; אמוראים מציעים רפואות; מעשי ר׳ יהודה ור׳ יוסי בבולמוס; וסיפור כידור הרשע — מכאן למדו לדייק בשמות.</span><span data-when="en">Honey and sweets restore sight; amoraim offer remedies; episodes of R. Yehuda and R. Yosei seized with bulmos; and the tale of wicked Kidor, whence the sages learned to read names.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ברייתא: בולמוס — מאכילים דבש ומיני מתיקה, שמאירים את העיניים; זכר לדבר ׳אורו עיני׳"]:::statement
+  Q1{"② ומאי ׳אין ראיה׳? יונתן לא בולמוס אחזיה"}:::question
+  S2["③ אביי: לא שנו אלא לאחר אכילה, אבל קודם — מגרר גריר (דוד והמצרי)"]:::statement
+  S3["④ רב נחמן בשם שמואל ועוד: אליה בדבש, סולת, קמח שעורים; ר׳ יוחנן ותאנה"]:::statement
+  S4["⑤ ר׳ יהודה ור׳ יוסי בדרך — אחזם בולמוס, קיפחו רועה ועיר שלמה"]:::statement
+  S5["⑥ ר׳ מאיר דייק בשם ׳כידור׳ הרשע, הצניע כיסו בקבר אביו"]:::statement
+  S6["⑦ בחלום נודע לכידור; ר׳ מאיר שמרו; למחר כפר בפיקדון"]:::statement
+  Q2{"⑧ אמאי לא דייקיתו בשמא? · אמר חששא, אחזוקי לא"}:::question
+  S7["⑨ השקוהו יין, ראו טלפחי בשפמו, נטלו כיסיהם; הוא הרג אשתו"]:::statement
+  S8["⑩ היינו ׳מים אחרונים הרגו את הנפש׳; ולבסוף דייקו בשם ׳בלה׳"]:::statement
+  S1 -.->|קושיא| Q1
+  Q1 -->|אביי| S2
+  S2 -->|רפואות| S3
+  S3 -->|מעשה| S4
+  S4 -->|ותו, מעשה| S5
+  S5 -->|חלום| S6
+  S6 -.->|קושיא| Q2
+  Q2 -->|המשך| S7
+  S7 -->|מסקנה| S8
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Baraita: bulmos — feed honey and sweets, which brighten the eyes; allusion ׳my eyes brightened׳"]:::statement
+  Q1{"② Why ׳no proof׳? Jonathan was not seized with bulmos"}:::question
+  S2["③ Abaye: only after eating; before, honey whets appetite (David and the Egyptian)"]:::statement
+  S3["④ Rav Naḥman/Shmuel and others: tail in honey, fine flour, barley flour; R. Yoḥanan and the fig"]:::statement
+  S4["⑤ R. Yehuda and R. Yosei traveling — seized with bulmos, robbed a shepherd and a whole town"]:::statement
+  S5["⑥ R. Meir read the name ׳Kidor׳ as wicked, hid his purse at the host׳s father׳s grave"]:::statement
+  S6["⑦ Kidor learns of it in a dream; R. Meir guarded it; next day Kidor denied the deposit"]:::statement
+  Q2{"⑧ Why didn׳t you read his name? · I said suspect, not establish as wicked"}:::question
+  S7["⑨ They gave him wine, saw lentils on his mustache, recovered the purses; he killed his wife"]:::statement
+  S8["⑩ This is ׳the final washing killed a soul׳; in the end they too read the name ׳Bala׳"]:::statement
+  S1 -.->|objection| Q1
+  Q1 -->|Abaye| S2
+  S2 -->|remedies| S3
+  S3 -->|episode| S4
+  S4 -->|furthermore| S5
+  S5 -->|dream| S6
+  S6 -.->|question| Q2
+  Q2 -->|continues| S7
+  S7 -->|conclusion| S8
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן … שֶׁאֲחָזוֹ בּוּלְמוּס — מַאֲכִילִין אוֹתוֹ דְּבַשׁ … מְאִירִין מְאוֹר עֵינָיו … זֵכֶר לַדָּבָר: רְאוּ נָא כִּי אוֹרוּ עֵינַי"]:::statement
+  Q1{"② וּמַאי אַף עַל פִּי שֶׁאֵין רְאָיָה לַדָּבָר! דְּהָתָם לָאו בּוּלְמוּס אַחְזֵיה"}:::question
+  S2["③ אָמַר אַבָּיֵי: לֹא שָׁנוּ, אֶלָּא לְאַחַר אֲכִילָה, אֲבָל קוֹדֶם אֲכִילָה מִגְרָר גָּרֵיר"]:::statement
+  S3["④ אָמַר רַב נַחְמָן … מַאֲכִילִין אוֹתוֹ אַלְיָה בִּדְבַשׁ … סוֹלֶת … קִמְחָא דִשְׂעָרֵי … רַבִּי יוֹחָנָן … לְמִזְרָחָהּ שֶׁל תְּאֵנָה"]:::statement
+  S4["⑤ רַבִּי יְהוּדָה וְרַבִּי יוֹסֵי … אַחְזֵיה בּוּלְמוּס … קַפְּחֵיהּ לְרוֹעֶה … קִפַּחְתָּ אֶת הָעִיר כּוּלָּהּ"]:::statement
+  S5["⑥ רַבִּי מֵאִיר הֲוָה דָּיֵיק בִּשְׁמָא … אָדָם רָשָׁע הוּא … אוֹתְבֵיהּ בֵּי קִיבְרֵיהּ דַּאֲבוּהּ"]:::statement
+  S6["⑦ אִתְחֲזִי לֵיהּ בְּחֶלְמֵיהּ … חֶלְמָא דְּבֵי שִׁמְשֵׁי לֵית בְּהוּ מַמָּשָׁא … נַטְרֵיהּ … וְאַיְּיתְיֵהּ"]:::statement
+  Q2{"⑧ אַמַּאי לָא דָּיְיקִיתוּ בִּשְׁמָא? … אֵימַר דַּאֲמַרִי אֲנָא חֲשָׁשָׁא, אַחְזוֹקֵי מִי אֲמַרִי?"}:::question
+  S7["⑨ חֲזוֹ טְלָפְחֵי אַשְּׂפָמֵיהּ … וְשַׁקְלוּהּ לְכִיסַיְיהוּ … אֲזַל אִיהוּ וְקַטְלֵיהּ לְאִיתְּתֵיהּ"]:::statement
+  S8["⑩ מַיִם אַחֲרוֹנִים הָרְגוּ אֶת הַנֶּפֶשׁ … וּלְבַסּוֹף הֲווֹ דָּיְיקִי בִּשְׁמָא … דִּשְׁמֵיהּ בָּלָה … רָשָׁע הוּא"]:::statement
+  S1 -.->|קושיא| Q1
+  Q1 -->|אביי| S2
+  S2 -->|רפואות| S3
+  S3 -->|מעשה| S4
+  S4 -->|ותו, מעשה| S5
+  S5 -->|חלום| S6
+  S6 -.->|קושיא| Q2
+  Q2 -->|המשך| S7
+  S7 -->|מסקנה| S8
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ג ב — Yoma 83b:7</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן מִי: שֶׁאֲחָזוֹ בּוּלְמוּס — מַאֲכִילִין אוֹתוֹ דְּבַשׁ וְכׇל מִינֵי מְתִיקָה, שֶׁהַדְּבַשׁ וְכׇל מִינֵי מְתִיקָה מְאִירִין מְאוֹר עֵינָיו שֶׁל אָדָם. וְאַף עַל פִּי שֶׁאֵין רְאָיָה לַדָּבָר, זֵכֶר לַדָּבָר: ״רְאוּ נָא כִּי אוֹרוּ עֵינַי כִּי טָעַמְתִּי מְעַט דְּבַשׁ הַזֶּה״.</div>
+    <div class="trans" data-when="he">שנו חכמים: מי שאחזו בולמוס — מאכילים אותו דבש וכל מיני מתיקה, שהדבש ומיני המתיקה מאירים את עיני האדם. ואף שאין ראיה גמורה לדבר, זכר (רמז) לדבר מדברי יונתן: ״ראו נא כי אורו עיני כי טעמתי מעט דבש הזה״.</div>
+    <div class="trans" data-when="en">The Sages taught in a baraita: In the case of one who is seized with bulmos, one feeds him honey and all types of sweet foods, as the honey and all types of sweet foods restore the sight of his eyes. And although there is no clear proof for the matter, there is an allusion to the matter. Jonathan said: “See, I pray you, how my eyes are brightened because I tasted a little of this honey” (I Samuel 14:29).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ג ב — Yoma 83b:8</span></div>
+    <div class="orig">וּמַאי: ״אַף עַל פִּי שֶׁאֵין רְאָיָה לַדָּבָר״! דְּהָתָם לָאו בּוּלְמוּס אַחְזֵיה.</div>
+    <div class="trans" data-when="he">קושיא: ולמה אמרה הברייתא ״אף על פי שאין ראיה״, והרי הפסוק ביונתן ראיה ברורה? תירוץ: שם יונתן לא אחזו בולמוס אלא רעב רגיל, ולכן אין משם ראיה גמורה שדבש מרפא בולמוס.</div>
+    <div class="trans" data-when="en">The Gemara asks: And why does the baraita say: Although there is no clear proof for the matter, when that verse is a strong proof? The Gemara answers: There, Jonathan was not seized with bulmos, he was merely very hungry. Therefore, the episode provides no evidence that honey or sweet foods are the remedy for bulmos.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ג ב — Yoma 83b:9</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: לֹא שָׁנוּ, אֶלָּא לְאַחַר אֲכִילָה, אֲבָל קוֹדֶם אֲכִילָה מִגְרָר גָּרֵיר, דִּכְתִיב: ״וַיִּמְצְאוּ אִישׁ מִצְרִי בַּשָּׂדֶה וַיִּקְחוּ אוֹתוֹ אֶל דָּוִד וַיִּתְּנוּ לוֹ לֶחֶם וַיֹּאכַל וַיַּשְׁקוּהוּ מָיִם. וַיִּתְּנוּ לוֹ פֶלַח דְּבֵילָה וּשְׁנֵי צִמּוּקִים וַיֹּאכַל וַתָּשׇׁב רוּחוֹ אֵלָיו כִּי לֹא אָכַל לֶחֶם וְלֹא שָׁתָה מַיִם שְׁלֹשָׁה יָמִים וּשְׁלֹשָׁה לֵילוֹת״.</div>
+    <div class="trans" data-when="he">אמר אביי: לא נאמר שהדבש מאיר עיניים אלא לאחר אכילת מאכל אחר; אבל קודם אכילה הדבש דווקא גורר ומגביר את הרעב. ראיה מן המצרי שמצאו אנשי דוד: נתנו לו תחילה לחם, ורק אחר כך דבילה וצימוקים — שהמתיקה ניתנת לאחר העיקר ולא לפניו.</div>
+    <div class="trans" data-when="en">Abaye said: They taught that honey restores one’s eyesight only after eating other food, but before eating other food it whets one’s appetite, as it is written: “And they found an Egyptian man in the field, and brought him to David, and they gave him bread and he ate, and they gave him water to drink; and they gave him a piece of a cake of figs, and two clusters of raisins, and he ate, and his spirit was restored; for he had eaten no bread nor drunk any water for three days and three nights” (I Samuel 30:11–12). This indicates that sweets are given after the main course and not before it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ג ב — Yoma 83b:10</span></div>
+    <div class="orig">אָמַר רַב נַחְמָן אָמַר שְׁמוּאֵל: מִי שֶׁאֲחָזוֹ בּוּלְמוּס — מַאֲכִילִין אוֹתוֹ אַלְיָה בִּדְבַשׁ. רַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ אָמַר: אַף סוֹלֶת נְקִיָּה בִּדְבַשׁ. רַב פָּפָּא אָמַר: אֲפִילּוּ קִמְחָא דִשְׂעָרֵי בְּדוּבְשָׁא. אָמַר רַבִּי יוֹחָנָן: פַּעַם אַחַת אֲחָזַנִי בּוּלְמוּס וְרַצְתִּי לְמִזְרָחָהּ שֶׁל תְּאֵנָה, וְקִיַּימְתִּי בְּעַצְמִי: ״הַחׇכְמָה תְּחַיֶּה בְעָלֶיהָ״. דְּתָנֵי רַב יוֹסֵף: הָרוֹצֶה לִטְעוֹם טַעַם תְּאֵנָה — יִפְנֶה לְמִזְרָחָהּ, שֶׁנֶּאֱמַר: ״וּמִמֶּגֶד תְּבוּאוֹת שָׁמֶשׁ״.</div>
+    <div class="trans" data-when="he">רב נחמן בשם שמואל: בולמוס — מאכילים אליה (שומן) בדבש; רב הונא בריה דרב יהושע: אף סולת נקייה בדבש; רב פפא: אפילו קמח שעורים בדבש. ר׳ יוחנן: פעם אחזני בולמוס ורצתי למזרח התאנה (ששם מבשילות הפירות תחילה) ומצאתי תאנים, וקיימתי בעצמי ״החכמה תחיה בעליה״. וכדתני רב יוסף: הרוצה לטעום טעם תאנה יפנה למזרחה, שנאמר ״וממגד תבואות שמש״.</div>
+    <div class="trans" data-when="en">Rav Naḥman said that Shmuel said: In the case of one who is seized with bulmos, one feeds him a sheep’s tail with honey, since the combination of the fatty meat and the honey helps greatly. Rav Huna, son of Rav Yehoshua, said: Also, fine wheat flour with honey is a remedy. Rav Pappa said: Even barley flour with honey is good for curing bulmos. Rabbi Yoḥanan said: Once I was seized with bulmos and I ran to the east side of a fig tree and found ripe figs there, which I ate. Figs on a tree do not all ripen at once but ripen first on the side where the sun rises, so Rabbi Yoḥanan searched first for figs on the east side of the tree. And I thereby fulfilled the verse: “Wisdom preserves the lives of those who have it” (Ecclesiastes 7:12). As Rav Yosef taught: One who wishes to taste the flavor of the fig should turn to the east, as it is stated: “And for the precious things of the sun’s fruits” (Deuteronomy 33:14), implying that the sun ripens fruit and makes them sweet.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ג ב — Yoma 83b:11</span></div>
+    <div class="orig">רַבִּי יְהוּדָה וְרַבִּי יוֹסֵי הֲווֹ קָא אָזְלִי בְּאוֹרְחָא. אַחְזֵיה בּוּלְמוּס לְרַבִּי יְהוּדָה, קַפְּחֵיהּ לְרוֹעֶה אַכְלֵיהּ לְרִיפְתָּא. אָמַר לֵיהּ רַבִּי יוֹסֵי: קִפַּחְתָּ אֶת הָרוֹעֶה. כִּי מְטוֹ לְמָתָא, אַחְזֵיה בּוּלְמוּס לְרַבִּי יוֹסֵי. אַהְדְּרוּהוּ בְּלָגֵי וְצָעֵי, אֲמַר לֵיהּ רַבִּי יְהוּדָה: אֲנִי קִפַּחְתִּי אֶת הָרוֹעֶה, וְאַתָּה קִפַּחְתָּ אֶת הָעִיר כּוּלָּהּ.</div>
+    <div class="trans" data-when="he">מעשה: ר׳ יהודה ור׳ יוסי הלכו בדרך. אחזו בולמוס את ר׳ יהודה, ונטל בעל כורחו את לחמו של רועה ואכלו. אמר לו ר׳ יוסי: קיפחת (גזלת) את הרועה. כשהגיעו לעיר, אחז בולמוס את ר׳ יוסי, והקיפוהו אנשי העיר בכדים וקערות מלאות מטעמים. אמר לו ר׳ יהודה: אני קיפחתי רועה אחד, ואתה קיפחת עיר שלמה.</div>
+    <div class="trans" data-when="en">The Gemara relates that Rabbi Yehuda and Rabbi Yosei were walking on the road when Rabbi Yehuda was seized with bulmos. He overpowered a nearby shepherd and ate the bread that the shepherd had in his hand, since his life was in danger. Rabbi Yosei said to him: You have robbed that shepherd. When they reached the city, Rabbi Yosei was seized with bulmos, and all the people of the city surrounded him with jugs [lagei] and plates with all sorts of sweets. Rabbi Yehuda said to him in jest: I robbed only the shepherd, but you have robbed the entire city.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ג ב — Yoma 83b:12</span></div>
+    <div class="orig">וְתוּ: רַבִּי מֵאִיר וְרַבִּי יְהוּדָה וְרַבִּי יוֹסֵי הֲווֹ קָא אָזְלִי בְּאוֹרְחָא, רַבִּי מֵאִיר הֲוָה דָּיֵיק בִּשְׁמָא, רַבִּי יְהוּדָה וְרַבִּי יוֹסֵי לָא הֲווֹ דָּיְיקִי בִּשְׁמָא. כִּי מְטוֹ לְהָהוּא דּוּכְתָּא, בְּעוֹ אוּשְׁפִּיזָא. יְהַבוּ לְהוּ. אֲמַרוּ לֵיהּ: מָה שְׁמָךְ? אֲמַר לְהוּ: ״כִּידוֹר״. אֲמַר: שְׁמַע מִינַּהּ אָדָם רָשָׁע הוּא, שֶׁנֶּאֱמַר: ״כִּי דוֹר תַּהְפּוּכוֹת הֵמָּה״. רַבִּי יְהוּדָה וְרַבִּי יוֹסֵי אַשְׁלִימוּ לֵיהּ כִּיסַיְיהוּ. רַבִּי מֵאִיר לָא אַשְׁלֵים לֵיהּ כִּיסֵיהּ, אֲזַל אוֹתְבֵיהּ בֵּי קִיבְרֵיהּ דַּאֲבוּהּ.</div>
+    <div class="trans" data-when="he">ועוד: ר׳ מאיר, ר׳ יהודה ור׳ יוסי הלכו בדרך. ר׳ מאיר היה מדייק בשמות בני אדם, ור׳ יהודה ור׳ יוסי לא. הגיעו לבית מלון; שאלו את המארח לשמו, אמר ׳כידור׳. אמר ר׳ מאיר בלבו: רשע הוא, שנאמר ״כי דור תהפוכות המה״. ר׳ יהודה ור׳ יוסי הפקידו אצלו כיסיהם (ערב שבת); ר׳ מאיר לא הפקיד, אלא הטמין כיסו בקבר אבי המארח.</div>
+    <div class="trans" data-when="en">§ And furthermore, it is told: Rabbi Meir and Rabbi Yehuda and Rabbi Yosei were walking on the road together. Rabbi Meir would analyze names and discern one’s nature from his name, while Rabbi Yehuda and Rabbi Yosei were not apt to analyze names. When they came to a certain place, they looked for lodging and were given it. They said to the innkeeper: What is your name? He said to them: My name is Kidor. Rabbi Meir said to himself: Perhaps one can learn from this that he is a wicked person, as it is stated: “For they are a generation [ki dor] of upheavals” (Deuteronomy 32:20). Since it was Friday afternoon, Rabbi Yehuda and Rabbi Yosei entrusted their purses to him. Rabbi Meir did not entrust his purse to him but went and placed it at the grave of the innkeeper’s father.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״ג ב — Yoma 83b:13</span></div>
+    <div class="orig">אִתְחֲזִי לֵיהּ בְּחֶלְמֵיהּ: תָּא שְׁקֵיל כִּיסָא דְּמַנַּח אַרֵישָׁא דְּהָהוּא גַּבְרָא. לִמְחַר אֲמַר לְהוּ: הָכִי אִתְחֲזִי לִי בְּחֶלְמַאי. אָמְרִי לֵיהּ: חֶלְמָא דְּבֵי שִׁמְשֵׁי לֵית בְּהוּ מַמָּשָׁא, אֲזַל רַבִּי מֵאִיר וְנַטְרֵיהּ כּוּלֵּי יוֹמָא וְאַיְּיתְיֵהּ.</div>
+    <div class="trans" data-when="he">נראה לכידור בחלומו אביו: בוא טול את הכיס המונח על ראש פלוני (אביו, בקבר). למחר סיפר כידור לחכמים את חלומו. אמרו לו: חלום של בין השמשות (ליל שבת) אין בו ממש. אף על פי כן הלך ר׳ מאיר ושמר על מקומו כל היום ולבסוף נטל את כיסו.</div>
+    <div class="trans" data-when="en">The innkeeper’s father appeared to the innkeeper in a dream and said to him: Go take the purse placed at the head of that man, i.e., the innkeeper’s father. The following day, he said to the Sages: This is what appeared to me in my dream. They said to him: Dreams during twilight on Shabbat evening have no substance and should not be trusted. Even so, Rabbi Meir went and guarded his money all that day and then took it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ״ג ב — Yoma 83b:14</span></div>
+    <div class="orig">לִמְחַר אֲמַרוּ לֵיהּ: הַב לַן כִּיסַן. אֲמַר לְהוּ: לֹא הָיוּ דְבָרִים מֵעוֹלָם. אֲמַר לְהוּ רַבִּי מֵאִיר: אַמַּאי לָא דָּיְיקִיתוּ בִּשְׁמָא? אֲמַרוּ לֵיהּ: אַמַּאי לָא אֲמַרְתְּ לַן מָר? אֲמַר לְהוּ: אֵימַר דַּאֲמַרִי אֲנָא חֲשָׁשָׁא, אַחְזוֹקֵי מִי אֲמַרִי?</div>
+    <div class="trans" data-when="he">למחר ביקשו ר׳ יהודה ור׳ יוסי את כיסיהם. אמר להם כידור: לא היו דברים מעולם. אמר להם ר׳ מאיר: מדוע לא דייקתם בשמו? אמרו לו: ומדוע לא אמרת לנו, רבנו? אמר להם: אמרתי שראוי לחשוש, אך וכי אמרתי להחזיקו ודאי לרשע?</div>
+    <div class="trans" data-when="en">The next day, the rabbis said to the innkeeper: Give us our purses. He said to them: These matters never occurred; you never gave me any purses. Rabbi Meir said to them: Why didn’t you analyze his name to learn that he is a wicked man? They said to him: Why didn’t the Master tell us? He said to them: I said one should be suspicious, but have I said a person should be established as wicked? Could I say to you with certainty that he is wicked based on his name alone?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא פ״ג ב — Yoma 83b:15</span></div>
+    <div class="orig">מַשְׁכוּהוּ וְעַיְּילוּהוּ לַחֲנוּתָא, חֲזוֹ טְלָפְחֵי אַשְּׂפָמֵיהּ, אֲזַלוּ וִיהַבוּ סִימָנָא לִדְבֵיתְהוּ וְשַׁקְלוּהּ לְכִיסַיְיהוּ וְאַיְיתוֹ. אֲזַל אִיהוּ וְקַטְלֵיהּ לְאִיתְּתֵיהּ.</div>
+    <div class="trans" data-when="he">מה עשו? משכו את כידור והכניסוהו לחנות והשקוהו יין, ולאחר ששתה ראו עדשים בשפמו (סימן למאכל היום). הלכו ומסרו סימן זה לאשתו, כאילו ציוה להחזיר את הכיסים, ונטלו את כיסיהם והביאום. כשנודע לכידור — הלך והרג את אשתו על שמסרה הכיסים.</div>
+    <div class="trans" data-when="en">What did they do? They dragged the innkeeper and brought him to a store and gave him wine to drink. After he drank the wine, they saw lentils on his mustache, showing that he had eaten lentils that day. They went and gave this sign to his wife. They said that the innkeeper had ordered that their money be returned to them upon the sign that he ate lentils at his last meal. And they took their purses and went. He went and killed his wife out of anger that she did this.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא פ״ג ב — Yoma 83b:16</span></div>
+    <div class="orig">הַיְינוּ (דִּתְנַן): מַיִם רִאשׁוֹנִים הֶאֱכִילוּ בְּשַׂר חֲזִיר. מַיִם אַחֲרוֹנִים הָרְגוּ אֶת הַנֶּפֶשׁ.</div>
+    <div class="trans" data-when="he">זהו ששנינו: ׳מים ראשונים האכילו בשר חזיר׳ — מארח שהבחין בין יהודי לגוי לפי נטילת ידיים, וזה שלא נטל הואכל חזיר; ׳מים אחרונים הרגו את הנפש׳ — שאילו היה כידור נוטל מים אחרונים ומקנח שפמו, לא היו רואים את העדשים ולא נהרגה אשתו.</div>
+    <div class="trans" data-when="en">This is as we learned in a baraita: Due to a person’s laxity in the first washing, they fed him pork. There was an innkeeper who was accustomed to feed pork to gentiles and kosher meat to Jews. He distinguished between Jews and gentiles by watching to see whether they performed the ritual hand-washing before eating. One time, a Jew came and ate without washing his hands before the meal, and the innkeeper gave him pork to eat. Laxity in the final washing, the washing of one’s hands and mouth after a meal, caused the innkeeper to kill the person. This is similar to that story, as had the wicked innkeeper washed his mouth, the rabbis would not have known that he had eaten lentils.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא פ״ג ב — Yoma 83b:17</span></div>
+    <div class="orig">וּלְבַסּוֹף הֲווֹ דָּיְיקִי בִּשְׁמָא. כִּי מְטוֹ לְהָהוּא בֵּיתָא דִּשְׁמֵיהּ ״בָּלָה״, לָא עֲיַילוּ לְגַבֵּיהּ. אָמְרִי: שְׁמַע מִינַּהּ רָשָׁע הוּא. דִּכְתִיב: ״וָאֹמַר לַבָּלָה נִאוּפִים״, (כְּמוֹ: ״אַחֲרֵי בְלוֹתִי הָיְתָה לִּי עֶדְנָה״, כְּלוֹמַר: זָקְנָה בְּנִאוּפִים).</div>
+    <div class="trans" data-when="he">ולבסוף אף ר׳ יהודה ור׳ יוסי נהגו לדייק בשמות. כשהגיעו לבית מארח ששמו ׳בלה׳, לא נכנסו אליו, ואמרו: שמע מינה רשע הוא, שנאמר ״ואומר לבלה ניאופים״ (כלשון ״אחרי בלותי״ — שזקן בניאופים).</div>
+    <div class="trans" data-when="en">And in the end, they too, Rabbi Yehuda and Rabbi Yosei, would analyze names. When they came to a house of a landlord named Bala, they did not enter. They said: Conclude from here that he is certainly wicked, as it is written: “I said of her who was worn out [bala] by adulteries” (Ezekiel 23:43), as it states: “After I am grown old [beloti] shall I have pleasure?” (Genesis 18:12). “Worn out by adulteries” means aged through adulteries.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-8">
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">כלב שוטה — סימניו, מקורו ותקנת הנשוך</span><span data-when="en">The mad dog — its signs, cause, and the remedy</span>
+      <span class="ref">Yoma 83b:18–84a:3</span></h2>
+  <div class="lead"><span data-when="he">חמישה סימני כלב שוטה; מחלוקת רב ושמואל במקורו; הנפקא מינה — הריגתו בדבר הנזרק; ותקנות למי שחף בו או נשכו.</span><span data-when="en">Five signs of a mad dog; Rav vs Shmuel on its cause; the practical upshot — killing it with a thrown object; and remedies for one rubbed or bitten.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① ברייתא: חמישה סימני כלב שוטה; מקורו — רב: כשפים, שמואל: רוח רעה"]:::statement
+  Q1{"② מאי בינייהו? למקטליה בדבר הנזרק"}:::question
+  P1["③ תניא כוותיה דשמואל: הורגים בדבר הנזרק; חף בו — מסתכן, נשכו — מת"]:::proof
+  A1["③ תקנת החף בו: ישלח בגדיו וירוץ (רב הונא בריה דרב יהושע)"]:::answer
+  A2["④ תקנת הנשוך: כתב על עור צבוע, קבורת בגדים, שתייה בקנה נחושת (אביי)"]:::answer
+  S1 -.->|מאי בינייהו| Q1
+  Q1 -->|תניא כוותיה| P1
+  P1 -->|תקנה| A1
+  A1 -->|תקנה| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Baraita: five signs of a mad dog; its cause — Rav: witchcraft, Shmuel: an evil spirit"]:::statement
+  Q1{"② What is the difference? Killing it with a thrown object"}:::question
+  P1["③ A baraita supports Shmuel: kill with a thrown object; one rubbed — endangered, bitten — dies"]:::proof
+  A1["③ Remedy for one rubbed: shed clothes and run (Rav Huna son of Rav Yehoshua)"]:::answer
+  A2["④ Remedy for one bitten: a written charm on hide, burying clothes, drinking through a copper tube (Abaye)"]:::answer
+  S1 -.->|the difference| Q1
+  Q1 -->|supports Shmuel| P1
+  P1 -->|remedy| A1
+  A1 -->|remedy| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① חֲמִשָּׁה דְּבָרִים נֶאֶמְרוּ בְּכֶלֶב שׁוֹטֶה … רַב אָמַר: נָשִׁים כַּשְׁפָנִיּוֹת … וּשְׁמוּאֵל אָמַר: רוּחַ רָעָה שׁוֹרָה עָלָיו"]:::statement
+  Q1{"② מַאי בֵּינַיְיהוּ? … לְמִקְטְלֵיהּ בְּדָבָר הַנִּזְרָק"}:::question
+  P1["③ תַּנְיָא כְּווֹתֵיהּ דִּשְׁמוּאֵל … אֵין הוֹרְגִין … אֶלָּא בְּדָבָר הַנִּזְרָק. דְּחָיֵיף בֵּיהּ — מִסְתַּכַּן, דְּנָכֵית לֵיהּ — מָיֵית"]:::proof
+  A1["③ מַאי תַּקַּנְתֵּיהּ? נִישַׁלַּח מָאנֵיהּ וְנִירְהַיט … שַׁלְּחִינְהוּ לְמָאנֵיהּ וְרָהֵיט"]:::answer
+  A2["④ אָמַר אַבָּיֵי: נֵיתֵי מַשְׁכָּא דְּאַפָּא דִּיכְרָא וְנִיכְתּוֹב עֲלֵיהּ … לָא לִישְׁתֵּי אֶלָּא בְּגוּבְתָּא דִנְחָשָׁא"]:::answer
+  S1 -.->|מאי בינייהו| Q1
+  Q1 -->|תניא כוותיה| P1
+  P1 -->|תקנה| A1
+  A1 -->|תקנה| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ג ב — Yoma 83b:18</span></div>
+    <div class="orig">מִי שֶׁנְּשָׁכוֹ כֶּלֶב שׁוֹטֶה וְכוּ׳. תָּנוּ רַבָּנַן, חֲמִשָּׁה דְּבָרִים נֶאֶמְרוּ בְּכֶלֶב שׁוֹטֶה: פִּיו פָּתוּחַ, וְרִירוֹ נוֹטֵף, וְאׇזְנָיו סְרוּחוֹת, וּזְנָבוֹ מוּנָּח עַל יַרְכוֹתָיו, וּמְהַלֵּךְ בְּצִידֵּי דְּרָכִים. וְיֵשׁ אוֹמְרִים: אַף נוֹבֵחַ וְאֵין קוֹלוֹ נִשְׁמָע. מִמַּאי הָוֵי? רַב אָמַר: נָשִׁים כַּשְׁפָנִיּוֹת מְשַׂחֲקוֹת בּוֹ, וּשְׁמוּאֵל אָמַר: רוּחַ רָעָה שׁוֹרָה עָלָיו.</div>
+    <div class="trans" data-when="he">המשנה אמרה ׳מי שנשכו כלב שוטה׳. שנו חכמים חמישה סימני כלב שוטה: פיו פתוח, רירו נוטף, אזניו תלויות (סרוחות), זנבו מונח על ירכותיו, ומהלך בצדי הדרכים. ויש אומרים: אף נובח ואין קולו נשמע. ממה נעשה שוטה? רב: נשים מכשפות משחקות בו; ושמואל: רוח רעה שורה עליו.</div>
+    <div class="trans" data-when="en">§ It was taught that in the case of one whom a mad dog bit, one does not feed him the lobe of its liver. The Gemara clarifies the concept of the mad dog. The Sages taught in a baraita: Five signs were said about a mad dog: Its mouth is always open; and its saliva drips; and its ears are floppy and do not stand up; and its tail rests on its legs; and it walks on the edges of roads. And some say it also barks and its voice is not heard. The Gemara asks: From where did the dog become mad? Rav said: Witches play with it and practice their magic on it, causing it to become mad. And Shmuel said: An evil spirit rests upon it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ג ב — Yoma 83b:19</span></div>
+    <div class="orig">מַאי בֵּינַיְיהוּ? אִיכָּא בֵּינַיְיהוּ</div>
+    <div class="trans" data-when="he">מה הנפקא מינה בין רב לשמואל? יש ביניהם נפקא מינה לעניין…</div>
+    <div class="trans" data-when="en">The Gemara asks: What is the practical difference between these two opinions? The Gemara answers: There is a practical difference between them with regard to</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ד א — Yoma 84a:1</span></div>
+    <div class="orig">לְמִקְטְלֵיהּ בְּדָבָר הַנִּזְרָק.</div>
+    <div class="trans" data-when="he">…להריגתו בדבר הנזרק מרחוק (כחץ) ולא ביד: לשמואל שרוח רעה שורה עליו, ראוי להימנע ממגע ישיר עמו.</div>
+    <div class="trans" data-when="en">killing it with an object that is thrown from a distance like an arrow rather than with one’s hands. If the dog is possessed by an evil spirit, one should avoid direct contact with it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ד א — Yoma 84a:2</span></div>
+    <div class="orig">תַּנְיָא כְּווֹתֵיהּ דִּשְׁמוּאֵל. כְּשֶׁהוֹרְגִין אוֹתוֹ — אֵין הוֹרְגִין אוֹתוֹ אֶלָּא בְּדָבָר הַנִּזְרָק. דְּחָיֵיף בֵּיהּ — מִסְתַּכַּן, דְּנָכֵית לֵיהּ — מָיֵית. דְּחָיֵיף בֵּיהּ — מִסְתַּכַּן: מַאי תַּקַּנְתֵּיהּ? נִישַׁלַּח מָאנֵיהּ וְנִירְהַיט. רַב הוּנָא בְּרֵיהּ דְּרַב יְהוֹשֻׁעַ חַף בֵּיהּ חַד מִינַּיְיהוּ בְּשׁוּקָא, שַׁלְּחִינְהוּ לְמָאנֵיהּ וְרָהֵיט. אֲמַר: קִיַּימְתִּי בְּעַצְמִי ״הַחׇכְמָה תְּחַיֶּה בְעָלֶיהָ״.</div>
+    <div class="trans" data-when="he">ברייתא כשמואל: כשהורגים כלב שוטה — אין הורגים אלא בדבר הנזרק. מי שהכלב חף (שִפשף) בו — מסתכן; ומי שנשכו — מת. תקנת החף בו: ישלח (יפשוט) בגדיו וירוץ. רב הונא בריה דרב יהושע חף בו אחד מהם בשוק, פשט בגדיו ורץ, ואמר: קיימתי בעצמי ״החכמה תחיה בעליה״.</div>
+    <div class="trans" data-when="en">The Gemara comments: This was taught in a baraita in accordance with the opinion of Shmuel: When one kills a mad dog, he should kill it only with a thrown object. Furthermore, one who is rubbed by a mad dog will become dangerously ill, while one bitten by the dog will die. The Gemara asks: What is the remedy for one who is rubbed by mad dog and becomes dangerously ill? The Gemara answers: Let him take off his clothing and run. The Gemara relates: Rav Huna, son of Rav Yehoshua, was rubbed by one of these mad dogs in the market, whereupon he took off his clothing and ran. He said: I have fulfilled the verse: “Wisdom preserves the lives of those who have it” (Ecclesiastes 7:12).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ד א — Yoma 84a:3</span></div>
+    <div class="orig">דְּנָכֵית לֵיהּ מָיֵית: מַאי תַּקַּנְתֵּיהּ? אָמַר אַבָּיֵי: נֵיתֵי מַשְׁכָּא דְּאַפָּא דִּיכְרָא וְנִיכְתּוֹב עֲלֵיהּ: אֲנָא פְּלָנְיָא בַּר פְּלָנִיתָא אַמַּשְׁכָּא דְּאַפָּא דִּיכְרָא כָּתֵיבְנָא עֲלָךְ: ״כַּנְתִּי כַּנְתִּי קְלֵירוֹס״. וְאָמְרִי לַהּ: ״קַנְדִּי קַנְדִּי קְלוֹרוֹס, יָהּ יָהּ ה׳ צְבָאוֹת אָמֵן אָמֵן סֶלָה״. וְנִשְׁלְחִינְהוּ לְמָאנֵיהּ וְלִקְבְּרִינְהוּ בֵּי קִבְרֵי עַד תְּרֵיסַר יַרְחֵי שַׁתָּא, וְנַפְּקִינְהוּ וְנִקְלִינְהוּ בְּתַנּוּרָא וּנְבַדְּרִינְהוּ לְקִטְמֵיהּ אַפָּרָשַׁת דְּרָכִים. וְהָנָךְ תְּרֵיסַר יַרְחֵי שַׁתָּא, כִּי שָׁתֵי מַיָּא — לָא לִישְׁתֵּי אֶלָּא בְּגוּבְתָּא דִנְחָשָׁא, דִּילְמָא חָזֵי בָּבוּאָה דְּשֵׁידָא וְלִיסְתַּכַּן. כִּי הָא דְּאַבָּא בַּר מָרְתָא הוּא אַבָּא בַּר מִנְיוֹמֵי, עֲבַדָא לֵיהּ אִימֵּיהּ גּוּבְתָּא דְּדַהֲבָא.</div>
+    <div class="trans" data-when="he">מי שנשכו כלב שוטה — מת. מה תקנתו? אמר אביי: יביא עור זכר של צבוע ויכתוב עליו לחש (״אנא פלוני בר פלונית… כנתי כנתי קלירוס״, ויש אומרים ״קנדי קנדי קלורוס, יה יה ה׳ צבאות אמן אמן סלה״); ויפשוט בגדיו ויקברם בבית הקברות שנים עשר חודש, ואחר ישרפם בתנור ויפזר אפרם בפרשת דרכים. ובאותם שנים עשר חודש, כששותה מים — ישתה רק בקנה (צינור) נחושת, שמא יראה בבואת השד שבמים ויסתכן, כמעשה אבא בר מרתא שאמו עשתה לו קנה של זהב.</div>
+    <div class="trans" data-when="en">The Gemara continues to discuss the baraita: One bitten by a mad dog will die. The Gemara asks: What is the remedy? Abaye said: Let him bring the skin of a male hyena and write on it: I, so-and-so, son of so-and-so, am writing this spell about you upon the skin of a male hyena: Kanti kanti kelirus. And some say he should write: Kandi kandi keloros. He then writes names of God, Yah, Yah, Lord of Hosts, amen amen Selah. And let him take off his clothes and bury them in a cemetery for twelve months of the year, after which he should take them out, and burn them in an oven, and scatter the ashes at a crossroads. And during those twelve months of the year, when his clothes are buried, when he drinks water, let him drink only from a copper tube and not from a spring, lest he see the image of the demon in the water and be endangered, like the case of Abba bar Marta, who is also called Abba bar Manyumi, whose mother made him a gold tube for this purpose.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
