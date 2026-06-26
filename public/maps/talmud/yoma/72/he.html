@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא ע״ב</title>
+<meta name="description" content="מפת הסוגיא של יומא ע״ב: איסורי קריעת בגדי כהונה והזחת החושן והסרת בדי הארון; דרשות ׳בגדי השרד׳ ומעשה אורג; שלוש ארונות ושלושה זירים; הארון כסמל התורה — זכה ולא זכה; ובגדי משוח מלחמה — משמש בהן או רק נשאל בהן.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="72">
+<meta name="gemara-map:sefaria-ref" content="Yoma 72">
+<meta name="gemara-map:topic-he" content="בגדי כהונה, הארון, וכתר התורה">
+<meta name="gemara-map:topic-en" content="Priestly vestments, the Ark, and Torah">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא ע״ב">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 72">
+<meta name="gemara-map:blurb-he" content="לוקה הקורע בגדי כהונה או מזיח חושן; הארון — שלוש תיבות מקוננות ושלושה זירים, וזֵר התורה מונח לכל הרוצה ליטול; ובגדי משוח מלחמה — מחלוקת אם משמש בהן או רק נשאל בהם.">
+<meta name="gemara-map:blurb-en" content="One who tears the vestments or detaches the breastplate is flogged; the Ark was three nested boxes with three crowns, the crown of Torah free for the taking; and the war-priest’s garments — does he serve in them or only consult the Urim?">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא ע״ב</span><span data-when="en">Sugya map — Yoma 72</span></h1>
+    <div class="subtitle"><span data-when="he">יומא ע״ב א — ע״ג א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 72a–73a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> חמש סוגיות אגב המשנה על בגדי הכהן הגדול: <b>איסורי לאו</b> — הקורע בגד כהונה, המזיח חושן או המסיר בדי הארון לוקה, ובדי הארון ׳מתפרקין ואין נשמטין׳; דרשות על <b>״בגדי השרד״</b> והכרעה שעיקר הבגד מעשה אורג; <b>שלוש ארונות</b> מקוננות ו<b>שלושה זירים</b> — וזֵר התורה מונח לכל הרוצה ליטול; שורת דרשות שהארון מסמל את <b>התורה</b>, שזכה נעשית לו סם חיים; ולבסוף — האם <b>משוח מלחמה</b> משמש בשמונה בגדים או רק נשאל בהם.</span>
+    <span data-when="en"><b>Bottom line:</b> Five discussions around the Mishna on the High Priest’s garments: <b>Torah prohibitions</b> — one who tears a vestment, detaches the breastplate, or removes the Ark’s staves is flogged, and the staves “loosen but do not slip out”; homilies on the <b>“serad garments”</b> and a ruling that the garment’s body is woven; <b>three nested arks</b> and <b>three crowns</b> — the crown of Torah left for anyone to take; a chain of teachings that the Ark symbolizes the <b>Torah</b>, a potion of life for the deserving; and finally — does the <b>war-priest</b> serve in the eight garments or only consult the Urim in them?</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא ע״ב</span><span data-when="en">Overview — Yoma 72</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · איסורי קריעה, הזחה והסרת בדים"]:::statement
+  O2["2 · ׳בגדי השרד׳ — מעשה אורג"]:::statement
+  O3["3 · שלוש ארונות ושלושה זירים"]:::statement
+  O4["4 · הארון כסמל התורה"]:::statement
+  O5["5 · בגדי משוח מלחמה — משמש או נשאל?"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Tearing, detaching, removing staves — forbidden"]:::statement
+  O2["2 · ׳Serad garments׳ — woven work"]:::statement
+  O3["3 · Three nested arks and three crowns"]:::statement
+  O4["4 · The Ark as symbol of the Torah"]:::statement
+  O5["5 · War-priest’s garments — serve or consult?"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">איסורי קריעה, הזחה והסרת בדים</span><span data-when="en">Tearing, detaching, and removing the staves</span>
+      <span class="ref">Yoma 72a:8–12</span></h2>
+  <div class="lead"><span data-when="he">הקורע בגד כהונה, המזיח חושן או המסיר בדי הארון — לוקה; ובדי הארון ׳מתפרקין ואין נשמטין׳, ועצי השדרה ׳עומדים לעולם׳.</span><span data-when="en">One who tears a vestment, detaches the breastplate, or removes the Ark’s staves is flogged; the staves “loosen but do not slip out,” and the boards “stand forever.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב יהודה: הקורע בגדי כהונה לוקה — ׳לא יקרע׳"]:::statement
+  Q1{"① ודלמא הסבר, לא איסור? · מי כתיב ׳שלא יקרע׳"}:::question
+  S2["② ר׳ אלעזר: מזיח חושן ומסיר בדי ארון לוקה"]:::statement
+  Q2{"② ודלמא רק לחזקם? · מי כתיב ׳שלא יזח׳"}:::question
+  S3["③ ר׳ יוסי: סתירת פסוקי הבדים — מתפרקין ואין נשמטין"]:::statement
+  P1["④ תניא נמי הכי: כך נדרשים שני הכתובים"]:::proof
+  C1["⑤ ר׳ חמא: ׳עצי שטים עומדים׳ — עומדים לעולם ולעולמים"]:::conclusion
+  S1 -.->|מתקיף| Q1
+  S2 -.->|מתקיף| Q2
+  Q1 -->|דין נוסף| S2
+  Q2 -->|סתירה| S3
+  S3 -->|ברייתא| P1
+  P1 -->|דרשה נוספת| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Yehuda: tearing a vestment is flogged — ׳it shall not be torn׳"]:::statement
+  Q1{"① Perhaps explanation, not prohibition? · Is ׳so it not tear׳ written"}:::question
+  S2["② R. Elazar: detaching breastplate, removing Ark staves — flogged"]:::statement
+  Q2{"② Perhaps only to fasten them? · Is ׳so it not detach׳ written"}:::question
+  S3["③ R. Yosei: the staves verses clash — loosen but do not slip out"]:::statement
+  P1["④ A baraita too: the two verses are read just so"]:::proof
+  C1["⑤ R. Ḥama: ׳acacia boards standing׳ — they stand forever and ever"]:::conclusion
+  S1 -.->|objects| Q1
+  S2 -.->|objects| Q2
+  Q1 -->|further ruling| S2
+  Q2 -->|contradiction| S3
+  S3 -->|baraita| P1
+  P1 -->|further homily| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הַמְקָרֵעַ בִּגְדֵי כְהוּנָּה לוֹקֶה, שֶׁנֶּאֱמַר: ׳לֹא יִקָּרֵעַ׳"]:::statement
+  Q1{"① וְדִילְמָא … נַעֲבֵיד לֵיהּ שָׂפָה … מִי כְּתִיב ׳שֶׁלֹּא יִקָּרֵעַ׳"}:::question
+  S2["② הַמַּזִּיחַ חוֹשֶׁן … וְהַמֵּסִיר בַּדֵּי אָרוֹן — לוֹקֶה"]:::statement
+  Q2{"② וְדִילְמָא … חַדְּקִינְהוּ … מִי כְּתִיב ׳שֶׁלֹּא יִזַּח׳"}:::question
+  S3["③ רַבִּי יוֹסֵי … רָמֵי … הָא כֵּיצַד? מִתְפָּרְקִין וְאֵין נִשְׁמָטִין"]:::statement
+  P1["④ תַּנְיָא נָמֵי הָכִי … מִתְפָּרְקִין, וְאֵין נִשְׁמָטִין"]:::proof
+  C1["⑤ ׳עֲצֵי שִׁטִּים עוֹמְדִים׳ … שֶׁעוֹמְדִין לְעוֹלָם וּלְעוֹלָמִים"]:::conclusion
+  S1 -.->|מתקיף| Q1
+  S2 -.->|מתקיף| Q2
+  Q1 -->|דין נוסף| S2
+  Q2 -->|סתירה| S3
+  S3 -->|ברייתא| P1
+  P1 -->|דרשה נוספת| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ב א — Yoma 72a:8</span></div>
+    <div class="orig">אָמַר רַחֲבָא אָמַר רַב יְהוּדָה: הַמְקָרֵעַ בִּגְדֵי כְהוּנָּה לוֹקֶה, שֶׁנֶּאֱמַר: ״לֹא יִקָּרֵעַ״. מַתְקֵיף לַהּ רַב אַחָא בַּר יַעֲקֹב, וְדִילְמָא הָכִי קָאָמַר רַחֲמָנָא: נַעֲבֵיד לֵיהּ שָׂפָה כִּי הֵיכִי דְּלָא נִיקְּרַע! מִי כְּתִיב ״שֶׁלֹּא יִקָּרֵעַ״?</div>
+    <div class="trans" data-when="he">רחבא בשם רב יהודה: הקורע בכוונה בגד מבגדי הכהונה לוקה, שנאמר בכתב המעיל ״לא ייקרע״ — וכשם שאסור לקרוע פי המעיל, כך כל בגדי כהונה. הקשה רב אחא בר יעקב: שמא הכתוב מסביר בלבד — ׳עשו שפה כדי שלא ייקרע׳ — ואינו לאו? דחייה: וכי כתוב ״כדי שלא ייקרע״? משמע שהוא לאו.</div>
+    <div class="trans" data-when="en">§ The Gemara discusses various halakhot concerning the priestly vestments and other sacred vessels: Raḥava said that Rav Yehuda said: One who intentionally tears any of the priestly vestments transgresses a prohibition and is flogged, as it is stated concerning the robe: “It shall have a hem of woven work around the opening of it, like the opening of a coat of mail, and it shall not be torn” (Exodus 28:32). Just as it is prohibited to tear the opening of the robe, so too, it is prohibited to tear any of the priestly vestments. Rav Aḥa bar Ya’akov strongly objects to this: But perhaps this is what the Merciful One is saying in the Torah: An opening should be made in order that it not tear. In other words, the Torah was giving an explanation, not a prohibition. The Gemara rejects this: Is it written: In order that it not be torn? Clearly, the intention of the verse is to state a prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ב א — Yoma 72a:9</span></div>
+    <div class="orig">אָמַר רַבִּי אֶלְעָזָר: הַמַּזִּיחַ חוֹשֶׁן מֵעַל הָאֵפוֹד, וְהַמֵּסִיר בַּדֵּי אָרוֹן — לוֹקֶה, שֶׁנֶּאֱמַר: ״לֹא יִזַּח״ וְ״לָא יָסוּרוּ״. מַתְקֵיף לַהּ רַב אַחָא בַּר יַעֲקֹב: וְדִילְמָא כִּי קָאָמַר רַחֲמָנָא, חַדְּקִינְהוּ וְעַבְדִינְהוּ שַׁפִּיר כְּדֵי שֶׁלֹּא יִזַּח וְלֹא יָסוּרוּ! מִי כְּתִיב ״שֶׁלֹּא יִזַּח״ וְ״שֶׁלֹּא יָסוּרוּ״?!</div>
+    <div class="trans" data-when="he">ר׳ אלעזר: המזיח (מנתק) את החושן מעל האפוד, והמסיר את בדי הארון מטבעותיהם — לוקה, שנאמר ״לא יזח החושן״ ו״לא יסורו ממנו״ (הבדים). הקשה רב אחא בר יעקב: שמא הכתוב רק מורה לחזקם ולהדקם היטב כדי שלא יזוזו? דחייה: וכי כתוב ״כדי שלא יזח״ ו״כדי שלא יסורו״? משמע שהם לאוין.</div>
+    <div class="trans" data-when="en">Rabbi Elazar said: One who detaches the breastplate from upon the ephod or one who removes the staves of the Ark from their rings transgresses a Torah prohibition and is flogged, as it is stated: “And the breastplate shall not be detached from the ephod” (Exodus 28:28),and it is also stated: “The staves shall be in the rings of the Ark; they shall not be removed from it” (Exodus 25:15). Rav Aḥa bar Ya’akov strongly objects to this: But perhaps when the Merciful One said this in the Torah, the intention was to strengthen them and make them fast so that the breastplate not become detached from the ephod and the staves not be removed. He suggests that the Torah was giving an explanation, not a prohibition. The Gemara rejects this: Is it written: In order that it not become detached, and: In order that they not be removed? Clearly, the intention of the verse is to state a prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ב א — Yoma 72a:10</span></div>
+    <div class="orig">רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא רָמֵי, כְּתִיב: ״בְּטַבְּעוֹת הָאָרוֹן יִהְיוּ הַבַּדִּים לֹא יָסוּרוּ מִמֶּנּוּ״, וּכְתִיב: ״וְהוּבָא אֶת בַּדָּיו בַּטַּבָּעוֹת״! הָא כֵּיצַד? מִתְפָּרְקִין וְאֵין נִשְׁמָטִין.</div>
+    <div class="trans" data-when="he">ר׳ יוסי בר׳ חנינא מקשה סתירה: כתוב ״בטבעות הארון יהיו הבדים לא יסורו ממנו״ — שהבדים קבועים תמיד; וכתוב ״והובא את בדיו בטבעות״ — שמכניסים אותם בשעת השימוש, משמע שאינם קבועים. כיצד מיישבים? הבדים ׳מתפרקין ואין נשמטין׳ — רחבים בקצותיהם, ולכן זזים אך אינם יוצאים לגמרי.</div>
+    <div class="trans" data-when="en">Rabbi Yosei, son of Rabbi Ḥanina, raised a contradiction. In one verse it is written: “The staves shall be in the rings of the Ark; they shall not be removed from it” (Exodus 25:15), implying the staves should remain there permanently. But in another verse it is written: “And its staves shall be put into the rings” (Exodus 27:7), implying that when the Ark is used the staves are inserted, which suggests that they do not remain there permanently. How is this contradiction resolved? The staves could be removed from their position, i.e., they were loosened, but did not come out. The staves were wider at their ends and thinner in the middle. Therefore, once they had been forced into the rings, although they could be shifted, they would not be removed entirely.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ב א — Yoma 72a:11</span></div>
+    <div class="orig">תַּנְיָא נָמֵי הָכִי: ״בְּטַבְּעוֹת הָאָרוֹן יִהְיוּ הַבַּדִּים״. יָכוֹל לֹא יִהְיוּ זָזִין מִמְּקוֹמָן? תַּלְמוּד לוֹמַר: ״וְהוּבָא אֶת בַּדָּיו בַּטַּבָּעוֹת״, אִי ״וְהוּבָא אֶת בַּדָּיו״, יָכוֹל יִהְיוּ נִכְנָסִין וְיוֹצְאִין — תַּלְמוּד לוֹמַר: ״בְּטַבְּעוֹת הָאָרוֹן יִהְיוּ הַבַּדִּים״. הָא כֵּיצַד? מִתְפָּרְקִין, וְאֵין נִשְׁמָטִין.</div>
+    <div class="trans" data-when="he">ברייתא תומכת בכך: ״בטבעות הארון יהיו הבדים״ — יכול לא יזוזו כלל? תלמוד לומר ״והובא את בדיו בטבעות״ (זזים). אי ״והובא את בדיו״ — יכול נכנסים ויוצאים לגמרי? תלמוד לומר ״בטבעות הארון יהיו הבדים״. כיצד? מתפרקין (זזים) ואין נשמטין (יוצאים).</div>
+    <div class="trans" data-when="en">That was also taught in a baraita. The verse states: “The staves shall be in the rings of the Ark; they shall not be removed from it” (Exodus 25:15). One might have thought that they should not move from their place at all; therefore; the verse states: “And its staves shall be put into the rings” (Exodus 27:7). If it had stated: And its staves shall be put, one might have thought that they are inserted and removed entirely; therefore, the verse states: “The staves shall be in the rings of the Ark; they shall not be removed from it” (Exodus 25:15). How is this? They could be removed from their position, but did not come out.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ב א — Yoma 72a:12</span></div>
+    <div class="orig">אָמַר רַבִּי חָמָא בְּרַבִּי חֲנִינָא, מַאי דִּכְתִיב: ״עֲצֵי שִׁטִּים עוֹמְדִים״, שֶׁעוֹמְדִים דֶּרֶךְ גְּדִילָתָן. דָּבָר אַחֵר: ״עוֹמְדִים״, שֶׁמַּעֲמִידִין אֶת צִפּוּיָין. דָּבָר אַחֵר: ״עוֹמְדִים״. שֶׁמָּא תֹּאמַר אָבַד סִבְרָן וּבָטֵל סִכּוּיָין — תַּלְמוּד לוֹמַר: ״עוֹמְדִים״, שֶׁעוֹמְדִין לְעוֹלָם וּלְעוֹלָמִים.</div>
+    <div class="trans" data-when="he">ר׳ חמא בר׳ חנינא דורש ״עצי שטים עומדים״: שעומדים כדרך גדילתם (כיוון צמיחתם); דבר אחר: שמעמידים את ציפויָם (הזהב) ואינו נופל; דבר אחר: שמא תאמר משבטל המשכן אבדה תקוותם ובטל סיכויָם — תלמוד לומר ״עומדים״, שהם עומדים לעולם ולעולמים.</div>
+    <div class="trans" data-when="en">The Gemara cites other statements concerning the ark. Rabbi Ḥama, son of Rabbi Ḥanina, said: What is the meaning of that which is written: “And you shall make the boards for the Tabernacle of acacia wood, standing” (Exodus 26:15)? This verse teaches that the boards of wood used for the Tabernacle should stand in the same direction in which they grew from the ground as a tree. Alternatively, “standing” means that they supported their gold plating and prevented it from falling. Alternatively, “standing” is written to hint at the following: Perhaps you will say that now that the Tabernacle is no longer in use, their hope is lost and their chance is abandoned, and after being stored away the boards will no longer return to use. Therefore, the verse states “standing” to indicate that they stand forever and ever.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">״בגדי השרד״ — דרשות ומעשה אורג</span><span data-when="en">“Serad garments” — homilies and woven work</span>
+      <span class="ref">Yoma 72a:13–72b:3</span></h2>
+  <div class="lead"><span data-when="he">למה נקראו ״בגדי השרד״? כפרה שמשיירת שריד; או שנותר מהם מעט שלא נארג. מיתיבי ממעשה אורג — והיישוב: רק בית היד נארג לעצמו ונדבק.</span><span data-when="en">Why “serad garments”? Atonement leaves a remnant; or a part remains unwoven. An objection from “woven work” — resolved: only the sleeve is woven separately and attached.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① ר׳ חמא: מהו ׳בגדי השרד׳?"}:::question
+  S1["② כפרת הבגדים — משיירת שריד ופליט"]:::statement
+  S2["③ דבי ר׳ שמעון: נגרדים שלמים, ומשתייר מעט — מעשה מחט"]:::statement
+  Q2{"④ מיתיבי: בגדי כהונה מעשה אורג, לא מחט"}:::question
+  A1["④ אביי: לא נצרכה אלא לבית היד — נארגת לעצמה ונדבקת"]:::answer
+  Q1 -->|דרשה א| S1
+  Q1 -->|דרשה ב| S2
+  S2 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① R. Ḥama: what is ׳serad garments׳?"}:::question
+  S1["② The garments atone — leaving a remnant and survivor"]:::statement
+  S2["③ School of R. Shimon: woven whole, a bit remains — needlework"]:::statement
+  Q2{"④ Objection: vestments are woven work, not needlework"}:::question
+  A1["④ Abaye: only the sleeve — woven apart and attached"]:::answer
+  Q1 -->|homily A| S1
+  Q1 -->|homily B| S2
+  S2 -.->|objection| Q2
+  Q2 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① מַאי דִּכְתִיב: ׳אֶת בִּגְדֵי הַשְּׂרָד לְשָׁרֵת בַּקּוֹדֶשׁ׳"}:::question
+  S1["② אִלְמָלֵא בִּגְדֵי כְהוּנָּה … לֹא נִשְׁתַּיֵּיר … שָׂרִיד וּפָלִיט"]:::statement
+  S2["③ דְּבֵי רַבִּי שִׁמְעוֹן … גּוֹרְדִין … כִּבְרִיָּיתָן … אֵלּוּ מַעֲשֵׂה מַחַט"]:::statement
+  Q2{"④ מֵיתִיבִי: בִּגְדֵי כְהוּנָּה … מַעֲשֵׂה אוֹרֵג, שֶׁנֶּאֱמַר ׳מַעֲשֵׂה אוֹרֵג׳"}:::question
+  A1["④ אַבָּיֵי: לֹא נִצְרְכָה אֶלָּא לְבֵית יָד … נֶאֱרֶגֶת בִּפְנֵי עַצְמָהּ, וְנִדְבֶּקֶת"]:::answer
+  Q1 -->|דרשה א| S1
+  Q1 -->|דרשה ב| S2
+  S2 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ב א — Yoma 72a:13</span></div>
+    <div class="orig">אָמַר רַבִּי חָמָא בַּר חֲנִינָא, מַאי דִּכְתִיב: ״אֶת בִּגְדֵי הַשְּׂרָד לְשָׁרֵת בַּקּוֹדֶשׁ״ —</div>
+    <div class="trans" data-when="he">ר׳ חמא בר חנינא פותח: מה הטעם שהכתוב מכנה את בגדי הכהונה ״בגדי השרד״? (השאלה נפתחת כאן ונענית בשני אופנים בהמשך.)</div>
+    <div class="trans" data-when="en">§ The Gemara returns to its discussion of the priestly vestments: Rabbi Ḥama bar Ḥanina said: What is the meaning of that which is written: “The plaited [serad] garments, for serving in the Sanctuary” (Exodus 35:19)? Why does the verse refer to the priestly vestments as “serad garments”?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ב ב — Yoma 72b:1</span></div>
+    <div class="orig">אִלְמָלֵא בִּגְדֵי כְהוּנָּה, לֹא נִשְׁתַּיֵּיר מִשּׂוֹנְאֵיהֶן שֶׁל יִשְׂרָאֵל שָׂרִיד וּפָלִיט.</div>
+    <div class="trans" data-when="he">דרשה ראשונה: אלמלא בגדי הכהונה, המכפרים על ישראל, לא היה נשתייר ׳משונאיהן של ישראל׳ (לשון נקייה לישראל עצמם) שריד ופליט — מלשון ״בגדי השרד״, שמשיירים שריד.</div>
+    <div class="trans" data-when="en">He offers a homiletic interpretation: Were it not for the priestly vestments, which provide atonement for the Jewish people, there would not remain a remnant [sarid] or survivor from the haters of the Jewish people, a euphemism used to refer to the Jewish people themselves. Due to the atonement provided by the priestly vestments, a remnant [sarid] of the Jewish people does survive.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ב ב — Yoma 72b:2</span></div>
+    <div class="orig">רַבִּי שְׁמוּאֵל בַּר נַחְמָנִי אָמַר: דְּבֵי רַבִּי שִׁמְעוֹן תָּנָא: בְּגָדִים שֶׁגּוֹרְדִין אוֹתָן כִּבְרִיָּיתָן מִכְּלֵיהֶן, וּמְשָׂרְדִין מֵהֶן כְּלוּם. מַאי הִיא? רֵישׁ לָקִישׁ אָמַר: אֵלּוּ מַעֲשֵׂה מַחַט.</div>
+    <div class="trans" data-when="he">דרשה שנייה (ר׳ שמואל בר נחמני, דבי ר׳ שמעון): נקראו ׳בגדי השרד׳ לפי שנארגים שלמים על הנול (ולא חותכים ותופרים), ומשתייר מהם מעט שאינו נגמר באריגה. ומהו השריד? ריש לקיש: זה מעשה המחט הנדרש להשלמת הבגד.</div>
+    <div class="trans" data-when="en">Another interpretation: Rabbi Shmuel bar Naḥmani said that the school of Rabbi Shimon taught: The priestly vestments are referred to as “serad garments” because they are garments that are woven in their completed form upon the loom, as opposed to weaving the material and then cutting and sewing pieces of the material together to create the required form, and then just a small part of them remains [masridin] which is not completed upon the loom. What is the remnant, the part that was not woven? Reish Lakish said: This is the needle-work required to complete the garment.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ב ב — Yoma 72b:3</span></div>
+    <div class="orig">מֵיתִיבִי: בִּגְדֵי כְהוּנָּה אֵין עוֹשִׂין אוֹתָן מַעֲשֵׂה מַחַט, אֶלָּא מַעֲשֵׂה אוֹרֵג, שֶׁנֶּאֱמַר: ״מַעֲשֵׂה אוֹרֵג״! אָמַר אַבָּיֵי: לֹא נִצְרְכָה אֶלָּא לְבֵית יָד שֶׁלָּהֶם. כִּדְתַנְיָא: בֵּית יָד שֶׁל בִּגְדֵי כְהוּנָּה נֶאֱרֶגֶת בִּפְנֵי עַצְמָהּ, וְנִדְבֶּקֶת עִם הַבֶּגֶד, וּמַגַּעַת עַד פִּיסַּת הַיָּד.</div>
+    <div class="trans" data-when="he">מיתיבי על ריש לקיש: בגדי כהונה אין עושים מעשה מחט אלא מעשה אורג, שנאמר ״מעשה אורג״. תירוץ אביי: דברי ריש לקיש אמורים רק לגבי בית היד (השרוול). כדתניא: בית היד של בגדי כהונה נארגת בפני עצמה, ונדבקת (בתפירה) עם הבגד, ומגעת עד פיסת היד; אך גוף הבגד כולו מעשה אורג.</div>
+    <div class="trans" data-when="en">The Gemara raises an objection to this from a baraita: Priestly vestments should not be made through needle-work but though woven work, as it is stated: “Woven work” (Exodus 28:32). The Gemara answers that Abaye said: Reish Lakish’s statement is necessary only for, i.e., refers only to, the sleeves. As it was taught in a baraita: A sleeve made for the priestly vestments is woven separately and then attached to the garment by sewing, and the sleeve is made to reach as far as the palm of the hand. However, the main body of the garment must indeed be made exclusively though weaving.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">שלוש ארונות ושלושה זירים</span><span data-when="en">Three nested arks and three crowns</span>
+      <span class="ref">Yoma 72b:4–6</span></h2>
+  <div class="lead"><span data-when="he">בצלאל עשה שלוש ארונות מקוננות; יישוב סתירת המידות; ושלושה זירים — מזבח, שולחן וארון — וזֵר הארון מונח לכל הרוצה ליטול.</span><span data-when="en">Bezalel made three nested arks; a measurement contradiction is resolved; and three crowns — altar, table, and Ark — the Ark’s crown left for anyone to take.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב יהודה: שלוש ארונות עשה בצלאל — חיצון עשרה ומשהו"]:::statement
+  Q1{"② והתניא: אחד עשר ומשהו!"}:::question
+  A1["② לא קשיא: בעובי טפח / אין בעובי טפח; ומשהו — זֵר"]:::answer
+  C1["③ ר׳ יוחנן: שלושה זירים — מזבח, שולחן, וארון; זֵר הארון לכל הרוצה ליטול"]:::conclusion
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|אגב הזֵר| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Yehuda: Bezalel made three arks — outer ten and a bit"]:::statement
+  Q1{"② But a baraita: eleven and a bit!"}:::question
+  A1["② No contradiction: plating a handbreadth / not; the bit — a crown"]:::answer
+  C1["③ R. Yoḥanan: three crowns — altar, table, Ark; the Ark’s crown for anyone to take"]:::conclusion
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -->|via the crown| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שָׁלֹשׁ אֲרוֹנוֹת עָשָׂה בְּצַלְאֵל … חִיצוֹן עֲשָׂרָה וּמַשֶּׁהוּ"]:::statement
+  Q1{"② וְהָתַנְיָא: אַחַד עָשָׂר וּמַשֶּׁהוּ!"}:::question
+  A1["② לָא קַשְׁיָא … יֵשׁ בְּעׇבְיוֹ טֶפַח … אֵין בְּעׇבְיוֹ טֶפַח. וּמַאי מַשֶּׁהוּ — זֵיר"]:::answer
+  C1["③ שְׁלֹשָׁה זֵירִים הֵן … מִזְבֵּחַ … אָרוֹן … שֻׁלְחָן … כָּל הָרוֹצֶה לִיקַּח יָבֹא וְיִקַּח"]:::conclusion
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|אגב הזֵר| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ב ב — Yoma 72b:4</span></div>
+    <div class="orig">אָמַר רַחֲבָה אָמַר רַב יְהוּדָה: שָׁלֹשׁ אֲרוֹנוֹת עָשָׂה בְּצַלְאֵל, אֶמְצָעִי שֶׁל עֵץ תִּשְׁעָה, פְּנִימִי שֶׁל זָהָב שְׁמוֹנָה, חִיצוֹן עֲשָׂרָה וּמַשֶּׁהוּ.</div>
+    <div class="trans" data-when="he">רחבה בשם רב יהודה: כדי שיהיה הארון מצופה זהב מבית ומחוץ, עשה בצלאל שלוש תיבות מקוננות — אמצעית של עץ בגובה תשעה טפחים, פנימית של זהב גובה שמונה, וחיצונה של זהב גובה עשרה ומשהו.</div>
+    <div class="trans" data-when="en">§ The Gemara cites statements concerning other Temple vessels: Raḥava said that Rav Yehuda said: The Torah states that the Ark should be made of wood with gold plating inside and out (Exodus 25:10–11). In order to achieve this Bezalel made three arks: A middle one made of wood, whose height was nine handbreadths; an inner one made of gold, whose height was eight handbreadths; and an outer one of gold, whose height was ten handbreadths and a bit. These arks were nested.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ב ב — Yoma 72b:5</span></div>
+    <div class="orig">וְהָתַנְיָא: אַחַד עָשָׂר וּמַשֶּׁהוּ! לָא קַשְׁיָא: הָא כְּמַאן דְּאָמַר יֵשׁ בְּעׇבְיוֹ טֶפַח, הָא כְּמַאן דְּאָמַר אֵין בְּעׇבְיוֹ טֶפַח. וּמַאי מַשֶּׁהוּ — זֵיר.</div>
+    <div class="trans" data-when="he">מיתיבי: והרי שנינו שהארון החיצון היה אחד עשר ומשהו! תירוץ: לא קשיא — ברייתא זו כדעה שעובי הזהב טפח (ולכן צריך אחד עשר), ורב יהודה כדעה שאין בעובי הזהב טפח (ודי בעשרה ומשהו). ומהו ה׳משהו׳? הזֵר (כתר הקישוט) שעל שפת הארון.</div>
+    <div class="trans" data-when="en">The Gemara asks: But wasn’t it taught in a baraita that the outer ark was eleven handbreadths and a bit? The Gemara explains: This is not difficult: This statement in the baraita is in accordance with the one who said that the thickness of the gold plating was one handbreadth. According to this opinion, the outer ark’s base took up one handbreadth of its height, ten handbreadths were then needed to contain the middle ark within it, and then a bit more was needed so it could also contain the Ark’s cover. That statement of Rav Yehuda is in accordance with the one who said that the thickness of the gold plating was not one handbreadth but was a plate of gold of negligible thickness. According to this opinion, the outer ark needed to be only ten handbreadths and a bit and could still contain the outer ark and have room for the cover. And what is this additional bit? It is the ornamental crown on the edge of the outer ark.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ב ב — Yoma 72b:6</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹחָנָן, שְׁלֹשָׁה זֵירִים הֵן: שֶׁל מִזְבֵּחַ, וְשֶׁל אָרוֹן, וְשֶׁל שֻׁלְחָן. שֶׁל מִזְבֵּחַ — זָכָה אַהֲרֹן וּנְטָלוֹ. שֶׁל שֻׁלְחָן — זָכָה דָּוִד וּנְטָלוֹ. שֶׁל אָרוֹן — עֲדַיִין מוּנָּח הוּא, כָּל הָרוֹצֶה לִיקַּח — יָבֹא וְיִקַּח. שְׁמָּא תֹּאמַר פָּחוּת הוּא, תַּלְמוּד לוֹמַר: ״בִּי מְלָכִים יִמְלוֹכוּ״.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן: שלושה זירים (כתרים) היו — של מזבח, של ארון ושל שולחן. זֵר המזבח מסמל כתר כהונה — זכה אהרן ונטלו; זֵר השולחן מסמל כתר מלכות — זכה דוד ונטלו; וזֵר הארון מסמל כתר תורה — עדיין מונח, וכל הרוצה ליטול יבוא ויטול. שמא תאמר פחות הוא — תלמוד לומר ״בי מלכים ימלוכו״, שכל הכתרים יונקים מכתר התורה.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan said: There were three crowns on the sacred vessels in the Temple: The crown of the altar, and of the Ark, and of the table. The regal appearance they provided symbolized power and authority: The crown of the altar symbolized the crown of priesthood; Aaron was deserving and took it, and the priesthood continues exclusively through his descendants. The crown of the table symbolized the abundance and blessing associated with the crown of kingship; David was deserving and took it for himself and his descendants after him. The crown of the Ark symbolized the crown of Torah; it is still sitting and waiting to be acquired, and anyone who wishes to take it may come and take it and be crowned with the crown of Torah. Perhaps you will say it is inferior to the other two crowns and that is why nobody has taken it; therefore, the verse states about the wisdom of Torah: “Through me kings will reign” (Proverbs 8:15), indicating that the strength of the other crowns is derived from the crown of Torah, which is greater than them all.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">הארון כסמל התורה — זכה ולא זכה</span><span data-when="en">The Ark as symbol of the Torah</span>
+      <span class="ref">Yoma 72b:7–19</span></h2>
+  <div class="lead"><span data-when="he">שורת דרשות שהארון מסמל את התורה: זכה — זֵר, לא זכה — זָרה; תלמיד חכם שתוכו כברו; ויראת שמים קודמת ללימוד — זכה נעשית לו סם חיים.</span><span data-when="en">A chain of teachings that the Ark symbolizes Torah: deserving — a crown, undeserving — a stranger; the scholar whose inside matches his outside; and fear of Heaven before study — for the deserving, a potion of life.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ יוחנן: ׳זָר׳/׳זֵיר׳ — זכה נעשית זֵר, לא זכה זרה הימנו"]:::statement
+  S2["② ארון לך / ארון להם — בני העיר עושים מלאכת ת״ח"]:::statement
+  S3["③ ׳מבית ומחוץ תצפנו׳ — ת״ח שאין תוכו כברו אינו ת״ח"]:::statement
+  S4["④ אביי: ונקרא נתעב · ⑤ ר׳ יונתן: אוי לעוסקים בלי יראה · ⑥ ר׳ ינאי: דרתא ותרעא · ⑦ רבא: לא תירתון תרתי גיהנם"]:::statement
+  S5["⑧ ריב״ל: ׳שָׂם׳ — זכה סם חיים, לא זכה סם מיתה"]:::statement
+  S6["⑨ ר׳ יונתן וריש לקיש: משמחתו / צורפתו לחיים או למיתה"]:::statement
+  S7["⑩ ר׳ חנינא: לומד בטהרה — נושא אשה ואחר כך לומד"]:::statement
+  S8["⑪ נאמנה להעיד בלומדיה · ⑫ רוקם/חושב · ⑬ פרצוף אחד / שני פרצופות"]:::statement
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Yoḥanan: ׳zar׳/׳zeir׳ — deserving a crown, undeserving a stranger"]:::statement
+  S2["② Ark ׳for you׳ / ׳they shall make׳ — the town does the scholar’s work"]:::statement
+  S3["③ ׳cover within and without׳ — inside unlike outside is no scholar"]:::statement
+  S4["④ Abaye: he is called loathsome · ⑤ R. Yonatan: woe to study without awe · ⑥ R. Yannai: gate without courtyard · ⑦ Rava: inherit not two Gehennas"]:::statement
+  S5["⑧ R. Yehoshua b. Levi: ׳sam׳ — deserving a potion of life, else of death"]:::statement
+  S6["⑨ R. Yonatan and Reish Lakish: gladdens / refines for life or death"]:::statement
+  S7["⑩ R. Ḥanina: study in purity — marry, then study"]:::statement
+  S8["⑪ faithful to testify · ⑫ embroiderer/designer · ⑬ one face / two faces"]:::statement
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① כְּתִיב ׳זָר׳, וְקָרֵינַן ׳זֵיר׳ … זָכָה … זֵיר, לֹא זָכָה — זָרָה הֵימֶנּוּ"]:::statement
+  S2["② ׳וְעָשִׂיתָ לְּךָ … עֵץ׳ … ׳וְעָשׂוּ … שִׁטִּים׳ … בְּנֵי עִירוֹ … לַעֲשׂוֹת לוֹ מְלַאכְתּוֹ"]:::statement
+  S3["③ ׳מִבַּיִת וּמִחוּץ תְּצַפֶּנּוּ׳ … שֶׁאֵין תּוֹכוֹ כְּבָרוֹ — אֵינוֹ תַּלְמִיד חָכָם"]:::statement
+  S4["④ נִקְרָא נִתְעָב · ⑤ אוֹי … שֶׁעוֹסְקִין בַּתּוֹרָה וְאֵין בָּהֶן יִרְאַת שָׁמַיִם · ⑥ דְּלֵית לֵיהּ דָּרְתָּא · ⑦ לָא תִּירְתוּן תַּרְתֵּי גֵּיהִנָּם"]:::statement
+  S5["⑧ ׳שָׂם מֹשֶׁה׳ … זָכָה — סַם חַיִּים, לֹא זָכָה — סַם מִיתָה"]:::statement
+  S6["⑨ זָכָה — מְשַׂמַּחְתּוֹ … צוֹרַפְתּוֹ לְחַיִּים, לֹא זָכָה — צוֹרַפְתּוֹ לְמִיתָה"]:::statement
+  S7["⑩ זֶה הַלּוֹמֵד תּוֹרָה בְּטָהֳרָה … נוֹשֵׂא אִשָּׁה, וְאַחַר כָּךְ לוֹמֵד"]:::statement
+  S8["⑪ נֶאֱמָנָה … לְהָעִיד בְּלוֹמְדֶיהָ · ⑫ שֶׁרוֹקְמִין בִּמְקוֹם שֶׁחוֹשְׁבִין · ⑬ פַּרְצוּף אֶחָד … שְׁנֵי פַּרְצוּפוֹת"]:::statement
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ב ב — Yoma 72b:7</span></div>
+    <div class="orig">רַבִּי יוֹחָנָן רָמֵי. כְּתִיב: ״זָר״, וְקָרֵינַן ״זֵיר״. זָכָה — נַעֲשֵׂית לוֹ זֵיר, לֹא זָכָה — זָרָה הֵימֶנּוּ.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן מקשה סתירה בכתיב/קרי: כתוב ״זָר״ (זר, מוזר) וקוראים ״זֵיר״ (כתר). יישוב: זכה — נעשית לו התורה זֵר (כתר); לא זכה — זרה (מתנכרת) ממנו וישכח לימודו.</div>
+    <div class="trans" data-when="en">§ The Gemara presents a number of statements based on the idea that the Ark symbolizes the Torah: Rabbi Yoḥanan raised a contradiction: According to the way the word crown is written in the Torah (Exodus 25:11), without vowels, it should be pronounced zar, meaning strange, but according to the traditional vocalization we read it as zeir, meaning crown. These two ways of understanding the word appear to contradict each other. Rabbi Yoḥanan explains: The two understandings apply to two different situations: If one is deserving by performing mitzvot, it becomes a crown [zeir] for him; but if one is not deserving, the Torah will be a stranger [zara] to him and he will forget his studies.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ב ב — Yoma 72b:8</span></div>
+    <div class="orig">רַבִּי יוֹחָנָן רָמֵי. כְּתִיב: ״וְעָשִׂיתָ לְּךָ אֲרוֹן עֵץ״, וּכְתִיב: ״וְעָשׂוּ אֲרוֹן עֲצֵי שִׁטִּים״, מִכָּאן לְתַלְמִיד חָכָם, שֶׁבְּנֵי עִירוֹ מְצֻוִּוין לַעֲשׂוֹת לוֹ מְלַאכְתּוֹ.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן מקשה: כתוב ״ועשית לך ארון עץ״ (משה לבדו) וכתוב ״ועשו ארון עצי שטים״ (כל ישראל). יישוב: אף שמשה עשהו, הכל חייבים לסייע — ומכאן לתלמיד חכם, שבני עירו מצוּוים לעשות לו מלאכתו כדי שיתפנה לתורתו.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan raised a contradiction: It is written: “And you shall make for yourself a wooden Ark” (Deuteronomy 10:1), implying that Moses alone was commanded to construct the Ark; and it is written: “And they shall make an Ark of acacia wood” (Exodus 25:10), implying that the Jewish people were all commanded to be involved in its construction. The apparent resolution to this contradiction is that although only Moses actually constructed the Ark, everyone was required to support the endeavor. So too, from here it is derived with regard to a Torah scholar that the members of his town should perform his work for him to support him and allow him to focus on his studies, since it is also the town’s responsibility to enable him to study.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ב ב — Yoma 72b:9</span></div>
+    <div class="orig">״מִבַּיִת וּמִחוּץ תְּצַפֶּנּוּ״. אָמַר רָבָא: כׇּל תַּלְמִיד חָכָם שֶׁאֵין תּוֹכוֹ כְּבָרוֹ — אֵינוֹ תַּלְמִיד חָכָם.</div>
+    <div class="trans" data-when="he">״מבית ומחוץ תצפנו״ (הארון מצופה זהב פנים וחוץ). רבא: כל תלמיד חכם שאין תוכו כברו — שאין פנימיותו תואמת לחיצוניותו — אינו תלמיד חכם.</div>
+    <div class="trans" data-when="en">The verse states concerning the Ark: “From within and from without you shall cover it” (Exodus 25:11). Rava said: This alludes to the idea that any Torah scholar whose inside is not like his outside, i.e., whose outward expression of righteousness is insincere, is not to be considered a Torah scholar.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ב ב — Yoma 72b:10</span></div>
+    <div class="orig">אָמַר אַבָּיֵי וְאִיתֵּימָא רַבָּה בַּר עוּלָּא: נִקְרָא נִתְעָב, שֶׁנֶּאֱמַר: ״אַף כִּי נִתְעָב וְנֶאֱלָח אִישׁ שׁוֹתֶה כַמַּיִם עַוְלָה״.</div>
+    <div class="trans" data-when="he">אביי (ויש אומרים רבה בר עולא): כזה ת״ח לא רק שאינו ת״ח, אלא נקרא ׳נתעב׳, שנאמר ״אף כי נתעב ונאלח איש שותה כמים עוולה״ — אף ששותה תורה כמים, מאחר שחוטא תורתו עוולה.</div>
+    <div class="trans" data-when="en">Abaye said, and some say it was Rabba bar Ulla who said: Not only is such a person not to be considered a Torah scholar, but he is called loathsome, as it is stated: “What then of one loathsome and foul, man who drinks iniquity like water” (Job 15:16). Although he drinks the Torah like water, since he sins, his Torah is considered iniquitous and this makes him loathsome and foul.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ב ב — Yoma 72b:11</span></div>
+    <div class="orig">אָמַר רַבִּי שְׁמוּאֵל בַּר נַחְמָנִי אָמַר רַבִּי יוֹנָתָן, מַאי דִּכְתִיב: ״לָמָּה זֶּה מְחִיר בְּיַד כְּסִיל לִקְנוֹת חׇכְמָה וְלֶב אָיִן״ — אוֹי לָהֶם לְשׂוֹנְאֵיהֶן שֶׁל תַּלְמִידֵי חֲכָמִים, שֶׁעוֹסְקִין בַּתּוֹרָה וְאֵין בָּהֶן יִרְאַת שָׁמַיִם.</div>
+    <div class="trans" data-when="he">ר׳ שמואל בר נחמני בשם ר׳ יונתן: ״למה זה מחיר ביד כסיל לקנות חכמה ולב אין״ — אוי להם לתלמידי חכמים (לשון נקייה) שעוסקים בתורה ואין בהם יראת שמים; כסילים הם, מבקשים חכמה ואין בלבם יראה לקנותה.</div>
+    <div class="trans" data-when="en">Rabbi Shmuel bar Naḥmani said that Rabbi Yonatan said: What is the meaning of that which is written: “Why is there a price in the hand of a fool to buy wisdom, as he has no heart?” (Proverbs 17:16)? This expresses the following sentiment: Woe to them, haters of Torah scholars, a euphemism for the Torah scholars themselves, who immerse themselves in Torah and have no fear of Heaven. They are fools; they try to acquire the wisdom of Torah, but since they have no fear of Heaven in their hearts they lack the ability to do so.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ב ב — Yoma 72b:12</span></div>
+    <div class="orig">מַכְרִיז רַבִּי יַנַּאי: חֲבָל עַל דְּלֵית לֵיהּ דָּרְתָּא, וְתַרְעָא לְדָרְתֵּיהּ עָבֵיד.</div>
+    <div class="trans" data-when="he">ר׳ ינאי מכריז: חבל על מי שאין לו חצר ובכל זאת עושה שער לחצרו. היראה היא החצר, ולימוד התורה הוא השער — ואין טעם בשער ללא חצר; הלימוד תכליתו להביא ליראה.</div>
+    <div class="trans" data-when="en">Rabbi Yannai declared that the situation may be expressed by the following sentiment: Pity him who has no courtyard but senselessly makes a gate for his courtyard. Fear of Heaven is like the courtyard, and the study of Torah is the gate that provides entrance to the courtyard. The study of Torah is purposeful only if it leads to fear of Heaven.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ב ב — Yoma 72b:13</span></div>
+    <div class="orig">אֲמַר לְהוּ רָבָא לְרַבָּנַן: בְּמָטוּתָא מִינַּיְיכוּ, לָא תִּירְתוּן תַּרְתֵּי גֵּיהִנָּם.</div>
+    <div class="trans" data-when="he">רבא לחכמי בית המדרש: בבקשה מכם, אל תירשו שני גיהינום — שהלומד תורה בלי יראת שמים מאבד את העולם הבא, וגם בעולם הזה סובל, שכל זמנו בלימוד ואינו נהנה מן העולם.</div>
+    <div class="trans" data-when="en">Rava said to the Sages in the study hall: I beg of you, do not inherit Gehenna twice. By studying Torah without the accompanying fear of Heaven, not only are you undeserving of the World-to-Come, but even in this world you experience Gehenna, as you spend all your time in study and fail to benefit from worldly pleasure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ב ב — Yoma 72b:14</span></div>
+    <div class="orig">אָמַר רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי, מַאי דִּכְתִיב: ״וְזֹאת הַתּוֹרָה אֲשֶׁר שָׂם מֹשֶׁה״, זָכָה — נַעֲשֵׂית לוֹ סַם חַיִּים, לֹא זָכָה — נַעֲשֵׂית לוֹ סַם מִיתָה. וְהַיְינוּ דְּאָמַר רָבָא: דְּאוֹמֵן לַהּ — סַמָּא דְחַיָּיא, דְּלָא אוֹמֵן לַהּ — סַמָּא דְמוֹתָא.</div>
+    <div class="trans" data-when="he">ריב״ל: ״וזאת התורה אשר שָׂם משה״ — ׳שָׂם׳ (בשי״ן) רומז ל׳סם׳ (בסמ״ך): זכה — נעשית לו התורה סם חיים, לא זכה — סם מיתה. והיינו דברי רבא: למי שאומן בה (בקי ואוהבה) — סם חיים, ולמי שאינו אומן בה — סם מיתה.</div>
+    <div class="trans" data-when="en">Rabbi Yehoshua ben Levi said: What is the meaning of that which is written: “And this is the Torah which Moses put [sam] before the children of Israel” (Deuteronomy 4:44)? The word sam is written with the letter sin and means put; it is phonetically similar to the word sam written with the letter samekh, meaning a drug. This use of this word therefore alludes to the following: If one is deserving, the Torah becomes a potion [sam] of life for him. If one is not deserving, the Torah becomes a potion of death for him. And this idea is what Rava said: For one who is skillful in his study of Torah and immerses himself in it with love, it is a potion of life; but for one who is not skillful in his studies, it is a potion of death.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ב ב — Yoma 72b:15</span></div>
+    <div class="orig">אָמַר רַבִּי שְׁמוּאֵל בַּר נַחְמָנִי, רַבִּי יוֹנָתָן רָמֵי, כְּתִיב: ״פִּקּוּדֵי ה׳ יְשָׁרִים מְשַׂמְּחֵי לֵב״, וּכְתִיב: ״אִמְרַת ה׳ צְרוּפָה״. זָכָה — מְשַׂמַּחְתּוֹ, לֹא זָכָה — צוֹרַפְתּוֹ. רֵישׁ לָקִישׁ אָמַר, מִגּוּפֵיהּ דִּקְרָא נָפְקָא: זָכָה — צוֹרַפְתּוֹ לְחַיִּים, לֹא זָכָה — צוֹרַפְתּוֹ לְמִיתָה.</div>
+    <div class="trans" data-when="he">ר׳ שמואל בר נחמני בשם ר׳ יונתן מקשה: כתוב ״פיקודי ה׳ ישרים משמחי לב״ וכתוב ״אמרת ה׳ צרופה״ (מצרפת ביסורים). יישוב: זכה — משמחתו, לא זכה — צורפתו. ריש לקיש: מגוף הפסוק ׳צרופה׳ נדרש — זכה צורפתו לחיים, לא זכה צורפתו למיתה.</div>
+    <div class="trans" data-when="en">Rabbi Shmuel bar Naḥmani said that Rabbi Yonatan raised a contradiction: It was written: “The precepts of the Lord are upright, gladdening the heart” (Psalms 19:9), but it is also written: “The word of the Lord is refining” (Psalms 18:31), which implies that the study of Torah can be a distressing process by which a person is refined like metal smelted in a smith’s fire. He reconciles these verses as follows: For one who is deserving, the Torah gladdens him; for one who is not deserving, it refines him. Reish Lakish said: This lesson emerges from that second verse itself: For one who is deserving, the Torah refines him for life; for one who is not deserving, it refines him for death.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ב ב — Yoma 72b:16</span></div>
+    <div class="orig">״יִרְאַת ה׳ טְהוֹרָה עוֹמֶדֶת לָעַד״. אָמַר רַבִּי חֲנִינָא: זֶה הַלּוֹמֵד תּוֹרָה בְּטָהֳרָה. מַאי הִיא? נוֹשֵׂא אִשָּׁה, וְאַחַר כָּךְ לוֹמֵד תּוֹרָה.</div>
+    <div class="trans" data-when="he">״יראת ה׳ טהורה עומדת לעד״. ר׳ חנינא: זה הלומד תורה בטהרה — שתורתו תתקיים בו לעד. ומהי לימוד בטהרה? נושא אשה תחילה ואחר כך לומד תורה, שאז לבו אינו טרוד בהרהורי עברה.</div>
+    <div class="trans" data-when="en">The verse states: “Fear of the Lord is pure, it stands forever” (Psalms 19:10). Rabbi Ḥanina said: This is referring to one who studies Torah in purity; for such a person the Torah will remain with him forever. What is this; what does it mean to study in purity? One first marries a woman and afterward studies Torah. Since he is married, his heart will not be occupied with thoughts of sin, which could lead him to become impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ב ב — Yoma 72b:17</span></div>
+    <div class="orig">״עֵדוּת ה׳ נֶאֱמָנָה״, אָמַר רַבִּי חִיָּיא בַּר אַבָּא: נֶאֱמָנָה הִיא לְהָעִיד בְּלוֹמְדֶיהָ.</div>
+    <div class="trans" data-when="he">״עדות ה׳ נאמנה״. ר׳ חייא בר אבא: נאמנה התורה להעיד בלומדיה — מי לומדהּ ומי אינו.</div>
+    <div class="trans" data-when="en">In the same Psalm the verse states: “The testimony of God is faithful” (Psalms 19:8). Rabbi Ḥiyya bar Abba said: This alludes to the fact that the Torah is faithful to testify about those who study it and those who do not.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ב ב — Yoma 72b:18</span></div>
+    <div class="orig">״מַעֲשֵׂה רוֹקֵם״, ״מַעֲשֵׂה חוֹשֵׁב״, אָמַר רַבִּי אֶלְעָזָר: שֶׁרוֹקְמִין בִּמְקוֹם שֶׁחוֹשְׁבִין.</div>
+    <div class="trans" data-when="he">הגמרא שבה לדיון הכלים: על יריעות המשכן נאמר ״מעשה רוקם״ ונאמר ״מעשה חושב״. ר׳ אלעזר מיישב: שרוקמין במקום שחושבין — תחילה מציירים (חושבים) את הצורה, ואז רוקמים עליה.</div>
+    <div class="trans" data-when="en">The Gemara returns to its discussion concerning the sacred vessels: The verse states with regard to the covers for the Tabernacle that they are “work of an embroiderer” (Exodus 26:36), and it also states they are “work of a designer” (Exodus 26:31). How can both descriptions be reconciled? Rabbi Elazar said: They embroidered the place where they had designed. They first marked a design on the material in paint, and then they embroidered it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא ע״ב ב — Yoma 72b:19</span></div>
+    <div class="orig">תָּנָא מִשְּׁמֵיהּ דְּרַבִּי נְחֶמְיָה: ״רוֹקֵם״ — מַעֲשֵׂה מַחַט, לְפִיכָךְ פַּרְצוּף אֶחָד. ״חוֹשֵׁב״ — מַעֲשֵׂה אוֹרֵג, לְפִיכָךְ שְׁנֵי פַּרְצוּפוֹת.</div>
+    <div class="trans" data-when="he">תנא משום ר׳ נחמיה: ״רוקם״ — מעשה מחט, ולכן צורה אחת (אותה צורה בשני הצדדים). ״חושב״ — מעשה אורג, ולכן שתי צורות שונות בשני הצדדים.</div>
+    <div class="trans" data-when="en">A Sage taught in the name of Rabbi Neḥemya: “Work of an embroiderer” refers to needlework, which therefore produces only one face. The design is made with a needle passing back and forth from both sides of the curtain, and consequently an identical parallel image, or one face, is formed on both sides. “Work of a designer” refers to woven work, which therefore produces two faces. Although formed together, the two sides of the material were not identical; for example, sometimes an eagle appeared on one side while a lion was on the other side.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">בגדי משוח מלחמה — משמש או נשאל?</span><span data-when="en">War-priest’s garments — serve or consult?</span>
+      <span class="ref">Yoma 72b:20–73a:15</span></h2>
+  <div class="lead"><span data-when="he">רב דימי: משוח מלחמה משמש בשמונה בגדי כהן גדול; קושיות מברייתות, וטעמי אֵיבה ומעלין בקודש; ולבסוף רבין: נשאל בהן — אך אינו משמש.</span><span data-when="en">Rav Dimi: the war-priest serves in the High Priest’s eight garments; objections and the reasons of animosity and elevation in sanctity; and finally Ravin: he is consulted in them — but never serves.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: בבגדים אלו נשאלין באורים ותומים"]):::mishnah
+  S1["② רב דימי: משוח מלחמה משמש בבגדי כהן גדול — ׳לבניו אחריו׳"]:::statement
+  Q1{"③ מתיב: יורש בנו? · ת״ל ׳הראוי לבוא׳ — ואם איתא, חזי!"}:::question
+  A1["④ רב נחמן בר יצחק: עיקר משיחתו למלחמה, יצא מירושה"]:::answer
+  Q2{"⑤ מיתיבי: אינו משמש לא בארבעה ולא בשמונה"}:::question
+  A2["⑥ אביי: ככה״ג משום אֵיבה, כהדיוט משום מעלין בקודש"]:::answer
+  Q3{"⑦ רב אדא לרבא: ותנא דלית ליה אֵיבה — ולא משמש!"}:::question
+  P1["⑧ ברייתא: דברים שבין כה״ג להדיוט — פר, פריעה ופרימה…"]:::proof
+  A3["⑭ אית ליה אֵיבה בדזוטר מיניה — וברייתא דחויה"]:::answer
+  Q4{"⑮ אהדרינהו ר׳ אמי ואסי לאפייהו · רב פפא: יקרא דקיסר"}:::question
+  C1["⑰ רבין: נשאל איתמר — תניא: נשאל בהן, ואינו משמש"]:::conclusion
+  M1 -->|אגב המשנה| S1
+  S1 -.->|מתיב| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A2
+  A2 -.->|קושיא| Q3
+  Q3 -->|ראיה| P1
+  P1 -->|דחיית הראיה| A3
+  A3 -.->|מעשה ומתקיף| Q4
+  Q4 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: in these garments the Urim VeTummim is consulted"]):::mishnah
+  S1["② Rav Dimi: war-priest serves in the High Priest’s garments — ׳for his sons after him׳"]:::statement
+  Q1{"③ Objection: does his son inherit? · ׳fit to enter׳ — and if so, he is fit!"}:::question
+  A1["④ R. Naḥman b. Yitzḥak: his anointment is for war, excluded from inheritance"]:::answer
+  Q2{"⑤ Objection: he serves in neither four nor eight garments"}:::question
+  A2["⑥ Abaye: not like the High Priest — animosity; not common — elevation in sanctity"]:::answer
+  Q3{"⑦ Rav Adda to Rava: a tanna with no animosity — yet he does not serve!"}:::question
+  P1["⑧ Baraita: the differences High Priest vs common — bull, hair, rending…"]:::proof
+  A3["⑭ He feels animosity toward an inferior — so the proof is rejected"]:::answer
+  Q4{"⑮ R. Ami and Asi turned their faces · Rav Pappa: honor of the caesar’s house"}:::question
+  C1["⑰ Ravin: ׳consulted׳ was stated — a baraita: he is consulted, but does not serve"]:::conclusion
+  M1 -->|via the Mishna| S1
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|objection| Q2
+  Q2 -->|answer| A2
+  A2 -.->|objection| Q3
+  Q3 -->|proof| P1
+  P1 -->|proof rejected| A3
+  A3 -.->|incident, objection| Q4
+  Q4 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① בְּאֵלּוּ נִשְׁאָלִין בְּאוּרִים וְתוּמִּים"]):::mishnah
+  S1["② רַב דִּימִי … מְשׁוּחַ מִלְחָמָה מְשַׁמֵּשׁ בָּהֶן … לְמִי שֶׁבָּא בִּגְדוּלָּה אַחֲרָיו"]:::statement
+  Q1{"③ יָכוֹל יְהֵא בְּנוֹ … מְשַׁמֵּשׁ … מִי שֶׁרָאוּי לָבֹא … וְאִם אִיתָא — מִיחְזֵא חֲזֵי!"}:::question
+  A1["④ רַב נַחְמָן בַּר יִצְחָק … כׇּל שֶׁעִיקַּר מְשִׁיחָתוֹ לְאֹהֶל מוֹעֵד … יָצָא זֶה … לְמִלְחָמָה"]:::answer
+  Q2{"⑤ מֵיתִיבִי … אֵינוֹ מְשַׁמֵּשׁ לֹא בְּאַרְבָּעָה … לֹא בִּשְׁמוֹנָה"}:::question
+  A2["⑥ אַבָּיֵי … כְּכֹהֵן גָּדוֹל — מִשּׁוּם אֵיבָה, כְּכֹהֵן הֶדְיוֹט — מַעֲלִין בַּקֹּדֶשׁ"]:::answer
+  Q3{"⑦ רַב אַדָּא … לְרָבָא: וְהַאי תַּנָּא דְּלֵית לֵיהּ אֵיבָה, וְלָא קָא מְשַׁמֵּשׁ"}:::question
+  P1["⑧ דְּתַנְיָא, דְּבָרִים שֶׁבֵּין כֹּהֵן גָּדוֹל לְכֹהֵן הֶדְיוֹט: פַּר … לֹא פּוֹרֵעַ, וְלֹא פּוֹרֵם …"]:::proof
+  A3["⑭ כִּי לֵית לֵיהּ אֵיבָה — בְּדִכְווֹתֵיהּ, בִּדְזוּטַר מִינֵּיהּ — אִית לֵיהּ"]:::answer
+  Q4{"⑮ אַהְדְּרִינְהוּ … לְאַפַּיְיהוּ · רַב פָּפָּא … מִשּׁוּם יְקָרָא דְבֵי קֵיסָר"}:::question
+  C1["⑰ כִּי אֲתָא רָבִין … נִשְׁאַל אִיתְּמַר … מְשׁוּחַ מִלְחָמָה נִשְׁאָל בָּהֶן"]:::conclusion
+  M1 -->|אגב המשנה| S1
+  S1 -.->|מתיב| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|מיתיבי| Q2
+  Q2 -->|תירוץ| A2
+  A2 -.->|קושיא| Q3
+  Q3 -->|ראיה| P1
+  P1 -->|דחיית הראיה| A3
+  A3 -.->|מעשה ומתקיף| Q4
+  Q4 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ב ב — Yoma 72b:20</span></div>
+    <div class="orig">בְּאֵלּוּ נִשְׁאָלִין בְּאוּרִים וְתוּמִּים. כִּי אֲתָא רַב דִּימִי, אָמַר: בְּגָדִים שֶׁכֹּהֵן גָּדוֹל מְשַׁמֵּשׁ בָּהֶן, מְשׁוּחַ מִלְחָמָה מְשַׁמֵּשׁ בָּהֶן, שֶׁנֶּאֱמַר: ״וּבִגְדֵי הַקּוֹדֶשׁ אֲשֶׁר לְאַהֲרֹן יִהְיוּ לְבָנָיו אַחֲרָיו״, לְמִי שֶׁבָּא בִּגְדוּלָּה אַחֲרָיו.</div>
+    <div class="trans" data-when="he">המשנה: בשמונה בגדים אלו נשאלין באורים ותומים. כי אתא רב דימי אמר: הבגדים שכהן גדול משמש בהם — אף משוח מלחמה (כהן המוזהר את העם לפני המלחמה) משמש בהם, שנאמר ״ובגדי הקודש אשר לאהרן יהיו לבניו אחריו״ — למי שבא בגדולה אחריו, היינו המשוח שדרגתו אחת פחותה מכה״ג.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: When dressed in these eight garments, the High Priest may be consulted for the decision of the Urim VeTummim. When Rav Dimi came from Eretz Yisrael to Babylonia, he said: The garments in which the High Priest serves are also worn when the priest anointed for war serves. This priest is appointed to recite words of encouragement to the nation before it goes out to war (see Deuteronomy 20:2). As it is stated: “And the sacred garments of Aaron shall be for his sons after him” (Exodus 29:29), which is taken to refer to the one who comes after him in greatness, meaning the priest whose rank is one lower than the High Priest, i.e., the priest anointed for war.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ב ב — Yoma 72b:21</span></div>
+    <div class="orig">מֵתִיב רַב אַדָּא בַּר אַהֲבָה, וְאָמְרִי לַהּ כְּדִי: יָכוֹל יְהֵא בְּנוֹ שֶׁל מְשׁוּחַ מִלְחָמָה מְשַׁמֵּשׁ תַּחְתָּיו כְּדֶרֶךְ שֶׁבְּנוֹ שֶׁל כֹּהֵן גָּדוֹל מְשַׁמֵּשׁ תַּחְתָּיו —</div>
+    <div class="trans" data-when="he">מתיב רב אדא בר אהבה (ויש אומרים בלא שם): שנינו בברייתא — יכול יהא בנו של משוח מלחמה משמש תחתיו (יורש את מעמדו), כדרך שבנו של כהן גדול משמש תחתיו —</div>
+    <div class="trans" data-when="en">Rav Adda bar Ahava raised an objection, and some say it unattributed: It is taught in a baraita: One might have thought that the son of the priest anointed for war serves in his place, i.e., he inherits the position, in the same way that the son of a High Priest serves in his place if he is fit for the job;</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ג א — Yoma 73a:1</span></div>
+    <div class="orig">תַּלְמוּד לוֹמַר: ״שִׁבְעַת יָמִים יִלְבָּשָׁם הַכֹּהֵן תַּחְתָּיו מִבָּנָיו אֲשֶׁר יָבֹא אֶל אֹהֶל מוֹעֵד״, מִי שֶׁרָאוּי לָבֹא אֶל אֹהֶל מוֹעֵד. וְאִם אִיתָא — מִיחְזֵא חֲזֵי!</div>
+    <div class="trans" data-when="he">המשך הברייתא: תלמוד לומר ״שבעת ימים ילבשם הכהן תחתיו מבניו אשר יבוא אל אהל מועד״ — רק מי שראוי לבוא אל אהל מועד (כהן גדול) בנו יורשו, ולא משוח מלחמה. ואם איתא לרב דימי שהמשוח משמש באותם בגדים — הרי גם הוא ראוי לבוא, ובנו אמור לרשת!</div>
+    <div class="trans" data-when="en">therefore, the verse states: “Seven days shall he wear them, the one who serves in his stead from among his sons, who comes into the Tent of Meeting to serve in the Sanctuary” (Exodus 29:30). The verse describes a son serving in the place of his father, indicating that the position is inherited. The conclusion of the verse implies that the rule that a son inherits his father’s position applies only to a High Priest who is fit to enter the Tent of Meeting, but not to the priest anointed for war. Based on this baraita, the following challenge is posed: And if it is so, since the priest anointed for war also serves wearing the same garments as the High Priest, he is also fit to enter the Tent of Meeting and should bequeath his position to his son.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ג א — Yoma 73a:2</span></div>
+    <div class="orig">אָמַר רַב נַחְמָן בַּר יִצְחָק, הָכִי קָאָמַר: כׇּל שֶׁעִיקַּר מְשִׁיחָתוֹ לְאֹהֶל מוֹעֵד. יָצָא זֶה, שֶׁעִיקַּר מְשִׁיחָתוֹ לְמִלְחָמָה.</div>
+    <div class="trans" data-when="he">תירוץ רב נחמן בר יצחק: כך כוונת הברייתא — דין הירושה נוהג בכל מי שעיקר משיחתו לעבודת אהל מועד; יצא משוח מלחמה, שעיקר משיחתו למלחמה — ולכן בנו אינו יורש, ואין מכאן סתירה לרב דימי.</div>
+    <div class="trans" data-when="en">Rav Naḥman bar Yitzḥak said that this is what the baraita is saying: The rule that a son inherits his father’s position applies to anyone for whom the primary purpose of his anointment is to come and serve in the Tent of Meeting. That excludes this priest for whom the primary purpose of his anointment is for war.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ג א — Yoma 73a:3</span></div>
+    <div class="orig">מֵיתִיבִי: מְשׁוּחַ מִלְחָמָה אֵינוֹ מְשַׁמֵּשׁ לֹא בְּאַרְבָּעָה כְּכֹהֵן הֶדְיוֹט, לֹא בִּשְׁמוֹנָה כְּכֹהֵן גָּדוֹל.</div>
+    <div class="trans" data-when="he">מיתיבי על רב דימי: שנינו בברייתא — משוח מלחמה אינו משמש לא בארבעה בגדים ככהן הדיוט, ולא בשמונה בגדים ככהן גדול.</div>
+    <div class="trans" data-when="en">The Gemara raises an objection to Rav Dimi’s claim: It was taught in a baraita that the priest anointed for war serves neither in four garments, like a common priest, nor in eight garments, like a High Priest.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ג א — Yoma 73a:4</span></div>
+    <div class="orig">אֲמַר לֵיהּ אַבָּיֵי: אֶלָּא זָר מְשַׁוֵּית לֵיהּ! אֶלָּא: כְּכֹהֵן גָּדוֹל — מִשּׁוּם אֵיבָה, כְּכֹהֵן הֶדְיוֹט — מִשּׁוּם מַעֲלִין בַּקֹּדֶשׁ וְלֹא מוֹרִידִין.</div>
+    <div class="trans" data-when="he">תירוץ אביי: אם אינו לובש לא ככה״ג ולא כהדיוט — וכי תעשהו זר?! אלא: ככהן גדול אינו לובש מדרבנן משום אֵיבה (שלא לעורר קנאה), וככהן הדיוט אינו לובש משום ׳מעלין בקודש ואין מורידין׳ — שכבר עלה למעלת כה״ג; ומדאורייתא אכן לובש כמותו.</div>
+    <div class="trans" data-when="en">Abaye said to him: Would you make him like a non-priest? If he dresses like neither a High Priest nor a common priest, then effectively he is like a non-priest, but that is certainly not true. Rather, the meaning of the baraita is that the priest anointed for war does not dress like a High Priest due to the animosity that could be caused between him and the High Priest if they both wore similar garments. Therefore, although according to Torah law the priest anointed for war should dress like a High Priest, the Sages decreed that he should not, out of concern that animosity might result. And he does not dress like a common priest, due to the principle: One elevates to a higher level in matters of sanctity and one does not downgrade. Since the priest anointed for war attained the level of sanctity of a High Priest, he may not now be demoted to serve as an ordinary priest and dress accordingly.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ג א — Yoma 73a:5</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אַדָּא בַּר אַבָּא לְרָבָא: וְהַאי תַּנָּא דְּלֵית לֵיהּ אֵיבָה, וְלָא קָא מְשַׁמֵּשׁ.</div>
+    <div class="trans" data-when="he">הקשה רב אדא בר אבא לרבא: והרי יש תנא בברייתא (להלן) שאין לו את חשש האֵיבה, ואף על פי כן משוח מלחמה אינו משמש בשמונה בגדים — משמע שהטעם אינו אֵיבה.</div>
+    <div class="trans" data-when="en">Rav Adda bar Abba said to Rava: But there is this tanna of the following baraita who does not accept the concern of animosity as a reason to prevent one from wearing similar garments, and yet even according to him the priest anointed for war does not serve wearing the eight garments. Clearly, there must be a different reason.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ג א — Yoma 73a:6</span></div>
+    <div class="orig">דְּתַנְיָא, דְּבָרִים שֶׁבֵּין כֹּהֵן גָּדוֹל לְכֹהֵן הֶדְיוֹט: פַּר כֹּהֵן מָשִׁיחַ, וּפַר הַבָּא עַל כׇּל הַמִּצְוֹת, וּפַר יוֹם הַכִּפּוּרִים, וַעֲשִׂירִית הָאֵיפָה.</div>
+    <div class="trans" data-when="he">דתניא — הברייתא המונה ההבדלים בין כהן גדול לכהן הדיוט: פר כהן משיח (הוא ׳פר הבא על כל המצוות׳, על הוראת טעות שיש בה כרת), פר יום הכיפורים, ועשירית האיפה (מנחת חביתין שמקריב כה״ג בכל יום) — קרבנות אלו רק כה״ג מביא.</div>
+    <div class="trans" data-when="en">As it was taught in a baraita: The matters in which there are differences between a High Priest and a common priest are as follows: The bull of the anointed priest, also called the bull brought for all the mitzvot, which is brought for unwittingly deciding and following an erroneous halakhic ruling in a case for which one would be liable to receive the penalty of karet had he committed it intentionally; And the bull of Yom Kippur; And the tenth of an ephah that the High Priest offers each day. Only the High Priest brings the above offerings.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ג א — Yoma 73a:7</span></div>
+    <div class="orig">לֹא פּוֹרֵעַ, וְלֹא פּוֹרֵם, אֲבָל פּוֹרֵם הוּא מִלְּמַטָּה, וְהַהֶדְיוֹט מִלְמַעְלָה. וְאֵין מִטַּמֵּא לִקְרוֹבָיו, וּמְצֻוֶּוה עַל הַבְּתוּלָה, וּמוּזְהָר עַל הָאַלְמָנָה, וּמַחֲזִיר אֶת הָרוֹצֵחַ.</div>
+    <div class="trans" data-when="he">המשך הברייתא (דיני אבלות וכבוד כה״ג): אינו פורע (מגדל שיער) ואינו פורם (קורע בגדו) כדרך אבלים, אך פורם מלמטה (במקום שאינו ניכר), וההדיוט מלמעלה; ואינו מיטמא לקרוביו; ומצוּוה לישא בתולה; ומוזהר שלא לישא אלמנה; ומיתתו מחזירה את הרוצח מעיר המקלט.</div>
+    <div class="trans" data-when="en">In addition, when in mourning, a High Priest does not let his hair grow wild, nor does he rend his clothing in the way other mourners do. But he does rend his clothing from below, in a place that is not noticeable, while the common priest rends from above in the normal manner. And he may not become ritually impure in the event of the death of his close relatives, but a common priest may. And he is commanded to marry a virgin, and he is prohibited from marrying a widow, in contrast to a common priest who is prohibited to marry only a divorcee. And his death allows the return of the accidental killer from the city of refuge.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ג א — Yoma 73a:8</span></div>
+    <div class="orig">וּמַקְרִיב אוֹנֵן, וְאֵינוֹ אוֹכֵל, וְאֵינוֹ חוֹלֵק, וְנוֹטֵל חֵלֶק בָּרֹאשׁ, וּמַקְרִיב חֵלֶק בָּרֹאשׁ. וּמְשַׁמֵּשׁ בִּשְׁמֹנָה כֵּלִים, וּפָטוּר עַל טוּמְאַת מִקְדָּשׁ וְקָדָשָׁיו, וְכׇל עֲבוֹדוֹת יוֹם הַכִּפּוּרִים אֵינָן כְּשֵׁירוֹת אֶלָּא בּוֹ.</div>
+    <div class="trans" data-when="he">המשך: מקריב אונן (ביום מות קרובו) אך אינו אוכל מן הקדשים ואינו חולק; נוטל חלק בראש (תחילה) ומקריב חלק בראש; משמש בשמונה כלים (בגדים); פטור על טומאת מקדש וקודשיו; וכל עבודות יום הכיפורים כשרות רק בו.</div>
+    <div class="trans" data-when="en">And he sacrifices offerings even when he is an acute mourner, i.e., on the first day of his mourning, but he may not eat from the offerings on that day and he may not take a portion from them. And he takes his portion first from any offering of his choice. And he has the first right to sacrifice any offering he wants. And he serves wearing eight garments. And he is exempt from bringing an offering for unwittingly causing ritual impurity to the Temple and its sacred objects. And all parts of the Yom Kippur service are valid only when performed by him.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ג א — Yoma 73a:9</span></div>
+    <div class="orig">וְכוּלָּן נוֹהֲגוֹת בִּמְרוּבֵּה בְּגָדִים, חוּץ מִפַּר הַבָּא עַל כׇּל הַמִּצְוֹת.</div>
+    <div class="trans" data-when="he">וכל ההלכות הללו נוהגות גם ב׳מרובה בגדים׳ — כהן גדול שנתרבה בשמונה הבגדים בלבד (בלא שמן המשחה, כבבית שני) — חוץ מפר הבא על כל המצוות, שמביאו רק כהן המשוח בשמן.</div>
+    <div class="trans" data-when="en">And all these halakhot unique to the High Priest are not limited to one who was consecrated with anointing oil, but apply also to a High Priest of many garments. During the Second Temple period, when the oil used for anointing was no longer available for anointing High Priests, the High Priests were consecrated by virtue of wearing the eight garments. This is true except with regard to the bull brought for all the mitzvot, which is brought only by a High Priest consecrated with anointing oil.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ג א — Yoma 73a:10</span></div>
+    <div class="orig">וְכוּלָּן נוֹהֲגוֹת בְּמָשׁוּחַ שֶׁעָבַר, חוּץ מִפַּר יוֹם הַכִּפּוּרִים וַעֲשִׂירִית הָאֵיפָה.</div>
+    <div class="trans" data-when="he">וכולן נוהגות גם בכהן גדול ׳משוח שעבר׳ — שמינוהו במקום כה״ג שנפסל וחזר הראשון — שעדיין קדושת כה״ג עליו; חוץ מפר יום הכיפורים ועשירית האיפה, שאינו מקריבם כשאינו משמש בפועל.</div>
+    <div class="trans" data-when="en">And all these halakhot apply to a former High Priest who had been consecrated to substitute for a High Priest who had become disqualified. If the disqualification of the original High Priest is removed, he may return to his position. Although the substitute no longer serves as a High Priest, he retains the sanctity of a High Priest and the halakhot of the High Priest continue to apply to him. This is true except with regard to the sacrifice of the bull on Yom Kippur and the sacrifice of the tenth of an ephah each day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא ע״ג א — Yoma 73a:11</span></div>
+    <div class="orig">וְכוּלָּן אֵין נוֹהֲגוֹת בִּמְשׁוּחַ מִלְחָמָה, חוּץ מֵחֲמִשָּׁה דְּבָרִים הָאֲמוּרִין בַּפָּרָשָׁה: לֹא פּוֹרֵעַ, וְלֹא פּוֹרֵם, וְלֹא מִטַּמֵּא לִקְרוֹבָיו, וּמְצֻוֶּוה עַל הַבְּתוּלָה, וּמוּזְהָר עַל הָאַלְמָנָה, וּמַחְזִיר אֶת הָרוֹצֵחַ כְּדִבְרֵי רַבִּי יְהוּדָה, וַחֲכָמִים אוֹמְרִים: אֵינוֹ מַחְזִיר.</div>
+    <div class="trans" data-when="he">וכולן אינן נוהגות במשוח מלחמה, חוץ מחמישה דברים האמורים בפרשת הכהן הגדול: אינו פורע ואינו פורם, אינו מיטמא לקרוביו, מצוּוה על הבתולה, ומוזהר על האלמנה; ומחזיר את הרוצח — לדברי ר׳ יהודה; וחכמים אומרים אינו מחזיר. (כיוון שברייתא זו מחילה דיני כה״ג גם על ׳משוח שעבר׳ הלובש שמונה בגדים, מוכח שאין לתנא חשש אֵיבה, ובכל זאת המשוח מלחמה אינו משמש בהם.)</div>
+    <div class="trans" data-when="en">And none of them applies to the priest anointed for war, except for the five items stated explicitly in the passage about the High Priest (Leviticus 21:10–15): When in mourning, he does not let his hair grow wild nor does he rend his clothing in the way regular mourners do. And he may not become ritually impure in the event of the death of his close relatives. And he is commanded to marry a virgin, and he is prohibited from marrying a widow. And his death allows the return of the accidental killer from the city of refuge, in accordance with the statement of Rabbi Yehuda in tractate Makkot (11a). And the Rabbis say: His death does not allow the return of the accidental killer from the city of refuge. The baraita teaches that a former High Priest also wears the eight garments of the High Priest. It is therefore apparent that the tanna of the baraita is not concerned about animosity which could be caused if the High Priest and the former High Priest wear similar garments. Despite this, the baraita agrees that the priest anointed for war does not wear the eight garments. This suggests that the reason for this is not out of concern that animosity might result.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">יומא ע״ג א — Yoma 73a:12</span></div>
+    <div class="orig">כִּי לֵית לֵיהּ אֵיבָה — בְּדִכְווֹתֵיהּ, בִּדְזוּטַר מִינֵּיהּ — אִית לֵיהּ.</div>
+    <div class="trans" data-when="he">דחיית הראיה: כשאין לתנא חשש אֵיבה — היינו דווקא במי שדומה לכה״ג (משוח שעבר, באותה דרגה); אבל במי שנמוך ממנו (משוח מלחמה) — יש אֵיבה. ושוב אין סתירה לטעם אביי.</div>
+    <div class="trans" data-when="en">The Gemara rejects this proof: When the High Priest has no animosity toward someone else wearing the same garments, it is only where that person is similar to him, such as a former High Priest who held the same rank. But toward someone inferior to him who wears the same garments, such as the priest anointed for war, he does feel animosity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">יומא ע״ג א — Yoma 73a:13</span></div>
+    <div class="orig">יְתֵיב רַבִּי אֲבָהוּ וְקָאָמַר לַהּ לְהָא שְׁמַעְתָּא מִשְּׁמֵיהּ דְּרַבִּי יוֹחָנָן. אַהְדְּרִינְהוּ רַבִּי אַמֵּי וְרַבִּי אַסִּי לְאַפַּיְיהוּ. אִיכָּא דְּאָמְרִי, רַבִּי חִיָּיא בַּר אַבָּא אֲמַרָה, וְאַהְדְּרִינְהוּ רַבִּי אַמֵּי וְרַבִּי אַסִּי לְאַפַּיְיהוּ.</div>
+    <div class="trans" data-when="he">מעשה: ישב ר׳ אבהו ואמר שמועה זו של רב דימי (שמשוח מלחמה משמש בבגדי כה״ג) משם ר׳ יוחנן. החזירו ר׳ אמי ור׳ אסי את פניהם (לאות חולק). ויש אומרים: ר׳ חייא בר אבא אמרהּ, ואליו החזירו ר׳ אמי ור׳ אסי את פניהם.</div>
+    <div class="trans" data-when="en">The Gemara relates: Rabbi Abbahu was sitting before the Sages and saying this halakha of Rav Dimi, that the priest anointed for war serves in the same garments as the High Priest, in the name of Rabbi Yoḥanan. Rabbi Ami and Rabbi Asi turned their faces away to show that they disagreed. Some say it was not Rabbi Abbahu but Rabbi Ḥiyya bar Abba who said it, and it was away from him that Rabbi Ami and Rabbi Asi turned their faces.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">16</span> <span class="ref">יומא ע״ג א — Yoma 73a:14</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב פָּפָּא: בִּשְׁלָמָא רַבִּי אֲבָהוּ — מִשּׁוּם יְקָרָא דְבֵי קֵיסָר, אֶלָּא לְרַבִּי חִיָּיא בַּר אַבָּא — נֵימְרוּ לֵיהּ מֵימָר: לָא אָמַר רַבִּי יוֹחָנָן הָכִי.</div>
+    <div class="trans" data-when="he">מתקיף רב פפא על הלשון השנייה: בשלמא אם ר׳ אבהו אמרהּ — מובן שלא אמרו לו במפורש שחולקים, מפני כבוד בית הקיסר (שהיה ר׳ אבהו מקורב למלכות); אבל אם ר׳ חייא בר אבא אמרהּ — היו אומרים לו במפורש: לא אמר ר׳ יוחנן כך. ולכן הלשון הראשונה עיקר.</div>
+    <div class="trans" data-when="en">Rav Pappa strongly objects to the alternative account: Granted, if you say that Rabbi Abbahu reported the halakha, it is understandable that Rabbi Ami and Rabbi Asi did not state outright that they disagreed with him due to the honor of the house of the caesar, as Rabbi Abbahu was close to the government (see Ḥagiga 14a). But if the alternative account were true, then they should have said outright to Rabbi Ḥiyya bar Abba that they held that Rabbi Yoḥanan did not say this, since there would have been no reason not to have done so. Therefore, Rav Pappa claimed this account must be incorrect.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">17</span> <span class="ref">יומא ע״ג א — Yoma 73a:15</span></div>
+    <div class="orig">כִּי אֲתָא רָבִין, אָמַר: נִשְׁאַל אִיתְּמַר. תַּנְיָא נָמֵי הָכִי: בְּגָדִים שֶׁכֹּהֵן גָּדוֹל מְשַׁמֵּשׁ בָּהֶן — מְשׁוּחַ מִלְחָמָה נִשְׁאָל בָּהֶן.</div>
+    <div class="trans" data-when="he">מסקנה (כי אתא רבין): השמועה נאמרה בלשון ׳נשאל׳ ולא ׳משמש׳ — משוח מלחמה לובש שמונה בגדים רק כדי להישאל בהם באורים ותומים, אך לעולם אינו משמש בהם. תניא נמי הכי: הבגדים שכהן גדול משמש בהן — משוח מלחמה נשאל בהן.</div>
+    <div class="trans" data-when="en">The Gemara cites an opinion that conflicts with that of Rav Dimi: When Ravin came from Eretz Yisrael to Babylonia he said: The teaching that the priest anointed for war wears the eight garments of the High Priest was stated only with regard to being consulted for the decision of the Urim VeTummim. To be consulted he must wear all eight garments; however, he never serves in them. That was also taught in a baraita: The garments in which the High Priest serves are also worn when the priest anointed for war is consulted for the decision of the Urim VeTummim.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
