@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ״ו</title>
+<meta name="description" content="מפת הסוגיא של יומא פ״ו: סוגיות התשובה — ארבעה (שלושה) חילוקי כפרה, חילול השם וכפרתו, ׳גדולה תשובה׳ בדרשות חכמים, מידת הקב״ה לעומת מידת בשר ודם, הכרת בעל תשובה גמור, ופירוט החטא בווידוי.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="86">
+<meta name="gemara-map:sefaria-ref" content="Yoma 86">
+<meta name="gemara-map:topic-he" content="סוגיות התשובה">
+<meta name="gemara-map:topic-en" content="The sugyot of repentance">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ״ו">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 86">
+<meta name="gemara-map:blurb-he" content="חטיבת התשובה: חילוקי הכפרה ומקומה של תשובה בכל אחד, חומרת חילול השם, וריבוי דרשות ׳גדולה תשובה׳ — עד הכרת בעל תשובה גמור והווידוי.">
+<meta name="gemara-map:blurb-en" content="The repentance unit: the distinctions of atonement and the place of repentance in each, the gravity of desecrating God’s name, and a chain of ‘Great is repentance’ teachings — through the mark of a true penitent and confession.">
+<meta name="gemara-map:sugya-count" content="8">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ״ו</span><span data-when="en">Sugya map — Yoma 86</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ״ו א — פ״ז א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 86a–87a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> חטיבת <b>התשובה</b> שבסוף מסכת יומא: שלושה (ולא ארבעה) <b>חילוקי כפרה</b> ותשובה עם כל אחד — עד שחילול השם אינו מתכפר אלא במיתה; מהו <b>חילול השם</b> ותיקונו; שורת דרשות <b>״גדולה תשובה״</b> (מביאה רפואה, מגעת לכיסא הכבוד, דוחה לא־תעשה, מקרבת גאולה, הופכת זדונות); מידת הקב״ה המתפייס בדברים לעומת בשר ודם; מי הוא <b>בעל תשובה גמור</b> ומחלוקת אם מפרסמים את החטא; ושצריך <b>לפרוט את החטא</b> בווידוי.</span>
+    <span data-when="en"><b>Bottom line:</b> The <b>repentance</b> unit closing Yoma: three (not four) <b>distinctions of atonement</b>, repentance pairing with each — until desecration of God’s name, absolved only by death; what <b>desecration of God’s name</b> is and how to repair it; a chain of <b>“Great is repentance”</b> teachings (it heals, reaches the throne, overrides a prohibition, hastens redemption, turns sins to merits); how God, unlike flesh and blood, is appeased by mere words; who is a <b>true penitent</b> and whether one publicizes sin; and that one must <b>specify the sin</b> in confession.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ״ו</span><span data-when="en">Overview — Yoma 86</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · חילוקי כפרה — תשובה עם כל אחד"]:::statement
+  O2["2 · היכי דמי חילול השם"]:::statement
+  O3["3 · גדולה תשובה — רפואה, כיסא הכבוד"]:::statement
+  O4["4 · גדולה תשובה — דוחה ל״ת, גאולה, זדונות"]:::statement
+  O5["5 · מידת הקב״ה — מתפייס בדברים"]:::statement
+  O6["6 · בעל תשובה גמור · לפרסם חטא?"]:::statement
+  O7["7 · עובר עבירה — עד כמה מוחלין"]:::statement
+  O8["8 · ווידוי — לפרוט את החטא"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Distinctions of atonement — repentance with each"]:::statement
+  O2["2 · What is desecration of God’s name"]:::statement
+  O3["3 · Great is repentance — healing, the throne"]:::statement
+  O4["4 · Great is repentance — overrides, redemption, sins"]:::statement
+  O5["5 · God’s attribute — appeased by words"]:::statement
+  O6["6 · A true penitent · publicize sin?"]:::statement
+  O7["7 · Sinning — until when is one forgiven"]:::statement
+  O8["8 · Confession — specify the sin"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7 --> O8
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">1
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">חילוקי כפרה — ותשובה עם כל אחד</span><span data-when="en">The distinctions of atonement — repentance with each</span>
+      <span class="ref">Yoma 86a:5–8</span></h2>
+  <div class="lead"><span data-when="he">דרשת ״ונקה״ — מנקה לשבים; ושלושה (לא ארבעה) חילוקי כפרה לפי חומרת העבירה, ותשובה עם כל אחד — עד חילול השם שאינו מתכפר אלא במיתה.</span><span data-when="en">“Absolve” means He absolves penitents; and three (not four) distinctions of atonement by severity, repentance pairing with each — until desecration of God’s name, absolved only by death.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① ׳ונקה׳ — מנא לן שנאמר בחורב?"}:::question
+  A1["① ר׳ אלעזר: מנקה לשבין, ואינו מנקה לשאינן שבין"]:::answer
+  S1["② ר׳ ישמעאל: שלושה חילוקי כפרה, ותשובה עם כל אחד"]:::statement
+  S2["③ עשה — מוחלין מיד · ל״ת — תשובה תולה, יוה״כ מכפר · כריתות — יסורין ממרקין"]:::statement
+  S3["④ חילול השם — אין כוח לתלות, אלא מיתה ממרקת"]:::statement
+  Q1 -->|תירוץ| A1
+  A1 -->|דרשה נוספת| S1
+  S1 -->|פירוט| S2
+  S2 -->|חריג חמור| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① ׳Absolve׳ — whence that it was said at Horeb?"}:::question
+  A1["① R. Elazar: He absolves penitents, not the unrepentant"]:::answer
+  S1["② R. Yishmael: three distinctions of atonement, repentance with each"]:::statement
+  S2["③ Positive — forgiven at once · Prohibition — repentance suspends, Yom Kippur atones · Karet — suffering completes"]:::statement
+  S3["④ Desecration of the Name — nothing suspends, only death completes"]:::statement
+  Q1 -->|answer| A1
+  A1 -->|further teaching| S1
+  S1 -->|details| S2
+  S2 -->|grave exception| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① לְפִי שֶׁנֶּאֱמַר בְּחוֹרֵב ׳וְנַקֵּה׳. מְנָא לַן?"}:::question
+  A1["① רַבִּי אֶלְעָזָר אוֹמֵר … מְנַקֶּה הוּא לְשָׁבִין, וְאֵינוֹ מְנַקֶּה לְשֶׁאֵינָן שָׁבִין"]:::answer
+  S1["② אַרְבָּעָה חִלּוּקֵי כַפָּרָה … שְׁלֹשָׁה הֵן, וּתְשׁוּבָה עִם כׇּל אֶחָד וְאֶחָד"]:::statement
+  S2["③ עָבַר עַל עֲשֵׂה … עַד שֶׁמּוֹחֲלִין לוֹ … עַל לֹא תַעֲשֶׂה … תְּשׁוּבָה תּוֹלָה … עַל כָּרֵיתוֹת … וְיִסּוּרִין מְמָרְקִין"]:::statement
+  S3["④ מִי שֶׁיֵּשׁ חִילּוּל הַשֵּׁם בְּיָדוֹ … אֶלָּא כּוּלָּן תּוֹלִין, וּמִיתָה מְמָרֶקֶת"]:::statement
+  Q1 -->|תירוץ| A1
+  A1 -->|דרשה נוספת| S1
+  S1 -->|פירוט| S2
+  S2 -->|חריג חמור| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ו א — Yoma 86a:5</span></div>
+    <div class="orig">אָמַר מָר: לְפִי שֶׁנֶּאֱמַר בְּחוֹרֵב ״וְנַקֵּה״. מְנָא לַן? דְּתַנְיָא, רַבִּי אֶלְעָזָר אוֹמֵר: אִי אֶפְשָׁר לוֹמַר ״נַקֵּה״, שֶׁכְּבָר נֶאֱמַר ״לֹא יְנַקֶּה״, וְאִי אֶפְשָׁר לוֹמַר ״לֹא יְנַקֶּה״, שֶׁכְּבָר נֶאֱמַר ״נַקֵּה״. הָא כֵּיצַד? מְנַקֶּה הוּא לְשָׁבִין, וְאֵינוֹ מְנַקֶּה לְשֶׁאֵינָן שָׁבִין.</div>
+    <div class="trans" data-when="he">הגמרא חוזרת לברייתא קודמת: ״לפי שנאמר בחורב ׳ונקה׳״ — מניין שהתשובה נזכרה שם? מברייתא: ר׳ אלעזר דורש את הסתירה בין ״נקה״ ל״לא ינקה״ (שמות לד) — אי אפשר לקיים את שניהם כפשוטם. אלא: הקב״ה מנקה (מכפר) למי ששבים בתשובה, ואינו מנקה לשאינם שבים.</div>
+    <div class="trans" data-when="en">§ Since the Gemara cited this baraita, it now clarifies part of it. The Master said: Since it was stated at Horeb with regard to repentance: “Absolve.” The Gemara asks: From where do we derive this concept that repentance was mentioned there? The Gemara answers: As it was taught in a baraita that Rabbi Elazar says: It is not possible to say “absolve” (Exodus 34:7) about all transgressions, since “will not absolve” is already stated (Exodus 34:7). And it is not possible to say “will not absolve,” since “absolve” is already stated. How so? The Holy One, Blessed be He, absolves those who repent and does not absolve those who do not repent. Therefore, both “repentance” and “absolve” were mentioned at Horeb.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ו א — Yoma 86a:6</span></div>
+    <div class="orig">שָׁאַל רַבִּי מַתְיָא בֶּן חָרָשׁ אֶת רַבִּי אֶלְעָזָר בֶּן עֲזַרְיָה בְּרוֹמִי: שָׁמַעְתָּ אַרְבָּעָה חִלּוּקֵי כַפָּרָה שֶׁהָיָה רַבִּי יִשְׁמָעֵאל דּוֹרֵשׁ? אָמַר: שְׁלֹשָׁה הֵן, וּתְשׁוּבָה עִם כׇּל אֶחָד וְאֶחָד.</div>
+    <div class="trans" data-when="he">ר׳ מתיא בן חרש שאל את ראב״ע ברומי: האם שמעת על ארבעה חילוקי כפרה שהיה ר׳ ישמעאל דורש? השיב: אינם ארבעה אלא שלושה, ותשובה נדרשת עם כל אחד ואחד מהם.</div>
+    <div class="trans" data-when="en">Furthermore, with regard to the topic of repentance, Rabbi Matya ben Ḥarash asked Rabbi Elazar ben Azarya when Rabbi Elazar was in Rome: Have you heard the teaching that there are four distinctions in the process of atonement that Rabbi Yishmael would derive? He said to him: They are not four but three distinctions, and repentance is necessary with each one.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ו א — Yoma 86a:7</span></div>
+    <div class="orig">עָבַר עַל עֲשֵׂה וְשָׁב — אֵינוֹ זָז מִשָּׁם עַד שֶׁמּוֹחֲלִין לוֹ, שֶׁנֶּאֱמַר: ״שׁוּבוּ בָּנִים שׁוֹבָבִים״. עָבַר עַל לֹא תַעֲשֶׂה וְעָשָׂה תְּשׁוּבָה — תְּשׁוּבָה תּוֹלָה, וְיוֹם הַכִּפּוּרִים מְכַפֵּר. שֶׁנֶּאֱמַר: ״כִּי בַיּוֹם הַזֶּה יְכַפֵּר עֲלֵיכֶם מִכֹּל חַטֹּאתֵיכֶם״. עָבַר עַל כָּרֵיתוֹת וּמִיתוֹת בֵּית דִּין וְעָשָׂה תְּשׁוּבָה — תְּשׁוּבָה וְיוֹם הַכִּפּוּרִים תּוֹלִין, וְיִסּוּרִין מְמָרְקִין. שֶׁנֶּאֱמַר: ״וּפָקַדְתִּי בְשֵׁבֶט פִּשְׁעָם וּבִנְגָעִים עֲוֹנָם״.</div>
+    <div class="trans" data-when="he">פירוט שלושת החילוקים: (א) עבר על מצוות עשה ושב — מוחלין לו מיד, שנאמר ״שובו בנים שובבים״. (ב) עבר על לא־תעשה ושב — התשובה תולה את העונש, ויום הכיפורים מכפר, שנאמר ״כי ביום הזה יכפר עליכם״. (ג) עבר על כריתות ומיתות בית דין ושב — תשובה ויוה״כ תולין, והיסורין ממרקים (גומרים) את הכפרה, שנאמר ״ופקדתי בשבט פשעם״.</div>
+    <div class="trans" data-when="en">These are the categories: If one violates a positive mitzva and repents, he is forgiven even before he moves from his place, i.e. immediately, as it is stated: “Return, you backsliding children, I will heal your backsliding” (Jeremiah 3:22), implying that when one repents he is immediately forgiven. If one violates a prohibition and repents, repentance suspends his punishment and Yom Kippur atones for his sin, as it is stated: “For on this day shall atonement be made for you, to purify you from all your sins” (Leviticus 16:30). If one commits a transgression that warrants karet or a sin punishable by death from the earthly court and then repents, repentance and Yom Kippur suspend his punishment, and suffering absolves and completes the atonement, as it is stated: “Then will I visit their transgression with the rod, and their iniquity with strokes” (Psalms 89:33).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ו א — Yoma 86a:8</span></div>
+    <div class="orig">אֲבָל מִי שֶׁיֵּשׁ חִילּוּל הַשֵּׁם בְּיָדוֹ — אֵין לוֹ כֹּחַ בִּתְשׁוּבָה לִתְלוֹת וְלֹא בְּיוֹם הַכִּפּוּרִים לְכַפֵּר וְלֹא בְּיִסּוּרִין לְמָרֵק, אֶלָּא כּוּלָּן תּוֹלִין, וּמִיתָה מְמָרֶקֶת, שֶׁנֶּאֱמַר: ״וְנִגְלָה בְאׇזְנָי ה׳ צְבָאוֹת אִם יְכוּפַּר הֶעָוֹן הַזֶּה לָכֶם עַד תְּמוּתוּן״.</div>
+    <div class="trans" data-when="he">החריג החמור: מי שיש בידו חילול השם — אין כוח בתשובה לתלות, ולא ביום הכיפורים לכפר, ולא ביסורין למרק; אלא כולם יחד רק תולים, ורק המיתה ממרקת לגמרי, שנאמר ״אם יכופר העוון הזה לכם עד תמותון״.</div>
+    <div class="trans" data-when="en">But in the case of one who has caused desecration of God’s name, his repentance has no power to suspend punishment, nor does Yom Kippur have power to atone for his sin, nor does suffering alone have power to absolve him. Rather, all these suspend punishment, and death absolves him, as it is stated: “And the Lord of Hosts revealed Himself to my ears: This iniquity shall not be atoned for until you die” (Isaiah 22:14).</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">2
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">היכי דמי חילול השם</span><span data-when="en">What is desecration of God’s name</span>
+      <span class="ref">Yoma 86a:9–13</span></h2>
+  <div class="lead"><span data-when="he">מהו חילול השם? אמוראים נותנים דוגמאות לפי מעלתם; ואביי דורש ״ואהבת״ — שיהא שם שמים מתאהב על ידך, כנגד מי שמעשיו מקולקלים.</span><span data-when="en">What counts as desecrating God’s name? Sages give examples by their own standing; Abaye expounds “you shall love” — that the Name be made beloved through you, against one whose deeds are corrupt.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① היכי דמי חילול השם?"}:::question
+  A1["② רב: כגון אנא, לוקח בשר ואינו פורע מיד · אביי: רק במקום שאין תובעין"]:::answer
+  A2["② רבינא: מתא מחסיא תובעין · אביי נהג לפרוע מיד"]:::answer
+  A3["③ ר׳ יוחנן: מהלך ד׳ אמות בלא תורה ותפילין · ועוד דוגמאות"]:::answer
+  S1["④ אביי: ׳ואהבת׳ — שיהא שם שמים מתאהב על ידך, ובריות משבחות"]:::statement
+  S2["⑤ אבל מי שאין משאו באמונה — בריות מגנות, חילול השם"]:::statement
+  Q1 -->|דעה| A1
+  A1 -->|השלמה| A2
+  A1 -->|דעות נוספות| A3
+  A3 -->|דרשה| S1
+  S1 -->|לעומת זה| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① What is desecration of God’s name?"}:::question
+  A1["② Rav: like me, taking meat without paying at once · Abaye: only where they don’t ask"]:::answer
+  A2["② Ravina: Meḥasya does ask · Abaye paid each at once"]:::answer
+  A3["③ R. Yoḥanan: walking four cubits without Torah and phylacteries · further cases"]:::answer
+  S1["④ Abaye: ׳you shall love׳ — make the Name beloved by you, so people praise"]:::statement
+  S2["⑤ But one whose dealings lack faith — people deride: desecration"]:::statement
+  Q1 -->|view| A1
+  A1 -->|qualified| A2
+  A1 -->|further views| A3
+  A3 -->|exposition| S1
+  S1 -->|contrast| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① הֵיכִי דָּמֵי חִילּוּל הַשֵּׁם?"}:::question
+  A1["② אָמַר רַב: כְּגוֹן אֲנָא … וְלָא יָהֵיבְנָא דְּמֵי לְאַלְתַּר … אֶלָּא בְּאַתְרָא דְּלָא תָּבְעִי"]:::answer
+  A2["② אָמַר רָבִינָא: וּמָתָא מַחְסֵיָא אַתְרָא דְּתָבְעִי הוּא … יָהֵיב זוּזָא לְהַאי וְזוּזָא לְהַאי"]:::answer
+  A3["③ רַבִּי יוֹחָנָן אָמַר: כְּגוֹן אֲנָא דִּמְסַגֵּינָא אַרְבַּע אַמּוֹת בְּלָא תּוֹרָה וּבְלָא תְּפִילִּין"]:::answer
+  S1["④ אַבָּיֵי … ׳וְאָהַבְתָּ׳ … שֶׁיְּהֵא שֵׁם שָׁמַיִם מִתְאַהֵב עַל יָדְךָ … אַשְׁרֵי אָבִיו שֶׁלִּמְּדוֹ תּוֹרָה"]:::statement
+  S2["⑤ אֲבָל … וְאֵין מַשָּׂאוֹ וּמַתָּנוֹ בֶּאֱמוּנָה … אוֹי לוֹ לִפְלוֹנִי שֶׁלָּמַד תּוֹרָה"]:::statement
+  Q1 -->|דעה| A1
+  A1 -->|השלמה| A2
+  A1 -->|דעות נוספות| A3
+  A3 -->|דרשה| S1
+  S1 -->|לעומת זה| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ו א — Yoma 86a:9</span></div>
+    <div class="orig">הֵיכִי דָּמֵי חִילּוּל הַשֵּׁם? אָמַר רַב: כְּגוֹן אֲנָא, אִי שָׁקֵילְנָא בִּישְׂרָא מִטַּבָּחָא וְלָא יָהֵיבְנָא דְּמֵי לְאַלְתַּר. אָמַר אַבָּיֵי: לֹא שָׁנוּ אֶלָּא בְּאַתְרָא דְּלָא תָּבְעִי, אֲבָל בְּאַתְרָא דְּתָבְעִי — לֵית לַן בַּהּ.</div>
+    <div class="trans" data-when="he">הגמרא שואלת: מהו חילול השם המדובר? רב: אדם חשוב כמותי, אם אקח בשר מן הטבח ולא אשלם מיד — יחשדוני בגזל וילמדו ממני. אביי מסייג: לא אמרו כן אלא במקום שאין הטבח רגיל לתבוע את חובו; אבל במקום שתובעים — אין בכך חשש, שהכול יודעים שקונה בהקפה.</div>
+    <div class="trans" data-when="en">§ The Gemara asks: What are the circumstances that cause desecration of God’s name? Rav said: For example, in the case of someone like me, since I am an important public figure, if I take meat from a butcher and do not give him money immediately, people are likely to think that I did not mean to pay at all. They would consider me a thief and learn from my behavior that one is permitted to steal. Abaye said: They taught this statement of Rav only in a place where they do not ask for the money, where it is not customary for the butcher himself to come and collect payment from the customer. When the customer does not pay immediately, people may suspect him of theft. But in a place where they ask for the money from the customer some time later, we have no problem with doing this. Since everyone understands he is buying on credit, he is not desecrating God’s name.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ו א — Yoma 86a:10</span></div>
+    <div class="orig">אָמַר רָבִינָא: וּמָתָא מַחְסֵיָא אַתְרָא דְּתָבְעִי הוּא. אַבָּיֵי כִּדְשָׁקֵיל בִּישְׂרָא מִתְּרֵי שׁוּתָּפֵי, יָהֵיב זוּזָא לְהַאי וְזוּזָא לְהַאי, וַהֲדַר מְקָרֵב לְהוּ גַּבֵּי הֲדָדֵי וְעָבֵיד חוּשְׁבָּנָא.</div>
+    <div class="trans" data-when="he">רבינא: עירי מתא מחסיא היא מקום שתובעים בו את החוב. ומסופר: אביי, כשהיה קונה בשר משני שותפים, היה נותן זוז לזה וזוז לזה — כדי שכל אחד ידע שקיבל את חלקו — ואחר כך מקרב את שניהם ועושה חשבון.</div>
+    <div class="trans" data-when="en">Ravina said: My native city of Meḥasya is a place where they ask for and collect the money. The Gemara relates that when Abaye bought meat from two partners, he would give the money to this one and the money to this one, so that each would know that he had paid. And afterward he would bring them together and perform the calculation to see whether he received his change.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ו א — Yoma 86a:11</span></div>
+    <div class="orig">רַבִּי יוֹחָנָן אָמַר: כְּגוֹן אֲנָא דִּמְסַגֵּינָא אַרְבַּע אַמּוֹת בְּלָא תּוֹרָה וּבְלָא תְּפִילִּין. יִצְחָק דְּבֵי רַבִּי יַנַּאי אָמַר: כׇּל שֶׁחֲבֵירָיו מִתְבַּיְּישִׁין מֵחֲמַת שְׁמוּעָתוֹ (הַיְינוּ חִילּוּל הַשֵּׁם). אָמַר רַב נַחְמָן בַּר יִצְחָק: כְּגוֹן דְּקָא אָמְרִי אִינָשֵׁי: שְׁרָא לֵיהּ מָרֵיהּ לִפְלָנְיָא.</div>
+    <div class="trans" data-when="he">דעות נוספות: ר׳ יוחנן — אדם כמותי, אם אהלך ארבע אמות בלא תורה ובלא תפילין (והרואים אינם יודעים שזה מחמת חולשתי). יצחק דבי ר׳ ינאי — כל שחבריו מתביישים מחמת השמועות עליו. רב נחמן בר יצחק — כגון שאומרים עליו הבריות: ״ימחל לו אדונו לפלוני״ (על חטאיו).</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan said: What is an example of desecration of God’s name? For example, someone like me, if I would walk four cubits without Torah and without phylacteries, and the onlookers did not know that it is only on account of my body’s weakness, that would be a desecration of God’s name. Yitzḥak from the school of Rabbi Yannai said: Any case when one’s friends are embarrassed on account of his reputation, meaning his friends are embarrassed due to things they hear about him, this is a desecration of God’s name. Rav Naḥman bar Yitzḥak said: One creates a profanation of God’s name, for example, when people say about him: May his Master forgive so-and-so for the sins he has done.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ו א — Yoma 86a:12</span></div>
+    <div class="orig">אַבָּיֵי אָמַר, כִּדְתַנְיָא: ״וְאָהַבְתָּ אֵת ה׳ אֱלֹהֶיךָ״, שֶׁיְּהֵא שֵׁם שָׁמַיִם מִתְאַהֵב עַל יָדְךָ. שֶׁיְּהֵא קוֹרֵא וְשׁוֹנֶה וּמְשַׁמֵּשׁ תַּלְמִידֵי חֲכָמִים, וִיהֵא מַשָּׂאוֹ וּמַתָּנוֹ בְּנַחַת עִם הַבְּרִיּוֹת, מָה הַבְּרִיּוֹת אוֹמְרוֹת עָלָיו — אַשְׁרֵי אָבִיו שֶׁלִּמְּדוֹ תּוֹרָה, אַשְׁרֵי רַבּוֹ שֶׁלִּמְּדוֹ תּוֹרָה. אוֹי לָהֶם לַבְּרִיּוֹת שֶׁלֹּא לָמְדוּ תּוֹרָה, פְּלוֹנִי שֶׁלִּמְּדוֹ תּוֹרָה — רְאוּ כַּמָּה נָאִים דְּרָכָיו, כַּמָּה מְתוּקָּנִים מַעֲשָׂיו. עָלָיו הַכָּתוּב אוֹמֵר: ״וַיֹּאמֶר לִי עַבְדִּי אָתָּה יִשְׂרָאֵל אֲשֶׁר בְּךָ אֶתְפָּאָר״.</div>
+    <div class="trans" data-when="he">אביי מביא את הצד החיובי, מברייתא על ״ואהבת את ה׳ אלהיך״: שיהא שם שמים מתאהב על ידך — שאדם הלומד תורה ומשמש חכמים ומשאו ומתנו בנחת עם הבריות, הבריות אומרות עליו: אשרי אביו ורבו שלימדוהו תורה, ראו כמה נאים דרכיו ומתוקנים מעשיו. עליו הכתוב אומר ״עבדי אתה ישראל אשר בך אתפאר״.</div>
+    <div class="trans" data-when="en">Abaye said: As it was taught in a baraita that it is stated: “And you shall love the Lord your God” (Deuteronomy 6:5), which means that you shall make the name of Heaven beloved. How should one do so? One should do so in that he should read Torah, and learn Mishna, and serve Torah scholars, and he should be pleasant with people in his business transactions. What do people say about such a person? Fortunate is his father who taught him Torah, fortunate is his teacher who taught him Torah, woe to the people who have not studied Torah. So-and-so, who taught him Torah, see how pleasant are his ways, how proper are his deeds. The verse states about him and others like him: “You are My servant, Israel, in whom I will be glorified” (Isaiah 49:3).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ו א — Yoma 86a:13</span></div>
+    <div class="orig">אֲבָל מִי שֶׁקּוֹרֵא וְשׁוֹנֶה וּמְשַׁמֵּשׁ תַּלְמִידֵי חֲכָמִים, וְאֵין מַשָּׂאוֹ וּמַתָּנוֹ בֶּאֱמוּנָה, וְאֵין דִּבּוּרוֹ בְּנַחַת עִם הַבְּרִיּוֹת, מָה הַבְּרִיּוֹת אוֹמְרוֹת עָלָיו — אוֹי לוֹ לִפְלוֹנִי שֶׁלָּמַד תּוֹרָה. אוֹי לוֹ לְאָבִיו שֶׁלִּמְּדוֹ תּוֹרָה, אוֹי לוֹ לְרַבּוֹ שֶׁלִּמְּדוֹ תּוֹרָה. פְּלוֹנִי שֶׁלָּמַד תּוֹרָה — רְאוּ כַּמָּה מְקוּלְקָלִין מַעֲשָׂיו וְכַמָּה מְכוֹעָרִין דְּרָכָיו, וְעָלָיו הַכָּתוּב אוֹמֵר: ״בֶּאֱמוֹר לָהֶם עַם ה׳ אֵלֶּה וּמֵאַרְצוֹ יָצָאוּ״.</div>
+    <div class="trans" data-when="he">לעומת זה: הלומד תורה ומשמש חכמים, אך משאו ומתנו אינו באמונה ודיבורו אינו בנחת — הבריות אומרות עליו: אוי לו ולאביו ולרבו שלימדוהו תורה, ראו כמה מקולקלים מעשיו ומכוערים דרכיו. עליו הכתוב אומר (על חילול השם בגלות) ״עם ה׳ אלה ומארצו יצאו״.</div>
+    <div class="trans" data-when="en">But one who reads Torah, and learns Mishna, and serves Torah scholars, but his business practices are not done faithfully, and he does not speak pleasantly with other people, what do people say about him? Woe to so-and-so who studied Torah, woe to his father who taught him Torah, woe to his teacher who taught him Torah. So-and-so who studied Torah, see how destructive are his deeds, and how ugly are his ways. About him and others like him the verse states that the gentiles will say: “Men said of them: These are the people of the Lord, yet they had to leave His land” (Ezekiel 36:20). Through their sins and subsequent exile, such people have desecrated the name of God.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">3
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">גדולה תשובה — רפואה וכיסא הכבוד</span><span data-when="en">Great is repentance — healing and the throne</span>
+      <span class="ref">Yoma 86a:14–16</span></h2>
+  <div class="lead"><span data-when="he">ר׳ חמא בר חנינא: גדולה תשובה שמביאה רפואה; שני יישובי סתירות בין כתובים — מאהבה לעומת מיראה / על ידי יסורין; ור׳ לוי: מגעת עד כיסא הכבוד.</span><span data-when="en">R. Ḥama bar Ḥanina: repentance brings healing; two resolved scriptural contradictions — out of love vs. fear / through suffering; and R. Levi: it reaches the throne of glory.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ר׳ חמא בר חנינא: גדולה תשובה שמביאה רפואה לעולם"]:::statement
+  Q1{"② רמי: ׳שובבים אתם׳ לעומת ׳ארפא משובותיכם׳"}:::question
+  A1["② לא קשיא: כאן מאהבה, כאן מיראה"]:::answer
+  Q2{"③ רב יהודה רמי: ׳ארפא׳ לכול לעומת ׳אחד מעיר׳"}:::question
+  A2["③ לא קשיא: מאהבה או מיראה / על ידי יסורין · ר׳ לוי: מגעת עד כיסא הכבוד"]:::answer
+  S1 -.->|רמי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|רמי נוסף| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① R. Ḥama bar Ḥanina: great is repentance, it brings healing to the world"]:::statement
+  Q1{"② Contradiction: ׳you are backsliding׳ vs. ׳I will heal your backsliding׳"}:::question
+  A1["② No difficulty: here out of love, there out of fear"]:::answer
+  Q2{"③ Rav Yehuda’s contradiction: ׳I will heal׳ for all vs. ׳one from a city׳"}:::question
+  A2["③ No difficulty: from love or fear / through suffering · R. Levi: reaches the throne of glory"]:::answer
+  S1 -.->|contradiction| Q1
+  Q1 -->|resolution| A1
+  A1 -->|further contradiction| Q2
+  Q2 -->|resolution| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אָמַר רַבִּי חָמָא חֲנִינָא: גְּדוֹלָה תְּשׁוּבָה שֶׁמְּבִיאָה רִפְאוּת לְעוֹלָם"]:::statement
+  Q1{"② רָמֵי, כְּתִיב: ׳שׁוּבוּ בָּנִים שׁוֹבָבִים׳ … וּכְתִיב: ׳אֶרְפָּא מְשׁוּבוֹתֵיכֶם׳"}:::question
+  A1["② לָא קַשְׁיָא: כָּאן מֵאַהֲבָה, כָּאן מִיִּרְאָה"]:::answer
+  Q2{"③ רַב יְהוּדָה רָמֵי … ׳אֶרְפָּא מְשׁוּבוֹתֵיכֶם׳ … וּכְתִיב … ׳אֶחָד מֵעִיר וּשְׁנַיִם מִמִּשְׁפָּחָה׳"}:::question
+  A2["③ לָא קַשְׁיָא: כָּאן מֵאַהֲבָה אוֹ מִיִּרְאָה, כָּאן עַל יְדֵי יִסּוּרִין … גְּדוֹלָה תְּשׁוּבָה שֶׁמַּגַּעַת עַד כִּסֵּא הַכָּבוֹד"]:::answer
+  S1 -.->|רמי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|רמי נוסף| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ו א — Yoma 86a:14</span></div>
+    <div class="orig">אָמַר רַבִּי חָמָא (בַּר) חֲנִינָא: גְּדוֹלָה תְּשׁוּבָה שֶׁמְּבִיאָה רִפְאוּת לְעוֹלָם, שֶׁנֶּאֱמַר: ״אֶרְפָּא מְשׁוּבָתָם אוֹהֲבֵם נְדָבָה״.</div>
+    <div class="trans" data-when="he">פותחת שורת דרשות ״גדולה תשובה״. ר׳ חמא בר חנינא: גדולה תשובה שמביאה רפואה לעולם, שנאמר ״ארפא משובתם אוהבם נדבה״ (הושע יד) — התשובה מן החטא מרפאת.</div>
+    <div class="trans" data-when="en">§ Further on the topic of repentance, Rabbi Ḥama bar Ḥanina said: Great is repentance, as it brings healing to the world, as it is stated: “I will heal their backsliding, I will love them freely” (Hosea 14:5), which teaches that repentance from sin brings healing.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ו א — Yoma 86a:15</span></div>
+    <div class="orig">רַבִּי חָמָא (בַּר) חֲנִינָא רָמֵי, כְּתִיב: ״שׁוּבוּ בָּנִים שׁוֹבָבִים״, דְּמֵעִיקָּרָא שׁוֹבָבִים אַתֶּם, וּכְתִיב: ״אֶרְפָּא מְשׁוּבוֹתֵיכֶם״! לָא קַשְׁיָא: כָּאן מֵאַהֲבָה, כָּאן מִיִּרְאָה.</div>
+    <div class="trans" data-when="he">ר׳ חמא בר חנינא מקשה סתירה: כתוב ״שובו בנים שובבים״ — משמע שמתחילה הייתם שובבים (כאילו לא חטאתם ממש), וכתוב ״ארפא משובותיכם״ — משמע שעדיין חוטאים וצריכים ריפוי. תירוץ: לא קשיא — כאן (שנמחק לגמרי) בתשובה מאהבה, כאן (שהחטא נזכר) בתשובה מיראה.</div>
+    <div class="trans" data-when="en">Rabbi Ḥama bar Ḥanina raised a contradiction between two verses. It is written in one verse: “Return, you backsliding children” (Jeremiah 3:14), implying that initially when you sinned, it was only because you were backsliding, i.e., rebelling. It was merely an act of immaturity and foolishness and could be ignored as if it had never happened. But it is written: “I will heal your backsliding” (Jeremiah 3:22), implying that He will heal the sin from this point onward, and that they are still sinners. He resolved this contradiction, explaining that this is not difficult: Here, where everything is forgiven as if the Jewish people never sinned, it is referring to repentance out of love; there, where the sin is still remembered despite the forgiveness and repentance, it is referring to repentance out of fear.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ו א — Yoma 86a:16</span></div>
+    <div class="orig">רַב יְהוּדָה רָמֵי, כְּתִיב: ״שׁוּבוּ בָּנִים שׁוֹבָבִים אֶרְפָּא מְשׁוּבוֹתֵיכֶם״, וּכְתִיב: ״(הִנֵּה) אָנֹכִי בָּעַלְתִּי בָכֶם וְלָקַחְתִּי אֶתְכֶם אֶחָד מֵעִיר וּשְׁנַיִם מִמִּשְׁפָּחָה״! לָא קַשְׁיָא: כָּאן מֵאַהֲבָה אוֹ מִיִּרְאָה, כָּאן עַל יְדֵי יִסּוּרִין. אָמַר רַבִּי לֵוִי: גְּדוֹלָה תְּשׁוּבָה שֶׁמַּגַּעַת עַד כִּסֵּא הַכָּבוֹד, שֶׁנֶּאֱמַר: ״שׁוּבָה יִשְׂרָאֵל עַד ה׳ אֱלֹהֶיךָ״.</div>
+    <div class="trans" data-when="he">רב יהודה מקשה סתירה דומה: כתוב ״ארפא משובותיכם״ — שכל אדם זוכה לריפוי בתשובה, וכתוב ״ולקחתי אתכם אחד מעיר ושנים ממשפחה״ — שמשמע רק יחידים. תירוץ: כאן בתשובה מאהבה או מיראה (שמעטים זוכים לה), כאן בתשובה על ידי יסורין (שכולם הוגים בה). ר׳ לוי: גדולה תשובה שמגעת עד כיסא הכבוד, שנאמר ״שובה ישראל עד ה׳ אלהיך״.</div>
+    <div class="trans" data-when="en">Similarly, Rabbi Yehuda raised a contradiction between two verses. It is written: “Return, you backsliding children I will heal your backsliding” (Jeremiah 3:22), implying that anyone can achieve healing, which is dependent only on repentance. But it also states: “Return, O backsliding children, says the Lord, for I am a lord to you, and I will take you one from a city, and two from a family” (Jeremiah 3:14), implying that repentance is available only to certain individuals. He resolved the contradiction and explained that this is not difficult: Here, it is referring to repentance out of love or fear, which few people achieve; there, it referring is repentance through suffering, as everyone has thoughts of repentance when they suffer. Rabbi Levi said: Great is repentance, as it reaches the heavenly throne, as it is stated: “Return, Israel, to the Lord your God” (Hosea 14:2). This implies that repentance literally reaches to God.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">4
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">גדולה תשובה — דוחה ל״ת, מקרבת גאולה, זדונות</span><span data-when="en">Great is repentance — overrides, hastens redemption, turns sins</span>
+      <span class="ref">Yoma 86b:1–4</span></h2>
+  <div class="lead"><span data-when="he">המשך הדרשות: גדולה תשובה שדוחה לא־תעשה, שמקרבת את הגאולה, שזדונות נעשות כשגגות (וכזכיות), ושמאריכה שנותיו של אדם.</span><span data-when="en">More teachings: repentance overrides a prohibition, hastens redemption, turns intentional sins into unwitting ones (and into merits), and lengthens one’s life.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ר׳ יוחנן: גדולה תשובה שדוחה לא־תעשה שבתורה"]:::statement
+  S2["② ר׳ יונתן: שמקרבת את הגאולה"]:::statement
+  S3["③ ריש לקיש: שזדונות נעשות כשגגות"]:::statement
+  Q1{"③ איני?! והאמר ריש לקיש: נעשות כזכיות!"}:::question
+  A1["③ לא קשיא: כאן מאהבה, כאן מיראה"]:::answer
+  S4["④ ר׳ שמואל בר נחמני: שמארכת שנותיו של אדם"]:::statement
+  S1 -->|דעה| S2
+  S2 -->|דעה| S3
+  S3 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|דעה| S4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① R. Yoḥanan: great is repentance, it overrides a Torah prohibition"]:::statement
+  S2["② R. Yonatan: it hastens the redemption"]:::statement
+  S3["③ Reish Lakish: intentional sins become unwitting"]:::statement
+  Q1{"③ Is that so?! But Reish Lakish also said: they become merits!"}:::question
+  A1["③ No difficulty: here out of love, there out of fear"]:::answer
+  S4["④ R. Shmuel bar Naḥmani: it lengthens a person’s years"]:::statement
+  S1 -->|view| S2
+  S2 -->|view| S3
+  S3 -.->|objection| Q1
+  Q1 -->|resolution| A1
+  A1 -->|view| S4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אָמַר רַבִּי יוֹחָנָן: גְּדוֹלָה תְּשׁוּבָה שֶׁדּוֹחָה אֶת לֹא תַעֲשֶׂה שֶׁבַּתּוֹרָה"]:::statement
+  S2["② אָמַר רַבִּי יוֹנָתָן: גְּדוֹלָה תְּשׁוּבָה שֶׁמְּקָרֶבֶת אֶת הַגְּאוּלָּה"]:::statement
+  S3["③ אָמַר רֵישׁ לָקִישׁ: גְּדוֹלָה תְּשׁוּבָה שֶׁזְּדוֹנוֹת נַעֲשׂוֹת לוֹ כִּשְׁגָגוֹת"]:::statement
+  Q1{"③ אִינִי?! וְהָאָמַר רֵישׁ לָקִישׁ … שֶׁזְּדוֹנוֹת נַעֲשׂוֹת לוֹ כִּזְכִיּוֹת"}:::question
+  A1["③ לָא קַשְׁיָא: כָּאן מֵאַהֲבָה, כָּאן מִיִּרְאָה"]:::answer
+  S4["④ אָמַר רַבִּי שְׁמוּאֵל בַּר נַחְמָנִי … גְּדוֹלָה תְּשׁוּבָה שֶׁמַּאֲרֶכֶת שְׁנוֹתָיו שֶׁל אָדָם"]:::statement
+  S1 -->|דעה| S2
+  S2 -->|דעה| S3
+  S3 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|דעה| S4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ו ב — Yoma 86b:1</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹחָנָן: גְּדוֹלָה תְּשׁוּבָה שֶׁדּוֹחָה אֶת לֹא תַעֲשֶׂה שֶׁבַּתּוֹרָה, שֶׁנֶּאֱמַר: ״לֵאמֹר הֵן יְשַׁלַּח אִישׁ אֶת אִשְׁתּוֹ וְהָלְכָה מֵאִתּוֹ וְהָיְתָה לְאִישׁ אַחֵר הֲיָשׁוּב אֵלֶיהָ עוֹד הֲלֹא חָנוֹף תֶּחֱנַף הָאָרֶץ הַהִיא וְאַתְּ זָנִית רֵעִים רַבִּים וְשׁוֹב אֵלַי נְאֻם ה׳״.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן: גדולה תשובה שדוחה אפילו לא־תעשה שבתורה. ראיה מן הנביא: אף שאסור לאשה שזינתה לשוב לבעלה, נמשלו ישראל לאשה, ובכל זאת ״ושוב אלי נאם ה׳״ — התשובה דוחה את האיסור.</div>
+    <div class="trans" data-when="en">§ Rabbi Yoḥanan said: Great is repentance, as it overrides even a prohibition of the Torah. How so? As it is stated that God said: “…Saying: If a man sends away his wife and she goes from him and becomes another man’s, may he return to her again? Will not that land be greatly polluted? But you have committed adultery with many lovers; and would you yet return to Me, said the Lord” (Jeremiah 3:1). Indeed, the Torah states: “Her former husband, who sent her away, may not take her again to be his wife after she has been made impure” (Deuteronomy 24:4). The relationship between the Jewish people and the Holy One, Blessed be He, is compared to that between a husband and wife. Just as it is prohibited for an adulterous wife to return to her husband, it should be prohibited for the Jewish people to return to God from their sins, yet repentance overrides this prohibition.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ו ב — Yoma 86b:2</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹנָתָן: גְּדוֹלָה תְּשׁוּבָה (שֶׁמְּקָרֶבֶת) אֶת הַגְּאוּלָּה, שֶׁנֶּאֱמַר: ״וּבָא לְצִיּוֹן גּוֹאֵל וּלְשָׁבֵי פֶשַׁע בְּיַעֲקֹב״, מָה טַעַם ״וּבָא לְצִיּוֹן גּוֹאֵל״ — מִשּׁוּם דְּ״שָׁבֵי פֶשַׁע בְּיַעֲקֹב״.</div>
+    <div class="trans" data-when="he">ר׳ יונתן: גדולה תשובה שמקרבת את הגאולה, שנאמר ״ובא לציון גואל ולשבי פשע ביעקב״ — ומדוע ״ובא לציון גואל״? משום ש״שבי פשע ביעקב״, שעשו תשובה.</div>
+    <div class="trans" data-when="en">Rabbi Yonatan said: Great is repentance, which hastens the redemption, as it is stated: “And a redeemer will come to Zion, and to those who repent from transgression in Jacob” (Isaiah 59:20). What is the reason that a redeemer will come to Zion? It is because there are those who repent from transgression in Jacob.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ו ב — Yoma 86b:3</span></div>
+    <div class="orig">אָמַר רֵישׁ לָקִישׁ: גְּדוֹלָה תְּשׁוּבָה שֶׁזְּדוֹנוֹת נַעֲשׂוֹת לוֹ כִּשְׁגָגוֹת, שֶׁנֶּאֱמַר: ״שׁוּבָה יִשְׂרָאֵל עַד ה׳ אֱלֹהֶיךָ כִּי כָשַׁלְתָּ בַּעֲוֹנֶךָ״, הָא ״עָוֹן״ — מֵזִיד הוּא, וְקָא קָרֵי לֵיהּ מִכְשׁוֹל. אִינִי?! וְהָאָמַר רֵישׁ לָקִישׁ: גְּדוֹלָה תְּשׁוּבָה שֶׁזְּדוֹנוֹת נַעֲשׂוֹת לוֹ כִּזְכִיּוֹת, שֶׁנֶּאֱמַר: ״וּבְשׁוּב רָשָׁע מֵרִשְׁעָתוֹ וְעָשָׂה מִשְׁפָּט וּצְדָקָה עֲלֵיהֶם (חָיֹה) יִחְיֶה״! לָא קַשְׁיָא: כָּאן מֵאַהֲבָה, כָּאן מִיִּרְאָה.</div>
+    <div class="trans" data-when="he">ריש לקיש: גדולה תשובה שהזדונות (עבירות במזיד) נעשות לשב כשגגות, שנאמר ״כי כשלת בעוונך״ — ה״עוון״ הוא מזיד, ובכל זאת קוראו ״מכשול״ (שגגה). קושיא: והרי ריש לקיש עצמו אמר שהזדונות נעשות כזכיות (״ובשוב רשע… חיֹה יחיה״)? תירוץ: לא קשיא — כאן בתשובה מאהבה (כזכיות), כאן מיראה (כשגגות).</div>
+    <div class="trans" data-when="en">Reish Lakish said: Great is repentance, as the penitent’s intentional sins are counted for him as unwitting transgressions, as it is stated: “Return, Israel, to the Lord your God, for you have stumbled in your iniquity” (Hosea 14:2). The Gemara analyzes this: Doesn’t “iniquity” mean an intentional sin? Yet the prophet calls it stumbling, implying that one who repents is considered as though he only stumbled accidentally in his transgression. The Gemara asks: Is that so? Didn’t Reish Lakish himself say: Great is repentance, as one’s intentional sins are counted for him as merits, as it is stated: “And when the wicked turns from his wickedness, and does that which is lawful and right, he shall live thereby” (Ezekiel 33:19), and all his deeds, even his transgressions, will become praiseworthy? The Gemara reconciles: This is not difficult: Here, when one repents out of love, his sins become like merits; there, when one repents out of fear, his sins are counted as unwitting transgressions.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ו ב — Yoma 86b:4</span></div>
+    <div class="orig">אָמַר רַבִּי שְׁמוּאֵל בַּר נַחְמָנִי אָמַר רַבִּי יוֹנָתָן: גְּדוֹלָה תְּשׁוּבָה שֶׁמַּאֲרֶכֶת שְׁנוֹתָיו שֶׁל אָדָם, שֶׁנֶּאֱמַר: ״וּבְשׁוּב רָשָׁע מֵרִשְׁעָתוֹ (חָיוֹ) יִחְיֶה״.</div>
+    <div class="trans" data-when="he">ר׳ שמואל בר נחמני בשם ר׳ יונתן: גדולה תשובה שמאריכה שנותיו של אדם, שנאמר ״ובשוב רשע מרשעתו… חיו יחיה״ — ישוב לחיות חיים ארוכים.</div>
+    <div class="trans" data-when="en">Rabbi Shmuel bar Naḥmani said that Rabbi Yonatan said: Great is repentance, which lengthens the years of a person’s life, as it is stated: “When the wicked man turns from his wickedness that he has committed, and does that which is lawful and right, he will preserve his life” (Ezekiel 18:27).</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">5
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">מידת הקב״ה — מתפייס בדברים</span><span data-when="en">God’s attribute — appeased by words</span>
+      <span class="ref">Yoma 86b:5–7</span></h2>
+  <div class="lead"><span data-when="he">בשם רבה בר מרי: בשר ודם ספק מתפייס; אך הקב״ה מתפייס בדברים, אף מחזיק טובה, אף כאילו הקריב פרים; ובשביל יחיד ששב — מוחלין לכל העולם.</span><span data-when="en">In Rabba bar Mari’s name: flesh and blood may not be appeased; but God is appeased by words, even reckons it a favor, even as though one offered bulls; and for one penitent the whole world is forgiven.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① ר׳ יצחק בשם רבה בר מרי: בשר ודם — ספק מתפייס, ספק בדברים"]:::statement
+  S2["② אבל הקב״ה: מתפייס בדברים, מחזיק טובה, כאילו הקריב פרים — ולא חובה אלא נדבה"]:::statement
+  S3["③ ר׳ מאיר: בשביל יחיד ששב — מוחלין לכל העולם"]:::statement
+  S1 -->|לעומת| S2
+  S2 -->|מוסיף| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① R. Yitzḥak in Rabba bar Mari’s name: flesh and blood — maybe appeased, maybe not by words"]:::statement
+  S2["② But God: appeased by words, reckons it a favor, as though he offered bulls — a free-will gift"]:::statement
+  S3["③ R. Meir: for one penitent the whole world is forgiven"]:::statement
+  S1 -->|contrast| S2
+  S2 -->|adds| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① אָמַר רַבִּי יִצְחָק … מִשְּׁמֵיהּ דְּרַבָּה בַּר מָרִי … מִדַּת בָּשָׂר וָדָם … סָפֵק מִתְפַּיֵּיס … סָפֵק אֵין מִתְפַּיֵּיס"]:::statement
+  S2["② אֲבָל הַקָּדוֹשׁ בָּרוּךְ הוּא … מִתְפַּיֵּיס מִמֶּנּוּ בִּדְבָרִים … כְּאִילּוּ הִקְרִיב פָּרִים … אוֹהֲבֵם נְדָבָה"]:::statement
+  S3["③ הָיָה רַבִּי מֵאִיר אוֹמֵר: גְּדוֹלָה תְּשׁוּבָה, שֶׁבִּשְׁבִיל יָחִיד שֶׁעָשָׂה תְּשׁוּבָה — מוֹחֲלִין לְכׇל הָעוֹלָם כּוּלּוֹ"]:::statement
+  S1 -->|לעומת| S2
+  S2 -->|מוסיף| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ו ב — Yoma 86b:5</span></div>
+    <div class="orig">אָמַר רַבִּי יִצְחָק: אָמְרִי בְּמַעְרְבָא מִשְּׁמֵיהּ דְּרַבָּה בַּר מָרִי: בֹּא וּרְאֵה שֶׁלֹּא כְּמִדַּת הַקָּדוֹשׁ בָּרוּךְ הוּא מִדַּת בָּשָׂר וָדָם: מִדַּת בָּשָׂר וָדָם, מַקְנִיט אֶת חֲבֵירוֹ בִּדְבָרִים — סָפֵק מִתְפַּיֵּיס הֵימֶנּוּ, סָפֵק אֵין מִתְפַּיֵּיס הֵימֶנּוּ. וְאִם תֹּאמַר מִתְפַּיֵּיס הֵימֶנּוּ — סָפֵק מִתְפַּיֵּיס בִּדְבָרִים, סָפֵק אֵין מִתְפַּיֵּיס בִּדְבָרִים,</div>
+    <div class="trans" data-when="he">ר׳ יצחק בשם רבה בר מרי (בני ארץ ישראל): בוא וראה שמידת הקב״ה אינה כמידת בשר ודם. בבשר ודם — המקניט את חברו בדברים, ספק יתרצה לו ספק לא; ואם יתרצה — ספק יתרצה בדברים בלבד, ספק לא.</div>
+    <div class="trans" data-when="en">§ Rabbi Yitzḥak said: They say in the West, Eretz Yisrael, in the name of Rabba bar Mari: Come and see that the attribute of flesh and blood is unlike the attribute of the Holy One, Blessed be He. With flesh and blood people, if one insults his friend with words, it is uncertain whether the victim will be appeased by him or will not be appeased by him. And if you say he will be appeased, it is still uncertain whether he will be appeased by words alone or will not be appeased by words alone, and one must try to appease him in other ways.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ו ב — Yoma 86b:6</span></div>
+    <div class="orig">אֲבָל הַקָּדוֹשׁ בָּרוּךְ הוּא, אָדָם עוֹבֵר עֲבֵירָה בַּסֵּתֶר — מִתְפַּיֵּיס מִמֶּנּוּ בִּדְבָרִים, שֶׁנֶּאֱמַר: ״קְחוּ עִמָּכֶם דְּבָרִים וְשׁוּבוּ אֶל ה׳״. וְלֹא עוֹד, אֶלָּא שֶׁמַּחְזִיק לוֹ טוֹבָה, שֶׁנֶּאֱמַר: ״וְקַח טוֹב״. וְלֹא עוֹד אֶלָּא שֶׁמַּעֲלֶה עָלָיו הַכָּתוּב כְּאִילּוּ הִקְרִיב פָּרִים, שֶׁנֶּאֱמַר: ״וּנְשַׁלְּמָה פָּרִים שְׂפָתֵינוּ״. שֶׁמָּא תֹּאמַר פָּרֵי חוֹבָה, תַּלְמוּד לוֹמַר: ״אֶרְפָּא מְשׁוּבָתָם אוֹהֲבֵם נְדָבָה״.</div>
+    <div class="trans" data-when="he">אבל הקב״ה: אדם החוטא בסתר ושב — מתפייס ממנו בדברים בלבד, שנאמר ״קחו עמכם דברים ושובו אל ה׳״. ולא עוד, אלא שמחזיק לו טובה (״וקח טוב״). ולא עוד, אלא שמעלה עליו הכתוב כאילו הקריב פרים (״ונשלמה פרים שפתינו״). ושמא תאמר פרי חובה — תלמוד לומר ״אוהבם נדבה״, כקרבן נדבה.</div>
+    <div class="trans" data-when="en">But with regard to the Holy One, Blessed be He, if a person commits a transgression in private, God is appeased by words, as it is stated: “Take with you words and return to God” (Hosea 14:3). And not only that, but God considers it as though he has done a favor for God by repenting, as it is stated: “Accept that which is good” (Hosea 14:3). And not only that, but the verse ascribes him credit as though he had sacrificed bulls, as it is stated: “So we will render for bulls the offering of our lips” (Hosea 14:3). Lest you say he is considered only like one who offers obligatory bulls, therefore the verse states: “I will heal their backsliding, I will love them freely” (Hosea 14:5). Repentance is considered as though it were the sacrifice of a free-will offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ו ב — Yoma 86b:7</span></div>
+    <div class="orig">תַּנְיָא, הָיָה רַבִּי מֵאִיר אוֹמֵר: גְּדוֹלָה תְּשׁוּבָה, שֶׁבִּשְׁבִיל יָחִיד שֶׁעָשָׂה תְּשׁוּבָה — מוֹחֲלִין לְכׇל הָעוֹלָם כּוּלּוֹ, שֶׁנֶּאֱמַר: ״אֶרְפָּא מְשׁוּבָתָם אוֹהֲבֵם נְדָבָה כִּי שָׁב אַפִּי מִמֶּנּוּ״. ״מֵהֶם״ לֹא נֶאֱמַר, אֶלָּא ״מִמֶּנּוּ״.</div>
+    <div class="trans" data-when="he">ברייתא — ר׳ מאיר: גדולה תשובה, שבשביל יחיד שעשה תשובה מוחלין לכל העולם כולו, שנאמר ״כי שב אפי ממנו״ — ׳מהם׳ לא נאמר אלא ׳ממנו׳ (מאותו יחיד), ובזכותו נתרפא הכול.</div>
+    <div class="trans" data-when="en">It was taught in a baraita that Rabbi Meir would say: Great is repentance because the entire world is forgiven on account of one individual who repents, as it is stated: “I will heal their backsliding, I will love them freely; for My anger has turned away from him” (Hosea 14:5). It does not say: From them, i.e., from the sinners, but “from him,” i.e., from that individual. Because he repented, everyone will be healed.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">6
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">בעל תשובה גמור · פרסום החטא</span><span data-when="en">A true penitent · publicizing sin</span>
+      <span class="ref">Yoma 86b:8–9</span></h2>
+  <div class="lead"><span data-when="he">מהו בעל תשובה גמור — שנמנע מן העבירה באותו מקום ובאותו זמן; ושני יישובים לסתירה אם ראוי לפרסם את החטא או לכסותו.</span><span data-when="en">What is a complete penitent — one who refrains in the same place and time; and two resolutions of whether one should publicize a sin or conceal it.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① היכי דמי בעל תשובה?"}:::question
+  A1["① רב יהודה: באה לידו עבירה ב׳ פעמים וניצל — באותה אשה, אותו זמן ומקום"]:::answer
+  Q2{"② רב רמי: ׳כסוי חטאה׳ לעומת ׳מכסה פשעיו לא יצליח׳"}:::question
+  A2["② לא קשיא: בחטא מפורסם / בחטא שאינו מפורסם · ורב נחמן: בין אדם לחברו / למקום"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 -.->|רמי| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① What are the marks of a penitent?"}:::question
+  A1["① Rav Yehuda: the sin comes twice and he is saved — same woman, time, place"]:::answer
+  Q2{"② Rav’s contradiction: ׳whose sin is hidden׳ vs. ׳who hides his sins shall not prosper׳"}:::question
+  A2["② No difficulty: a publicized sin / an unpublicized sin · Rav Naḥman: against another / against God"]:::answer
+  Q1 -->|answer| A1
+  A1 -.->|contradiction| Q2
+  Q2 -->|resolution| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① הֵיכִי דָּמֵי בַּעַל תְּשׁוּבָה?"}:::question
+  A1["① אָמַר רַב יְהוּדָה: כְּגוֹן שֶׁבָּאת לְיָדוֹ דְּבַר עֲבֵירָה … וְנִיצַּל הֵימֶנָּה … בְּאוֹתָהּ אִשָּׁה, בְּאוֹתוֹ פֶּרֶק, בְּאוֹתוֹ מָקוֹם"]:::answer
+  Q2{"② רַב רָמֵי — כְּתִיב: ׳אַשְׁרֵי נְשׂוּי פֶּשַׁע כְּסוּי חֲטָאָה׳, וּכְתִיב: ׳מְכַסֶּה פְשָׁעָיו לֹא יַצְלִיחַ׳"}:::question
+  A2["② לָא קַשְׁיָא: הָא בְּחֵטְא מְפוּרְסָם, הָא בְּחֵטְא שֶׁאֵינוֹ מְפוּרְסָם … כָּאן … שֶׁבֵּין אָדָם לַחֲבֵירוֹ, כָּאן … שֶׁבֵּין אָדָם לַמָּקוֹם"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 -.->|רמי| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ו ב — Yoma 86b:8</span></div>
+    <div class="orig">הֵיכִי דָּמֵי בַּעַל תְּשׁוּבָה? אָמַר רַב יְהוּדָה: כְּגוֹן שֶׁבָּאת לְיָדוֹ דְּבַר עֲבֵירָה פַּעַם רִאשׁוֹנָה וּשְׁנִיָּה וְנִיצַּל הֵימֶנָּה. מַחְוֵי רַב יְהוּדָה: בְּאוֹתָהּ אִשָּׁה, בְּאוֹתוֹ פֶּרֶק, בְּאוֹתוֹ מָקוֹם.</div>
+    <div class="trans" data-when="he">הגמרא שואלת: מהו בעל תשובה גמור? רב יהודה: כגון שבאה לידו אותה עבירה פעם ראשונה ושנייה — וניצל ממנה, שכבש את יצרו. ורב יהודה הראה (פירש): באותה אשה ממש שחטא בה, באותו זמן ובאותו מקום — וזו הוכחה שתשובתו שלמה.</div>
+    <div class="trans" data-when="en">§ With regard to repentance, the Gemara asks: What are the circumstances that demonstrate that one has completely repented? Rav Yehuda said: For example, the prohibited matter came to his hand a first time and a second time, and he was saved from it, thereby proving that he has completely repented. Rav Yehuda demonstrated what he meant: If one has the opportunity to sin with the same woman he sinned with previously, at the same time and the same place, and everything is aligned as it was that first time when he sinned, but this time he overcomes his inclination, it proves his repentance is complete, and he is forgiven.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ו ב — Yoma 86b:9</span></div>
+    <div class="orig">אָמַר רַב יְהוּדָה, רַב רָמֵי — כְּתִיב: ״אַשְׁרֵי נְשׂוּי פֶּשַׁע כְּסוּי חֲטָאָה״, וּכְתִיב: ״מְכַסֶּה פְשָׁעָיו לֹא יַצְלִיחַ״! לָא קַשְׁיָא: הָא בְּחֵטְא מְפוּרְסָם, הָא בְּחֵטְא שֶׁאֵינוֹ מְפוּרְסָם. רַב זוּטְרָא בַּר טוֹבִיָּה אָמַר רַב נַחְמָן: כָּאן בַּעֲבֵירוֹת שֶׁבֵּין אָדָם לַחֲבֵירוֹ, כָּאן בַּעֲבֵירוֹת שֶׁבֵּין אָדָם לַמָּקוֹם.</div>
+    <div class="trans" data-when="he">רב יהודה אמר שרב הקשה סתירה: כתוב ״אשרי נשוי פשע כסוי חטאה״ — שראוי לכסות החטא, וכתוב ״מכסה פשעיו לא יצליח״ — שראוי לגלותו. תירוץ: כאן בחטא מפורסם (ראוי לפרסם גם את תשובתו), כאן בחטא שאינו מפורסם (ראוי לכסותו). רב זוטרא בשם רב נחמן: כאן בעבירות שבין אדם לחברו, כאן שבין אדם למקום.</div>
+    <div class="trans" data-when="en">Rav Yehuda said that Rav raised a contradiction: It is written: “Fortunate is he whose transgression is forgiven, whose sin is hidden” (Psalms 32:1), implying that it is inappropriate for one to reveal his sins, and it is written: “He who hides his transgressions shall not prosper” (Proverbs 28:13). He resolved the contradiction as follows: This is not difficult. Here it is referring to a publicized sin; since his sin is public knowledge it is fitting for him to also publicize his repentance. There, it is referring to a sin that is not publicized, in which case it is inappropriate to publicize one’s repentance. Rav Zutra bar Toviya said that Rav Naḥman said: Here, it is referring to sins a person commits against another; he must publicize his repentance so that those who hear him may persuade the other to forgive him. There, it is referring to sins a person commits against God, in which case he need not repent publicly.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">7
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">עובר עבירה — עד כמה מוחלין</span><span data-when="en">Sinning — until when is one forgiven</span>
+      <span class="ref">Yoma 86b:10–11</span></h2>
+  <div class="lead"><span data-when="he">ר׳ יוסי בר יהודה: שלוש פעמים מוחלין, ברביעית אין מוחלין; וקושיה ״מאי ואומר״ — ותירוץ שהפסוק השני בא לרבות יחיד.</span><span data-when="en">R. Yosei bar Yehuda: forgiven three times, not a fourth; and a query “why a second verse” — resolved that it extends the rule to an individual.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ר׳ יוסי בר יהודה: ג׳ פעמים מוחלין, רביעית אין מוחלין"]:::statement
+  Q1{"② מאי ׳ואומר׳? — למה פסוק שני?"}:::question
+  A1["② תא שמע: ׳פעמים שלוש עם גבר׳ — אף ביחיד, מכאן ואילך אין מוחלין"]:::answer
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① R. Yosei bar Yehuda: forgiven three times, not a fourth"]:::statement
+  Q1{"② What is ׳and it says׳? — why a second verse?"}:::question
+  A1["② Come and hear: ׳twice, three times with a man׳ — even an individual; thereafter not forgiven"]:::answer
+  S1 -->|objection| Q1
+  Q1 -->|resolution| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① רַבִּי יוֹסֵי בַּר יְהוּדָה אוֹמֵר: … פַּעַם רִאשׁוֹנָה — מוֹחֲלִין לוֹ … רְבִיעִית — אֵין מוֹחֲלִין לוֹ"]:::statement
+  Q1{"② מַאי ׳וְאוֹמֵר׳?"}:::question
+  A1["② וְכִי תֵּימָא … בְּצִיבּוּר, אֲבָל בְּיָחִיד — לָא, תָּא שְׁמַע: ׳פַּעֲמַיִם שָׁלֹשׁ עִם גָּבֶר׳ … אֵין מוֹחֲלִין לוֹ"]:::answer
+  S1 -->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ו ב — Yoma 86b:10</span></div>
+    <div class="orig">תַּנְיָא, רַבִּי יוֹסֵי בַּר יְהוּדָה אוֹמֵר: אָדָם עוֹבֵר עֲבֵירָה פַּעַם רִאשׁוֹנָה — מוֹחֲלִין לוֹ, שְׁנִיָּה — מוֹחֲלִין לוֹ, שְׁלִישִׁית — מוֹחֲלִין לוֹ, רְבִיעִית — אֵין מוֹחֲלִין לוֹ, שֶׁנֶּאֱמַר: ״כֹּה אָמַר ה׳ עַל שְׁלֹשָׁה פִּשְׁעֵי יִשְׂרָאֵל וְעַל אַרְבָּעָה לֹא אֲשִׁיבֶנּוּ״, (וְנֶאֱמַר:) ״הֵן כׇּל אֵלֶּה יִפְעַל אֵל פַּעֲמַיִם שָׁלֹשׁ עִם גָּבֶר״.</div>
+    <div class="trans" data-when="he">ברייתא — ר׳ יוסי בר יהודה: עבר אדם עבירה פעם ראשונה, שנייה ושלישית — מוחלין לו; רביעית — אין מוחלין לו, שנאמר ״על שלושה פשעי ישראל ועל ארבעה לא אשיבנו״. ומביא פסוק נוסף: ״הן כל אלה יפעל אל פעמיים שלוש עם גבר״.</div>
+    <div class="trans" data-when="en">§ It was taught in a baraita that Rabbi Yosei bar Yehuda says: When a person commits a transgression the first time, he is forgiven; a second time, he is forgiven; a third time, he is forgiven; but the fourth time, he is not forgiven, as it is stated: “Thus said the Lord: For three transgressions of Israel, but for four I will not reverse it” (Amos 2:6). And it says: “All these things does God do twice or three times with a man” (Job 33:29).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ו ב — Yoma 86b:11</span></div>
+    <div class="orig">מַאי ״וְאוֹמֵר״? וְכִי תֵּימָא: הָנֵי מִילֵּי בְּצִיבּוּר, אֲבָל בְּיָחִיד — לָא, תָּא שְׁמַע: ״הֶן כׇּל אֵלֶּה יִפְעַל אֵל פַּעֲמַיִם שָׁלֹשׁ עִם גָּבֶר״. (מִכָּאן וְאֵילָךְ אֵין מוֹחֲלִין לוֹ, שֶׁנֶּאֱמַר: ״עַל שְׁלֹשָׁה פִּשְׁעֵי יִשְׂרָאֵל וְעַל אַרְבָּעָה לֹא אֲשִׁיבֶנּוּ״.)</div>
+    <div class="trans" data-when="he">קושיא: מדוע צריך פסוק שני (״ואומר״)? תירוץ: שמא תאמר שדין שלוש הפעמים נאמר רק בציבור אך לא ביחיד — תא שמע ״פעמיים שלוש עם גבר״, שאף ביחיד כן; ומכאן ואילך (מן הרביעית) אין מוחלין, כנאמר ״ועל ארבעה לא אשיבנו״.</div>
+    <div class="trans" data-when="en">The Gemara asks: What is: And it says? Why did he need to bring an additional biblical proof when the first verse seems to suffice? The Gemara explains: Lest you say that this statement that the Holy One, Blessed be He, forgives easily the first three times applies to a community but not to an individual, come and hear proof from another verse that states: “All these things does God do twice or three times with a man,” implying that this is so even for an individual. From this point onward, he is not forgiven, as it is stated: “For three transgressions of Israel, but for four I will not reverse it.”</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-8">8
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">ווידוי — לחזור עליו, ולפרוט את החטא</span><span data-when="en">Confession — repeating it, and specifying the sin</span>
+      <span class="ref">Yoma 86b:12–87a:1</span></h2>
+  <div class="lead"><span data-when="he">ברייתא על חזרת הווידוי בכל יוה״כ — ומחלוקת אם משובח; אם צריך לפרוט את החטא — משה ודוד; ופרסום החנפים, שלוות רשעים ותפילות הדיינים.</span><span data-when="en">A baraita on repeating confession each Yom Kippur — and whether it is praiseworthy; whether one must specify the sin — Moses and David; and exposing hypocrites, the tranquility of the wicked, and judges’ prayers.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ת״ר: עבירות שהתוודה עליהן — לא יתוודה שוב; ואם חזר עליהן — כן · כחוזר על קיאו"]:::statement
+  S2["② ר׳ אליעזר בן יעקב: כל שכן שמשובח; ׳ככלב׳ — כדרב הונא: נעשית לו כהיתר"]:::statement
+  S3["③ צריך לפרוט החטא (ר׳ יהודה בן בבא) · ר׳ עקיבא: אין צריך — ׳כסוי חטאה׳"]:::statement
+  S4["④ משה ודוד: יכתב סורחני / אל יכתב — משל לשתי נשים שלקו"]:::statement
+  S5["⑤ מפרסמין החנפין; שלוות רשעים סופה תקלה; רב ורבא ורב זוטרא בדינא"]:::statement
+  S1 -->|ועוד| S2
+  S2 -->|ועוד| S3
+  S3 -->|משל| S4
+  S4 -->|ועוד| S5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Baraita: sins once confessed — confess no more; if repeated — yes · like a dog to its vomit"]:::statement
+  S2["② R. Eliezer b. Yaakov: all the more praiseworthy; ׳like a dog׳ — per Rav Huna: it became permitted to him"]:::statement
+  S3["③ Must specify the sin (R. Yehuda b. Bava) · R. Akiva: need not — ׳sin is hidden׳"]:::statement
+  S4["④ Moses and David: let my disgrace be written / not — parable of two flogged women"]:::statement
+  S5["⑤ Expose hypocrites; the wicked’s ease ends in ruin; Rav, Rava, Rav Zutra at judgment"]:::statement
+  S1 -->|further| S2
+  S2 -->|further| S3
+  S3 -->|parable| S4
+  S4 -->|further| S5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: עֲבֵירוֹת שֶׁהִתְוַדָּה עֲלֵיהֶן … לֹא יִתְוַדֶּה … וְאִם שָׁנָה בָּהֶן — צָרִיךְ … כְּכֶלֶב שָׁב עַל קִיאוֹ"]:::statement
+  S2["② רַבִּי אֱלִיעֶזֶר בֶּן יַעֲקֹב אוֹמֵר: כׇּל שֶׁכֵּן שֶׁהוּא מְשׁוּבָּח … כִּדְרַב הוּנָא … נַעֲשֵׂית לוֹ כְּהֶיתֵּר"]:::statement
+  S3["③ וְצָרִיךְ לִפְרוֹט אֶת הַחֵטְא … דִּבְרֵי רַבִּי יְהוּדָה בֶּן בָּבָא. רַבִּי עֲקִיבָא אוֹמֵר: ׳אַשְׁרֵי נְשׂוּי פֶּשַׁע כְּסוּי חֲטָאָה׳"]:::statement
+  S4["④ שְׁנֵי פַּרְנָסִים … מֹשֶׁה … יִכָּתֵב סוּרְחָנִי … דָּוִד … אַל יִכָּתֵב סוּרְחָנִי … מָשָׁל … לִשְׁתֵּי נָשִׁים שֶׁלָּקוּ"]:::statement
+  S5["⑤ מְפַרְסְמִין אֶת הַחֲנֵפִין … שַׁלְוַת רְשָׁעִים סוֹפָהּ תַּקָּלָה … רַב … רָבָא … רַב זוּטְרָא"]:::statement
+  S1 -->|ועוד| S2
+  S2 -->|ועוד| S3
+  S3 -->|משל| S4
+  S4 -->|ועוד| S5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ו ב — Yoma 86b:12</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: עֲבֵירוֹת שֶׁהִתְוַדָּה עֲלֵיהֶן יוֹם הַכִּפּוּרִים זֶה, לֹא יִתְוַדֶּה עֲלֵיהֶן יוֹם הַכִּפּוּרִים אַחֵר. וְאִם שָׁנָה בָּהֶן — צָרִיךְ לְהִתְוַדּוֹת יוֹם הַכִּפּוּרִים אַחֵר. וְאִם לֹא שָׁנָה בָּהֶן, וְחָזַר וְהִתְוַדָּה — עֲלֵיהֶן עָלָיו הַכָּתוּב אוֹמֵר: ״כְּכֶלֶב שָׁב עַל קִיאוֹ כְּסִיל שׁוֹנֶה בְּאִוַּלְתּוֹ״.</div>
+    <div class="trans" data-when="he">ברייתא: עבירות שהתוודה עליהן ביוה״כ זה — לא יתוודה עליהן ביוה״כ אחר, שכבר נמחלו. ואם חזר ועבר בהן — צריך להתוודות שוב. ואם לא חזר בהן ובכל זאת חזר והתוודה — עליו הכתוב אומר ״ככלב שב על קיאו, כסיל שונה באיוולתו״.</div>
+    <div class="trans" data-when="en">§ The Sages taught in the Tosefta: With regard to transgressions that one confessed on this Yom Kippur, he should not confess them on another Yom Kippur, since he has already been forgiven. But if he repeated those same transgressions during the year, he must confess them again on another Yom Kippur. And if he did not repeat them but did confess them again, about him the verse states: “As a dog that returns to its vomit, so is a fool who repeats his folly” (Proverbs 26:11), since it is inappropriate to go back and mention one’s earlier sins.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ו ב — Yoma 86b:13</span></div>
+    <div class="orig">רַבִּי אֱלִיעֶזֶר בֶּן יַעֲקֹב אוֹמֵר: כׇּל שֶׁכֵּן שֶׁהוּא מְשׁוּבָּח, שֶׁנֶּאֱמַר: ״כִּי פְשָׁעַי אֲנִי אֵדָע וְחַטָּאתִי נֶגְדִּי תָמִיד״. אֶלָּא מָה אֲנִי מְקַיֵּים ״כְּכֶלֶב שָׁב עַל קִיאוֹ וְגוֹ׳״ — כִּדְרַב הוּנָא. דְּאָמַר רַב הוּנָא, כֵּיוָן שֶׁעָבַר אָדָם עֲבֵירָה וְשָׁנָה בָּהּ — הוּתְּרָה לוֹ. הוּתְּרָה לוֹ סָלְקָא דַּעְתָּךְ?! אֶלָּא אֵימָא: נַעֲשֵׂית לוֹ כְּהֶיתֵּר.</div>
+    <div class="trans" data-when="he">ר׳ אליעזר בן יעקב חולק: אדרבה, החוזר ומתוודה משובח, שנאמר ״כי פשעי אני אדע וחטאתי נגדי תמיד״. ואם כן מה אקיים ״ככלב שב על קיאו״? כדרב הונא: כיוון שעבר אדם עבירה ושנה בה — ׳הותרה לו׳. וכי הותרה ממש?! אלא אימא: נעשית לו כהיתר, שאינו מרגיש בה עוד באיסור.</div>
+    <div class="trans" data-when="en">Rabbi Eliezer ben Ya’akov says: If one confesses in subsequent years, all the more so is he praiseworthy, as he remembers his earlier sins and is thereby humbled, as it is stated: “For I know my transgressions; and my sin is ever before me” (Psalms 51:5). But how do I establish the meaning of the verse: “Like a dog that returns to its vomit”? It may be established in accordance with the opinion of Rav Huna, as Rav Huna said: When a person commits a transgression and repeats it, it is permitted to him. The Gemara is surprised at this: Can it enter your mind that it is permitted to him because he has sinned twice? Rather, say it becomes to him as if it were permitted.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ו ב — Yoma 86b:14</span></div>
+    <div class="orig">וְצָרִיךְ לִפְרוֹט אֶת הַחֵטְא, שֶׁנֶּאֱמַר: ״אָנָּא חָטָא הָעָם הַזֶּה חֲטָאָה גְדוֹלָה וַיַּעֲשׂוּ לָהֶם אֱלֹהֵי זָהָב״, דִּבְרֵי רַבִּי יְהוּדָה בֶּן בָּבָא. רַבִּי עֲקִיבָא אוֹמֵר: ״אַשְׁרֵי נְשׂוּי פֶּשַׁע כְּסוּי חֲטָאָה״. אֶלָּא מַהוּ שֶׁאָמַר מֹשֶׁה: ״וַיַּעֲשׂוּ לָהֶם אֱלֹהֵי זָהָב״? כִּדְרַבִּי יַנַּאי. דְּאָמַר רַבִּי יַנַּאי: אָמַר מֹשֶׁה לִפְנֵי הַקָּדוֹשׁ בָּרוּךְ הוּא: רִבּוֹנוֹ שֶׁל עוֹלָם! כֶּסֶף וְזָהָב שֶׁהִרְבֵּיתָ לָהֶם לְיִשְׂרָאֵל עַד שֶׁאָמְרוּ דַּי — גָּרַם לָהֶם שֶׁיַּעֲשׂוּ אֱלֹהֵי זָהָב.</div>
+    <div class="trans" data-when="he">ר׳ יהודה בן בבא: בווידוי צריך לפרוט את החטא במפורש, שנאמר ״חטא העם הזה חטאה גדולה ויעשו להם אלהי זהב״ (משה פירט). ר׳ עקיבא חולק: אין צריך לפרוט, שנאמר ״אשרי נשוי פשע כסוי חטאה״. ולפי ר׳ עקיבא, מהו שמשה פרט ״ויעשו אלהי זהב״? כדר׳ ינאי: משה תלה הקולר בקב״ה — הכסף והזהב שהרבית להם גרמו להם לחטוא.</div>
+    <div class="trans" data-when="en">Furthermore, during confession, one must detail the sin he committed and not suffice with a general admission of sin, as it is stated: “And Moses returned to the Lord and said: Please, this people have sinned a great sin, and have made themselves a god of gold” (Exodus 32:31); this is the statement of Rabbi Yehuda ben Bava. Rabbi Akiva says that the verse states: “Fortunate is he whose transgression is forgiven, whose sin is hidden” (Psalms 32:1), which teaches that one need not detail his sins. But what is the meaning of that which Moses said: “And have made themselves a god of gold” (Exodus 32:31)? It should be understood in accordance with the statement of Rabbi Yannai, as Rabbi Yannai said: Moses said before the Holy One, Blessed be He: Master of the universe, it is the silver and gold that you gave to the Jewish people in abundance, until they said: Enough, which caused them to make a god of gold. Consequently, the phrase: “And have made themselves a god of gold,” is not a description of the sin but an explanation and justification of it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ו ב — Yoma 86b:15</span></div>
+    <div class="orig">שְׁנֵי פַּרְנָסִים טוֹבִים עָמְדוּ לָהֶם לְיִשְׂרָאֵל: מֹשֶׁה וְדָוִד. מֹשֶׁה אָמַר: יִכָּתֵב סוּרְחָנִי, שֶׁנֶּאֱמַר: ״יַעַן לֹא הֶאֱמַנְתֶּם בִּי לְהַקְדִּישֵׁנִי״, דָּוִד אָמַר: אַל יִכָּתֵב סוּרְחָנִי. שֶׁנֶּאֱמַר: ״אַשְׁרֵי נְשׂוּי פֶּשַׁע כְּסוּי חֲטָאָה״.</div>
+    <div class="trans" data-when="he">שני מנהיגים טובים עמדו לישראל — משה ודוד. משה אמר: ייכתב חטאי במפורש, שנאמר ״יען לא האמנתם בי להקדישני״. דוד אמר: אל ייכתב חטאי, שנאמר ״אשרי נשוי פשע כסוי חטאה״ — ולכן חטאו (בת שבע) לא נכתב בפירוש.</div>
+    <div class="trans" data-when="en">It is said that two good leaders arose for the Jewish people: Moses and David. Moses said: Let my disgrace be written, i.e., may the sin I committed be written explicitly, as it is stated: “Because you did not believe in Me, to sanctify Me” (Numbers 20:12). In contrast, David said: Let my disgrace not be written, as it is stated: “Fortunate is he whose transgression is forgiven, whose sin is hidden” (Psalms 32:1).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ״ו ב — Yoma 86b:16</span></div>
+    <div class="orig">מָשָׁל דְּמֹשֶׁה וְדָוִד לְמָה הַדָּבָר דּוֹמֶה? לִשְׁתֵּי נָשִׁים שֶׁלָּקוּ בְּבֵית דִּין, אַחַת קִלְקְלָה, וְאַחַת אָכְלָה פַּגֵּי שְׁבִיעִית. אָמְרָה לָהֶן אוֹתָהּ שֶׁאָכְלָה פַּגֵּי שְׁבִיעִית: בְּבַקָּשָׁה מִכֶּם, הוֹדִיעוּ עַל מָה הִיא לוֹקָה, שֶׁלֹּא יֹאמְרוּ: עַל מַה שֶּׁזּוֹ לוֹקָה — זוֹ לוֹקָה. הֵבִיאוּ פַּגֵּי שְׁבִיעִית וְתָלוּ בְּצַוָּארָהּ, וְהָיוּ מַכְרִיזִין לְפָנֶיהָ וְאוֹמְרִין: עַל עִסְקֵי שְׁבִיעִית הִיא לוֹקָה.</div>
+    <div class="trans" data-when="he">משל למשה ודוד: לשתי נשים שלקו בבית דין — אחת על עריות ואחת על שאכלה פגי שביעית. ביקשה זו שאכלה שביעית: פרסמו על מה אני לוקה, שלא יחשבו שלקיתי על אותו חטא כחברתי. הביאו פגי שביעית ותלו בצווארה והכריזו: על עסקי שביעית היא לוקה. כך משה ביקש שיפורש חטאו, שלא יחשדוהו בחטא חמור כדור המדבר.</div>
+    <div class="trans" data-when="en">The Gemara explains: A parable with regard to Moses and David shows to what this may be compared. It may be compared to two women who were flogged in court for their sins. One of them sinned by engaging in forbidden relations, and one ate unripe figs of the Sabbatical Year although they are forbidden. The woman who ate the unripe figs of the Sabbatical Year said to the court: Please publicize the sin for which I am being flogged, so that people will not say that what that woman is being flogged for is also what this woman is being flogged for. They brought unripe figs of the Sabbatical Year, and hung them around her neck, and announced before her, saying: She is receiving lashes on account of the Sabbatical Year. Moses requested that his sin be publicized so that people would not think that he committed the same sins as the members of his generation, i.e., the Golden Calf and the report of the spies.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ״ו ב — Yoma 86b:17</span></div>
+    <div class="orig">מְפַרְסְמִין אֶת הַחֲנֵפִין מִפְּנֵי חִילּוּל הַשֵּׁם, שֶׁנֶּאֱמַר: ״וּבְשׁוּב צַדִּיק מִצִּדְקוֹ וְעָשָׂה עָוֶל וְנָתַתִּי מִכְשׁוֹל לְפָנָיו״. תְּשׁוּבַת הַמּוּחְלָטִין מְעַכֶּבֶת הַפּוּרְעָנוּת, וְאַף עַל פִּי שֶׁנֶּחְתַּם עָלָיו גְּזַר דִּין שֶׁל פּוּרְעָנוּת.</div>
+    <div class="trans" data-when="he">מפרסמים את החנפים (הרשעים המתחזים לצדיקים) מפני חילול השם — שלא ילמדו ממעשיהם, שנאמר ״ובשוב צדיק מצדקו… ונתתי מכשול לפניו״. ותשובת הרשעים הגמורים מעכבת את הפורענות, אף על פי שכבר נחתם עליהם גזר דין של פורענות.</div>
+    <div class="trans" data-when="en">Furthermore, they said: One exposes the hypocrites due to the desecration of God’s name, so others will not think that they are truly righteous and that their deeds bear imitating, as it is stated: “When a righteous man turns from his righteousness and commits iniquity, I will lay a stumbling block before him” (Ezekiel 3:20). That is, when people do not know that someone is wicked to the core, he causes other people to err and this desecrates the name of God when it is revealed. The repentance of utterly wicked people prevents suffering from coming upon them. And although the sentence of judgment has already been signed against them for suffering, their repentance prevents them from being punished.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ״ו ב — Yoma 86b:18</span></div>
+    <div class="orig">שַׁלְוַת רְשָׁעִים סוֹפָהּ תַּקָּלָה, וְהָרְשׁוּת מְקַבֶּרֶת אֶת בְּעָלֶיהָ, עָרוֹם נִכְנָס לָהּ וְעָרוֹם יֵצֵא מִמֶּנָּה, וּלְוַאי שֶׁתְּהֵא יְצִיאָה כְּבִיאָה. רַב כִּי הֲוָה נָפֵיק לְמֵידַן דִּינָא אָמַר הָכִי: בִּצְבוּ נַפְשֵׁיהּ לִקְטָלָא נָפֵיק, וּצְבוּ בֵּיתֵיהּ לֵית הוּא עָבֵיד, וְרֵיקָן לְבֵיתֵיהּ אָזֵיל, וּלְוַאי שֶׁתְּהֵא בִּיאָה כִּיצִיאָה.</div>
+    <div class="trans" data-when="he">שלוות הרשעים סופה תקלה; והשררה מקברת את בעליה — ערום נכנס לה וערום יצא, והלוואי שתהא יציאתו (נקייה) כביאתו. רב, כשהיה יוצא לדון דין, היה אומר על עצמו: ברצונו לכליה (מיתה בידי שמים, אם יטעה בדין) הוא יוצא, ואינו עושה רצון ביתו (אינו נוטל שכר), וריקן הולך לביתו — והלוואי שתהא ביאתו (ביתה, נקייה) כיציאתו.</div>
+    <div class="trans" data-when="en">The tranquility of the wicked is ultimately their destruction, as in their contentment they sit and think about forbidden matters. And authority buries one who owns it. He was naked when he entered into power, and he will be naked when he leaves it, and if only his exit would be like his entrance, without sin and added iniquity. The Gemara relates: When Rav would leave his home to go to court to judge cases, he would say this of himself: Of his own will, he goes to die, because a judge who misjudges a case is liable to death at the hand of Heaven; and he does not fulfill the will of his household and he goes empty-handed to his household, because a judge does not receive a salary; and if only his entrance would be like his exit, without sin or transgression.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ״ו ב — Yoma 86b:19</span></div>
+    <div class="orig">רָבָא כִּי הֲוָה נָפֵיק לְדִינָא אָמַר הָכִי:</div>
+    <div class="trans" data-when="he">רבא, אף הוא, כשהיה יוצא לדון דין, היה אומר כך על עצמו (וכדלהלן):</div>
+    <div class="trans" data-when="en">When Rava would go to judge, he would say this of himself:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ״ז א — Yoma 87a:1</span></div>
+    <div class="orig">בִּצְבוּ נַפְשֵׁיהּ לִקְטָלָא נָפֵיק, וּצְבוּ בֵּיתֵיהּ לֵית הוּא עָבֵיד, וְרֵיקָן לְבֵיתֵיהּ אָזֵיל, וּלְוַאי שֶׁתְּהֵא בִּיאָה כִּיצִיאָה. וְכִי הָוֵי חָזֵי אַמְבּוּהָא אַבָּתְרֵיהּ, אָמַר: ״אִם יַעֲלֶה לַשָּׁמַיִם שִׂיאוֹ וְרֹאשׁוֹ לָעָב יַגִּיעַ. כְּגֶלֲלוֹ לָנֶצַח יֹאבֵד רוֹאָיו יֹאמְרוּ אַיּוֹ״. רַב זוּטְרָא, כִּי הֲווֹ מְכַתְּפִי לֵיהּ בְּשַׁבְּתָא דְרִיגְלָא, הֲוָה אָמַר: ״כִּי לֹא לְעוֹלָם חֹסֶן וְאִם נֵזֶר לְדוֹר וָדוֹר״.</div>
+    <div class="trans" data-when="he">נוסח רבא (המשך): ברצונו לכליה הוא יוצא… והלוואי שתהא ביאתו כיציאתו. וכשהיה רואה המון נוהר אחריו מתוך כבוד, היה אומר ״אם יעלה לשמים שיאו… כגללו לנצח יאבד״ — שלא תביאהו השררה לגאווה. ורב זוטרא, כשהיו נושאים אותו על כתפיהם בשבת שלפני הרגל, היה אומר ״כי לא לעולם חוסן, ואם נזר לדור ודור״ — אין השררה נצחית.</div>
+    <div class="trans" data-when="en">Of his own will, he goes to die; and he does not fulfill the will of his household, and he goes empty-handed to his household; and if only his entrance would be like his exit. And when he saw a line of people [ambuha] following after him out of respect for him, he said: “Though his excellency ascends to the heavens, and his head reaches to the clouds, yet he shall perish forever like his own dung; they who have seen him will say: Where is he?” (Job 20:6–7). This teaches that when one achieves power, it can lead to his downfall. When they would carry Rav Zutra on their shoulders during the Shabbat of the Festival when he taught, he would recite the following to avoid becoming arrogant: “For power is not forever, and does the crown endure for all generations?” (Proverbs 27:24).</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
