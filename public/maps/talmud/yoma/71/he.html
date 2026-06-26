@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא ע״א</title>
+<meta name="description" content="מפת הסוגיא של יומא ע״א: פגישת המשלח עם הכהן הגדול ו׳מחיה חיים׳, ודרשות על החיים ועל תלמידי חכמים; משתה הכהן הגדול ומעשה שמעיה ואבטליון; משנת שמונה בגדי כהן גדול; ומניין חוטי הבגדים — שש שישה, משזר שמונה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="71">
+<meta name="gemara-map:sefaria-ref" content="Yoma 71">
+<meta name="gemara-map:topic-he" content="מחיה חיים, שמעיה ואבטליון, בגדי כהונה">
+<meta name="gemara-map:topic-en" content="Grants life, Shemaya and Avtalyon, vestments">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא ע״א">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 71">
+<meta name="gemara-map:blurb-he" content="סיום עבודת יום הכיפורים: ׳מחיה חיים׳ ודרשות על החיים; משתה הכהן הגדול ומעשה שמעיה ואבטליון; ומשם למשנת שמונה בגדי כהן גדול ולמניין חוטי כל בגד.">
+<meta name="gemara-map:blurb-en" content="After Yom Kippur: ‘the One Who grants life’ and homilies on life; the High Priest’s feast and the Shemaya–Avtalyon incident; then the Mishna of the eight vestments and how many strands each thread held.">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא ע״א</span><span data-when="en">Sugya map — Yoma 71</span></h1>
+    <div class="subtitle"><span data-when="he">יומא ע״א א — ע״ב א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 71a–72a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> ארבע יחידות בסיום פרק יום הכיפורים: פגישת <b>המשלח עם הכהן הגדול</b> ו״מחיה חיים״, ובעקבותיה דרשות על ״ארצות החיים״ ועל תלמידי חכמים; <b>משתה הכהן הגדול</b> ומעשה שמעיה ואבטליון שלימדם ענווה; משנת <b>שמונה בגדי כהן גדול</b> וארבעה של הדיוט; ודרשת הברייתא על <b>מניין החוטים</b> בכל בגד — ״שש״ שישה, ״משזר״ שמונה, מעיל שנים עשר, פרוכת עשרים וארבעה, חושן ואפוד עשרים ושמונה.</span>
+    <span data-when="en"><b>Bottom line:</b> Four units closing the Yom Kippur chapter: the meeting of <b>the sender and the High Priest</b> and “the One Who grants life,” leading to homilies on “the lands of the living” and on Torah scholars; the <b>High Priest’s feast</b> and the Shemaya–Avtalyon incident teaching humility; the Mishna of the <b>eight High-Priestly vestments</b> versus four for a common priest; and the baraita deriving the <b>strand-counts</b> of each garment — shesh is six, twined is eight, robe twelve, curtain twenty-four, breastplate and ephod twenty-eight.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא ע״א</span><span data-when="en">Overview — Yoma 71</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · מחיה חיים — ודרשות על החיים ות״ח"]:::statement
+  O2["2 · משתה הכהן הגדול — שמעיה ואבטליון"]:::statement
+  O3["3 · משנה: שמונה בגדי כהן גדול"]:::mishnah
+  O4["4 · מניין חוטי הבגדים — שש שישה"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Grants life — homilies on life and scholars"]:::statement
+  O2["2 · The High Priest׳s feast — Shemaya and Avtalyon"]:::statement
+  O3["3 · Mishna: the eight High-Priestly vestments"]:::mishnah
+  O4["4 · Strand-counts of the garments — shesh is six"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">מחיה חיים — ודרשות על החיים ועל תלמידי חכמים</span><span data-when="en">The One Who grants life — homilies on life and on scholars</span>
+      <span class="ref">Yoma 71a:14–71b:1</span></h2>
+  <div class="lead"><span data-when="he">המשלח פוגש את הכהן הגדול ומברכו ״מחיה חיים״; ומכאן שרשרת דרשות על ״ארצות החיים״, שנות חיים, ותלמידי חכמים.</span><span data-when="en">The sender meets the High Priest and blesses “the One Who grants life”; this triggers a chain of homilies on “the lands of the living,” years of life, and Torah scholars.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① המשלח לכהן הגדול: עשינו שליחותך · בביתו: מחיה חיים, עשינו שליחותו"]:::statement
+  S2["② רבה: ברכת חכמי פומבדיתא — מחיה חיים יתן לך חיים ארוכים"]:::statement
+  S3["③ רב יהודה: ׳ארצות החיים׳ — זה מקום שווקים"]:::statement
+  S4["④ ר׳ אלעזר: ׳שנות חיים׳ — שנים המתהפכות מרעה לטובה"]:::statement
+  S5["⑤ ר׳ ברכיה: ׳אישים׳ — תלמידי חכמים; ימלא גרונם יין"]:::statement
+  S6["⑥ ר׳ ברכיה: תורה פוסקת מזרעו — ישא בת תלמיד חכם"]:::statement
+  S1 -->|אגב מחיה חיים| S2
+  S2 -->|דרשה| S3
+  S3 -->|דרשה| S4
+  S4 -->|דרשה| S5
+  S5 -->|ועוד| S6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① Sender to High Priest: we did your mission · at home: the One Who grants life, we did His mission"]:::statement
+  S2["② Rabba: Pumbedita sages׳ farewell — may the One Who grants life grant you long life"]:::statement
+  S3["③ Rav Yehuda: ׳lands of the living׳ — this is the place of markets"]:::statement
+  S4["④ R. Elazar: ׳years of life׳ — years transformed from bad to good"]:::statement
+  S5["⑤ R. Berekhya: ׳ishim׳ — Torah scholars; fill their throats with wine"]:::statement
+  S6["⑥ R. Berekhya: if Torah ceases from his line — marry a scholar׳s daughter"]:::statement
+  S1 -->|apropos grants life| S2
+  S2 -->|homily| S3
+  S3 -->|homily| S4
+  S4 -->|homily| S5
+  S5 -->|further| S6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  S1["① מְצָאוֹ בַּשּׁוּק … עָשִׂינוּ שְׁלִיחוּתְךָ … מְחַיֵּה חַיִּים, עָשִׂינוּ שְׁלִיחוּתוֹ"]:::statement
+  S2["② אָמַר רַבָּה … מְחַיֵּה חַיִּים יִתֵּן לְךָ חַיִּים אֲרוּכִּים וְטוֹבִים וּמְתוּקָּנִין"]:::statement
+  S3["③ אֶתְהַלֵּךְ … בְּאַרְצוֹת הַחַיִּים … זֶה מָקוֹם שְׁוָוקִים"]:::statement
+  S4["④ ר׳ אֶלְעָזָר: שְׁנוֹתָיו … הַמִּתְהַפְּכוֹת עָלָיו מֵרָעָה לְטוֹבָה"]:::statement
+  S5["⑤ ר׳ בֶּרֶכְיָה: אֵלּוּ תַּלְמִידֵי חֲכָמִים … יְמַלֵּא גְּרוֹנָם … יַיִן"]:::statement
+  S6["⑥ ר׳ בֶּרֶכְיָה: תּוֹרָה פּוֹסֶקֶת מִזַּרְעוֹ — יִשָּׂא בַּת תַּלְמִיד חָכָם"]:::statement
+  S1 -->|אגב מחיה חיים| S2
+  S2 -->|דרשה| S3
+  S3 -->|דרשה| S4
+  S4 -->|דרשה| S5
+  S5 -->|ועוד| S6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״א א — Yoma 71a:14</span></div>
+    <div class="orig">אָתֵי מְשַׁלֵּחַ, מְצָאוֹ בַּשּׁוּק לְכֹהֵן גָּדוֹל, אוֹמֵר לוֹ: אִישִׁי כֹּהֵן גָּדוֹל! עָשִׂינוּ שְׁלִיחוּתְךָ. מְצָאוֹ בְּבֵיתוֹ, אוֹמֵר לוֹ: מְחַיֵּה חַיִּים, עָשִׂינוּ שְׁלִיחוּתוֹ.</div>
+    <div class="trans" data-when="he">הגמרא מתארת את הפגישה שלמחרת יום הכיפורים בין הכהן הגדול לבין מי ששילח את השעיר לעזאזל: מצאו המשלח בשוק — מקום פומבי — אומר לו דרך כבוד: ״אישי כהן גדול, עשינו שליחותך״. מצאו בביתו, אומר לו: ״מחיה חיים (הקב״ה), עשינו שליחותו״.</div>
+    <div class="trans" data-when="en">§ The Gemara describes the eventual meeting between the High Priest and the one who sends the goat to Azazel: When the one who sends the goat comes on the day following Yom Kippur, if he finds the High Priest in the market, which is a public place, he says to him: My Master, High Priest, we performed your mission, i.e., we fulfilled the mitzva of sending the goat to Azazel. He refers to the sending as the High Priest’s mission as a public display of respect. But if he finds him in his house, he says to him: The One Who grants life to the living, God, we performed His mission.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״א א — Yoma 71a:15</span></div>
+    <div class="orig">אָמַר רַבָּה: כִּי מִיפַּטְרִי רַבָּנַן מֵהֲדָדֵי בְּפוּמְבְּדִיתָא אָמְרִי הָכִי: ״מְחַיֵּה חַיִּים יִתֵּן לְךָ חַיִּים אֲרוּכִּים וְטוֹבִים וּמְתוּקָּנִין״.</div>
+    <div class="trans" data-when="he">אגב לשון ״מחיה חיים״, אמר רבה: כשהחכמים נפרדים זה מזה בפומבדיתא, כך הם מברכים: ״מחיה חיים יתן לך חיים ארוכים וטובים ומתוקנים״.</div>
+    <div class="trans" data-when="en">Apropos the phrase: The One Who grants life to the living, Rabba said: When the Sages take leave from one another in Pumbedita, they say as follows: May the One Who grants life to the living grant you a long, good, and established life.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״א א — Yoma 71a:16</span></div>
+    <div class="orig">״אֶתְהַלֵּךְ לִפְנֵי ה׳ בְּאַרְצוֹת הַחַיִּים״, אָמַר רַב יְהוּדָה: זֶה מָקוֹם שְׁוָוקִים.</div>
+    <div class="trans" data-when="he">אגב לשון ״החיים״ דורשת הגמרא כתובים. על הפסוק ״אתהלך לפני ה׳ בארצות החיים״ (תהלים קטז) אמר רב יהודה: ״ארצות החיים״ — זה מקום שווקים, מקום שמצוי בו מזון בנקל; דוד שנדד התפלל למצוא תמיד פרנסה מזומנת.</div>
+    <div class="trans" data-when="en">Further apropos the phrase: The One Who grants life to the living, the Gemara explains a verse using a similar phrase and then additional verses. With regard to the verse: “I shall walk before the Lord in the lands of the living” (Psalms 116:9), Rav Yehuda said: This is the place of markets, where food and needs can be readily obtained. King David, who wandered from place to place, prayed to always find ready sustenance.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״א א — Yoma 71a:17</span></div>
+    <div class="orig">״כִּי אוֹרֶךְ יָמִים וּשְׁנוֹת חַיִּים וְשָׁלוֹם יוֹסִיפוּ לָךְ״, וְכִי יֵשׁ שָׁנִים שֶׁל חַיִּים וְיֵשׁ שָׁנִים שֶׁאֵינָן שֶׁל חַיִּים? אָמַר רַבִּי אֶלְעָזָר: אֵלּוּ שְׁנוֹתָיו שֶׁל אָדָם הַמִּתְהַפְּכוֹת עָלָיו מֵרָעָה לְטוֹבָה.</div>
+    <div class="trans" data-when="he">על הפסוק ״כי אורך ימים ושנות חיים ושלום יוסיפו לך״ (משלי ג) שואלת הגמרא: וכי יש שנים של חיים ושנים שאינן של חיים? אמר ר׳ אלעזר: ״שנות חיים״ הן שנים טובות — שנותיו של אדם המתהפכות עליו מרעה לטובה.</div>
+    <div class="trans" data-when="en">The verse states: “For length of days, and years of life, and peace, will they add to you” (Proverbs 3:2). The Gemara asks: Are there years of life and years that are not of life? The Gemara explains: Rabbi Elazar said: “Years of life” refers to good years. As such, these additional years of life referred to in the verse are the years of a person’s life which are transformed for him from bad to good.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״א א — Yoma 71a:18</span></div>
+    <div class="orig">״אֲלֵיכֶם אִישִׁים אֶקְרָא״, אָמַר רַבִּי בֶּרֶכְיָה: אֵלּוּ תַּלְמִידֵי חֲכָמִים, שֶׁדּוֹמִין לְנָשִׁים וְעוֹשִׂין גְּבוּרָה כַּאֲנָשִׁים. וְאָמַר רַבִּי בֶּרֶכְיָה: הָרוֹצֶה לְנַסֵּךְ יַיִן עַל גַּבֵּי הַמִּזְבֵּחַ — יְמַלֵּא גְּרוֹנָם שֶׁל תַּלְמִידֵי חֲכָמִים יַיִן, שֶׁנֶּאֱמַר: ״אֲלֵיכֶם אִישִׁים אֶקְרָא״.</div>
+    <div class="trans" data-when="he">על הפסוק ״אליכם אישים אקרא״ (משלי ח) אמר ר׳ ברכיה: ״אישים״ (כעין ״אישה״) — אלו תלמידי חכמים, שדומים לנשים בחולשתם הגופנית ועם זאת עושים גבורה כאנשים בתלמודם. ועוד אמר: הרוצה לנסך יין על המזבח בזמן הזה — ימלא גרונם של תלמידי חכמים יין, שנאמר ״אליכם אישים אקרא״ (כעין ״אִשֶּׁה״ של המזבח).</div>
+    <div class="trans" data-when="en">The verse states: “To you men [ishim] do I call, and my voice is to the sons of men” (Proverbs 8:4). Rabbi Berekhya said: The word ishim, although it means men, is similar to the term isha, woman. It may therefore be taken to refer to these Torah scholars, who are similar to women in that they are physically weak and are not engaged in many activities that other men are, but nevertheless, they act mightily like men when engaged in Torah study. And Rabbi Berekhya said further about that same verse: Nowadays one who wishes to pour libations of wine over the altar should fill the throats of Torah scholars with wine, as it is stated: “To you men [ishim] do I call.” The use of the phrase ishim, which is similar to isheh, used for the altar’s fire, suggests that scholars may be compared to the fire of the altar.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״א א — Yoma 71a:19</span></div>
+    <div class="orig">וְאָמַר רַבִּי בֶּרֶכְיָה: אִם רוֹאֶה אָדָם שֶׁתּוֹרָה פּוֹסֶקֶת מִזַּרְעוֹ — יִשָּׂא בַּת תַּלְמִיד חָכָם, שֶׁנֶּאֱמַר: ״אִם יַזְקִין בָּאָרֶץ שׇׁרְשׁוֹ וּבֶעָפָר יָמוּת גִּזְעוֹ</div>
+    <div class="trans" data-when="he">ועוד אמר ר׳ ברכיה: אם רואה אדם שהתורה פוסקת מזרעו — בניו אינם נעשים תלמידי חכמים כמותו — ישא בת תלמיד חכם, וכך יזכו בניו ממנה לגדול בתורה, שנאמר: ״אם יזקין בארץ שרשו ובעפר ימות גזעו</div>
+    <div class="trans" data-when="en">And Rabbi Berekhya said: If a person sees that Torah is ceasing from his children, and they are not becoming Torah scholars like himself, he should marry the daughter of a Torah scholar. This will ensure that his children from her will be raised with Torah, as it is stated: “Though its root will grow old in the earth, and its trunk will die in the ground,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״א ב — Yoma 71b:1</span></div>
+    <div class="orig">מֵרֵיחַ מַיִם יַפְרִיחַ וְעָשָׂה קָצִיר כְּמוֹ נָטַע״.</div>
+    <div class="trans" data-when="he">— ״מריח מים יפריח ועשה קציר כמו נטע״ (איוב יד). אם גזע משפחתו מתייבש מחוסר תורה, ייטע עצמו במקום מים — משפחת חכמים, שהמים משל לתורה — וכך יפריחו בניו לתלמידי חכמים.</div>
+    <div class="trans" data-when="en">from the scent of water it will blossom and put forth branches like a plant” (Job 14:8–9). If the figurative trunk of one’s family is drying up through lack of Torah, he should plant himself in a place of water, i.e., a family of scholars, water being a metaphor for Torah. This will ensure that his children will blossom into Torah scholars.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">משתה הכהן הגדול — מעשה שמעיה ואבטליון</span><span data-when="en">The High Priest׳s feast — the Shemaya and Avtalyon incident</span>
+      <span class="ref">Yoma 71b:2–3</span></h2>
+  <div class="lead"><span data-when="he">המשנה: הכהן הגדול עושה יום טוב לאוהביו. ברייתא: כהן גדול שקינא בשמעיה ואבטליון נענה בתשובה ניצחת על מעלת מעשי אהרן.</span><span data-when="en">The Mishna: the High Priest makes a feast for his loved ones. A baraita: a High Priest who envied Shemaya and Avtalyon is answered with a stinging rebuke about the worth of acting like Aaron.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: ויום טוב היה עושה לאוהביו"]):::mishnah
+  S1["① מעשה: כהן גדול יצא, והעם הניחוהו והלכו אחר שמעיה ואבטליון"]:::statement
+  C1["② הכהן: יבואו בני עממין לשלום! · הם: העושה מעשה אהרן — לשלום"]:::conclusion
+  M1 -->|תנו רבנן| S1
+  S1 -->|תשובתם| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishna: and he would make a feast for his loved ones"]):::mishnah
+  S1["① Incident: the High Priest left, and all followed Shemaya and Avtalyon instead"]:::statement
+  C1["② Priest: let gentiles׳ sons come in peace! · They: one who acts like Aaron — in peace"]:::conclusion
+  M1 -->|the Sages taught| S1
+  S1 -->|their reply| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① וְיוֹם טוֹב הָיָה עוֹשֶׂה לְאוֹהֲבָיו"]):::mishnah
+  S1["① מַעֲשֶׂה בְּכֹהֵן גָּדוֹל … שַׁבְקוּהוּ לְדִידֵיהּ וְאָזְלִי בָּתַר שְׁמַעְיָה וְאַבְטַלְיוֹן"]:::statement
+  C1["② יֵיתוֹן בְּנֵי עַמְמִין לִשְׁלָם … דְּעָבְדִין עוֹבָדָא דְאַהֲרֹן … וְלָא יֵיתֵי בַּר אַהֲרֹן … דְּלָא עָבֵיד עוֹבָדָא דְאַהֲרֹן"]:::conclusion
+  M1 -->|תנו רבנן| S1
+  S1 -->|תשובתם| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״א ב — Yoma 71b:2</span></div>
+    <div class="orig">וְיוֹם טוֹב הָיָה עוֹשֶׂה לְאוֹהֲבָיו. תָּנוּ רַבָּנַן: מַעֲשֶׂה בְּכֹהֵן גָּדוֹל אֶחָד שֶׁיָּצָא מִבֵּית הַמִּקְדָּשׁ וַהֲווֹ אָזְלִי כּוּלֵּי עָלְמָא בָּתְרֵיהּ. כֵּיוָן דְּחַזְיוּנְהוּ לִשְׁמַעְיָה וְאַבְטַלְיוֹן, שַׁבְקוּהוּ לְדִידֵיהּ וְאָזְלִי בָּתַר שְׁמַעְיָה וְאַבְטַלְיוֹן.</div>
+    <div class="trans" data-when="he">המשנה אמרה: ״ויום טוב היה עושה לאוהביו״ — שהכהן הגדול היה עושה משתה ביציאתו בשלום מן הקודש. תנו רבנן: מעשה בכהן גדול אחד שיצא מבית המקדש והיו כולם הולכים אחריו. כיוון שראו את שמעיה ואבטליון, ראשי הסנהדרין, הניחו את הכהן הגדול והלכו אחר שמעיה ואבטליון מתוך כבוד לתורתם.</div>
+    <div class="trans" data-when="en">§ It was taught in the mishna: The people escort the High Priest to his house. And he would make a feast for his loved ones. The Sages taught in a baraita: There was an incident involving one High Priest who exited the Holy Temple and everyone followed him. When they saw Shemaya and Avtalyon, the heads of the Sanhedrin, walking along, in deference to them they left the High Priest by himself and walked after Shemaya and Avtalyon.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״א ב — Yoma 71b:3</span></div>
+    <div class="orig">לְסוֹף אֲתוֹ שְׁמַעְיָה וְאַבְטַלְיוֹן לְאִיפְּטוֹרֵי מִינֵּיהּ דְּכֹהֵן גָּדוֹל. אָמַר לָהֶן: יֵיתוֹן בְּנֵי עַמְמִין לִשְׁלָם. אֲמַרוּ לֵיהּ: יֵיתוֹן בְּנֵי עַמְמִין לִשְׁלָם דְּעָבְדִין עוֹבָדָא דְאַהֲרֹן, וְלָא יֵיתֵי בַּר אַהֲרֹן לִשְׁלָם דְּלָא עָבֵיד עוֹבָדָא דְאַהֲרֹן.</div>
+    <div class="trans" data-when="he">לבסוף באו שמעיה ואבטליון להיפרד מן הכהן הגדול. אמר להם בקנאה: יבואו בני העממין (הגויים) לשלום — רמז שהם מבני גרים. השיבוהו: יבואו בני העממין לשלום, העושים מעשה אהרן שאהב ורדף שלום; ולא יבוא בן אהרן (הכהן) לשלום, שאינו עושה מעשה אהרן ומדבר בגנות בני גרים.</div>
+    <div class="trans" data-when="en">Eventually, Shemaya and Avtalyon came to take leave of the High Priest before returning to their homes. Envious of the attention they received, he angrily said to them: Let the descendants of the gentile nations come in peace. Shemaya and Avtalyon descended from converts, and he scornfully drew attention to that fact. They said to him: Let the descendants of the gentile nations come in peace, who perform the acts of Aaron, who loved and pursued peace; and let not a descendant of Aaron come in peace, who does not perform the acts of Aaron and who speaks condescendingly to descendants of converts.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">משנה: שמונה בגדי כהן גדול ואורים ותומים</span><span data-when="en">Mishna: the eight vestments and the Urim VeTummim</span>
+      <span class="ref">Yoma 71b:4</span></h2>
+  <div class="lead"><span data-when="he">משנה פותחת לפרק הבא: כהן גדול משמש בשמונה בגדים, הדיוט בארבעה; ובהם נשאלים באורים ותומים — ורק לצורך ציבור.</span><span data-when="en">A Mishna opening the next chapter: the High Priest serves in eight garments, a common priest in four; in them the Urim VeTummim is consulted — only for public needs.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① משנה: כהן גדול בשמונה כלים, הדיוט בארבעה"]):::mishnah
+  M2(["① מוסיף כהן גדול: חושן, אפוד, מעיל, ציץ"]):::mishnah
+  M3(["① בהם נשאלין באורים ותומים — רק למלך ואב ב״ד וצורך ציבור"]):::mishnah
+  M1 -->|ארבעה יתרים| M2
+  M2 -->|אורים ותומים| M3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Mishna: High Priest in eight garments, common priest in four"]):::mishnah
+  M2(["① High Priest adds: breastplate, ephod, robe, frontplate"]):::mishnah
+  M3(["① In them Urim VeTummim is consulted — only for king, court head, public need"]):::mishnah
+  M1 -->|four more| M2
+  M2 -->|Urim VeTummim| M3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① כֹּהֵן גָּדוֹל מְשַׁמֵּשׁ בִּשְׁמוֹנָה כֵּלִים, וְהַהֶדְיוֹט בְּאַרְבָּעָה …"]):::mishnah
+  M2(["① מוֹסִיף עָלָיו כֹּהֵן גָּדוֹל: חֹשֶׁן וְאֵפוֹד וּמְעִיל וְצִיץ"]):::mishnah
+  M3(["① בְּאֵלּוּ נִשְׁאָלִין בְּאוּרִים וְתוּמִּים … אֶלָּא לְמֶלֶךְ וּלְאַב בֵּית דִּין וּלְמִי שֶׁהַצִּיבּוּר צָרִיךְ בּוֹ"]):::mishnah
+  M1 -->|ארבעה יתרים| M2
+  M2 -->|אורים ותומים| M3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״א ב — Yoma 71b:4</span></div>
+    <div class="orig">מַתְנִי׳ כֹּהֵן גָּדוֹל מְשַׁמֵּשׁ בִּשְׁמוֹנָה כֵּלִים, וְהַהֶדְיוֹט בְּאַרְבָּעָה: בִּכְתוֹנֶת וּמִכְנָסַיִם וּמִצְנֶפֶת וְאַבְנֵט. מוֹסִיף עָלָיו כֹּהֵן גָּדוֹל: חֹשֶׁן וְאֵפוֹד וּמְעִיל וְצִיץ. בְּאֵלּוּ נִשְׁאָלִין בְּאוּרִים וְתוּמִּים. וְאֵין נִשְׁאָלִין אֶלָּא לְמֶלֶךְ וּלְאַב בֵּית דִּין וּלְמִי שֶׁהַצִּיבּוּר צָרִיךְ בּוֹ.</div>
+    <div class="trans" data-when="he">משנה (פותחת פרק ״בא לו כהן גדול״): כל השנה הכהן הגדול משמש בשמונה בגדים, וכהן הדיוט בארבעה — כתונת, מכנסיים, מצנפת ואבנט. מוסיף עליהם הכהן הגדול ארבעה: חושן, אפוד, מעיל וציץ. כשהוא לבוש בשמונה, נשאלים בו באורים ותומים; ואין נשאלים אלא למלך, לאב בית דין, ולמי שהציבור צריך בו — ולא ליחיד.</div>
+    <div class="trans" data-when="en">MISHNA: Throughout the year the High Priest serves in eight garments, and the common priest serves in four: In a tunic and trousers and a mitre and a belt. The High Priest adds another four garments beyond those worn by the common priest: A breastplate, and an ephod, and a robe, and a frontplate. When dressed in these eight garments, the High Priest may be consulted for the decision of the Urim VeTummim. And he may be consulted for the decision of the Urim VeTummim only on behalf of the king, or on behalf of the president of the court, or on behalf of one whom the community needs. Individual inquiries are not posed to the Urim VeTummim.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">מניין חוטי הבגדים — שש שישה, משזר שמונה</span><span data-when="en">The strand-counts of the garments — shesh is six, twined is eight</span>
+      <span class="ref">Yoma 71b:5–72a:7</span></h2>
+  <div class="lead"><span data-when="he">ברייתא מונה את מספר חוטי כל בגד, והגמרא דורשת כל מספר מן הכתובים — מ״שש״ שישה ועד חושן ואפוד עשרים ושמונה, על ידי גזרות שווה ומיעוטי כתובים.</span><span data-when="en">A baraita lists the strand-count of each garment, and the Gemara derives each number from verses — from “shesh” as six up to breastplate-and-ephod as twenty-eight — via verbal analogies and scriptural exclusions.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: ׳שש׳ שישה, ׳משזר׳ שמונה, מעיל יב, פרוכת כד, חושן ואפוד כח"]:::statement
+  S2["② שש שישה — חמישה כתובים: לגופיה, כפול שישה, שזורין, שאר בגדים, לעכב"]:::statement
+  Q1{"③ מנין ש׳שש׳ פשתן? · ׳בד׳ — העולה מן הקרקע בד בד · ואימא צמר?"}:::question
+  A1["④ צמר וכיתן מיפצלי — אך כיתן רק אגב לקותיה"]:::answer
+  P1["⑤ רבינא: ׳פארי פשתים … ומכנסי פשתים׳ (יחזקאל)"]:::proof
+  Q2{"⑥ רב אשי: מקמי יחזקאל מאן אמרה? · אלא גמרא גמירי, ואסמכה אקרא"}:::question
+  S3["⑦ ׳משזר׳ שמונה — גז״ש ׳משזר׳ מפרוכת: כד, כל אחד תמני"]:::statement
+  Q3{"⑧ ונילף מחושן ואפוד כח? · דנין דבר בלא זהב מדבר בלא זהב"}:::question
+  A2["⑨ דנין מאבנט: בגד בלא זהב מבגד בלא זהב; רב מרי ורב אשי: כתובים"]:::answer
+  S4["⑩ מעיל יב — גז״ש ׳תכלת׳ מפרוכת: שישה, ושזורין — שנים עשר"]:::statement
+  Q4{"⑪ ונילף משוליו ורמוניו שמונה? · דנין כלי מכלי, לא מתכשיט"}:::question
+  S5["⑫ פרוכת כד — ארבעה דשיתא, לא דינא ולא דיינא"]:::statement
+  S6["⑬ חושן ואפוד כח — ארבעה דשיתא כד, זהב ארבעה"]:::statement
+  Q5{"⑭ ואימא זהב נמי שישה? · ׳וקצץ פתילים׳ — פתיל פתילים, ארבעה"}:::question
+  C1["⑮ רב אשי: ׳ועשית׳ — כל עשיותיו שווות, אחד זהב לכל צבע, כח"]:::conclusion
+  S1 -->|פירוט ראשון| S2
+  S2 -->|מנין שש פשתן| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|ראיה| P1
+  P1 -.->|קושיא| Q2
+  Q2 -->|המשך| S3
+  S3 -->|קושיא| Q3
+  Q3 -->|תירוץ| A2
+  A2 -->|מעיל| S4
+  S4 -->|קושיא| Q4
+  Q4 -->|פרוכת| S5
+  S5 -->|חושן ואפוד| S6
+  S6 -->|קושיא| Q5
+  Q5 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: ׳shesh׳ six, ׳twined׳ eight, robe 12, curtain 24, breastplate and ephod 28"]:::statement
+  S2["② Shesh is six — five verses: itself, six-fold, twined, other garments, indispensable"]:::statement
+  Q1{"③ How is ׳shesh׳ linen? · ׳bad׳ — grows stalk by stalk · but say wool?"}:::question
+  A1["④ Both wool and flax split — but flax only when beaten"]:::answer
+  P1["⑤ Ravina: ׳linen mitres … and linen trousers׳ (Ezekiel)"]:::proof
+  Q2{"⑥ Rav Ashi: before Ezekiel who said it? · A tradition, later supported by a verse"}:::question
+  S3["⑦ Twined is eight — analogy ׳twined׳ from curtain: 24, each one eight"]:::statement
+  Q3{"⑧ Derive from breastplate-ephod 28? · derive non-gold from non-gold"}:::question
+  A2["⑨ Derive from the belt: non-gold garment from non-gold; Rav Mari and Rav Ashi: verses"]:::answer
+  S4["⑩ Robe 12 — analogy ׳sky-blue׳ from curtain: six, twined — twelve"]:::statement
+  Q4{"⑪ Derive eight from its hem and pomegranates? · derive utensil from utensil, not ornament"}:::question
+  S5["⑫ Curtain 24 — four of six each, beyond dispute"]:::statement
+  S6["⑬ Breastplate-ephod 28 — four of six is 24, gold four"]:::statement
+  Q5{"⑭ Say gold too is six? · ׳cut into cords׳ — cord, cords, four"}:::question
+  C1["⑮ Rav Ashi: ׳you shall make׳ — all equal, one gold per color, twenty-eight"]:::conclusion
+  S1 -->|first detail| S2
+  S2 -->|how is shesh linen| Q1
+  Q1 -->|answer| A1
+  A1 -->|proof| P1
+  P1 -.->|objection| Q2
+  Q2 -->|continuing| S3
+  S3 -->|objection| Q3
+  Q3 -->|answer| A2
+  A2 -->|robe| S4
+  S4 -->|objection| Q4
+  Q4 -->|curtain| S5
+  S5 -->|breastplate-ephod| S6
+  S6 -->|objection| Q5
+  Q5 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן, ׳שֵׁשׁ׳ חוּטָן כָּפוּל שִׁשָּׁה · ׳מׇשְׁזָר׳ שְׁמוֹנָה · מְעִיל שְׁנֵים עָשָׂר · פָּרוֹכֶת כד · חוֹשֶׁן וְאֵפוֹד כח"]:::statement
+  S2["② חַמְשָׁה קְרָאֵי כְּתִיבִי: לְגוּפֵיהּ, כָּפוּל שִׁשָּׁה, שְׁזוּרִין, שְׁאָר בְּגָדִים, לְעַכֵּב"]:::statement
+  Q1{"③ מַאי מַשְׁמַע דְּהַאי ׳שֵׁשׁ׳ כִּיתָּנָא? · ׳בַּד׳ … בַּד בַּד · וְאֵימָא עַמְרָא"}:::question
+  A1["④ עַמְרָא … מִיפַּצְלָא · כִּיתָּנָא אַגַּב לָקוּתֵיהּ מִפְּצִיל"]:::answer
+  P1["⑤ רָבִינָא … פַּאֲרֵי פִשְׁתִּים … וּמִכְנְסֵי פִשְׁתִּים"]:::proof
+  Q2{"⑥ רַב אָשֵׁי: מִקַּמֵּי דְּאָתֵי יְחֶזְקֵאל מַאן אַמְרַהּ? · גְּמָרָא גְּמִירִי, וַאֲתָא … וְאַסְמְכַהּ אַקְּרָא"}:::question
+  S3["⑦ ׳מׇשְׁזָר׳ … יָלֵיף ׳מׇשְׁזָר׳ מִפָּרוֹכֶת … כׇּל חַד וְחַד תַּמְנֵי"]:::statement
+  Q3{"⑧ וְנֵילַף מֵחֹשֶׁן וְאֵפוֹד כח? · דָּנִין דָּבָר שֶׁלֹּא נֶאֱמַר בּוֹ זָהָב מִדָּבָר שֶׁלֹּא נֶאֱמַר בּוֹ זָהָב"}:::question
+  A2["⑨ דָּנִין מֵאַבְנֵט … בֶּגֶד … מִבֶּגֶד … רַב מָרִי: תַּעֲשֶׂנּוּ · רַב אָשֵׁי: וְעָשִׂיתָ"]:::answer
+  S4["⑩ מְעִיל … יָלֵיף ׳תְּכֵלֶת׳ מִפָּרוֹכֶת: שִׁשָּׁה … שְׁנֵים עָשָׂר"]:::statement
+  Q4{"⑪ וְנֵילַף מִשּׁוּלָיו וְרִמּוֹנָיו? · דָּנִין כְּלִי מִכְּלִי, וְאֵין דָּנִין כְּלִי מִתַּכְשִׁיט"}:::question
+  S5["⑫ פָּרֹכֶת … אַרְבְּעָה דְּשִׁיתָּא שִׁיתָּא, לָא דִּינָא וְלָא דַּיָּינָא"]:::statement
+  S6["⑬ חוֹשֶׁן וְאֵפוֹד … אַרְבְּעָה דְּשִׁיתָּא — עֶשְׂרִין וְאַרְבְּעָה, זָהָב אַרְבְּעָה — כח"]:::statement
+  Q5{"⑭ וְאֵימָא זָהָב נָמֵי שִׁשָּׁה? · ׳וְקִצֵּץ פְּתִילִים׳ … הֲרֵי כָּאן אַרְבָּעָה"}:::question
+  C1["⑮ רַב אָשֵׁי … ׳וְעָשִׂיתָ׳, שֶׁיִּהְיוּ כׇּל עֲשִׂיּוֹתָיו שָׁווֹת"]:::conclusion
+  S1 -->|פירוט ראשון| S2
+  S2 -->|מנין שש פשתן| Q1
+  Q1 -->|תירוץ| A1
+  A1 -->|ראיה| P1
+  P1 -.->|קושיא| Q2
+  Q2 -->|המשך| S3
+  S3 -->|קושיא| Q3
+  Q3 -->|תירוץ| A2
+  A2 -->|מעיל| S4
+  S4 -->|קושיא| Q4
+  Q4 -->|פרוכת| S5
+  S5 -->|חושן ואפוד| S6
+  S6 -->|קושיא| Q5
+  Q5 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״א ב — Yoma 71b:5</span></div>
+    <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן, דְּבָרִים שֶׁנֶּאֱמַר בָּהֶן ״שֵׁשׁ״ חוּטָן כָּפוּל שִׁשָּׁה. ״מׇשְׁזָר״ שְׁמוֹנָה. מְעִיל שְׁנֵים עָשָׂר. פָּרוֹכֶת עֶשְׂרִים וְאַרְבָּעָה. חוֹשֶׁן וְאֵפוֹד עֶשְׂרִים וּשְׁמוֹנָה.</div>
+    <div class="trans" data-when="he">גמרא. תנו רבנן: בגדים שנאמר בהם ״שש״ — חוטם כפול שישה (כל חוט שזור משישה חוטים דקים, ש״שש״ כשישה). ״משזר״ — שמונה. מעיל — שנים עשר. פרוכת — עשרים וארבעה. חושן ואפוד — עשרים ושמונה.</div>
+    <div class="trans" data-when="en">GEMARA: The Sages taught in a baraita: With regard to those items of the priestly vestments about which it is stated they must be made with linen [shesh], their threads are spun six-fold, as suggested by the use of the term shesh, which also means six. When the Torah states that certain items are twined, it means their threads are spun eight-fold. Threads used to weave the robe were spun from twelve strands. The threads of the curtain were spun from twenty-four strands. The threads used to weave the breastplate and ephod were spun from twenty-eight strands.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״א ב — Yoma 71b:6</span></div>
+    <div class="orig">חוּטָן כָּפוּל שִׁשָּׁה מְנָא לַן — דְּאָמַר קְרָא: ״וַיַּעֲשׂוּ אֶת הַכׇּתְנֹת שֵׁשׁ ... וְאֵת הַמִּצְנֶפֶת שֵׁשׁ וְאֶת פַּאֲרֵי הַמִּגְבָּעֹת שֵׁשׁ וְאֶת מִכְנְסֵי הַבָּד שֵׁשׁ מׇשְׁזָר״. חַמְשָׁה קְרָאֵי כְּתִיבִי: חַד לְגוּפֵיהּ, דְּכִיתָּנָא נִיהְווֹ. וְחַד, שֶׁיְּהֵא חוּטָן כָּפוּל שִׁשָּׁה. וְחַד, שֶׁיִּהְיוּ שְׁזוּרִין. וְחַד, לִשְׁאָר בְּגָדִים שֶׁלֹּא נֶאֱמַר בָּהֶן שֵׁשׁ. וְחַד, לְעַכֵּב.</div>
+    <div class="trans" data-when="he">מניין שחוטם כפול שישה? שנאמר ״ויעשו את הכתנות שש … ואת המצנפת שש ואת פארי המגבעות שש ואת מכנסי הבד שש משזר״ (שמות לט). חמישה אזכורי ״שש/בד״ נכתבו: אחד לגופו — שיהיו של פשתן; אחד — שיהא חוטם כפול שישה; אחד — שיהיו שזורים; אחד — לרבות שאר בגדים שלא נאמר בהם ״שש״; ואחד — לעכב (שאם לא עשאם כן, פסולים).</div>
+    <div class="trans" data-when="en">The Gemara asks: That the threads made from shesh are spun six-fold, from where do we derive this? The verse states: “And they made the tunics of linen [shesh] of woven work for Aaron and for his sons. And the mitre of linen, and the adorning mitres of linen, and the linen [bad] trousers of twined linen” (Exodus 39:27–28). Five mentions of the word linen are written; four times as “shesh” and an additional instance of “bad,” both meaning linen. One mention is stated for that halakha itself, to teach that they should be made of linen. And one mention is written to teach that the threads should be spun six-fold, shesh being interpreted as six. And one mention teaches that the six strands should be spun together into one. And one mention teaches that this also applies to the other garments, even though the term shesh is not stated with regard to them. And one mention teaches that this requirement is indispensable and that garments not made this way are invalid.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״א ב — Yoma 71b:7</span></div>
+    <div class="orig">מַאי מַשְׁמַע דְּהַאי ״שֵׁשׁ״ כִּיתָּנָא הוּא? אָמַר רַבִּי יוֹסֵי בְּרַבִּי חֲנִינָא: דְּאָמַר קְרָא ״בַּד״ — דָּבָר הָעוֹלֶה מִן הַקַּרְקַע בַּד בַּד. וְאֵימָא עַמְרָא! עַמְרָא אִיפְּצוֹלֵי מִיפַּצְלָא. כִּיתָּנָא נָמֵי אִיפְּצוֹלֵי מִפְּצִיל! כִּיתָּנָא אַגַּב לָקוּתֵיהּ מִפְּצִיל.</div>
+    <div class="trans" data-when="he">קושיא: מניין ש״שש״ הוא פשתן? אמר ר׳ יוסי בר׳ חנינא: הכתוב קורא לו גם ״בד״ — דבר העולה מן הקרקע ״בד בד״, כל גבעול לעצמו, כפשתן (לא כצמר גפן שסיביו משולבים). ואימא צמר, שכל שערה צומחת לבדה! צמר מתפצל — כל שערה לכמה — ואינו ״בד בד״. והרי גם פשתן מתפצל! פשתן מתפצל רק אגב כתישתו ולקותו, ולא מאליו.</div>
+    <div class="trans" data-when="en">The Gemara asks: From where may it be inferred that this term shesh means linen? Rabbi Yosei, son of Rabbi Ḥanina, said: As the verse also states: “Bad,” and uses it interchangeably with shesh. And bad refers to something which sprouts from the ground stalk by stalk [bad bad], each one by itself. This is a fitting description of flax, the plant used to produce linen, as opposed to other plants, such as cotton, whose fibers grow meshed together. The Gemara asks: And say that it refers to wool, since when it grows from the animal, each hair grows separately. The Gemara answers: Wool splits, with each hair dividing into several hairs, so it does not fully fit the description of sprouting stalk by stalk. The Gemara asks: But flax also splits into individual hairs. The Gemara answers: Flax, unlike wool, splits only when beaten.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״א ב — Yoma 71b:8</span></div>
+    <div class="orig">רָבִינָא אָמַר מֵהָכָא: ״פַּאֲרֵי פִשְׁתִּים יִהְיוּ עַל רֹאשָׁם וּמִכְנְסֵי פִשְׁתִּים יִהְיוּ עַל מׇתְנֵיהֶם״.</div>
+    <div class="trans" data-when="he">ראיה אחרת: רבינא אמר שהוכחת ״שש = פשתן״ באה מכאן — ״פארי פשתים יהיו על ראשם ומכנסי פשתים יהיו על מתניהם״ (יחזקאל מד); הרי ש״פשתים״ במפורש, ומכאן ש״שש״ ו״בד״ שבתורה לאותם בגדים אף הם פשתן.</div>
+    <div class="trans" data-when="en">Ravina said: We have a proof for the matter from here: The verse states: “They shall have linen [pishtim] mitres upon their heads, and linen trousers upon their loins” (Ezekiel 44:18). The term pishtim used in Ezekiel certainly refers to linen; therefore, it is clear that the terms shesh and bad, used in the Torah for the same garments, also refer to linen.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״א ב — Yoma 71b:9</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב אָשֵׁי: הָא מִקַּמֵּי דְּאָתֵי יְחֶזְקֵאל, מַאן אַמְרַהּ? וּלְטַעְמָיךְ, הָא דְּאָמַר רַב חִסְדָּא: דָּבָר זֶה מִתּוֹרַת מֹשֶׁה רַבֵּינוּ לֹא לָמַדְנוּ, מִדִּבְרֵי יְחֶזְקֵאל בֶּן בּוּזִי לָמַדְנוּ: ״כׇּל בֶּן נֵכָר עֶרֶל לֵב וְעֶרֶל בָּשָׂר לֹא יָבֹא אֶל מִקְדָּשִׁי״ — הָא מִקַּמֵּי דְּאָתֵי יְחֶזְקֵאל, מַאן אַמְרַהּ? אֶלָּא גְּמָרָא גְּמִירִי לַהּ, וַאֲתָא יְחֶזְקֵאל וְאַסְמְכַהּ אַקְּרָא. הָכָא נָמֵי: גְּמָרָא גְּמִירִי לַהּ, וַאֲתָא יְחֶזְקֵאל וְאַסְמְכַהּ אַקְּרָא.</div>
+    <div class="trans" data-when="he">הקשה רב אשי: והרי קודם שבא יחזקאל מי אמר הלכה זו? כיצד נדע ש״שש״ פשתן מן התורה? והשיב רבינא: ולטעמך, אף מה שאמר רב חסדא ש״ערל לב וערל בשר אינו עובד״ למדנו מיחזקאל (״כל בן נכר ערל לב וערל בשר לא יבוא אל מקדשי״) — קודם יחזקאל מי אמרה? אלא: הלכה למשה מסיני נמסרה, ובא יחזקאל וסמכה על הכתוב; אף כאן כן.</div>
+    <div class="trans" data-when="en">Rav Ashi said to him: But before Ezekiel came, who said this halakha? How was it known? Ravina retorted: And according to your reasoning, the same question could be asked with regard to that which Rav Ḥisda said concerning the disqualification of an uncircumcised priest from serving in the Temple: This matter we did not learn from the Torah of Moses our teacher, as it is not written explicitly in the Torah; rather, we learned it from the words of Ezekiel ben Buzi, as the verse states: “No foreigner, uncircumcised of heart or uncircumcised of flesh, shall enter into My sanctuary” (Ezekiel 44:9). One could ask here as well: Before Ezekiel came, who said this halakha? Rather, perforce, they learned it as a tradition and then Ezekiel came and supported it with a verse. Here, too, they learned it as a tradition and then Ezekiel came and supported it with a verse.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״א ב — Yoma 71b:10</span></div>
+    <div class="orig">״מׇשְׁזָר״ שְׁמוֹנָה. מְנָא לַן? דִּכְתִיב: ״וַיַּעֲשׂוּ עַל שׁוּלֵי הַמְּעִיל רִמּוֹנֵי תְּכֵלֶת וְאַרְגָּמָן וְתוֹלַעַת שָׁנִי מׇשְׁזָר״, וְיָלֵיף ״מׇשְׁזָר״ ״מׇשְׁזָר״ מִפָּרוֹכֶת, מָה לְהַלָּן עֶשְׂרִים וְאַרְבָּעָה — אַף כָּאן עֶשְׂרִים וְאַרְבָּעָה, דַּהֲוָה כׇּל חַד וְחַד תַּמְנֵי.</div>
+    <div class="trans" data-when="he">״משזר״ שמונה — מניין? שנאמר ״ויעשו על שולי המעיל רמוני תכלת וארגמן ותולעת שני משזר״ (שמות לט). ולומדים גזירה שווה ״משזר״־״משזר״ מן הפרוכת: מה שם עשרים וארבעה — אף כאן עשרים וארבעה בסך הכול; וכיוון שהרימון משלושה צבעים, כל אחד מהם משמונה חוטים.</div>
+    <div class="trans" data-when="en">The Gemara continues to explain the baraita. That the use of the term twined implies that the thread should be spun from eight strands, from where do we derive this? As it is written: “And they made upon the skirts of the robe pomegranates of sky-blue, and purple, and scarlet, twined” (Exodus 39:24); and derive a verbal analogy from the term “twined” used in this verse and the term “twined” from the verse about the curtain: Just as there, with regard to the curtain, there are twenty-four strands, as will be explained, so too here, there are twenty-four strands in total. And since each pomegranate is made of three colors, sky-blue, purple, and scarlet, it must be that each one of them was spun from eight strands.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״א ב — Yoma 71b:11</span></div>
+    <div class="orig">וְנֵילַף מֵחֹשֶׁן וְאֵפוֹד: מָה לְהַלָּן עֶשְׂרִים וּשְׁמוֹנָה, אַף כָּאן עֶשְׂרִים וּשְׁמוֹנָה! דָּנִין דָּבָר שֶׁלֹּא נֶאֱמַר בּוֹ זָהָב, מִדָּבָר שֶׁלֹּא נֶאֱמַר בּוֹ זָהָב, לְאַפּוֹקֵי חֹשֶׁן וְאֵפוֹד שֶׁנֶּאֱמַר בָּהֶן זָהָב. אַדְּרַבָּה: דָּנִין בֶּגֶד מִבֶּגֶד, לְאַפּוֹקֵי פָּרוֹכֶת — דְּאֹהֶל הוּא!</div>
+    <div class="trans" data-when="he">קושיא: ונלמד מספר החוטים מן החושן והאפוד — מה שם עשרים ושמונה, אף ברימונים עשרים ושמונה! תירוץ: דנים דבר שלא נאמר בו זהב (רימונים) מדבר שלא נאמר בו זהב (פרוכת), להוציא חושן ואפוד שנאמר בהם זהב. קושיא נגדית: אדרבה, דנים בגד מבגד (מעיל מחושן ואפוד), להוציא פרוכת שהיא אוהל ולא בגד!</div>
+    <div class="trans" data-when="en">The Gemara challenges this derivation: Let us derive the number of strands instead from the breastplate and ephod and say: Just as there, with regard to the breastplate and ephod, there are twenty-eight strands, so too, here there are twenty-eight strands. The Gemara answers: It is preferable to derive the halakhot of an item, i.e., the pomegranates, with regard to which the use of gold threads is not stated, from the halakhot of an item, i.e., the curtain, with regard to which the use of gold threads is also not stated. This would come to exclude the possibility of deriving them from the breastplate and ephod, with regard to which the use of gold threads is stated. The Gemara asks: On the contrary, it should be preferable to derive the halakhot of one garment from another garment, i.e., the halakhot of the robe from the halakhot of the breastplate and ephod. This would come to exclude the possibility of deriving them from the curtain, which is a tent, i.e., part of the Temple building, and not a garment. The Gemara accepts that the derivation is flawed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״א ב — Yoma 71b:12</span></div>
+    <div class="orig">אֶלָּא: דָּנִין מֵאַבְנֵט, וְדָנִין בֶּגֶד וְדָבָר שֶׁלֹּא נֶאֱמַר בּוֹ זָהָב, מִבֶּגֶד וְדָבָר שֶׁלֹּא נֶאֱמַר בּוֹ זָהָב, וְאֵין דָּנִין דָּבָר שֶׁאֵין בּוֹ זָהָב מִדָּבָר שֶׁיֵּשׁ בּוֹ זָהָב.</div>
+    <div class="trans" data-when="he">אלא: לומדים את ספירת השמונה מן האבנט (שעשרים וארבעה חוטיו), שהוא בגד ולא נאמר בו זהב; ולומדים ״בגד ודבר שלא נאמר בו זהב״ (רימונים ומעיל) מ״בגד ודבר שלא נאמר בו זהב״ (אבנט) — ואין לומדים דבר שאין בו זהב מדבר שיש בו זהב (חושן ואפוד).</div>
+    <div class="trans" data-when="en">Rather, the need for thread of eight strands is derived from the belt, which had twenty-four threads in total, and a garment and an item with regard to which the use of gold thread is not stated, i.e., the pomegranates, are derived from a garment and an item with regard to which the use of gold thread is not stated. And an item with no gold, such as the pomegranates and robe, is not derived from an item that has gold in it, such as the breastplate and ephod.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״א ב — Yoma 71b:13</span></div>
+    <div class="orig">רַב מָרִי אָמַר: ״תַּעֲשֶׂנּוּ״ כְּתִיב. תַּעֲשֶׂנּוּ לָזֶה, וְלֹא לְאַחֵר.</div>
+    <div class="trans" data-when="he">רב מרי נתן טעם אחר שלא ללמוד מספר חוטי הרימונים מחושן ואפוד: נאמר בחושן ״תעשנו״ (שמות כח) — ״תעשנו״ דווקא לזה (לחושן, בעשרים ושמונה), ולא לאחר.</div>
+    <div class="trans" data-when="en">Rav Mari said another reason not to derive the number of strands in a pomegranate from the breastplate and ephod: “Like the work of the ephod you shall make it” (Exodus 28:15) is written with regard to the breastplate to indicate that you shall make it, i.e., the breastplate, like the ephod, which indicates that for this, i.e., the breastplate, you shall use thread of twenty-eight strands, and not for anything else.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״א ב — Yoma 71b:14</span></div>
+    <div class="orig">רַב אָשֵׁי אָמַר: ״וְעָשִׂיתָ״ כְּתִיב, שֶׁיִּהְיוּ כׇּל עֲשִׂיּוֹת שָׁווֹת. וְהֵיכִי נֶעְבֵּיד? נֶעְבֵּיד תְּלָתָא דְּעַשְׂרָה עַשְׂרָה — הָווּ לְהוּ תְּלָתִין! נֶעְבֵּיד תְּרֵי דְּתִשְׁעָה תִּשְׁעָה וְחַד דְּעַשְׂרָה — אֲמַר קְרָא: ״וְעָשִׂיתָ״, שֶׁיִּהְיוּ כׇּל עֲשִׂיּוֹתָיו שָׁווֹת.</div>
+    <div class="trans" data-when="he">רב אשי נתן טעם נוסף שאי אפשר שיהיו ברימון עשרים ושמונה חוטים: נאמר ״ועשית״ — שיהיו כל חוטיו שווים, כל צבע ממספר חוטים שווה. וכיצד נחלק עשרים ושמונה לשלושה צבעים? עשרה עשרה — הרי שלושים, יותר מדי; שניים של תשעה ואחד של עשרה — הרי אינם שווים, וכתוב ״ועשית… שווות״. על כורחך מספר החוטים מתחלק לשלושה, כפרוכת.</div>
+    <div class="trans" data-when="en">Rav Ashi said another reason that there could not be twenty-eight strands in a pomegranate: “And you shall make pomegranates of sky-blue, and of purple, and of scarlet” (Exodus 28:33) is written to indicate that all the makings of it must be equal, i.e., that each color thread should be made from the same number of strands. However, if there are twenty-eight strands in total, the three threads, each of a different color, cannot be made with an equal number of strands, as how should we do it? Let us make three colored threads of ten strands each; then they are thirty strands in total, which is too many. Let us make two colored threads of nine strands and one of ten; but the verse states: “And you shall make,” to indicate that all the makings of it must be equal. Perforce, the threads used for the pomegranates and the robe must be derived from an item woven from threads of a number of strands divisible by three, such as the curtain.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״א ב — Yoma 71b:15</span></div>
+    <div class="orig">מְעִיל שְׁנֵים עָשָׂר, מְנָא לַן — דִּכְתִיב: ״וְעָשִׂיתָ אֶת מְעִיל הָאֵפוֹד</div>
+    <div class="trans" data-when="he">מעיל שנים עשר — מניין? שנאמר ״ועשית את מעיל האפוד</div>
+    <div class="trans" data-when="en">The Gemara continues to explain the baraita: That the robe must be woven from threads spun from twelve strands, from where do we derive this? As it is written: “And you shall make the robe of the ephod</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ב א — Yoma 72a:1</span></div>
+    <div class="orig">כְּלִיל תְּכֵלֶת״, וְיָלֵיף ״תְּכֵלֶת״ ״תְּכֵלֶת״ מִפָּרוֹכֶת: מָה לְהַלָּן שִׁשָּׁה, אַף כָּאן שִׁשָּׁה.</div>
+    <div class="trans" data-when="he">— כליל תכלת״ (שמות כח). ולומדים גזירה שווה ״תכלת״־״תכלת״ מן הפרוכת: מה שם שישה חוטים, אף כאן שישה; וכיוון שאף המעיל שזור (כל חוט כפול), הרי שנים עשר.</div>
+    <div class="trans" data-when="en">spun of sky-blue” (Exodus 28:31). And derive a verbal analogy from the term “sky-blue” used here and the same term “sky-blue” from the verse about the curtain: Just as there, with regard to the curtain, there are six strands, so too here, there are six strands. Then, since the Torah also says the threads are spun, i.e., each strand is made of two thinner strands spun together, each thread must contain twelve strands.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ב א — Yoma 72a:2</span></div>
+    <div class="orig">וְנֵילַף מִשּׁוּלָיו וְרִמּוֹנָיו — מָה לְהַלָּן שְׁמוֹנָה, אַף כָּאן שְׁמוֹנָה! דָּנִין כְּלִי מִכְּלִי, וְאֵין דָּנִין כְּלִי מִתַּכְשִׁיט כְּלִי.</div>
+    <div class="trans" data-when="he">קושיא: ונלמד מספר חוטי המעיל משוליו ורימוניו — מה שם שמונה, אף כאן שמונה! תירוץ: דנים כלי (מעיל) מכלי (פרוכת), ואין דנים כלי מתכשיט שלו (הרימונים שהם קישוט המעיל).</div>
+    <div class="trans" data-when="en">The Gemara suggests: Let us derive the number of strands in the robe from its hem and pomegranates: Just as there, each thread is spun from eight strands, so too here, the threads should be spun from eight strands. The Gemara rejects this: It is preferable to derive the halakhot of a utensil, i.e., the robe, from the halakhot of another utensil, i.e., the curtain, and one should not derive the halakhot of a utensil from the halakhot of something that is merely an ornament of a utensil, i.e., the pomegranates of the robe.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ב א — Yoma 72a:3</span></div>
+    <div class="orig">אַדְּרַבָּה: דָּנִין גּוּפוֹ מִגּוּפוֹ, וְאֵין דָּנִין גּוּפוֹ מֵעָלְמָא. הַיְינוּ דְּאָמְרִינַן: לִשְׁאָר בְּגָדִים שֶׁלֹּא נֶאֱמַר בָּהֶן ״שֵׁשׁ״.</div>
+    <div class="trans" data-when="he">קושיא נגדית: אדרבה, דנים גופו של דבר מגופו (מעיל מרימוניו) ולא מדבר חיצוני! ומתרצת הגמרא: זהו שאמרנו לעיל — אחד מחמשת אזכורי ״שש״ בא לרבות שאר בגדים שלא נאמר בהם ״שש״, ובכללם המעיל; הילכך לומדים מפרוכת.</div>
+    <div class="trans" data-when="en">The Gemara asks: On the contrary, it is preferable to derive the halakhot of an object from that object itself, i.e., to assume that the halakhot of the robe and its pomegranates are similar; and one should not derive the halakhot of an object from elsewhere. The Gemara explains: This is precisely what we said in the baraita: One of the five mentions of shesh in the verse is to teach that the requirement that threads be made from six strands applies also to other garments about which shesh is not explicitly stated, such as the robe.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ב א — Yoma 72a:4</span></div>
+    <div class="orig">פָּרֹכֶת עֶשְׂרִים וְאַרְבָּעָה — אַרְבְּעָה דְּשִׁיתָּא שִׁיתָּא, לָא דִּינָא וְלָא דַּיָּינָא.</div>
+    <div class="trans" data-when="he">פרוכת עשרים וארבעה — ארבעה צבעים (לבן, ארגמן, תולעת שני, תכלת), כל אחד שישה חוטים, הרי עשרים וארבעה; ״לא דינא ולא דיינא״ — דבר פשוט שאין בו ספק כלל.</div>
+    <div class="trans" data-when="en">The baraita further states: Each thread of the curtain was made of twenty-four strands. The Gemara explains: With regard to each thread being composed of four colored threads: White, purple, scarlet, and sky-blue, and each one of them being composed of six strands, there is neither judgment nor judge, i.e., it is absolutely clear that this is how the threads of the curtain are produced.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא ע״ב א — Yoma 72a:5</span></div>
+    <div class="orig">חוֹשֶׁן וְאֵפוֹד עֶשְׂרִים וּשְׁמוֹנָה מְנָא לַן? דִּכְתִיב: ״וְעָשִׂיתָ חֹשֶׁן מִשְׁפָּט מַעֲשֵׂה חוֹשֵׁב כְּמַעֲשֵׂה אֵפוֹד תַּעֲשֶׂנּוּ זָהָב תְּכֵלֶת וְאַרְגָּמָן וְתוֹלַעַת שָׁנִי וְשֵׁשׁ מׇשְׁזָר״, אַרְבְּעָה דְּשִׁיתָּא שִׁיתָּא — עֶשְׂרִין וְאַרְבְּעָה, זָהָב — אַרְבְּעָה, הָא עֶשְׂרִין וּתְמָנְיָא.</div>
+    <div class="trans" data-when="he">חושן ואפוד עשרים ושמונה — מניין? שנאמר ״ועשית חשן משפט … זהב תכלת וארגמן ותולעת שני ושש משזר״ (שמות כח). ארבעה צבעים, כל אחד שישה — עשרים וארבעה; וזהב — ארבעה (כפי שיתבאר); הרי עשרים ושמונה.</div>
+    <div class="trans" data-when="en">The baraita further states: Each thread of the breastplate and ephod was made of twenty-eight strands. From where do we derive this? As it is written: “And you shall make a breastplate of judgment, the work of the skilled craftsman; like the work of the ephod you shall make it: Of gold, sky-blue, and purple, and scarlet, and fine twined linen” (Exodus 28:15). There are four colored threads, each composed of six strands, which makes twenty-four. In addition, gold is spun together with each of the four colors, giving the total of twenty-eight.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">14</span> <span class="ref">יומא ע״ב א — Yoma 72a:6</span></div>
+    <div class="orig">וְאֵימָא זָהָב נָמֵי שִׁשָּׁה! אָמַר רַב אַחָא בַּר יַעֲקֹב, אָמַר קְרָא: ״וְקִצֵּץ פְּתִילִים״. ״פְּתִיל״, ״פְּתִילִים״ — הֲרֵי כָּאן אַרְבָּעָה.</div>
+    <div class="trans" data-when="he">קושיא: ואימא שגם הזהב יהיה שישה חוטים, כשאר הצבעים? אמר רב אחא בר יעקב: נאמר ״וקצץ פתילים״ (שמות לט) — ״פתיל״ משמע חוט כפול, ו״פתילים״ בלשון רבים שניים; הרי כאן ארבעה חוטי זהב, ולא שישה.</div>
+    <div class="trans" data-when="en">But couldn’t one say the gold should be made as a thread of six strands, like the other colors? Rav Aḥa bar Ya’akov said that the verse states: “And they beat the gold into thin plates, and cut it into cords, to work it into the sky-blue, and into the purple, and into the scarlet, and into the fine linen, the work of a skilled craftsman” (Exodus 39:3). “Cord” implies a strand that is doubled over and can be twisted into a cord; “cords” is in the plural, meaning at least two of these. Accordingly, there are four strands here.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">15</span> <span class="ref">יומא ע״ב א — Yoma 72a:7</span></div>
+    <div class="orig">רַב אָשֵׁי אָמַר, אָמַר קְרָא: ״לַעֲשׂוֹת בְּתוֹךְ הַתְּכֵלֶת וּבְתוֹךְ הָאַרְגָּמָן״. הֵיכִי נַעֲבֵיד? נַעֲבֵיד אַרְבְּעָה דִּתְרֵי תְּרֵי — הָווּ לְהוּ תְּמָנְיָא. נַעֲבֵיד תְּרֵי דִּתְרֵי תְּרֵי, וּתְרֵי דְּחַד חַד — ״וְעָשִׂיתָ״, שֶׁיִּהְיוּ כׇּל עֲשִׂיּוֹתָיו שָׁווֹת.</div>
+    <div class="trans" data-when="he">רב אשי אמר: נלמד שהזהב מצטרף לשאר הצבעים מן הפסוק ״לעשות בתוך התכלת ובתוך הארגמן״ (שמות לט). וכיצד נחלק את הזהב? ארבעה חוטים של שניים שניים — הרי שמונה, יותר מדי; שניים של שניים ושניים של אחד — אינם שווים, וכתוב ״ועשית… שווות״. על כורחך חוט זהב אחד לכל צבע, הרי עשרים ושמונה בסך הכול.</div>
+    <div class="trans" data-when="en">Rav Ashi said: This can be seen from that fact that the verse states with regard to the gold strands: “To work it into the sky-blue, and into the purple” (Exodus 39:3), indicating that the gold strands should be combined with the other colors. What should we do? If we make four gold threads of two strands each and combine each one with each of the colors, then there would be eight. If we make two gold threads of two strands each, and two gold threads of one strand each, it says: “And you shall make,” indicating that all its makings should be the same. Perforce, one strand of gold should be combined with each of the colors, producing a total of twenty-eight strands.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
