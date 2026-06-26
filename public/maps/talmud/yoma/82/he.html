@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ״ב</title>
+<meta name="description" content="מפת הסוגיא של יומא פ״ב: חינוך תינוקות לצום והשלמה לפי רב הונא, רב נחמן ור׳ יוחנן; עוברה וחולה שמאכילין אותם; פיקוח נפש דוחה הכל חוץ מע״ז גילוי עריות ושפיכות דמים, ומקורם; ומעשי עוברות שהריחו ביום הכיפורים.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="82">
+<meta name="gemara-map:sefaria-ref" content="Yoma 82">
+<meta name="gemara-map:topic-he" content="חינוך תינוקות, עוברה, ושלוש העבירות">
+<meta name="gemara-map:topic-en" content="Children's fasting, the pregnant woman, the three sins">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ״ב">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 82">
+<meta name="gemara-map:blurb-he" content="כיצד מחנכים תינוקות לצום ומתי משלימים; שמאכילים עוברה וחולה מפני פיקוח נפש — הדוחה הכל חוץ משלוש העבירות החמורות, שמקורן נדרש מן הכתובים ומסברה.">
+<meta name="gemara-map:blurb-en" content="How children are trained to fast and when they complete it; a craving pregnant woman and an ill person are fed, since saving a life overrides all but the three cardinal sins — derived from Scripture and reason.">
+<meta name="gemara-map:sugya-count" content="7">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ״ב</span><span data-when="en">Sugya map — Yoma 82</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ״ב א — פ״ג א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 82a–83a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> הדף עובר משני נושאים של דחיית הצום: <b>חינוך תינוקות</b> — אין מענים אותם אך מחנכים אותם שנה־שנתיים קודם, ומחלוקת רב הונא, רב נחמן ור׳ יוחנן מתי מתחיל החיוב להשלים; ואל <b>עוברה וחולה</b> שמאכילין אותם מפני סכנה. מכאן לכלל הגדול — <b>פיקוח נפש דוחה הכל</b> חוץ מעבודה זרה, גילוי עריות ושפיכות דמים — שמקורן נדרש מ״בכל נפשך״, מהיקש נערה־רוצח, ומסברת ״מאי חזית דדמא דידך סומק טפי״. וחותם בשני מעשי עוברות שהריחו ביום הכיפורים.</span>
+    <span data-when="en"><b>Bottom line:</b> The daf moves through two themes of overriding the fast: <b>training children</b> — one does not afflict them but trains them a year or two early, with Rav Huna, Rav Naḥman and Rabbi Yoḥanan disputing when the duty to complete the fast begins; and a <b>craving pregnant woman and an ill person</b>, who are fed because of danger. This leads to the great rule — <b>saving a life overrides everything</b> except idol worship, forbidden relations and bloodshed — derived from “with all your soul,” from the analogy of the betrothed girl and the murderer, and from the reasoning “what makes you think your blood is redder?” It closes with two stories of pregnant women who craved food on Yom Kippur.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ״ב</span><span data-when="en">Overview — Yoma 82</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · משנה: חינוך תינוקות לצום"]):::mishnah
+  O2["2 · מתי משלימין — הונא, נחמן, יוחנן"]:::statement
+  O3["3 · חינוך או השלמה — קושיות מן המשנה והברייתות"]:::statement
+  O4(["4 · משנה: עוברה וחולה שמאכילין"]):::mishnah
+  O5["5 · פיקוח נפש דוחה הכל חוץ משלוש"]:::statement
+  O6["6 · מקור עריות ושפיכות דמים — יהרג ואל יעבור"]:::statement
+  O7["7 · מעשי עוברות שהריחו ביום הכיפורים"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1(["1 · Mishna: training children to fast"]):::mishnah
+  O2["2 · When they complete — Huna, Naḥman, Yoḥanan"]:::statement
+  O3["3 · Training or completion — Mishna and baraita objections"]:::statement
+  O4(["4 · Mishna: the pregnant woman and the ill are fed"]):::mishnah
+  O5["5 · Saving a life overrides all but three"]:::statement
+  O6["6 · Source for relations and bloodshed — be killed, do not transgress"]:::statement
+  O7["7 · Stories of pregnant women who craved on Yom Kippur"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6 --> O7
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">משנה: חינוך תינוקות לצום</span><span data-when="en">Mishna: training children to fast</span>
+      <span class="ref">Yoma 82a:1</span></h2>
+  <div class="lead"><span data-when="he">אין מענים את התינוקות ביום הכיפורים, אבל מחנכים אותם שנה־שנתיים קודם כדי שיהיו רגילים במצוות.</span><span data-when="en">Children are not afflicted on Yom Kippur, but they are trained a year or two beforehand so they grow accustomed to mitzvot.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① משנה: אין מענים תינוקות, אבל מחנכים שנה־שנתיים קודם"]):::mishnah
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Mishna: children not afflicted, but trained a year or two early"]):::mishnah
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① הַתִּינוֹקוֹת אֵין מְעַנִּין אוֹתָן … אֲבָל מְחַנְּכִין אוֹתָן לִפְנֵי שָׁנָה וְלִפְנֵי שְׁנָתַיִים"]):::mishnah
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ב א — Yoma 82a:1</span></div>
+    <div class="orig">מַתְנִי׳ הַתִּינוֹקוֹת אֵין מְעַנִּין אוֹתָן בְּיוֹם הַכִּפּוּרִים, אֲבָל מְחַנְּכִין אוֹתָן לִפְנֵי שָׁנָה וְלִפְנֵי שְׁנָתַיִים, בִּשְׁבִיל שֶׁיִּהְיוּ רְגִילִין בְּמִצְוֹת.</div>
+    <div class="trans" data-when="he">משנה: אין מצערים את הקטנים במניעת אוכל ביום הכיפורים; אבל מחנכים אותם שנה או שנתיים לפני שיגיעו לגיל המצוות, על ידי צום חלקי של שעות, כדי שיתרגלו לקיים מצוות.</div>
+    <div class="trans" data-when="en">MISHNA: With regard to the children, one does not afflict them by withholding food on Yom Kippur; however, one trains them one year before or two years before they reach majority, by means of a partial fast lasting several hours, so that they will be accustomed to fulfill mitzvot.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">מתי משלימין — הונא, נחמן ויוחנן</span><span data-when="en">When children complete the fast — Huna, Naḥman, Yoḥanan</span>
+      <span class="ref">Yoma 82a:2-3</span></h2>
+  <div class="lead"><span data-when="he">הגמרא מדייקת מן המשנה למה ״שנה״, ומיישבת בחולה ובבריא; ושלוש דעות אמוראים מאיזה גיל מחנכים לשעות, מתי משלימין מדרבנן, ומתי מדאורייתא.</span><span data-when="en">The Gemara asks why the Mishna mentions “one year,” resolving it by feeble versus healthy; then three amoraic views on the ages of partial training, rabbinic completion, and Torah-level obligation.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① קושיא: אם שנתיים מחנכים — שנה למה לי?"}:::question
+  A1["① רב חסדא: לא קשיא — הא בחולה, הא בבריא"]:::answer
+  S1["② רב הונא: ח׳-ט׳ לשעות, י׳-י״א מדרבנן, י״ב מדאורייתא בתינוקת"]:::statement
+  S2["② רב נחמן: ט׳-י׳ לשעות, י״א-י״ב מדרבנן, י״ג מדאורייתא בתינוק"]:::statement
+  S3["② ר׳ יוחנן: אין השלמה דרבנן — י׳-י״א לשעות, י״ב מדאורייתא"]:::statement
+  Q1 -->|תירוץ| A1
+  A1 -->|דעה| S1
+  A1 -->|דעה| S2
+  A1 -->|דעה| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① Question: if trained two years before, why state one year?"}:::question
+  A1["① Rav Ḥisda: not difficult — one for a feeble child, two for a healthy one"]:::answer
+  S1["② Rav Huna: 8-9 partial, 10-11 rabbinic, 12 by Torah for a girl"]:::statement
+  S2["② Rav Naḥman: 9-10 partial, 11-12 rabbinic, 13 by Torah for a boy"]:::statement
+  S3["② R. Yoḥanan: no rabbinic completion — 10-11 partial, 12 by Torah"]:::statement
+  Q1 -->|answer| A1
+  A1 -->|view| S1
+  A1 -->|view| S2
+  A1 -->|view| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① הַשְׁתָּא בִּפְנֵי שְׁתַּיִם מְחַנְּכִין לְהוּ — בִּפְנֵי שָׁנָה מִבַּעְיָא?"}:::question
+  A1["① אָמַר רַב חִסְדָּא, לָא קַשְׁיָא: הָא — בְּחוֹלֶה, הָא — בְּבָרִיא"]:::answer
+  S1["② רַב הוּנָא: בֶּן שְׁמוֹנֶה וּבֶן תֵּשַׁע — לְשָׁעוֹת … בֶּן שְׁתֵּים עֶשְׂרֵה — מַשְׁלִימִין מִדְּאוֹרָיְיתָא בְּתִינוֹקֶת"]:::statement
+  S2["② רַב נַחְמָן: בֶּן תֵּשַׁע בֶּן עֶשֶׂר — לְשָׁעוֹת … בֶּן שְׁלֹשׁ עֶשְׂרֵה — מַשְׁלִימִין מִדְּאוֹרָיְיתָא בְּתִינוֹק"]:::statement
+  S3["② רַבִּי יוֹחָנָן: הַשְׁלָמָה דְּרַבָּנַן לֵיכָּא … בֶּן שְׁתֵּים עֶשְׂרֵה — מַשְׁלִימִין מִדְּאוֹרָיְיתָא"]:::statement
+  Q1 -->|תירוץ| A1
+  A1 -->|דעה| S1
+  A1 -->|דעה| S2
+  A1 -->|דעה| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ב א — Yoma 82a:2</span></div>
+    <div class="orig">גְּמָ׳ הַשְׁתָּא בִּפְנֵי שְׁתַּיִם מְחַנְּכִין לְהוּ — בִּפְנֵי שָׁנָה מִבַּעְיָא? אָמַר רַב חִסְדָּא, לָא קַשְׁיָא: הָא — בְּחוֹלֶה, הָא — בְּבָרִיא.</div>
+    <div class="trans" data-when="he">גמרא: הגמרא מדקדקת בלשון המשנה — אם כבר אמרה שמחנכים שנתיים לפני, פשיטא שמחנכים שנה לפני, ולשון זו מיותרת. רב חסדא: לא קשיא — ״שנה לפני״ נאמר בילד חלוש (שמחנכים אותו רק שנה), ו״שנתיים לפני״ בילד בריא.</div>
+    <div class="trans" data-when="en">GEMARA: The Gemara asks about the wording of the mishna: Since it is stated that one trains children two years before their maturity, is it necessary to say that one trains them one year before? This expression in the mishna is superfluous. Rav Ḥisda said: This is not difficult. This statement that one trains children one year before their maturity is referring to a feeble child; that statement that one trains children two years before their maturity is referring to a healthy child.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ב א — Yoma 82a:3</span></div>
+    <div class="orig">אָמַר רַב הוּנָא: בֶּן שְׁמוֹנֶה וּבֶן תֵּשַׁע — מְחַנְּכִין אוֹתוֹ לְשָׁעוֹת. בֶּן עֶשֶׂר וּבֶן אַחַת עֶשְׂרֵה — מַשְׁלִימִין מִדְּרַבָּנַן, בֶּן שְׁתֵּים עֶשְׂרֵה — מַשְׁלִימִין מִדְּאוֹרָיְיתָא בְּתִינוֹקֶת. וְרַב נַחְמָן אָמַר: בֶּן תֵּשַׁע בֶּן עֶשֶׂר — מְחַנְּכִין אוֹתָן לְשָׁעוֹת, בֶּן אַחַת עֶשְׂרֵה בֶּן שְׁתֵּים עֶשְׂרֵה — מַשְׁלִימִין מִדְּרַבָּנַן, בֶּן שְׁלֹשׁ עֶשְׂרֵה — מַשְׁלִימִין מִדְּאוֹרָיְיתָא בְּתִינוֹק. וְרַבִּי יוֹחָנָן אָמַר: הַשְׁלָמָה דְּרַבָּנַן לֵיכָּא. בֶּן עֶשֶׂר בֶּן אַחַת עֶשְׂרֵה — מְחַנְּכִין אוֹתוֹ לְשָׁעוֹת, בֶּן שְׁתֵּים עֶשְׂרֵה — מַשְׁלִימִין מִדְּאוֹרָיְיתָא.</div>
+    <div class="trans" data-when="he">רב הונא: ילד בריא בן ח׳-ט׳ מחנכים לצום שעות; בן י׳-י״א משלימים את כל הצום מדרבנן; בן י״ב משלימים מדאורייתא — בבת, שמתחייבת במצוות בגיל י״ב. רב נחמן: בן ט׳-י׳ לשעות; בן י״א-י״ב מדרבנן; בן י״ג מדאורייתא — בבן. ר׳ יוחנן: אין חיוב השלמה מדרבנן כלל; בן י׳-י״א לשעות, ובן י״ב הבת משלימה מדאורייתא.</div>
+    <div class="trans" data-when="en">Rav Huna said: One trains a healthy child of eight years and nine years to fast for several hours; at ten years and eleven years, they complete the fast by rabbinic law; at twelve years they complete the fast by Torah law. This applies to girls who reach maturity and become obligated in mitzvot at age twelve. And Rav Naḥman said: At nine years and ten years one trains them to fast for several hours; at eleven and twelve years they complete the fast by rabbinic law; at thirteen years they complete the fast by Torah law. This applies to boys. And Rabbi Yoḥanan said: There is no obligation with regard to children completing the fast by rabbinic law. Rather, at ten and eleven years, one trains them to fast for several hours; and at twelve years girls are obligated to complete their fast by Torah law.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">חינוך או השלמה — קושיות והכרעה</span><span data-when="en">Training or completion — objections and resolution</span>
+      <span class="ref">Yoma 82a:4-7</span></h2>
+  <div class="lead"><span data-when="he">קושיות מן המשנה ומברייתת רבה בר שמואל על הדעות; חכמים מפרשים ״חינוך״ כהשלמה, ורבא בר עולא מיישב שיש שני סוגי חינוך.</span><span data-when="en">Objections from the Mishna and Rabba bar Shmuel’s baraita against the views; the Rabbis read “training” as completion, and Rava bar Ulla resolves that there are two kinds of training.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① תנן: מחנכים שנה־שנתיים — ניחא להונא ונחמן"}:::question
+  A1["② אלא לר׳ יוחנן קשיא? מאי שנה או שתים — סמוך לפירקן"]:::answer
+  P1["③ תא שמע, רבה בר שמואל: שנה או שתים סמוך לפירקן — ניחא לר׳ יוחנן, קשיא להונא ונחמן"]:::proof
+  A2["③ חכמים: מאי חינוך דקתני — השלמה"]:::answer
+  Q2{"④ ומי קרי לחינוך השלמה? והתניא: איזה חינוך — מאכילין מאוחר יותר"}:::question
+  A3["④ רבא בר עולא: תרי חינוכי הוו"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 -->|תא שמע| P1
+  P1 -->|תירוץ| A2
+  A2 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① The Mishna: trained one or two years — fits Huna and Naḥman"}:::question
+  A1["② But difficult for R. Yoḥanan? What is one or two years — close to maturity"]:::answer
+  P1["③ Come and hear, Rabba bar Shmuel: a year or two close to maturity — fits Yoḥanan, hard for Huna and Naḥman"]:::proof
+  A2["③ The Rabbis: what is the training taught? It means completion"]:::answer
+  Q2{"④ Is training called completion? A baraita: training means feeding later"}:::question
+  A3["④ Rava bar Ulla: these are two kinds of training"]:::answer
+  Q1 -->|answer| A1
+  A1 -->|come and hear| P1
+  P1 -->|answer| A2
+  A2 -.->|objection| Q2
+  Q2 -->|answer| A3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① תְּנַן … מְחַנְּכִין אוֹתָן לִפְנֵי שָׁנָה וְלִפְנֵי שְׁתַּיִם … בִּשְׁלָמָא לְרַב הוּנָא וְרַב נַחְמָן"}:::question
+  A1["② אֶלָּא לְרַבִּי יוֹחָנָן, קַשְׁיָא? … מַאי שָׁנָה אוֹ שְׁתַּיִם — סָמוּךְ לְפִירְקָן"]:::answer
+  P1["③ תָּא שְׁמַע, דְּתָנֵי רַבָּה בַּר שְׁמוּאֵל … שָׁנָה אוֹ שְׁתַּיִם סָמוּךְ לְפִירְקָן … לְרַב הוּנָא וּלְרַב נַחְמָן — קַשְׁיָא!"]:::proof
+  A2["③ אָמְרִי לָךְ רַבָּנַן: מַאי חִינּוּךְ נָמֵי דְּקָתָנֵי — הַשְׁלָמָה"]:::answer
+  Q2{"④ וּמִי קָרֵי לְחִינּוּךְ הַשְׁלָמָה, וְהָא תַּנְיָא: אֵי זֶה חִינּוּךְ? … מַאֲכִילִין אוֹתוֹ לְשָׁלֹשׁ"}:::question
+  A3["④ אָמַר רָבָא בַּר עוּלָּא: תְּרֵי חִנּוּכֵי הָווּ"]:::answer
+  Q1 -->|תירוץ| A1
+  A1 -->|תא שמע| P1
+  P1 -->|תירוץ| A2
+  A2 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ב א — Yoma 82a:4</span></div>
+    <div class="orig">תְּנַן: הַתִּינוֹקוֹת אֵין מְעַנִּין אוֹתָן בַּיּוֹם הַכִּפּוּרִים, אֲבָל מְחַנְּכִין אוֹתָן לִפְנֵי שָׁנָה וְלִפְנֵי שְׁתַּיִם. בִּשְׁלָמָא לְרַב הוּנָא וְרַב נַחְמָן — לִפְנֵי שָׁנָה וְלִפְנֵי שְׁתַּיִם. לִפְנֵי שָׁנָה — לְדִבְרֵיהֶן, וְלִפְנֵי שְׁתַּיִם — לְדִבְרֵיהֶן.</div>
+    <div class="trans" data-when="he">למדנו במשנה: אין מענים את התינוקות, אבל מחנכים שנה ושנתיים קודם. ניחא לרב הונא ולרב נחמן, הסוברים שיש חיוב השלמה מדרבנן בשנה־שנתיים שלפני הגיל: ״שנה לפני״ — בחלוש (חייב להשלים שנה אחת מדרבנן), ו״שנתיים לפני״ — בבריא (חייב להשלים שנתיים מדרבנן).</div>
+    <div class="trans" data-when="en">§ We learned in the mishna: With regard to the children, one does not afflict them by withholding food on Yom Kippur; however, one trains them for one year before or two years before they reach maturity. Granted, this makes sense according to the opinion of Rav Huna and Rav Naḥman, who hold that for one or two years before reaching maturity there is a rabbinic law requiring children to complete the fast. The mishna that states one year before or two years before should be understood as follows: A feeble child is obligated to complete the fast on Yom Kippur in the year before reaching maturity by rabbinic law, and a healthy child is obligated to complete the fast on Yom Kippur in the two years before reaching maturity by rabbinic law (Vilna Gaon).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ב א — Yoma 82a:5</span></div>
+    <div class="orig">אֶלָּא לְרַבִּי יוֹחָנָן, קַשְׁיָא? אָמַר לָךְ רַבִּי יוֹחָנָן: מַאי שָׁנָה אוֹ שְׁתַּיִם — סָמוּךְ לְפִירְקָן.</div>
+    <div class="trans" data-when="he">אבל לר׳ יוחנן, שאין השלמה מדרבנן — קשה, מהי החלוקה לשנה ושנתיים? ר׳ יוחנן משיב: ״שנה או שתים״ אינו על שתי שנים שלפני הגיל, אלא על השנה הסמוכה לפירקן (גיל המצוות) בלבד — בריא מחנכים שנתיים, חלוש שנה.</div>
+    <div class="trans" data-when="en">But according to Rabbi Yoḥanan, who holds that there is no rabbinic law to complete the fast, this is difficult. In his opinion, what is the difference between one year before and two years before? Rabbi Yoḥanan could have said to you: What is the meaning of one year or two years? One year is referring not to the year before the year preceding their maturity, i.e. the two years preceding it, but actually to the year preceding their maturity. The phrase: One or two years, indicates that there is a difference between those who are required for one year and those who required for two, which depends on their health: The healthy child is required to fast two years, but one year is sufficient for a feeble child.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ב א — Yoma 82a:6</span></div>
+    <div class="orig">תָּא שְׁמַע, דְּתָנֵי רַבָּה בַּר שְׁמוּאֵל: תִּינוֹקוֹת אֵין מְעַנִּין אוֹתָן בְּיוֹם הַכִּפּוּרִים, אֲבָל מְחַנְּכִין אוֹתָן שָׁנָה אוֹ שְׁתַּיִם סָמוּךְ לְפִירְקָן. בִּשְׁלָמָא לְרַבִּי יוֹחָנָן — נִיחָא, אֶלָּא לְרַב הוּנָא וּלְרַב נַחְמָן — קַשְׁיָא! אָמְרִי לָךְ רַבָּנַן: מַאי חִינּוּךְ נָמֵי דְּקָתָנֵי — הַשְׁלָמָה.</div>
+    <div class="trans" data-when="he">בוא ושמע מברייתת רבה בר שמואל: מחנכים שנה (לחלוש) או שתים (לבריא) סמוך לפירקן. ניחא לר׳ יוחנן (״סמוך לפירקן״ כדבריו), אך קשה לרב הונא ולרב נחמן הסוברים שיש שנה נוספת של השלמה מדרבנן! משיבים רבנן: גם ה״חינוך״ שבברייתא היינו השלמה — שזמן ההשלמה מדרבנן לבריא הוא שנתיים לפני פרקו.</div>
+    <div class="trans" data-when="en">Come and hear that which Rabba bar Shmuel taught in a baraita: With regard to children, one does not afflict them by withholding food on Yom Kippur; however, one trains them one year for a feeble child or two years for a healthy child preceding their maturity. Granted, according to the opinion of Rabbi Yoḥanan, this works out well; but according to Rav Huna and Rav Naḥman, who say that there is an additional year that one is required to complete the fast according to rabbinic law, this is difficult. The Rabbis could say to you: What is this training that is also taught there? It is referring to fasting a complete day, which is required by rabbinic law. By rabbinic law, the time of completing the fast for a healthy child is two years before he reaches maturity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״ב א — Yoma 82a:7</span></div>
+    <div class="orig">וּמִי קָרֵי לְחִינּוּךְ הַשְׁלָמָה, וְהָא תַּנְיָא: אֵי זֶה חִינּוּךְ? הָיָה רָגִיל לֶאֱכוֹל בִּשְׁתֵּי שָׁעוֹת — מַאֲכִילִין אוֹתוֹ לְשָׁלֹשׁ. בְּשָׁלֹשׁ — מַאֲכִילִין אוֹתוֹ בְּאַרְבַּע. אָמַר רָבָא בַּר עוּלָּא: תְּרֵי חִנּוּכֵי הָווּ.</div>
+    <div class="trans" data-when="he">קושיא: וכי קוראים ל״חינוך״ השלמה? והרי חינוך הוא קיום חלק מן המצוה — שנינו בברייתא: איזהו חינוך? היה רגיל לאכול בשעה השנייה — מאכילים אותו בשלישית; בשלישית — מאכילים אותו ברביעית. רבא בר עולא: שני סוגי חינוך הם — חינוך קטנים לדחות מעט את האכילה, וחינוך גדולים שהוא הרגל לצום יום שלם.</div>
+    <div class="trans" data-when="en">The Gemara asks: And is training called completion? Doesn’t training mean that the child performs only part of the mitzva? Wasn’t it taught explicitly in a baraita: What is training? If the child was accustomed to eat every day at the second hour of the day, one feeds him at the third hour, so he will begin to understand the concept of affliction. If he was accustomed to eat at the third hour, one feeds him at the fourth hour. Rava bar Ulla said: This is not difficult; these are two different types of training. There is training of small children to wait slightly longer before eating, and training of older children, in which one habituates them to fasting a full day.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">משנה: עוברה וחולה שמאכילין</span><span data-when="en">Mishna: the pregnant woman and the ill are fed</span>
+      <span class="ref">Yoma 82a:8</span></h2>
+  <div class="lead"><span data-when="he">עוברה שהריחה — מאכילים עד שתשיב נפשה; חולה — על פי בקיאים, ובהיעדרם על פי עצמו עד שיאמר ״די״.</span><span data-when="en">A pregnant woman who smelled food is fed until she recovers; an ill person is fed by experts, or by his own word until he says “enough.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① משנה: עוברה שהריחה מאכילין עד שתשיב נפשה; חולה על פי בקיאים, ובהיעדרם עד שיאמר די"]):::mishnah
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① Mishna: a craving pregnant woman is fed until she recovers; the ill by experts, else until he says enough"]):::mishnah
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  M1(["① עוּבָּרָה שֶׁהֵרִיחָה — מַאֲכִילִין אוֹתָהּ עַד שֶׁתָּשִׁיב נַפְשָׁהּ … עַל פִּי בְּקִיאִין … עַד שֶׁיֹּאמַר דַּי"]):::mishnah
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ב א — Yoma 82a:8</span></div>
+    <div class="orig">מַתְנִי׳ עוּבָּרָה שֶׁהֵרִיחָה — מַאֲכִילִין אוֹתָהּ עַד שֶׁתָּשִׁיב נַפְשָׁהּ. חוֹלֶה — מַאֲכִילִין אוֹתוֹ עַל פִּי בְּקִיאִין, וְאִם אֵין שָׁם בְּקִיאִין — מַאֲכִילִין אוֹתוֹ עַל פִּי עַצְמוֹ עַד שֶׁיֹּאמַר דַּי.</div>
+    <div class="trans" data-when="he">משנה: עוברה שהריחה אוכל ונתאוותה לו — מאכילים אותה עד שתתיישב דעתה, שמא תסתכן. חולה הזקוק לאוכל מפני סכנה — מאכילים אותו על פי רופאים בקיאים שקובעים שהוא צריך; ואם אין שם בקיאים — מאכילים אותו על פי עצמו, עד שיאמר ״די״.</div>
+    <div class="trans" data-when="en">MISHNA: With regard to a pregnant woman who smelled food and was overcome by a craving to eat it, one feeds her until she recovers, as failure to do so could lead to a life-threatening situation. If a person is ill and requires food due to potential danger, one feeds him according to the advice of medical experts who determine that he indeed requires food. And if there are no experts there, one feeds him according to his own instructions, until he says that he has eaten enough and needs no more.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">פיקוח נפש דוחה הכל — ומקור עבודה זרה</span><span data-when="en">Saving a life overrides all — and the source for idol worship</span>
+      <span class="ref">Yoma 82a:9-11</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: עוברה שהריחה בשר איסור — מאכילים בהדרגה, שאין דבר עומד בפני פיקוח נפש חוץ משלוש; ומקור עבודה זרה מדרשת ר׳ אליעזר על ״בכל נפשך״ ו״בכל מאדך״.</span><span data-when="en">A baraita: a pregnant woman who smelled forbidden meat is fed gradually, for nothing overrides saving a life except three sins; the source for idol worship is R. Eliezer’s exposition of “with all your soul” and “with all your might.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① ת״ר: עוברה שהריחה בשר איסור — רוטב, ואם לאו שומן; אין דבר עומד בפני פיקוח נפש חוץ מע״ז, ג״ע וש״ד"]:::statement
+  Q1{"② עבודה זרה מנלן?"}:::question
+  P1["② ר׳ אליעזר: למה נאמר ׳בכל נפשך׳ וגם ׳בכל מאדך׳?"]:::proof
+  A1["③ מי שגופו חביב — בכל נפשך; מי שממונו חביב — בכל מאדך"]:::answer
+  S1 -->|קושיא| Q1
+  Q1 -->|דתניא| P1
+  P1 -->|דרשה| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① Baraita: a craving woman fed gravy, then fat; nothing overrides saving life except idolatry, incest, bloodshed"]:::statement
+  Q1{"② Idol worship — from where?"}:::question
+  P1["② R. Eliezer: why say ׳with all your soul׳ and also ׳with all your might׳?"]:::proof
+  A1["③ One who values his body — all your soul; one who values his money — all your might"]:::answer
+  S1 -->|objection| Q1
+  Q1 -->|a baraita teaches| P1
+  P1 -->|exposition| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: עוּבָּרָה שֶׁהֵרִיחָה בְּשַׂר קוֹדֶשׁ אוֹ בְּשַׂר חֲזִיר … שֶׁאֵין לְךָ דָּבָר שֶׁעוֹמֵד בִּפְנֵי פִּקּוּחַ נֶפֶשׁ, חוּץ מֵעֲבוֹדָה זָרָה וְגִילּוּי עֲרָיוֹת וּשְׁפִיכוּת דָּמִים"]:::statement
+  Q1{"② עֲבוֹדָה זָרָה מְנָלַן?"}:::question
+  P1["② רַבִּי אֱלִיעֶזֶר: אִם נֶאֱמַר ׳בְּכׇל נַפְשְׁךָ׳, לָמָּה נֶאֱמַר ׳בְּכׇל מְאֹדֶךָ׳?"]:::proof
+  A1["③ שֶׁגּוּפוֹ חָבִיב עָלָיו מִמָּמוֹנוֹ — בְּכׇל נַפְשְׁךָ; שֶׁמָּמוֹנוֹ חָבִיב עָלָיו מִגּוּפוֹ — וּבְכׇל מְאֹדֶךָ"]:::answer
+  S1 -->|קושיא| Q1
+  Q1 -->|דתניא| P1
+  P1 -->|דרשה| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ב א — Yoma 82a:9</span></div>
+    <div class="orig">גְּמָ׳ תָּנוּ רַבָּנַן: עוּבָּרָה שֶׁהֵרִיחָה בְּשַׂר קוֹדֶשׁ אוֹ בְּשַׂר חֲזִיר — תּוֹחֲבִין לָהּ כּוּשׁ בְּרוֹטֶב, וּמַנִּיחִין לָהּ עַל פִּיהָ, אִם נִתְיַישְּׁבָה דַּעְתָּהּ — מוּטָב, וְאִם לָאו — מַאֲכִילִין אוֹתָהּ רוֹטֶב עַצְמוֹ, וְאִם נִתְיַישְּׁבָה דַּעְתָּהּ — מוּטָב, וְאִם לָאו — מַאֲכִילִין אוֹתָהּ שׁוּמָּן עַצְמוֹ. שֶׁאֵין לְךָ דָּבָר שֶׁעוֹמֵד בִּפְנֵי פִּקּוּחַ נֶפֶשׁ, חוּץ מֵעֲבוֹדָה זָרָה וְגִילּוּי עֲרָיוֹת וּשְׁפִיכוּת דָּמִים.</div>
+    <div class="trans" data-when="he">גמרא: שנו חכמים — עוברה שהריחה בשר קודש או בשר חזיר ונתאוותה לו: תוחבים קיסם דק ברוטב של אותו דבר ומניחים על פיה. נתיישבה דעתה — מוטב; ואם לאו — מאכילים אותה את הרוטב עצמו; ואם לאו — את השומן עצמו. שכן אין דבר העומד בפני פיקוח נפש, חוץ מעבודה זרה, גילוי עריות ושפיכות דמים.</div>
+    <div class="trans" data-when="en">GEMARA: The Sages taught in a baraita: With regard to a pregnant woman who smelled consecrated meat or pig meat and craved those specific foods, one inserts a thin reed into the juice of that item and places it on her mouth. If her mind become settled with that, it is well. And if not, one feeds her the gravy itself of that forbidden food. If her mind becomes settled with that, it is well. And if not, one feeds her the fat of the forbidden food itself, as there is no halakha that stands in the way of saving a life except for the prohibitions against idol worship, and forbidden sexual relationships, and bloodshed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ב א — Yoma 82a:10</span></div>
+    <div class="orig">עֲבוֹדָה זָרָה מְנָלַן — דְּתַנְיָא, רַבִּי אֱלִיעֶזֶר אוֹמֵר: אִם נֶאֱמַר ״בְּכׇל נַפְשְׁךָ״, לָמָּה נֶאֱמַר ״בְּכׇל מְאֹדֶךָ״? וְאִם נֶאֱמַר ״בְּכׇל מְאֹדֶךָ״, לָמָּה נֶאֱמַר ״בְּכׇל נַפְשְׁךָ״?</div>
+    <div class="trans" data-when="he">מניין שעבודה זרה דוחה אף פיקוח נפש (יהרג ואל יעבור)? כדתניא: ר׳ אליעזר אומר — אם כבר נאמר ״בכל נפשך״ (שתאהב את ה׳ אף במסירות הנפש), למה נאמר ״בכל מאדך״? ואם נאמר ״בכל מאדך״, למה נאמר ״בכל נפשך״? נראה שאחד מהם מיותר.</div>
+    <div class="trans" data-when="en">The Gemara clarifies: With regard to the halakha that the prohibition against idol worship takes precedence over saving one’s life, from where do we derive this? As it was taught in a baraita that Rabbi Eliezer says: If it is stated: “And you shall love the Lord your God with all your heart, and with all your soul” (Deuteronomy 6:5), why is it stated in the continuation of the verse: “And with all your might” (Deuteronomy 6:5)? And if it is stated: “With all your might,” why is it stated: “With all your soul”? One of these statements appears to be superfluous.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ב א — Yoma 82a:11</span></div>
+    <div class="orig">אִם יֵשׁ לְךָ אָדָם שֶׁגּוּפוֹ חָבִיב עָלָיו מִמָּמוֹנוֹ — לְכָךְ נֶאֱמַר ״בְּכׇל נַפְשְׁךָ״, וְאִם יֵשׁ לָךְ אָדָם שֶׁמָּמוֹנוֹ חָבִיב עָלָיו מִגּוּפוֹ — לְכָךְ נֶאֱמַר ״וּבְכׇל מְאֹדֶךָ״.</div>
+    <div class="trans" data-when="he">תירוץ: יש אדם שגופו חביב עליו מממונו — לו נאמר ״בכל נפשך״, שימסור אף את נפשו על קדושת השם; ויש אדם שממונו חביב עליו מגופו — לו נאמר ״בכל מאדך״ (בכל ממונך). מכאן שחייב למסור נפשו ולא לעבוד עבודה זרה.</div>
+    <div class="trans" data-when="en">Rather, it is to teach that if there is a person whose body is more beloved to him than his property, therefore it is stated: “With all your soul.” The verse teaches that one must be willing to sacrifice his life to sanctify God’s name. And if there is a person whose property is more beloved to him than his body, therefore it is stated: “With all your might.” Rabbi Eliezer understands the phrase “with all your might” to mean: With all your possessions. Therefore, one must be prepared to forfeit his life rather than be saved through idol worship.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">מקור עריות ושפיכות דמים — יהרג ואל יעבור</span><span data-when="en">Source for relations and bloodshed — be killed, do not transgress</span>
+      <span class="ref">Yoma 82a:12-82b:1</span></h2>
+  <div class="lead"><span data-when="he">היקש נערה המאורסה ורוצח מלמד יהרג ואל יעבור על שניהם; ומקור הרוצח עצמו מסברה — ״מאי חזית דדמא דידך סומק טפי״.</span><span data-when="en">The analogy between the betrothed girl and the murderer teaches “be killed, do not transgress” for both; the murderer himself is derived by reason — “what makes you think your blood is redder?”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① גילוי עריות ושפיכות דמים מנא לן?"}:::question
+  P1["① רבי: ׳כי כאשר יקום איש על רעהו ורצחו׳ — מה למדנו מרוצח לנערה המאורסה?"]:::proof
+  A1["② היקש: מה נערה ניתן להצילה בנפשו — אף רוצח; מה רוצח יהרג ואל יעבור — אף נערה"]:::answer
+  Q2{"③ ורוצח גופיה מנא לן? סברא — מאי חזית דדמא דידך סומק טפי?"}:::question
+  Q1 -->|דתניא| P1
+  P1 -->|דרשה| A1
+  A1 -->|וסברה| Q2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① Forbidden relations and bloodshed — from where?"}:::question
+  P1["① Rabbi: ׳as when a man rises against his fellow and slays him׳ — what is learned from a murderer about the betrothed girl?"]:::proof
+  A1["② Analogy: as the girl is saved at her attacker׳s life — so the murderer; as the murderer must be killed and not transgress — so the girl"]:::answer
+  Q2{"③ The murderer himself — from where? Reason — what makes you think your blood is redder?"}:::question
+  Q1 -->|a baraita teaches| P1
+  P1 -->|exposition| A1
+  A1 -->|and reason| Q2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  Q1{"① גִּילּוּי עֲרָיוֹת וּשְׁפִיכַת דָּמִים מְנָא לַן?"}:::question
+  P1["① רַבִּי אוֹמֵר: ׳כִּי כַּאֲשֶׁר יָקוּם אִישׁ עַל רֵעֵהוּ וּרְצָחוֹ נֶפֶשׁ׳ … מָה עִנְיָן לָמַדְנוּ מֵרוֹצֵחַ לְנַעֲרָה הַמְאוֹרָסָה?"]:::proof
+  A1["② מָה נַעֲרָה הַמְאוֹרָסָה נִיתָּן לְהַצִּילָהּ בְּנַפְשׁוֹ — אַף רוֹצֵחַ … מָה רוֹצֵחַ יֵהָרֵג וְאַל יַעֲבוֹר — אַף נַעֲרָה הַמְאוֹרָסָה"]:::answer
+  Q2{"③ וְרוֹצֵחַ גּוּפֵיהּ מְנָא לַן? סְבָרָא הִיא … מַאי חָזֵית דִּדְמָא דִּידָךְ סוּמָּק טְפֵי?"}:::question
+  Q1 -->|דתניא| P1
+  P1 -->|דרשה| A1
+  A1 -->|וסברה| Q2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ב א — Yoma 82a:12</span></div>
+    <div class="orig">גִּילּוּי עֲרָיוֹת וּשְׁפִיכַת דָּמִים מְנָא לַן — דְּתַנְיָא, רַבִּי אוֹמֵר: ״כִּי כַּאֲשֶׁר יָקוּם אִישׁ עַל רֵעֵהוּ וּרְצָחוֹ נֶפֶשׁ כֵּן הַדָּבָר הַזֶּה״. וְכִי מָה עִנְיָן לָמַדְנוּ מֵרוֹצֵחַ לְנַעֲרָה הַמְאוֹרָסָה?</div>
+    <div class="trans" data-when="he">מניין שגילוי עריות ושפיכות דמים נדחים מפני פיקוח נפש (יהרג ואל יעבור)? כדתניא, רבי אומר: על אונס נערה המאורסה נאמר ״כי כאשר יקום איש על רעהו ורצחו נפש כן הדבר הזה״. ולכאורה: מה ענין למדנו מן הרוצח לנערה המאורסה? הרי דין הנערה ידוע, ומה נתחדש בהיקש לרוצח?</div>
+    <div class="trans" data-when="en">§ With regard to the concept that one must surrender his life rather than have forbidden sexual relations or shed blood through murder, from where do we derive this? As it was taught in a baraita that Rabbi Yehuda HaNasi says: It is stated about the rape of a betrothed woman: “For as when a man rises against his fellow and slays him, even so is this matter” (Deuteronomy 22:26). One might ask: What idea did we learn about a betrothed woman from a murderer? The halakha of a betrothed woman is clear; what new point is learned by comparing it to the halakha of a murderer?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ב א — Yoma 82a:13</span></div>
+    <div class="orig">אֶלָּא: הֲרֵי זֶה בָּא לְלַמֵּד, וְנִמְצָא לָמֵד: מָה נַעֲרָה הַמְאוֹרָסָה נִיתָּן לְהַצִּילָהּ בְּנַפְשׁוֹ — אַף רוֹצֵחַ (כּוּ׳). מָה רוֹצֵחַ יֵהָרֵג וְאַל יַעֲבוֹר — אַף נַעֲרָה הַמְאוֹרָסָה יֵהָרֵג וְאַל יַעֲבוֹר.</div>
+    <div class="trans" data-when="he">אלא: הדין על הרוצח, שבא ללמד על הנערה, נמצא גם למֵד ממנה. נלמד לשני הכיוונים: מה בנערה המאורסה ניתן להצילה בנפש האנס (הורגים את הרודף) — אף את הנרצח מצילים בנפש הרוצח; ומה הרוצח ״ייהרג ואל יעבור״ (ימות ולא יהרוג אחר) — אף בנערה המאורסה ייהרג ואל יעבור, וכן בכל העריות.</div>
+    <div class="trans" data-when="en">Rather, this halakha about the murderer, which appears to come to teach about the betrothed woman, is found to actually be the subject of teaching. The inference is as follows: Just as with regard to the betrothed woman, permission is given to save her at the cost of the life of her attacker, so too, the murderer may be saved from committing the crime at the cost of his life, i.e., one may save the victim by killing the attacker. Another teaching is derived in the opposite direction, from the case of murder to the case of rape. Just as the murderer is subject to the halakha of let him be killed, and let him not transgress, i.e., one must even allow himself to be killed rather than take the life of another, so too, a man must surrender his life rather than engage in forbidden sexual relations with a betrothed young woman. By inference, the halakha of let him be killed, and let him not transgress, applies to all forbidden sexual relations.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ב ב — Yoma 82b:1</span></div>
+    <div class="orig">וְרוֹצֵחַ גּוּפֵיהּ מְנָא לַן? סְבָרָא הִיא: דְּהָהוּא דַּאֲתָא לְקַמֵּיהּ (דְּרָבָא), אֲמַר לֵיהּ, אֲמַר לִי מָרֵי דּוּרַאי: קִטְלֵיהּ לִפְלָנְיָא, וְאִי לָא — קָטֵילְנָא לָךְ. אֲמַר לֵיהּ: נִקְטְלָךְ וְלָא תִּקְטוֹל. מַאי חָזֵית דִּדְמָא דִּידָךְ סוּמָּק טְפֵי? דִּילְמָא דְּמָא דְּהָהוּא גַּבְרָא סוּמָּק טְפֵי!</div>
+    <div class="trans" data-when="he">ומניין שהרוצח עצמו ״ייהרג ואל יעבור״? סברה היא: אדם בא לפני רבא ואמר לו — ראש העיר שלי ציווה עליי ״הרוג את פלוני, ואם לא — אהרוג אותך״, מה אעשה? אמר לו רבא: תיהרג ואל תהרוג. מאי חזית — מה ראית שדמך אדום יותר? שמא דמו של אותו אדם אדום יותר; אין לך רשות להרוג חברך כדי להציל את עצמך.</div>
+    <div class="trans" data-when="en">The Gemara asks: And with regard to the murderer himself, from where do we derive this halakha that he should be killed rather than transgress the prohibition against murder? The Gemara answers: It is derived through reason, as it was told: A certain person came before Rava. He said to Rava: The master of the village where I live said to me: Kill so-and-so, and if you do not do so, I will kill you. What should I do? Rava said to him: Let yourself be killed, and you should not kill. Rava reasoned: What did you see to make you think that your blood is redder and more important than his? Perhaps the blood of that man is redder, and he is more important than you. If so, it is logical that one must not kill another person to save himself.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">מעשי עוברות שהריחו ביום הכיפורים</span><span data-when="en">Stories of pregnant women who craved on Yom Kippur</span>
+      <span class="ref">Yoma 82b:2-83a:1</span></h2>
+  <div class="lead"><span data-when="he">שני מעשי עוברות שהריחו: אצל רבי לחשו לה ונתיישבה — יצא ממנה ר׳ יוחנן; אצל ר׳ חנינא לא נתיישבה — יצא ממנה שבתאי אצר פירי.</span><span data-when="en">Two stories of craving pregnant women: with Rabbi the whisper helped — R. Yoḥanan was born; with R. Ḥanina it did not — Shabbetai the hoarder was born.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מעשה אצל רבי: לחשו לה דיומא דכיפורי — ונתיישבה; ׳בטרם אצרך בבטן ידעתיך׳"]:::statement
+  C1["① נפק מינה רבי יוחנן"]:::conclusion
+  S2["② מעשה אצל ר׳ חנינא: לחשו לה — ולא נתיישבה; ׳זורו רשעים מרחם׳"]:::statement
+  C2["③ נפק מינה שבתאי אצר פירי"]:::conclusion
+  S1 -->|תוצאה| C1
+  C1 -->|מעשה שני| S2
+  S2 -->|תוצאה| C2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Before Rabbi: they whispered it is Yom Kippur — she settled; ׳before I formed you in the belly I knew you׳"]:::statement
+  C1["① From her came R. Yoḥanan"]:::conclusion
+  S2["② Before R. Ḥanina: they whispered — she did not settle; ׳the wicked are estranged from the womb׳"]:::statement
+  C2["③ From her came Shabbetai the hoarder of fruits"]:::conclusion
+  S1 -->|outcome| C1
+  C1 -->|second story| S2
+  S2 -->|outcome| C2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① הָהִיא עוּבָּרָה דְּאָרַחָא … לְחוּשׁוּ לַהּ דְּיוֹמָא דְכִיפּוּרֵי הוּא … וְאִילְּחִישָׁא … ׳בְּטֶרֶם אֶצָּרְךָ בַבֶּטֶן יְדַעְתִּיךָ׳"]:::statement
+  C1["① נְפַק מִינַּהּ רַבִּי יוֹחָנָן"]:::conclusion
+  S2["② הָהִיא עוּבָּרָה דְּאָרַחָא … לְחוּשׁוּ לָהּ, וְלָא אִילְּחִישָׁא … ׳זוֹרוּ רְשָׁעִים מֵרָחֶם׳"]:::statement
+  C2["③ נְפַק מִינַּהּ שַׁבְּתַאי אָצַר פֵּירֵי"]:::conclusion
+  S1 -->|תוצאה| C1
+  C1 -->|מעשה שני| S2
+  S2 -->|תוצאה| C2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ״ב ב — Yoma 82b:2</span></div>
+    <div class="orig">הָהִיא עוּבָּרָה דְּאָרַחָא, אֲתוֹ לְקַמֵּיהּ דְּרַבִּי, אֲמַר לְהוּ: זִילוּ לְחוּשׁוּ לַהּ דְּיוֹמָא דְכִיפּוּרֵי הוּא. לְחוּשׁוּ לָהּ וְאִילְּחִישָׁא. קָרֵי עֲלֵיהּ: ״בְּטֶרֶם אֶצָּרְךָ בַבֶּטֶן יְדַעְתִּיךָ וְגוֹ׳״. נְפַק מִינַּהּ רַבִּי יוֹחָנָן.</div>
+    <div class="trans" data-when="he">מעשה בעוברה אחת שהריחה ונתאוותה. באו לפני רבי לשאול כיצד לנהוג. אמר להם: לכו ולחשו לה שהיום יום הכיפורים. לחשו לה — ונתיישבה דעתה (פסקה תאוותה). קרא רבי על העובר: ״בטרם אצרך בבטן ידעתיך וגו׳״. יצא ממנה ר׳ יוחנן.</div>
+    <div class="trans" data-when="en">§ With respect to a pregnant woman who smells food, it is told: A certain pregnant woman smelled a food and craved it. Those involved came before Rabbi Yehuda HaNasi to ask how to proceed. He said to those who were inquiring: Go and whisper to her that today is Yom Kippur. They whispered to her, and this whispering helped; she stopped craving the food. Rabbi Yehuda HaNasi read this verse about the baby she was carrying: “Before I formed you in the belly I knew you, and before you came forth out of the womb I sanctified you” (Jeremiah 1:5), and indeed, the baby who came out of that woman was Rabbi Yoḥanan.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ״ב ב — Yoma 82b:3</span></div>
+    <div class="orig">הָהִיא עוּבָּרָה דְּאָרַחָא, אֲתוֹ לְקַמֵּיהּ דְּרַבִּי חֲנִינָא. אֲמַר לְהוּ: לְחוּשׁוּ לָהּ, וְלָא אִילְּחִישָׁא. קָרֵי עֲלֵיהּ:</div>
+    <div class="trans" data-when="he">מעשה אחר: עוברה אחרת שהריחה ונתאוותה ביום הכיפורים. באו לפני ר׳ חנינא. אמר להם: לחשו לה שהיום יום הכיפורים. לחשו לה — ולא נתיישבה דעתה (לא פסקה תאוותה). קרא ר׳ חנינא על העובר:</div>
+    <div class="trans" data-when="en">The Gemara relates another story: A certain pregnant woman smelled food and had a craving to eat it on Yom Kippur. Those involved came before Rabbi Ḥanina to ask how to proceed. He said to them: Whisper to her that today is Yom Kippur. They whispered to her, but she did not accept the whisper and continued to crave the food. Rabbi Ḥanina read this verse about the baby:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״ג א — Yoma 83a:1</span></div>
+    <div class="orig">״זוֹרוּ רְשָׁעִים מֵרָחֶם״. נְפַק מִינַּהּ שַׁבְּתַאי אָצַר פֵּירֵי.</div>
+    <div class="trans" data-when="he">״זורו רשעים מרחם״ — כלומר, רשעותם ניכרת כבר ברחם אמם. יצא ממנה שבתאי אוגר הפירות, שהיה אוצר תבואה בשנות רעב כדי להפקיע מחירים ולהתעשר על חשבון העניים.</div>
+    <div class="trans" data-when="en">“The wicked are estranged from the womb” (Psalms 58:4), i.e., it is clear they are estranged already in their mother’s womb. Indeed, Shabbetai the hoarder of fruits came out of her. He hoarded fruit during years of famine in order to inflate its price and profit at the expense of poor people.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
