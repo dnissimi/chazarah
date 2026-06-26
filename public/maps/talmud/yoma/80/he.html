@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא פ׳</title>
+<meta name="description" content="מפת הסוגיא של יומא פ׳: מנין ששיעור טומאת אוכלין כביצת תרנגולת; דין ׳מלא לוגמיו׳ בשתייה ביום הכיפורים ושיעורים יחסיים; צירוף כל האוכלין לכותבת; ופטור האוכל אכילה גסה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="80">
+<meta name="gemara-map:sefaria-ref" content="Yoma 80">
+<meta name="gemara-map:topic-he" content="שיעורי טומאה, שתייה, צירוף, אכילה גסה">
+<meta name="gemara-map:topic-en" content="Measures of impurity, drinking, combining, gorging">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא פ׳">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 80">
+<meta name="gemara-map:blurb-he" content="מקור שיעור הביצה לטומאת אוכלין; ׳מלא לוגמיו׳ נמדד לכל אדם לפי עצמו ושיעורי חכמים מסורת מסיני; כל האוכלין מצטרפים לכותבת; והאוכל אכילה גסה פטור — ׳פרט למזיק׳.">
+<meta name="gemara-map:blurb-en" content="The egg-bulk measure for impure foods is derived from a verse; a cheekful is measured per person and the Sages’ measures are from Sinai; all foods combine to a large date; and one who gorges is exempt — ‘excluding self-harm.’">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא פ׳</span><span data-when="en">Sugya map — Yoma 80</span></h1>
+    <div class="subtitle"><span data-when="he">יומא פ׳ א — פ״א א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 80a–81a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> ארבעה דיוני שיעורים: <b>שיעור טומאת אוכלין</b> כביצת תרנגולת — נלמד מן הכתוב ומאומדן חכמים שאין בית הבליעה מחזיק יותר; <b>״מלא לוגמיו״</b> בשתייה — נמדד לכל אחד לפי גודל פיו, ושיעורי העונשין הם הלכה למשה מסיני; <b>כל האוכלין מצטרפים</b> לכותבת אף מלח וציר; והאוכל <b>אכילה גסה</b> ביום הכיפורים פטור — ״פרט למזיק״ — וכן זר שאכל תרומה כך.</span>
+    <span data-when="en"><b>Bottom line:</b> Four discussions of Torah measures: the <b>egg-bulk for impure foods</b> is derived from a verse and from the Sages’ estimate that the esophagus holds no more; the <b>cheekful</b> for drinking is measured by each person’s own mouth, and the measures of punishment are a halakha from Sinai; <b>all foods combine</b> to a large date, even salt and brine; and one who <b>gorges</b> on Yom Kippur is exempt — “excluding self-harm” — as is a non-priest who gorges on teruma.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא פ׳</span><span data-when="en">Overview — Yoma 80</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · שיעור טומאת אוכלין — ביצה, ושיעורי עונשין מסיני"]:::statement
+  O2["2 · ׳מלא לוגמיו׳ בשתייה — שיעור לכל אדם לפי עצמו"]:::statement
+  O3["3 · כל האוכלין מצטרפים לכותבת"]:::statement
+  O4["4 · אכילה גסה — פטור, ׳פרט למזיק׳"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · Measure of impure foods — egg-bulk, and measures from Sinai"]:::statement
+  O2["2 · ׳Cheekful׳ for drinking — a measure per person"]:::statement
+  O3["3 · All foods combine to a large date"]:::statement
+  O4["4 · Gorging — exempt, ׳excluding self-harm׳"]:::statement
+  O1 --> O2 --> O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">שיעור טומאת אוכלין — ביצה, ושיעורי העונשין מסיני</span><span data-when="en">The measure of impure foods — egg-bulk, and measures from Sinai</span>
+      <span class="ref">Yoma 80a:3–12</span></h2>
+  <div class="lead"><span data-when="he">מנין ששיעור טומאת אוכלין כביצה? משתי דרשות של ר׳ אבהו ומאומדן חכמים. ואגב — שיעורי העונשין הלכה למשה מסיני.</span><span data-when="en">Whence the egg-bulk measure for impure foods? From two derivations of R. Abbahu and the Sages’ estimate. Incidentally — measures of punishment are a halakha from Sinai.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① מנין שטומאת אוכלין כביצה? ׳אוכל הבא מחמת אוכל׳ — ביצת תרנגולת"}:::question
+  Q2{"① ואימא גדי? מחוסר שחיטה · בן פקועה? טעון קריעה"}:::question
+  Q3{"② ואימא ביצת בר יוכני? תפסת מרובה לא תפסת · ואימא ציפורתא?"}:::question
+  S1["③ ר׳ אבהו דידיה: ׳אוכל שאתה אוכלו בבת אחת׳ — אין בית הבליעה מחזיק יותר מביצה"]:::statement
+  S2["④ ר׳ אלעזר: האוכל חלב בזמן הזה — יכתוב לו שיעור, שמא ירבה בית דין בשיעורין"]:::statement
+  Q4{"⑤ מאי ירבה? אי מחייבי אכזית קטן — והתניא ׳השב מידיעתו׳ מביא קרבן"}:::question
+  S3["⑥ לא שב מידיעתו — אין מביא קרבן על שגגתו"]:::statement
+  A1["⑦ אלא: לא מחייבי עד דאיכא כזית גדול"]:::answer
+  A2["⑧ ולמאי דסליק מעיקרא — ׳ירבה בקרבנות מחמת שיעורין׳"]:::answer
+  S4["⑨ ר׳ יוחנן: שיעורין של עונשין — הלכה למשה מסיני"]:::statement
+  Q5{"⑩ תניא נמי הכי · אחרים: בית דינו של יעבץ תיקנום · והכתיב ׳אלה המצות׳! אלא שכחום וחזרו ויסדום"}:::question
+  Q1 -->|ואימא| Q2
+  Q2 -->|ואימא| Q3
+  Q3 -->|דרשה שנייה| S1
+  S1 -->|אגב| S2
+  S2 -->|מאי ירבה| Q4
+  Q4 --> S3
+  S3 -->|אלא| A1
+  A1 -.->|ולמאי דסליק| A2
+  A2 -->|אגב| S4
+  S4 -->|תניא נמי| Q5
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Whence the egg-bulk for impure foods? ׳food from food׳ — a chicken egg"}:::question
+  Q2{"① Say a kid? It lacks slaughter · a ben pekua? It needs cutting"}:::question
+  Q3{"② Say a bar-yokhani egg? Grasp less, you grasp · say a tiny bird׳s egg?"}:::question
+  S1["③ R. Abbahu׳s own: ׳food eaten at once׳ — the esophagus holds no more than an egg"]:::statement
+  S2["④ R. Elazar: eat forbidden fat today — write the measure, lest a court increase it"]:::statement
+  Q4{"⑤ Increase how? If liable for a small olive — but ׳repents from awareness׳ brings an offering"}:::question
+  S3["⑥ One who does not repent from awareness brings no offering for his error"]:::statement
+  A1["⑦ Rather: not liable until a large olive"]:::answer
+  A2["⑧ And per the first thought — ׳increase in offerings due to the measures׳"]:::answer
+  S4["⑨ R. Yoḥanan: measures of punishments — a halakha from Sinai"]:::statement
+  Q5{"⑩ A baraita too · Others: the court of Jabez set them · but ׳these are the mitzvot׳! rather they forgot and reestablished them"}:::question
+  Q1 -->|say| Q2
+  Q2 -->|say| Q3
+  Q3 -->|second derivation| S1
+  S1 -->|incidentally| S2
+  S2 -->|increase how| Q4
+  Q4 --> S3
+  S3 -->|rather| A1
+  A1 -.->|per the first thought| A2
+  A2 -->|incidentally| S4
+  S4 -->|a baraita too| Q5
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① טוּמְאַת אוֹכָלִין כְּבֵיצָה מְנָלַן? … אוֹכֶל הַבָּא מֵחֲמַת אוֹכֶל … זֶה בֵּיצַת תַּרְנְגוֹלֶת"}:::question
+  Q2{"① וְאֵימָא גְּדִי! מְחוּסָּר שְׁחִיטָה · וְאֵימָא בֶּן פְּקוּעָה! טָעוּן קְרִיעָה"}:::question
+  Q3{"② וְאֵימָא בֵּיצַת בַּר יוֹכָנִי! תָּפַסְתָּ מְרוּבֶּה לֹא תָּפַסְתָּ … וְאֵימָא בֵּיעֲתָא דְּצִיפַּורְתָּא"}:::question
+  S1["③ רַבִּי אֲבָהוּ דִּידֵיהּ … אוֹכֶל שֶׁאַתָּה אוֹכְלוֹ בְּבַת אַחַת … אֵין בֵּית הַבְּלִיעָה מַחֲזִיק יוֹתֵר מִבֵּיצַת תַּרְנְגוֹלֶת"]:::statement
+  S2["④ הָאוֹכֵל חֵלֶב בִּזְמַן הַזֶּה צָרִיךְ שֶׁיִּכְתּוֹב לוֹ שִׁיעוּר, שֶׁמָּא … וְיַרְבֶּה בְּשִׁיעוּרִין"]:::statement
+  Q4{"⑤ מַאי יַרְבֶּה בְּשִׁיעוּרִין? אִי נֵימָא דִּמְחַיְּיבִי קׇרְבָּן אַכַּזַּיִת קָטָן … הַשָּׁב מִידִיעָתוֹ מֵבִיא קׇרְבָּן"}:::question
+  S3["⑥ לֹא שָׁב מִידִיעָתוֹ — אֵין מֵבִיא קׇרְבָּן עַל שִׁגְגָתוֹ"]:::statement
+  A1["⑦ אֶלָּא: דְּלָא מְחַיְּיבִי קׇרְבָּן עַד דְּאִיכָּא כְּזַיִת גָּדוֹל"]:::answer
+  A2["⑧ וּלְמַאי דִּסְלֵיק אַדַּעְתִּין מֵעִיקָּרָא … שֶׁמָּא יַרְבֶּה בְּקׇרְבָּנוֹת מֵחֲמַת שִׁיעוּרִין"]:::answer
+  S4["⑨ אָמַר רַבִּי יוֹחָנָן … שִׁיעוּרִים שֶׁל עוֹנָשִׁין — הֲלָכָה לְמֹשֶׁה מִסִּינַי"]:::statement
+  Q5{"⑩ תַּנְיָא נָמֵי הָכִי … אֲחֵרִים אוֹמְרִים: בֵּית דִּינוֹ שֶׁל יַעְבֵּץ תִּיקְּנוּם … אֶלָּא, שְׁכָחוּם וְחָזְרוּ וְיִסְּדוּם"}:::question
+  Q1 -->|ואימא| Q2
+  Q2 -->|ואימא| Q3
+  Q3 -->|דרשה שנייה| S1
+  S1 -->|אגב| S2
+  S2 -->|מאי ירבה| Q4
+  Q4 --> S3
+  S3 -->|אלא| A1
+  A1 -.->|ולמאי דסליק| A2
+  A2 -->|אגב| S4
+  S4 -->|תניא נמי| Q5
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ׳ א — Yoma 80a:3</span></div>
+    <div class="orig">טוּמְאַת אוֹכָלִין כְּבֵיצָה מְנָלַן? אָמַר רַבִּי אֲבָהוּ אָמַר רַבִּי אֶלְעָזָר: דְּאָמַר קְרָא: ״מִכׇּל הָאוֹכֶל אֲשֶׁר יֵאָכֵל״, אוֹכֶל הַבָּא מֵחֲמַת אוֹכֶל, וְאֵיזֶה — זֶה בֵּיצַת תַּרְנְגוֹלֶת. וְאֵימָא גְּדִי! מְחוּסָּר שְׁחִיטָה. וְאֵימָא בֶּן פְּקוּעָה! טָעוּן קְרִיעָה.</div>
+    <div class="trans" data-when="he">מנין שהשיעור הקטן ביותר לטומאת אוכלין הוא כביצה? ר׳ אבהו בשם ר׳ אלעזר: ״מכל האוכל אשר יֵאכל״ — כפל הלשון מלמד על ׳אוכל הבא מחמת אוכל׳, ואיזהו? ביצת תרנגולת. ומקשים: אמור שהכוונה לגדי (הבא מן הבהמה)? — אינו אוכל, שמחוסר שחיטה. בן פקועה (עובר ששחיטת אמו התירתו)? — טעון קריעה ואינו ראוי חי.</div>
+    <div class="trans" data-when="en">§ The Gemara asks: From where do we derive that the measure for impure foods is the volume of an egg-bulk? Rabbi Abbahu said that Rabbi Elazar said that the verse states: “Of all food [okhel] which may be eaten [ye’akhel], on which water comes shall be ritually impure” (Leviticus 11:34). The double usage of the root akhal teaches that the ritual impurity of food applies even to the amount which can be described as food that comes on account of food, i.e., food that comes from another food. And which food is that? A chicken egg. The Gemara asks: And say it is referring to a kid, which comes from a mother goat, and is therefore also food that comes from another food. The Gemara answers: It lacks ritual slaughter. The young goat is not yet food, since it is not edible until it has been slaughtered. The Gemara asks further: And say it is referring to a ben pekua. Since the slaughter of its mother made it fit to eat, the fetus itself need not be slaughtered, even if it survives and continues to live independently of its mother. The Gemara answers: The calf still requires cutting, since it cannot be eaten live, but it does not require ritual slaughter.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ׳ א — Yoma 80a:4</span></div>
+    <div class="orig">וְאֵימָא בֵּיצַת בַּר יוֹכָנִי! תָּפַסְתָּ מְרוּבֶּה לֹא תָּפַסְתָּ, תָּפַסְתָּ מוּעָט תָּפַסְתָּ. וְאֵימָא בֵּיעֲתָא דְּצִיפַּורְתָּא דְּזוּטַר טוּבָא!</div>
+    <div class="trans" data-when="he">ומקשים עוד: אמור שהכוונה לביצת העוף הגדול ׳בר יוכני׳? — תשובה: ׳תפסת מרובה לא תפסת, תפסת מועט תפסת׳ — בספק נוקטים את השיעור הקטן (הנכלל בגדול), ולכן ביצת תרנגולת. ומקשים שוב: אם כן, אמור שהכוונה לביצת ציפור קטנה ביותר!</div>
+    <div class="trans" data-when="en">The Gemara asks: Even if we claim that the measure for impure foods is an egg-bulk, one could say it is referring to the giant egg-bulk of the bird called bar yokhani. The Gemara answers: If you grasped many, you did not grasp anything; if you grasped few, you grasped something. This means that in a case of doubt, take the smaller number, as it is included in the larger number. Therefore, the correct measure is the volume of a chicken egg. The Gemara questions this: If so, say it is referring to a very small bird’s egg. Consequently, no proof can be brought from the verse that the volume of a chicken egg is the measure for ritual impurity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ׳ א — Yoma 80a:5</span></div>
+    <div class="orig">רַבִּי אֲבָהוּ דִּידֵיהּ, אָמַר: ״מִכׇּל הָאוֹכֶל אֲשֶׁר יֵאָכֵל״, אוֹכֶל שֶׁאַתָּה אוֹכְלוֹ בְּבַת אַחַת. וְשִׁיעֲרוּ חֲכָמִים: אֵין בֵּית הַבְּלִיעָה מַחֲזִיק יוֹתֵר מִבֵּיצַת תַּרְנְגוֹלֶת.</div>
+    <div class="trans" data-when="he">ר׳ אבהו דרש מעצמו: ״מכל האוכל אשר יֵאכל״ — אוכל שאתה אוכלו בבת אחת. ואמדו חכמים: אין בית הבליעה (הוושט) מחזיק יותר מביצת תרנגולת, ומכאן השיעור.</div>
+    <div class="trans" data-when="en">Rabbi Abbahu himself said: The verse states: “Of all food which may be eaten.” This is referring to food that you can eat at one time. The Sages estimated: The esophagus cannot hold more than the volume of a chicken’s egg, and therefore this is the measure used for the ritual impurity of foods.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ׳ א — Yoma 80a:6</span></div>
+    <div class="orig">אָמַר רַבִּי אֶלְעָזָר: הָאוֹכֵל חֵלֶב בִּזְמַן הַזֶּה צָרִיךְ שֶׁיִּכְתּוֹב לוֹ שִׁיעוּר, שֶׁמָּא יָבֹא בֵּית דִּין אַחֵר וְיַרְבֶּה בְּשִׁיעוּרִין.</div>
+    <div class="trans" data-when="he">אגב הדיון בשיעורי תורה: ר׳ אלעזר — האוכל חֵלב בשגגה בזמן הזה צריך לכתוב לעצמו את השיעור שאכל, שמא יבוא בית דין אחר וירבה (ישנה) את השיעורים.</div>
+    <div class="trans" data-when="en">Incidental to the discussion on Torah measures, Rabbi Elazar said: One who unwittingly eats forbidden fat even today must write down the exact measure that he ate, lest another court come in the future and increase the measure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ׳ א — Yoma 80a:7</span></div>
+    <div class="orig">מַאי יַרְבֶּה בְּשִׁיעוּרִין? אִי נֵימָא דִּמְחַיְּיבִי קׇרְבָּן אַכַּזַּיִת קָטָן, וְהָתַנְיָא: ״אֲשֶׁר לֹא תֵעָשֶׂינָה בִּשְׁגָגָה וְאָשֵׁם״, הַשָּׁב מִידִיעָתוֹ — מֵבִיא קׇרְבָּן עַל שִׁגְגָתוֹ.</div>
+    <div class="trans" data-when="he">מהו ׳ירבה בשיעורין׳? אם הכוונה שיחייבו קרבן אף על כזית קטן (פחות מהיום) — הרי לא יתחייב, שכן שנינו: ״אשר לא תֵעשינה בשגגה ואשם״ — רק ׳השב מידיעתו׳, החוזר מחמת ידיעתו שחטא, מביא קרבן על שגגתו.</div>
+    <div class="trans" data-when="en">The Gemara asks: What does it mean to increase the measure? If we say that a future court will obligate him to bring an offering even for the bulk of a small olive, which is less than what is considered an olive-bulk today, he would not be liable to bring a guilt-offering. Wasn’t it taught in a baraita: It was said with regard to guilt-offerings: “And if any one of the common people sin through error, in doing any of the things which the Lord has commanded not to be done, and be guilty” (Leviticus 4:27)? This teaches that one who repents due to his awareness, i.e., one who repents following becoming aware that he performed a transgression, brings an offering for his unwitting transgression.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ׳ א — Yoma 80a:8</span></div>
+    <div class="orig">לֹא שָׁב מִידִיעָתוֹ — אֵין מֵבִיא קׇרְבָּן עַל שִׁגְגָתוֹ.</div>
+    <div class="trans" data-when="he">המשך הברייתא: מי שאינו שב מחמת ידיעתו (שהרי לדעתו לא אכל שיעור) — אינו מביא קרבן על שגגתו. נמצא שאם אכל פחות מכזית כשיעור היום, לא יתחייב לעתיד אף אם ישנו את השיעור.</div>
+    <div class="trans" data-when="en">However, one who does not repent due to his awareness that he sinned does not bring an offering for his unwitting action. Similarly, if one eats less than an olive-bulk, based on the current measures, he will not be obligated to bring a guilt-offering in the future if the measures change, even if the amount that he ate equals the volume of a revised olive-bulk. This is because the individual would not be bringing his offering because he became aware he had sinned, but because the Torah measures had been changed.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ׳ א — Yoma 80a:9</span></div>
+    <div class="orig">אֶלָּא: דְּלָא מְחַיְּיבִי קׇרְבָּן עַד דְּאִיכָּא כְּזַיִת גָּדוֹל.</div>
+    <div class="trans" data-when="he">אלא יש לפרש: שמא לעתיד לא יחייבו קרבן עד שיאכל כזית גדול (יותר מהיום); ולכן יכתוב כמה אכל, שמא בעתיד ייקבע ששיעורו פחות מכזית ויתברר שלא התחייב.</div>
+    <div class="trans" data-when="en">Rather, it should be explained as follows: It is possible that in the future a court will not obligate one to bring an offering until he has eaten the bulk of a large olive, which is more than today’s amount. One should write down how much he ate, since in the future a court might rule that the amount he ate is less than the size of an olive, and therefore he will not be obligated to bring an offering.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ׳ א — Yoma 80a:10</span></div>
+    <div class="orig">וּלְמַאי דִּסְלֵיק אַדַּעְתִּין מֵעִיקָּרָא דִּמְחַיְּיבִי קׇרְבָּן אַכַּזַּיִת קָטָן, מַאי ״יַרְבֶּה בְּשִׁיעוּרִין״? שֶׁמָּא יַרְבֶּה בְּקׇרְבָּנוֹת מֵחֲמַת שִׁיעוּרִין.</div>
+    <div class="trans" data-when="he">ולפי ההווה־אמינא הראשונה שיחייבו קרבן אף על כזית קטן — מהו ׳ירבה בשיעורין׳? היה צריך לומר ׳ימעיט׳! תשובה: הכוונה שמא ירבו בקרבנות מחמת השיעורים הקטנים שמחייבים.</div>
+    <div class="trans" data-when="en">The Gemara returns to its first suggestion: According to what entered his mind initially, that in the future a court might obligate him to bring an offering for the bulk of a small olive, what is the meaning of increase the measure? Rabbi Elazar should have said decrease the measure. The Gemara answers: The statement may have meant that perhaps there will be an increase in offerings that are brought due to the smaller measure for liability.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא פ׳ א — Yoma 80a:11</span></div>
+    <div class="orig">אָמַר רַבִּי יוֹחָנָן: שִׁיעוּרִין וָעוֹנָשִׁין הֲלָכָה לְמֹשֶׁה מִסִּינַי. עוֹנָשִׁין מִכְתָּב כְּתִיבִי! אֶלָּא הָכִי קָאָמַר: (אָמַר רַבִּי יוֹחָנָן:) שִׁיעוּרִים שֶׁל עוֹנָשִׁין — הֲלָכָה לְמֹשֶׁה מִסִּינַי.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן: שיעורין ועונשין הלכה למשה מסיני. מקשים: הרי העונשים כתובים מפורש בתורה! אלא כך אמר: שיעורי העונשין (כמה צריך לאכול או לעבור כדי להתחייב) — הלכה למשה מסיני.</div>
+    <div class="trans" data-when="en">With regard to this topic, Rabbi Yoḥanan said: Measures and punishments are halakha transmitted to Moses from Sinai. The Gemara expresses surprise at this: The punishments for all transgressions are written explicitly in the Torah, and therefore are not part of an oral transmission from Moses. Rather, this is what was said: Rabbi Yoḥanan said: Measures that determine liability for punishments are halakha transmitted to Moses from Sinai.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא פ׳ א — Yoma 80a:12</span></div>
+    <div class="orig">תַּנְיָא נָמֵי הָכִי: שִׁיעוּרִין שֶׁל עוֹנָשִׁין הֲלָכָה לְמֹשֶׁה מִסִּינַי. אֲחֵרִים אוֹמְרִים: בֵּית דִּינוֹ שֶׁל יַעְבֵּץ תִּיקְּנוּם. וְהָכְתִיב: ״אֵלֶּה הַמִּצְוֹת״, שֶׁאֵין נָבִיא רַשַּׁאי לְחַדֵּשׁ דָּבָר מֵעַתָּה! אֶלָּא, שְׁכָחוּם וְחָזְרוּ וְיִסְּדוּם.</div>
+    <div class="trans" data-when="he">ברייתא מסייעת: שיעורי העונשין הלכה למשה מסיני. אחרים אומרים: בית דינו של יעבץ תיקנום. ומקשים: והכתיב ״אלה המצות״ — שאין נביא רשאי לחדש דבר מעתה! אלא: שכחום (במרוצת הדורות) וחזרו הנביאים ויסדום מחדש.</div>
+    <div class="trans" data-when="en">The Gemara comments: This was also taught in a baraita: Measures of punishments are halakha transmitted to Moses from Sinai. Others say: These measures were instituted by the court of Jabez. The Gemara questions this: How can this be? Isn’t it written: “These are the mitzvot which the Lord commanded Moses for the children of Israel at Mount Sinai” (Leviticus 27:34). The word “these” underscores that a prophet is not permitted to introduce any new element related to the Torah and its mitzvot from here on. Rather, over the course of time, the people forgot the measures; subsequently the prophets reestablished the measures and taught them to the masses.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">״מלא לוגמיו״ בשתייה — שיעור לכל אדם לפי עצמו</span><span data-when="en">The “cheekful” for drinking — a measure per person</span>
+      <span class="ref">Yoma 80a:13–80b:7</span></h2>
+  <div class="lead"><span data-when="he">מהו ׳מלא לוגמיו׳? כל שייראה כמלא לוגמיו; מיתיבי מברייתא, ומסקנה ששיעור השתייה נמדד לכל אחד לפי גודל פיו — אף לעוג מלך הבשן.</span><span data-when="en">What is a “cheekful”? Whatever appears as one; an objection from a baraita; concluding that drinking is measured by each person’s own mouth — even Og king of Bashan.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① שמואל: לא מלא לוגמיו ממש, אלא כל שייראה כמלא לוגמיו"]:::statement
+  Q1{"② מיתיבי: ב״ש רביעית, ב״ה מלא לוגמיו, ר׳ יהודה משום ר׳ אליעזר כמלא לוגמיו"}:::question
+  A1["③ ב״ה נמי כדי שייראה · אי הכי היינו ר׳ אליעזר! איכא בינייהו מלא לוגמיו דחוק"]:::answer
+  Q2{"④ מתקיף רב הושעיא: אם כן הוי מקולי ב״ש ומחומרי ב״ה!"}:::question
+  A2["⑤ כי איתשיל — בעוג מלך הבשן איתשיל, דהוו ב״ש לחומרא"]:::answer
+  Q3{"⑥ מתקיף ר׳ זירא: מאי שנא אכילה לכל בכותבת, ושתייה לכל בדידיה? · קים להו: בשתייה בדידיה מיתבא דעתיה"}:::question
+  Q4{"⑦ מתקיף ר׳ זירא: וכל העולם בכותבת ועוג בכותבת? · קים להו: כולי עלמא טובא, עוג פורתא"}:::question
+  Q5{"⑧ מתקיף ר׳ זירא: בשר שמן בכותבת ולולבי גפנים בכותבת? · קים להו: בשר שמן טובא, לולבי גפנים פורתא"}:::question
+  Q6{"⑨ מתקיף רבא: כזית וכותבת — בכדי אכילת פרס? · קים להו: בהכי מיתבא, בטפי לא"}:::question
+  Q7{"⑩ מתקיף רבא: חצי פרס בכדי אכילת פרס? · רב פפא: הנח לטומאת גוויה דלאו דאורייתא"}:::question
+  Q8{"⑪ ומי אמר רב פפא הכי? והא אמר טומאת גוויה דאורייתא! · מדרבנן, וקרא אסמכתא"}:::question
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|מתקיף| Q2
+  Q2 -->|תירוץ| A2
+  A2 -.->|מתקיף| Q3
+  Q3 -.->|מתקיף| Q4
+  Q4 -.->|מתקיף| Q5
+  Q5 -.->|מתקיף| Q6
+  Q6 -.->|מתקיף| Q7
+  Q7 -.->|ומי אמר| Q8
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Shmuel: not two cheeks literally, but whatever appears as a cheekful"]:::statement
+  Q1{"② Objection: BeShammai a quarter-log, BeHillel a cheekful, R. Yehuda per R. Eliezer ׳like a cheekful׳"}:::question
+  A1["③ BeHillel too ׳as it appears׳ · then it equals R. Eliezer! difference: a paltry cheekful"]:::answer
+  Q2{"④ Rav Hoshaya objects: then it׳s a BeShammai leniency, BeHillel stringency!"}:::question
+  A2["⑤ The question was asked of Og king of Bashan — there BeShammai is stringent"]:::answer
+  Q3{"⑥ R. Zeira objects: why is eating uniform (a date) yet drinking per-person? · they hold: in drink one׳s own mouth settles him"}:::question
+  Q4{"⑦ R. Zeira objects: is everyone — and Og — satisfied by a date? · they hold: all much, Og a little"}:::question
+  Q5{"⑧ R. Zeira objects: fatty meat by a date, and grape-shoots by a date? · they hold: meat much, shoots a little"}:::question
+  Q6{"⑨ Rava objects: olive and date both within ׳eating a half-loaf׳? · they hold: within this it settles, beyond it not"}:::question
+  Q7{"⑩ Rava objects: half a half-loaf within ׳eating a half-loaf׳? · Rav Pappa: leave aside bodily impurity, not Torah law"}:::question
+  Q8{"⑪ But did Rav Pappa say so? he said bodily impurity is Torah law! · rabbinic, the verse a mere support"}:::question
+  S1 -.->|objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|objects| Q2
+  Q2 -->|answer| A2
+  A2 -.->|objects| Q3
+  Q3 -.->|objects| Q4
+  Q4 -.->|objects| Q5
+  Q5 -.->|objects| Q6
+  Q6 -.->|objects| Q7
+  Q7 -.->|but did he say| Q8
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: לֹא מְלֹא לוּגְמָיו מַמָּשׁ … וְיֵרָאֶה כִּמְלֹא לוּגְמָיו"]:::statement
+  Q1{"② מֵיתִיבִי … בֵּית שַׁמַּאי: רְבִיעִית, וּבֵית הִלֵּל: מְלֹא לוּגְמָיו … רַבִּי יְהוּדָה … כִּמְלֹא לוּגְמָיו"}:::question
+  A1["③ הָכִי נָמֵי כְּדֵי שֶׁיֵּרָאֶה! אִי הָכִי, הַיְינוּ רַבִּי אֱלִיעֶזֶר! אִיכָּא בֵּינַיְיהוּ מְלֹא לוּגְמָיו דָּחוּק"]:::answer
+  Q2{"④ מַתְקֵיף לַהּ רַב הוֹשַׁעְיָא: אִם כֵּן, הָוֵה לֵיהּ מִקּוּלֵּי בֵּית שַׁמַּאי וּמֵחוּמְרֵי בֵּית הִלֵּל!"}:::question
+  A2["⑤ כִּי אִתְּשִׁיל, בְּעוֹג מֶלֶךְ הַבָּשָׁן אִתְּשִׁיל, דְּהָווּ לְהוּ בֵּית שַׁמַּאי לְחוּמְרָא"]:::answer
+  Q3{"⑥ מַתְקֵיף לַהּ רַבִּי זֵירָא: מַאי שְׁנָא אֲכִילָה … בִּכְכוֹתֶבֶת, וּמַאי שְׁנָא שְׁתִיָּה … בְּדִידֵיהּ? … בִּשְׁתִיָּה בְּדִידֵיהּ מִיַּתְּבָא דַּעְתֵּיהּ"}:::question
+  Q4{"⑦ מַתְקֵיף לַהּ רַבִּי זֵירָא: וְכׇל הָעוֹלָם … בִּכְכוֹתֶבֶת וְעוֹג … בִּכְכוֹתֶבֶת? … כּוּלֵּי עָלְמָא טוּבָא, וְעוֹג פּוּרְתָּא"}:::question
+  Q5{"⑧ מַתְקֵיף לַהּ רַבִּי זֵירָא בָּשָׂר שָׁמֵן בִּכְכוֹתֶבֶת, וְלוּלְבֵי גְפָנִים בִּכְכוֹתֶבֶת? … בָּשָׂר שָׁמֵן טוּבָא, לוּלְבֵי גְפָנִים פּוּרְתָּא"}:::question
+  Q6{"⑨ מַתְקֵיף לַהּ רָבָא: כְּזַיִת בִּכְדֵי אֲכִילַת פְּרָס, וְכוֹתֶבֶת בִּכְדֵי אֲכִילַת פְּרָס?! … דִּבְהָכִי מִיַּתְּבָא דַּעְתֵּיהּ"}:::question
+  Q7{"⑩ מַתְקֵיף לַהּ רָבָא: חֲצִי פְרָס בִּכְדֵי אֲכִילַת פְּרָס?! … רַב פָּפָּא: הַנַּח לְטוּמְאַת גְּוִויָּה דְּלָאו דְּאוֹרָיְיתָא הִיא"}:::question
+  Q8{"⑪ וּמִי אָמַר רַב פָּפָּא הָכִי? … מִכָּאן שֶׁטּוּמְאַת גְּוִויָּה דְּאוֹרָיְיתָא! מִדְּרַבָּנַן, וּקְרָא אַסְמַכְתָּא בְּעָלְמָא"}:::question
+  S1 -.->|מיתיבי| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|מתקיף| Q2
+  Q2 -->|תירוץ| A2
+  A2 -.->|מתקיף| Q3
+  Q3 -.->|מתקיף| Q4
+  Q4 -.->|מתקיף| Q5
+  Q5 -.->|מתקיף| Q6
+  Q6 -.->|מתקיף| Q7
+  Q7 -.->|ומי אמר| Q8
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ׳ א — Yoma 80a:13</span></div>
+    <div class="orig">הַשּׁוֹתֶה מְלֹא לוּגְמָיו. אָמַר רַב יְהוּדָה אָמַר שְׁמוּאֵל: לֹא מְלֹא לוּגְמָיו מַמָּשׁ, אֶלָּא כׇּל שֶׁאִילּוּ יְסַלְּקֶנּוּ לְצַד אֶחָד וְיֵרָאֶה כִּמְלֹא לוּגְמָיו. וְהָא אֲנַן תְּנַן ״מְלֹא לוּגְמָיו״! אֵימָא: ״כִּמְלֹא לוּגְמָיו״.</div>
+    <div class="trans" data-when="he">המשנה: השותה מלא לוגמיו ביום הכיפורים חייב. רב יהודה בשם שמואל: אין הכוונה לשני לחיים מלאים ממש, אלא כל שיעור שאם יסלקנו לצד אחד של פיו ייראה כמלא לוגמיו. מקשים: והרי שנינו ׳מלא לוגמיו׳ (לשון רבים)! ומתרצים: אימא — ׳כמלא לוגמיו׳, כפי שנראה מצד אחד.</div>
+    <div class="trans" data-when="en">§ We learned in the mishna that one who drinks a cheekful on Yom Kippur is liable. Rabbi Yehuda said that Shmuel said: This does not mean two cheeks actually full. Rather, the measure that determines liability is the volume of liquid if one pushes the drink to one side of his mouth, and it appears as though his cheek were full. The Gemara questions this: Didn’t we learn in the mishna: A cheekful, in the plural form, meaning two cheeks full? The Gemara answers: Say: Like two cheeks full in appearance. If viewed from only one side, one whose cheek is full appears as if his entire mouth is full.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ׳ א — Yoma 80a:14</span></div>
+    <div class="orig">מֵיתִיבִי: כַּמָּה יִשְׁתֶּה וִיהֵא חַיָּיב? בֵּית שַׁמַּאי אוֹמְרִים: רְבִיעִית, וּבֵית הִלֵּל אוֹמְרִים: מְלֹא לוּגְמָיו. רַבִּי יְהוּדָה אוֹמֵר מִשּׁוּם רַבִּי אֱלִיעֶזֶר: כִּמְלֹא לוּגְמָיו. רַבִּי יְהוּדָה בֶּן בְּתֵירָא אוֹמֵר: כְּדֵי גְמִיעָה.</div>
+    <div class="trans" data-when="he">מיתיבי מברייתא: כמה ישתה ויהא חייב? ב״ש: רביעית; ב״ה: מלא לוגמיו; ר׳ יהודה משום ר׳ אליעזר: כמלא לוגמיו; רי״בב: כדי גמיעה אחת. ולכאורה לב״ה ׳מלא לוגמיו׳ דווקא — מלא ממש, וקושיא על שמואל.</div>
+    <div class="trans" data-when="en">The Gemara raises an objection to this from a baraita: How much does one need to drink on Yom Kippur to be liable? Beit Shammai say: A quarter-log, and Beit Hillel say: Two cheeks full. Rabbi Yehuda says in the name of Rabbi Eliezer: Like two cheeks full in appearance from the side, i.e. a single cheekful. Rabbi Yehuda ben Beteira says: The amount that one can swallow in one gulp. In this baraita, Beit Hillel’s opinion is that the measure for drinking on Yom Kippur is a cheekful. This implies that a cheekful means an actual cheekful.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ׳ א — Yoma 80a:15</span></div>
+    <div class="orig">מִי עֲדִיפָא מִמַּתְנִיתִין דְּאוֹקֵימְנָא כְּדֵי שֶׁיֵּרָאֶה, הָכִי נָמֵי כְּדֵי שֶׁיֵּרָאֶה! אִי הָכִי, הַיְינוּ רַבִּי אֱלִיעֶזֶר! אִיכָּא בֵּינַיְיהוּ מְלֹא לוּגְמָיו דָּחוּק.</div>
+    <div class="trans" data-when="he">תירוץ: וכי הברייתא עדיפה מן המשנה? כשם שהעמדנו את המשנה ׳כדי שייראה׳, אף את הברייתא נעמיד כך. מקשים: אם כן, ב״ה זהים לר׳ אליעזר! ומתרצים: יש ביניהם נפקא־מינה — ׳מלא לוגמיו דחוק׳ (מעט פחות ממלא): לב״ה פטור, לר׳ אליעזר חייב.</div>
+    <div class="trans" data-when="en">The Gemara expresses surprise: Is the baraita preferable to the mishna? Since it was established that the measure in the mishna is so that it appears like a cheekful, so too, the baraita can be explained as meaning an amount that looks like two cheeks full. The Gemara questions further: If so, Beit Hillel require an amount that appears like two cheeks full; this is identical with the opinion of Rabbi Eliezer, who says: Like two cheeks full. The Gemara answers: We could say that the practical difference between them is evident in the case of a paltry cheekful, which is not a complete mouthful but slightly less. According to Beit Hillel, one is not liable unless he drinks a full cheekful; but according to Rabbi Eliezer, one is liable even for a paltry mouthful.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ׳ א — Yoma 80a:16</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב הוֹשַׁעְיָא: אִם כֵּן, הָוֵה לֵיהּ מִקּוּלֵּי בֵּית שַׁמַּאי וּמֵחוּמְרֵי בֵּית הִלֵּל! אֲמַר לֵיהּ:</div>
+    <div class="trans" data-when="he">מתקיף רב הושעיא: אם שיעור ב״ה הוא מלא לוגמיו (פחות מרביעית של ב״ש), הרי זו קולא של ב״ש וחומרא של ב״ה — ומדוע לא נמנה הדבר במסכת עדויות שמונה כל מקום שב״ש מקילים? אמר לו…</div>
+    <div class="trans" data-when="en">Rav Hoshaya strongly objects to this understanding: If so, if Beit Hillel’s measure is a single cheekful, then this is an instance of Beit Shammai’s leniencies and Beit Hillel’s stringencies, since the measure of a quarter-log is larger than a single cheekful. If so, why isn’t this debate listed in tractate Eduyyot, which lists all the cases where Beit Shammai are more lenient than Beit Hillel? He said to him:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא פ׳ ב — Yoma 80b:1</span></div>
+    <div class="orig">כִּי אִתְּשִׁיל, בְּעוֹג מֶלֶךְ הַבָּשָׁן אִתְּשִׁיל, דְּהָווּ לְהוּ בֵּית שַׁמַּאי לְחוּמְרָא.</div>
+    <div class="trans" data-when="he">תשובה: השאלה לא נשאלה באדם בינוני (שמלא לוגמיו פחות מרביעית), אלא אף בעוג מלך הבשן הגדול — ובו מלא לוגמיו גדול בהרבה מרביעית, ונמצא שב״ש (רביעית) הם המקילים. לכן לא נמנה בעדויות.</div>
+    <div class="trans" data-when="en">When this question with regard to the measure of liquid was asked, it was not asked about an average-sized person, for whom a mouthful is smaller than a quarter-log. Rather, the question was asked even about Og, king of Bashan, in which case, it is Beit Shammai who are stringent, for Og’s cheekful is much more than a quarter-log.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא פ׳ ב — Yoma 80b:2</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַבִּי זֵירָא: מַאי שְׁנָא אֲכִילָה, דְּכׇל חַד וְחַד — בִּכְכוֹתֶבֶת, וּמַאי שְׁנָא שְׁתִיָּה, דְּכׇל חַד וְחַד בְּדִידֵיהּ? אֲמַר לֵיהּ אַבָּיֵי: קִים לְהוּ לְרַבָּנַן בִּכְכוֹתֶבֶת, דִּבְהָכִי מִיַּתְּבָא דַּעְתֵּיהּ, בְּצִיר מֵהָכִי — לָא מִיַּתְּבָא. בִּשְׁתִיָּה, בְּדִידֵיהּ מִיַּתְּבָא דַּעְתֵּיהּ, בִּדְחַבְרֵיהּ — לָא מִיַּתְּבָא דַּעְתֵּיהּ.</div>
+    <div class="trans" data-when="he">מתקיף ר׳ זירא: מה שונה אכילה, ששיעורה לכל אדם בכותבת (שווה לכול), משתייה, ששיעורה לכל אחד לפי גודל פיו? אביי: מסורת בידי חכמים — בכותבת מתיישבת דעתו, בפחות מכך לא; ואילו בשתייה מתיישבת דעתו במלא פיו שלו, ולא במלא פי חברו הקטן ממנו.</div>
+    <div class="trans" data-when="en">Rabbi Zeira strongly objects to this halakha with regard to the measure for liability for drinking: What is different with regard to eating, in that all people have the same measure, the volume of a large date; and what is different with regard to drinking, where each and every person is liable according to his own measure, i.e., every individual’s measure depends on the size of his own mouth? Abaye said to him: The Sages have an accepted tradition with regard to the volume of the large date, that eating this amount settles his mind, but less than this amount does not settle his mind. However, with regard to drinking, his mind is settled with the amount of his own cheekful, but his mind is not settled with the cheekful of his fellow who is smaller than him.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא פ׳ ב — Yoma 80b:3</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַבִּי זֵירָא: וְכׇל הָעוֹלָם כּוּלּוֹ בִּכְכוֹתֶבֶת וְעוֹג מֶלֶךְ הַבָּשָׁן בִּכְכוֹתֶבֶת? אֲמַר לֵיהּ אַבָּיֵי: קִים לְהוּ לְרַבָּנַן דִּבְהָכִי מִיַּתְּבָא דַּעְתֵּיהּ, בְּצִיר מֵהָכִי לָא מִיַּתְּבָא דַּעְתֵּיהּ, מִיהוּ, כּוּלֵּי עָלְמָא — טוּבָא, וְעוֹג מֶלֶךְ הַבָּשָׁן — פּוּרְתָּא.</div>
+    <div class="trans" data-when="he">מתקיף ר׳ זירא שוב: וכי כל אדם בינוני שֵׂבע מכותבת, ואף עוג מלך הבשן שֵׂבע מכותבת? (אם לא — אף באכילה יהיו שיעורים יחסיים!) אביי: מסורת בידם שבכותבת מתיישבת דעתו; אלא שלאדם בינוני מתיישבת דעתו הרבה, ולעוג רק מעט — ובכל זאת שיעור זה מועיל לכול.</div>
+    <div class="trans" data-when="en">Rabbi Zeira strongly objects to this for a different reason: Is everyone of average size satisfied with eating the volume of a large date, and even Og, king of Bashan, is also satisfied with the volume of a large date? If not, there should also be relative measures for eating. Abaye said to him: The Sages have an accepted tradition that this amount settles his mind, but less than this amount does not settle his mind. However, everyone of average size has his mind greatly settled, whereas Og, king of Bashan, has his mind only a little settled. But even so, this measure settles the mind of any person and relieves his affliction.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא פ׳ ב — Yoma 80b:4</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַבִּי זֵירָא בָּשָׂר שָׁמֵן בִּכְכוֹתֶבֶת, וְלוּלְבֵי גְפָנִים בִּכְכוֹתֶבֶת? אֲמַר לֵיהּ אַבָּיֵי: קִים לְהוּ לְרַבָּנַן דִּבְהָכִי מִיַּתְּבָא דַּעְתֵּיהּ, בְּצִיר מֵהָכִי — לָא מִיַּתְּבָא דַּעְתֵּיהּ. מִיהוּ בָּשָׂר שָׁמֵן — טוּבָא, לוּלְבֵי גְפָנִים — פּוּרְתָּא.</div>
+    <div class="trans" data-when="he">מתקיף ר׳ זירא עוד: האוכל בשר שמן שֵׂבע מכותבת — וכי גם האוכל לולבי גפנים (מאכל דל) שֵׂבע מכותבת? אביי: מסורת בידם שבכותבת מתיישבת דעתו, בפחות לא; אלא שבבשר שמן מתיישבת הרבה, ובלולבי גפנים מעט.</div>
+    <div class="trans" data-when="en">Rabbi Zeira strongly objects to this further: If it is on account of settling one’s mind, the following question can be raised: If one ate fatty meat, his mind would be settled with the volume of a large date, but if he ate edible grapevine shoots, would his mind similarly be settled with the volume of a large date? Abaye said to him: The Sages have an accepted tradition that with this measure one’s mind is settled, but with less than this measure his mind is not settled. However, with fatty meat, his mind is greatly settled; if one ate the same measure of grapevine shoots, his mind is only a little settled.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא פ׳ ב — Yoma 80b:5</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רָבָא: כְּזַיִת בִּכְדֵי אֲכִילַת פְּרָס, וְכוֹתֶבֶת בִּכְדֵי אֲכִילַת פְּרָס?! אֲמַר לֵיהּ אַבָּיֵי: קִים לְהוּ לְרַבָּנַן דִּבְהָכִי מִיַּתְּבָא דַּעְתֵּיהּ, בִּטְפֵי מֵהָכִי — לָא מִיַּתְּבָא דַּעְתֵּיהּ.</div>
+    <div class="trans" data-when="he">מתקיף רבא: בכל איסורי אכילה השיעור כזית בכדי אכילת פרס; וכי גם ביום הכיפורים השיעור הגדול כותבת ייאכל באותו זמן עצמו (כדי אכילת פרס)? היה ראוי שיינתן זמן ארוך יותר! אביי: מסורת בידם שבזמן זה מתיישבת דעתו, וביותר מכך — לא מתיישבת.</div>
+    <div class="trans" data-when="en">Rava strongly objects to this: For all prohibitions of eating, the measure that determines liability is the volume of an olive-bulk consumed within the time it takes to eat a half-loaf of bread. All forbidden food eaten within that period combines to the measure of an olive-bulk. However, one who eats an olive-bulk over a longer period is exempt. Yet, on Yom Kippur one who eats the volume of a large date, which is a larger measure, is culpable if this amount is eaten within the time it would take to eat a half-loaf of bread. This appears to be a leniency, since one must eat a larger measure in the same time period of time. Why is there not a longer period of time for liability on Yom Kippur, to reflect the larger measure? Abaye said to him: The Sages have an accepted tradition that one who eats within this duration of time, his mind is settled; but one who eats within a longer duration of time, his mind is not settled, and he remains in a state of affliction.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא פ׳ ב — Yoma 80b:6</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רָבָא: (בְּכוֹתֶבֶת) בִּכְדֵי אֲכִילַת פְּרָס, חֲצִי פְרָס — בִּכְדֵי אֲכִילַת פְּרָס?! אֲמַר לֵיהּ רַב פָּפָּא: הַנַּח לְטוּמְאַת גְּוִויָּה דְּלָאו דְּאוֹרָיְיתָא הִיא.</div>
+    <div class="trans" data-when="he">מתקיף רבא עוד: שיעור יום הכיפורים כותבת בכדי אכילת פרס; אך שיעור טומאת הגוף הוא חצי פרס (שתי ביצים — גדול בהרבה) ואף הוא בכדי אכילת פרס — ומדוע לא ניתן לו זמן ארוך יותר? רב פפא: הנח לטומאת הגוף (מאכילת אוכל טמא), שאינה מן התורה אלא מדרבנן, והקלו בה.</div>
+    <div class="trans" data-when="en">Rava strongly objects to this: The measure for liability for eating on Yom Kippur is the volume of a large date consumed within the time it takes to eat a half-loaf of bread; but the measure for eating impure foods that render one ritually impure is half of a half-loaf, which is two egg-bulks, a much larger volume, and this must also be consumed within the time it takes to eat a half-loaf of bread. Rav Pappa said to him: Do not raise a challenge from here. Leave aside ritual impurity of the body contracted through consuming impure foods because that is not by Torah law but by rabbinic law. The Sages were lenient in this matter. If one does not consume that amount of impure food within this time period, he is not rendered impure.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא פ׳ ב — Yoma 80b:7</span></div>
+    <div class="orig">וּמִי אָמַר רַב פָּפָּא הָכִי? וְהָכְתִיב: ״וְלֹא תִטַּמְּאוּ בָּהֶם וְנִטְמֵתֶם בָּם״, וְאָמַר רַב פָּפָּא: מִכָּאן שֶׁטּוּמְאַת גְּוִויָּה דְּאוֹרָיְיתָא! מִדְּרַבָּנַן, וּקְרָא — אַסְמַכְתָּא בְּעָלְמָא.</div>
+    <div class="trans" data-when="he">קושיא: וכי רב פפא אמר כך? והרי דרש מן הפסוק ״ולא תטמאו בהם ונטמתם בם״ — שטומאת הגוף מן התורה! תירוץ: באמת היא מדרבנן, והפסוק אסמכתא בעלמא.</div>
+    <div class="trans" data-when="en">The Gemara challenges this: But did Rav Pappa actually say that the rendering of ritual impurity of the body through the consumption of impure foods is by rabbinic law? But he appears to say the opposite in another statement: Isn’t it written: “You shall not make yourselves detestable with any creeping thing that creeps, neither shall you make yourselves impure with them, that you should be impure thereby” (Leviticus 11:43). And Rav Pappa said: From here, from the Torah’s usage of the word “impure” with regard to the prohibition of eating, we learn that ritual impurity of the body is by Torah law. The Gemara answers: Rav Pappa did not mean that the law is actually Torah law. The law is indeed rabbinic law, and the verse brought as proof is a mere support.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">כל האוכלין מצטרפים לכותבת</span><span data-when="en">All foods combine to a large date</span>
+      <span class="ref">Yoma 80b:8</span></h2>
+  <div class="lead"><span data-when="he">המשנה: כל האוכלין מצטרפים. רב פפא — מלח עם בשר מצטרף; ריש לקיש — אף ציר שעל הירק, שכל מכשירי אוכל אוכל הוא.</span><span data-when="en">The mishna: all foods combine. Rav Pappa — salt with meat combines; Reish Lakish — even brine on a vegetable, for anything that prepares food is food.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① משנה: כל האוכלין מצטרפין לכותבת"]):::mishnah
+  S1["① רב פפא: אכל בשר ומלח — מצטרף, כיון דאכלי אינשי"]:::statement
+  S2["① ריש לקיש: ציר שעל הירק מצטרף לכותבת ביום הכיפורים"]:::statement
+  Q1{"① פשיטא! מהו דתימא משקה הוא"}:::question
+  A1["① קא משמע לן: כל אכשורי אוכלא — אוכלא הוא"]:::answer
+  M1 -->|רב פפא| S1
+  S1 -->|וכן| S2
+  S2 -->|פשיטא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① Mishna: all foods combine to a large date"]):::mishnah
+  S1["① Rav Pappa: meat and salt combine, since people eat them"]:::statement
+  S2["① Reish Lakish: brine on a vegetable combines on Yom Kippur"]:::statement
+  Q1{"① It is obvious! Lest you say it is a beverage"}:::question
+  A1["① It teaches: whatever prepares food is itself food"]:::answer
+  M1 -->|Rav Pappa| S1
+  S1 -->|likewise| S2
+  S2 -->|obvious| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  M1(["① כׇּל הָאוֹכָלִין … מִצְטָרֵף"]):::mishnah
+  S1["① אָמַר רַב פָּפָּא: אֲכַל אוּמְצָא וּמִילְחָא — מִצְטָרֵף … כֵּיוָן דְּאָכְלִי אִינָשֵׁי"]:::statement
+  S2["① אָמַר רֵישׁ לָקִישׁ: צִיר שֶׁעַל גַּבֵּי יָרָק מִצְטָרֵף לִכְכוֹתֶבֶת בְּיוֹם הַכִּפּוּרִים"]:::statement
+  Q1{"① פְּשִׁיטָא! מַהוּ דְּתֵימָא מַשְׁקֶה הוּא"}:::question
+  A1["① קָא מַשְׁמַע לַן: כׇּל אַכְשׁוֹרֵי אוּכְלָא — אוּכְלָא הוּא"]:::answer
+  M1 -->|רב פפא| S1
+  S1 -->|וכן| S2
+  S2 -->|פשיטא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ׳ ב — Yoma 80b:8</span></div>
+    <div class="orig">כׇּל הָאוֹכָלִין. אָמַר רַב פָּפָּא: אֲכַל אוּמְצָא וּמִילְחָא — מִצְטָרֵף. וְאַף עַל גַּב דְּלָאו אֲכִילָה הִיא, כֵּיוָן דְּאָכְלִי אִינָשֵׁי — מִצְטָרְפִין. אָמַר רֵישׁ לָקִישׁ: צִיר שֶׁעַל גַּבֵּי יָרָק מִצְטָרֵף לִכְכוֹתֶבֶת בְּיוֹם הַכִּפּוּרִים. פְּשִׁיטָא! מַהוּ דְּתֵימָא מַשְׁקֶה הוּא, קָא מַשְׁמַע לַן: כׇּל אַכְשׁוֹרֵי אוּכְלָא — אוּכְלָא הוּא.</div>
+    <div class="trans" data-when="he">המשנה: כל האוכלין מצטרפים לשיעור כותבת. רב פפא: אכל בשר עם המלח שעליו — מצטרפים; ואף שאכילת המלח לבדו אינה אכילה, כיון שדרך בני אדם לאוכלם יחד — מצטרפים. ריש לקיש: אף ציר (מי המליחה) שעל הירק מצטרף לכותבת ביום הכיפורים. מקשים: פשיטא, שהרי אוכל הוא! ומתרצים: מהו דתימא משקה הוא ואינו מצטרף — קא משמע לן: כל מכשירי האוכל אוכל הם.</div>
+    <div class="trans" data-when="en">§ We learned in the mishna: All types of foods combine to form a measure of liability with regard to eating on Yom Kippur. Rav Pappa said: If one ate meat and the salt that was on it, these combine to make the volume of a large date. Although consuming salt alone is not considered eating, since people do eat meat with salt together, they combine into one measure. Similarly, Reish Lakish said: Brine on a vegetable combines with the vegetable to make the volume of a large date with regard to the prohibition of eating on Yom Kippur. The Gemara expresses surprise at this: It is obvious. Why should the brine not combine with the vegetable, considering that it is itself food? The Gemara answers: Lest you say that brine is a beverage, and food and drinks do not combine, it teaches us that any item that prepares food for eating is considered a food.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">אכילה גסה — פטור, ״פרט למזיק״</span><span data-when="en">Excessive eating — exempt, “excluding self-harm”</span>
+      <span class="ref">Yoma 80b:9–81a:2</span></h2>
+  <div class="lead"><span data-when="he">ריש לקיש: האוכל אכילה גסה ביום הכיפורים פטור — ׳פרט למזיק׳. ומכאן לדיני זר שאכל תרומה כך, ולמקרה השזפין שהוקאו ונאכלו.</span><span data-when="en">Reish Lakish: one who gorges on Yom Kippur is exempt — “excluding self-harm.” Hence the laws of a non-priest who gorges on teruma, and the case of vomited plums eaten by another.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ריש לקיש: האוכל אכילה גסה ביוה״כ — פטור"]:::statement
+  Q1{"① מאי טעמא? ׳אשר לא תְעוּנֶּה׳ — פרט למזיק"}:::question
+  S2["② ר׳ ירמיה משום ר״ל: זר שאכל תרומה גסה — קרן בלי חומש, ׳כי יאכל׳ פרט למזיק"]:::statement
+  S3["③ ר׳ ירמיה משום ר׳ יוחנן: זר שכוסס שעורים — קרן בלי חומש, ׳כי יאכל׳ פרט למזיק"]:::statement
+  S4["④ רב שיזבי משום ר׳ יוחנן: בלע שזפין והקיאן ואכלן אחר — ראשון קרן וחומש, שני דמי עצים בלבד"]:::statement
+  S1 -->|מאי טעמא| Q1
+  Q1 -->|וכן| S2
+  S2 -->|וכן| S3
+  S3 -->|וכן| S4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Reish Lakish: one who gorges on Yom Kippur — exempt"]:::statement
+  Q1{"① Why? ׳which shall not be afflicted׳ — excluding self-harm"}:::question
+  S2["② R. Yirmeya per R. Lakish: a non-priest gorging on teruma — principal, no fifth, ׳if he eats׳ excludes self-harm"]:::statement
+  S3["③ R. Yirmeya per R. Yoḥanan: one who chews raw teruma barley — principal, no fifth, ׳if he eats׳ excludes harm"]:::statement
+  S4["④ Rav Sheizvi per R. Yoḥanan: swallowed plums, vomited, another ate — first pays principal and fifth, second only wood-value"]:::statement
+  S1 -->|why| Q1
+  Q1 -->|likewise| S2
+  S2 -->|likewise| S3
+  S3 -->|likewise| S4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① אָמַר רֵישׁ לָקִישׁ: הָאוֹכֵל אֲכִילָה גַּסָּה בְּיוֹם הַכִּפּוּרִים — פָּטוּר"]:::statement
+  Q1{"① מַאי טַעְמָא? ״אֲשֶׁר לֹא תְעוּנֶּה״ כְּתִיב, פְּרָט לְמַזִּיק"}:::question
+  S2["② אָמַר רַבִּי יִרְמְיָה אָמַר רֵישׁ לָקִישׁ: זָר שֶׁאָכַל תְּרוּמָה אֲכִילָה גַּסָּה … קֶרֶן וְאֵינוֹ … חוֹמֶשׁ. ״כִּי יֹאכַל״ פְּרָט לְמַזִּיק"]:::statement
+  S3["③ אָמַר רַבִּי יִרְמְיָה אָמַר רַבִּי יוֹחָנָן: זָר שֶׁכּוֹסֵס שְׂעוֹרִים … קֶרֶן וְאֵינוֹ … חוֹמֶשׁ. ״כִּי יֹאכַל״ פְּרָט לְמַזִּיק"]:::statement
+  S4["④ אָמַר רַב שֵׁיזְבִי … זָר שֶׁבָּלַע שִׁזְפִין … וֶהֱקִיאָן וַאֲכָלָן אַחֵר, רִאשׁוֹן קֶרֶן וָחוֹמֶשׁ, שֵׁנִי … דְּמֵי עֵצִים לָרִאשׁוֹן בִּלְבַד"]:::statement
+  S1 -->|מאי טעמא| Q1
+  Q1 -->|וכן| S2
+  S2 -->|וכן| S3
+  S3 -->|וכן| S4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא פ׳ ב — Yoma 80b:9</span></div>
+    <div class="orig">אָמַר רֵישׁ לָקִישׁ: הָאוֹכֵל אֲכִילָה גַּסָּה בְּיוֹם הַכִּפּוּרִים — פָּטוּר. מַאי טַעְמָא? ״אֲשֶׁר לֹא תְעוּנֶּה״ כְּתִיב, פְּרָט לְמַזִּיק.</div>
+    <div class="trans" data-when="he">ריש לקיש: האוכל אכילה גסה ביום הכיפורים — שאוכל מתוך שובע גמור עד שהאכילה מזיקה לו — פטור. מאי טעמא? נאמר ״אשר לא תְעוּנֶּה״ (לשון עינוי) — פרט למזיק, שאכילה כזו אינה מבטלת עינוי אלא מזיקה.</div>
+    <div class="trans" data-when="en">§ Reish Lakish said: One who eats in an excessive manner on Yom Kippur, to the degree that he forces himself to continue eating even when full is exempt, e.g., one who ate beyond being satiated on Yom Kippur eve and then ate something else as soon as the fast began. What is the reason for that? Because the Torah does not mention the prohibition of eating on Yom Kippur, but it was written “any soul which shall not be afflicted in that same day, he shall be cut off from his people” (Leviticus 23:29), excluding one who harms himself, e.g., one who does not enjoy his food at all.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא פ׳ ב — Yoma 80b:10</span></div>
+    <div class="orig">אָמַר רַבִּי יִרְמְיָה אָמַר רֵישׁ לָקִישׁ: זָר שֶׁאָכַל תְּרוּמָה אֲכִילָה גַּסָּה — מְשַׁלֵּם אֶת הַקֶּרֶן וְאֵינוֹ מְשַׁלֵּם אֶת הַחוֹמֶשׁ. ״כִּי יֹאכַל״ — פְּרָט לְמַזִּיק. אָמַר רַבִּי יִרְמְיָה אָמַר רַבִּי יוֹחָנָן: זָר</div>
+    <div class="trans" data-when="he">כיוצא בזה: ר׳ ירמיה משום ריש לקיש — זר שאכל תרומה אכילה גסה משלם את הקרן (ערך התרומה) אך פטור מן החומש, שנאמר ״כי יאכל״ — פרט למזיק, שאינו אוכל כדרך אכילה. ר׳ ירמיה משום ר׳ יוחנן: זר…</div>
+    <div class="trans" data-when="en">Similarly, Rabbi Yirmeya said that Reish Lakish said: A non-priest who ate teruma in an excessive manner pays the principal, that which he took, and does not pay the additional fifth, which one who illegally eats teruma pays to the priest as a penalty. This is because it states about one who eats teruma: “And if a man eat of the sacred thing in error, then he shall add a fifth to it, and give the priest the sacred thing” (Leviticus 22:14). The word “eat” excludes one who is not eating but harming himself. He does, however, pay the principal, since he caused a loss to the priest. The fifth is only paid by one who eats normally, not excessively. Similarly, Rabbi Yirmeya said that Rabbi Yoḥanan said: A non-priest</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא פ״א א — Yoma 81a:1</span></div>
+    <div class="orig">שֶׁכּוֹסֵס שְׂעוֹרִים שֶׁל תְּרוּמָה — מְשַׁלֵּם אֶת הַקֶּרֶן וְאֵינוֹ מְשַׁלֵּם אֶת הַחוֹמֶשׁ. ״כִּי יֹאכַל״ — פְּרָט לְמַזִּיק.</div>
+    <div class="trans" data-when="he">המשך: זר שכוסס שעורים של תרומה כשהן חיות (שלא נטחנו ולא נאפו) — משלם את הקרן ואינו משלם את החומש, שנאמר ״כי יאכל״ פרט למזיק; שאכילת שעורים חיות חשובה כמזיק עצמו ולא כאכילה.</div>
+    <div class="trans" data-when="en">who chews on barley of teruma that has not been ground or baked pays the principal and not an extra fifth. The reason is that it states “eats” (Leviticus 22:14), which excludes one who harms himself. Consuming raw barley is considered self-harm, not eating.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא פ״א א — Yoma 81a:2</span></div>
+    <div class="orig">אָמַר רַב שֵׁיזְבִי אָמַר רַבִּי יוֹחָנָן: זָר שֶׁבָּלַע שִׁזְפִין שֶׁל תְּרוּמָה וֶהֱקִיאָן וַאֲכָלָן אַחֵר, רִאשׁוֹן — מְשַׁלֵּם (אֶת) קֶרֶן וָחוֹמֶשׁ. שֵׁנִי — אֵין מְשַׁלֵּם אֶלָּא דְּמֵי עֵצִים לָרִאשׁוֹן בִּלְבַד.</div>
+    <div class="trans" data-when="he">רב שיזבי משום ר׳ יוחנן: זר שבלע שזפין (פירות) של תרומה שלמים והקיאן, ואכלן אדם אחר — הראשון, שנהנה וקנאן, משלם קרן וחומש; והשני אינו משלם אלא דמי עצים (שהרי לאחר ההקאה ראויים רק להסקה) לראשון בלבד.</div>
+    <div class="trans" data-when="en">Rav Sheizvi said that Rabbi Yoḥanan said: In the case of a non-priest who swallowed plums of teruma whole and vomited them out, whereupon another person ate them, the first one pays the principal plus a fifth. When the first one benefited from the plums, he acquired them and must therefore pay for them, and the second one must pay their worth to the first one. Since they are only fit for fuel after the first one vomited them out, the second person is considered to have damaged their value as fuel. Therefore, he pays only the price of wood, i.e., fuel, to the first person.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
