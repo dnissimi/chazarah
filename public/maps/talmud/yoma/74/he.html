@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא ע״ד</title>
+<meta name="description" content="מפת הסוגיא של יומא ע״ד: שני יישובים ללשון ׳אסור׳ במשנה; מחלוקת ר׳ יוחנן וריש לקיש בחצי שיעור; מדרשי ׳תְּעַנּוּ׳ לריבוי כל מאכל ולגזירה־שווה ׳עינוי רעבון׳; ענוי המן ׳פת בסלו׳; ו׳נותן עינו בכוסו׳.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="74">
+<meta name="gemara-map:sefaria-ref" content="Yoma 74">
+<meta name="gemara-map:topic-he" content="חצי שיעור ומדרשי עינוי דיום הכיפורים">
+<meta name="gemara-map:topic-en" content="Half-measure and the afflictions of Yom Kippur">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא ע״ד">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 74">
+<meta name="gemara-map:blurb-he" content="חצי שיעור אסור מן התורה כי ׳חזי לאיצטרופי׳; ולשון ׳עינוי׳ נדרשת לאסור כל אכילה ולכוון לרעבון — עינוי בידי שמים.">
+<meta name="gemara-map:blurb-en" content="A half-measure is forbidden by Torah law since it can combine to a whole; and ‘affliction’ is expounded to forbid all eating and to mean hunger.">
+<meta name="gemara-map:sugya-count" content="5">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא ע״ד</span><span data-when="en">Sugya map — Yoma 74</span></h1>
+    <div class="subtitle"><span data-when="he">יומא ע״ד א — ע״ה א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 74a–75a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשך עינויי יום הכיפורים: לשון <b>״אסור״</b> במשנה — או בחצי שיעור, או בשאר העינויים (רחיצה, סיכה ועוד) שאינם בכרת; <b>חצי שיעור</b> — ר׳ יוחנן אוסר מן התורה (״חזי לאיצטרופי״) וריש לקיש מתיר (״אכילה אמר רחמנא, וליכא״); מדרשי <b>״תְּעַנּוּ״</b> מרבים כל מאכל ומכוונים את העינוי לרעבון בגזירה־שווה; ולבסוף — עינוי המן (<b>״פת בסלו״</b>) ו״נותן עינו בכוסו״.</span>
+    <span data-when="en"><b>Bottom line:</b> The Yom Kippur afflictions continue: the Mishna’s word <b>“prohibited”</b> means either a half-measure or the other afflictions (bathing, anointing, etc.) that carry no karet; the <b>half-measure</b> dispute — R. Yoḥanan forbids it by Torah law (“it can combine”) while Reish Lakish permits it (“the Torah said ‘eat,’ and here there is none”); the <b>“afflict”</b> midrashim extend the ban to every food and fix “affliction” as hunger by verbal analogy; and finally the affliction of the manna (<b>“bread in the basket”</b>) and “casting one’s eye on the cup.”</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא ע״ד</span><span data-when="en">Overview — Yoma 74</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · לשון ׳אסור׳ — חצי שיעור או שאר עינויים"]:::statement
+  O2["2 · חצי שיעור — ר׳ יוחנן וריש לקיש"]:::statement
+  O3["3 · מדרשי ׳תְּעַנּוּ׳ — ריבוי וגזירה־שווה"]:::statement
+  O4["4 · עינוי המן — ׳פת בסלו׳"]:::statement
+  O5["5 · ׳נותן עינו בכוסו׳"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · ׳Prohibited׳ — half-measure or other afflictions"]:::statement
+  O2["2 · Half-measure — R. Yoḥanan and Reish Lakish"]:::statement
+  O3["3 · The ׳afflict׳ midrashim — inclusion and analogy"]:::statement
+  O4["4 · The affliction of the manna — ׳bread in the basket׳"]:::statement
+  O5["5 · ׳Casting one׳s eye on the cup׳"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">לשון ״אסור״ במשנה — חצי שיעור או שאר עינויים</span><span data-when="en">The Mishna’s “prohibited” — half-measure or other afflictions</span>
+      <span class="ref">Yoma 74a:5–6</span></h2>
+  <div class="lead"><span data-when="he">המשנה השתמשה בלשון ״אסור״. הגמרא מבררת: וכי ״אסור״ נאמר רק היכן שאין כרת? שני יישובים — בחצי שיעור, או בשאר העינויים שאינם בכרת.</span><span data-when="en">The Mishna used the word “prohibited.” The Gemara asks whether that word is reserved for cases without karet, and gives two answers — a half-measure, or the non-karet afflictions.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① קושיא: וכי ׳אסור׳ לא נאמר במקום כרת? והתניא!"}:::question
+  A1["② יישוב א: ׳אסור׳ בחצי שיעור, ׳כרת׳ בשיעור — באוכל, שותה ועושה מלאכה"]:::answer
+  A2["② יישוב ב: ׳אסור׳ אשאר עינויים — שבתון: רחיצה, סיכה, נעילה, תשמיש"]:::answer
+  Q1 -->|תירוץ| A1
+  Q1 -->|ואיבעית אימא| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① Question: is ׳prohibited׳ never used where there is karet? But a baraita!"}:::question
+  A1["② Answer 1: ׳prohibited׳ for a half-measure, ׳karet׳ for a full one — eating, drinking, labor"]:::answer
+  A2["② Answer 2: ׳prohibited׳ for the other afflictions — Shabbaton: bathing, anointing, shoes, relations"]:::answer
+  Q1 -->|resolution| A1
+  Q1 -->|alternatively| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  Q1{"① וְכׇל הֵיכָא דְּתָנֵי עָנוּשׁ כָּרֵת, לָא תָּנֵי אָסוּר? וְהָתַנְיָא …"}:::question
+  A1["② כְּשֶׁאָמְרוּ אָסוּר — בְּכַחֲצִי שִׁיעוּר, אֲבָל כְּשִׁיעוּר — עָנוּשׁ כָּרֵת …"]:::answer
+  A2["② כִּי קָתָנֵי אָסוּר — אַשְּׁאָרָא … ׳שַׁבָּתוֹן׳ — שְׁבוּת"]:::answer
+  Q1 -->|תירוץ| A1
+  Q1 -->|ואיבעית אימא| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ד א — Yoma 74a:5</span></div>
+    <div class="orig">וְכׇל הֵיכָא דְּתָנֵי עָנוּשׁ כָּרֵת, לָא תָּנֵי אָסוּר? וְהָתַנְיָא: אַף עַל פִּי שֶׁאָמְרוּ אָסוּר בְּכוּלָּן — לֹא אָמְרוּ עָנוּשׁ כָּרֵת אֶלָּא עַל הָאוֹכֶל וְשׁוֹתֶה וְעוֹשֶׂה מְלָאכָה בִּלְבַד. הָכִי קָאָמַר: כְּשֶׁאָמְרוּ אָסוּר — לָא אָמְרוּ אֶלָּא בְּכַחֲצִי שִׁיעוּר, אֲבָל כְּשִׁיעוּר — עָנוּשׁ כָּרֵת. וְאַף עַל פִּי שֶׁעָנוּשׁ כָּרֵת — אֵין עָנוּשׁ כָּרֵת אֶלָּא אוֹכֵל וְשׁוֹתֶה וְעוֹשֶׂה מְלָאכָה בִּלְבַד.</div>
+    <div class="trans" data-when="he">ההנחה הראשונית: לשון ״אסור״ שבמשנה מורה על איסור שאין בו כרת. הגמרא מקשה: וכי בכל מקום שיש כרת לא שונים לשון ״אסור״? והרי שנינו: אף שאמרו ״אסור״ בכל חמשת העינויים, לא אמרו ״ענוש כרת״ אלא באוכל, שותה ועושה מלאכה. תירוץ: כך כוונת הברייתא — ״אסור״ נאמר על חצי שיעור, אבל בשיעור שלם — ענוש כרת; ואף הכרת אינו אלא באכילה, שתייה ומלאכה.</div>
+    <div class="trans" data-when="en">§ The Gemara’s initial assumption is that the mishna’s use of the word prohibited is referring to a transgression not punishable by karet. The Gemara asks: And anywhere that it teaches that transgressing is punishable by karet, does it never teach using the word prohibited? Was it not taught in a baraita: Although they said the word prohibited with all of the five Yom Kippur afflictions, they said that the punishment of karet applies only to one who eats, or drinks, or performs prohibited labor. This means that the word prohibit is used with transgressions punishable by karet as well. The Gemara rejects this. This is what the baraita is saying: When they said that those five activities are prohibited, they said that only with regard to a half-measure; but a full measure is punishable by karet. And although a violation is punishable by karet, it is punishable by karet only if one eats, or drinks, or performs prohibited labor; these alone are the cases where karet is incurred.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ד א — Yoma 74a:6</span></div>
+    <div class="orig">וְאִי בָּעֵית אֵימָא: כִּי קָתָנֵי אָסוּר — אַשְּׁאָרָא. דְּתָנוּ רַבָּה וְרַב יוֹסֵף בִּשְׁאָר סִיפְרֵי דְבֵי רַב: מִנַּיִין לְיוֹם הַכִּפּוּרִים שֶׁאָסוּר בִּרְחִיצָה בְּסִיכָה וּבִנְעִילַת הַסַּנְדָּל וּבְתַשְׁמִישׁ הַמִּטָּה, תַּלְמוּד לוֹמַר: ״שַׁבָּתוֹן״ — שְׁבוּת.</div>
+    <div class="trans" data-when="he">ואם תרצה אמור: לשון ״אסור״ שבמשנה מוסבת על שאר העינויים שאין בהם כרת. שכן שנו רבה ורב יוסף בשאר ספרי דבי רב (מדרשי ההלכה): מניין שיום הכיפורים אסור ברחיצה, סיכה, נעילת הסנדל ותשמיש המיטה? תלמוד לומר ״שבתון״ — לשון שביתה. לכן ״אסור״ נאמר עליהם, ואין בהם כרת.</div>
+    <div class="trans" data-when="en">And if you wish, say instead that when it is taught in the mishna using the language of prohibited, it is referring to the other transgressions, which do not incur karet. As Rabba and Rav Yosef taught this in other books of Rav’s school, i.e., the Sifrei, the halakhic midrash on Numbers and Deuteronomy: From where is it derived that it is prohibited to engage in bathing, and in smearing oil on one’s body, and in wearing shoes, and in having relations on Yom Kippur? The verse states: “Shabbaton” (Leviticus 16:31), meaning resting and refraining from certain activities. Therefore, the word prohibit is used with these activities, but they are not punishable by karet.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">חצי שיעור — ר׳ יוחנן וריש לקיש</span><span data-when="en">A half-measure — R. Yoḥanan and Reish Lakish</span>
+      <span class="ref">Yoma 74a:7–74b:1</span></h2>
+  <div class="lead"><span data-when="he">דיון העצם: ר׳ יוחנן — חצי שיעור אסור מן התורה (חזי לאיצטרופי); ריש לקיש — מותר מן התורה. ר׳ יוחנן מקשה מ״כל חלב״, וריש לקיש דוחה: אסמכתא, ו״כוי בריה שאני״.</span><span data-when="en">The matter itself: R. Yoḥanan — a half-measure is forbidden by Torah law (it can combine); Reish Lakish — permitted. R. Yoḥanan objects from “all fat,” and Reish Lakish deflects: a mere support, and “a koy is its own species.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ יוחנן: חצי שיעור אסור מן התורה — חזי לאיצטרופי"]:::statement
+  S2["① ריש לקיש: מותר מן התורה — אכילה אמר רחמנא, וליכא"]:::statement
+  Q1{"② מיתיבי: ׳כל חלב׳ — לרבות כוי וחצי שיעור באזהרה!"}:::question
+  A1["② ריש לקיש: מדרבנן, וקרא אסמכתא בעלמא"]:::answer
+  S3["③ הכי נמי מסתברא — וכי צריך קרא לרבות ספק כוי?"]:::statement
+  A2["④ דחייה: קסברי כוי בריה בפני עצמה — אצטריך קרא; הכא נמי בריה שאני"]:::answer
+  S1 -->|מחלוקת| S2
+  S2 -.->|מיתיבי| Q1
+  Q1 -->|דחייה| A1
+  A1 -->|סיוע| S3
+  S3 -.->|אי משום הא| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Yoḥanan: a half-measure is forbidden by Torah law — it can combine"]:::statement
+  S2["① Reish Lakish: permitted by Torah law — the Torah said ׳eat׳, and here there is none"]:::statement
+  Q1{"② Objection: ׳all fat׳ — to include koy and a half-measure in the prohibition!"}:::question
+  A1["② Reish Lakish: it is rabbinic, the verse a mere support"]:::answer
+  S3["③ So too it is reasonable — need a verse to include the doubtful koy?"]:::statement
+  A2["④ Rejection: they hold a koy is its own species — a verse is needed; so too here, a species differs"]:::answer
+  S1 -->|dispute| S2
+  S2 -.->|objection| Q1
+  Q1 -->|deflection| A1
+  A1 -->|support| S3
+  S3 -.->|if for that| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רַבִּי יוֹחָנָן אָמַר אָסוּר מִן הַתּוֹרָה: כֵּיוָן דַּחֲזִי לְאִיצְטְרוֹפֵי, אִיסּוּרָא קָא אָכֵיל"]:::statement
+  S2["① רֵישׁ לָקִישׁ אָמַר מוּתָּר מִן הַתּוֹרָה: אֲכִילָה אָמַר רַחֲמָנָא, וְלֵיכָּא"]:::statement
+  Q1{"② אֵיתִיבֵיהּ … תַּלְמוּד לוֹמַר: ׳כׇּל חֵלֶב׳!"}:::question
+  A1["② מִדְּרַבָּנַן, וּקְרָא — אַסְמַכְתָּא בְּעָלְמָא"]:::answer
+  S3["③ הָכִי נָמֵי מִסְתַּבְּרָא … אִיצְטְרִיךְ קְרָא לְאֵתוֹיֵי סְפֵיקָא?"]:::statement
+  A2["④ קָסָבְרִי כּוֹי בְּרִיָּה בִּפְנֵי עַצְמָהּ הִיא … בְּרִיָּה שָׁאנֵי, הָכָא נָמֵי בְּרִיָּה שָׁאנֵי"]:::answer
+  S1 -->|מחלוקת| S2
+  S2 -.->|מיתיבי| Q1
+  Q1 -->|דחייה| A1
+  A1 -->|סיוע| S3
+  S3 -.->|אי משום הא| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ד א — Yoma 74a:7</span></div>
+    <div class="orig">גּוּפָא. חֲצִי שִׁיעוּר, רַבִּי יוֹחָנָן אָמַר: אָסוּר מִן הַתּוֹרָה, רֵישׁ לָקִישׁ אָמַר: מוּתָּר מִן הַתּוֹרָה. רַבִּי יוֹחָנָן אָמַר אָסוּר מִן הַתּוֹרָה: כֵּיוָן דַּחֲזִי לְאִיצְטְרוֹפֵי, אִיסּוּרָא קָא אָכֵיל. רֵישׁ לָקִישׁ אָמַר מוּתָּר מִן הַתּוֹרָה: אֲכִילָה אָמַר רַחֲמָנָא, וְלֵיכָּא.</div>
+    <div class="trans" data-when="he">הגמרא חוזרת לעצם המחלוקת: בחצי שיעור — ר׳ יוחנן אומר אסור מן התורה, וריש לקיש אומר מותר מן התורה. ר׳ יוחנן: כיוון שראוי הוא להצטרף עם חצי שיעור נוסף לכדי שיעור שלם — נמצא שכבר באכילת החצי הראשון אוכל איסור. ריש לקיש: התורה אסרה ״אכילה״, ושיעור אכילה הוא כזית — ובפחות מכזית אין כאן אכילה.</div>
+    <div class="trans" data-when="en">§ Apropos the dispute between Rabbi Yoḥanan and Reish Lakish, the Gemara deals with the matter itself: What is the law with regard to a half-measure? Rabbi Yoḥanan said: It is prohibited by Torah law. Reish Lakish said: It is permitted by Torah law. The Gemara elaborates: Rabbi Yoḥanan said it is prohibited by Torah law because it is fit to combine with another half-measure. If one continues to eat more, he will eat a whole measure, which is punishable by Torah law. Therefore, even when he eats the first half-measure he is eating forbidden food. Reish Lakish said it is permitted by Torah law. His reason is as follows: With regard to all forbidden foods, the Merciful One states in the Torah: “Eat,” for example in the verse: “You shall eat neither fat nor blood” (Leviticus 3:17). Eating is defined as consuming a minimum of an olive-bulk, and there is no prohibition if one eats less than an olive-bulk.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ד א — Yoma 74a:8</span></div>
+    <div class="orig">אֵיתִיבֵיהּ רַבִּי יוֹחָנָן לְרֵישׁ לָקִישׁ: אֵין לִי אֶלָּא כֹּל שֶׁיֶּשְׁנוֹ בְּעוֹנֶשׁ יֶשְׁנוֹ בְּאַזְהָרָה, כּוֹי וַחֲצִי שִׁיעוּר, הוֹאִיל וְאֵינוֹ בְּעוֹנֶשׁ — יָכוֹל אֵינוֹ בְּאַזְהָרָה, תַּלְמוּד לוֹמַר: ״כׇּל חֵלֶב״! מִדְּרַבָּנַן, וּקְרָא — אַסְמַכְתָּא בְּעָלְמָא.</div>
+    <div class="trans" data-when="he">ר׳ יוחנן הקשה לריש לקיש מברייתא בעניין חֵלב: אין לי אלא שכל שיש בו עונש (כרת) יש בו אזהרה; כוי וחצי שיעור, שאין בהם עונש — יכול שאין בהם אזהרה? תלמוד לומר ״כל חלב״ — לרבות שגם בהם יש איסור. הרי חצי שיעור אסור מן התורה! ריש לקיש דוחה: האיסור מדרבנן, והפסוק אסמכתא בעלמא.</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan raised an objection to the opinion of Reish Lakish from what was taught in a baraita with regard to the prohibition of forbidden fat: I have derived only that anything that is included in the punishment of karet is included in the prohibition. However, one might have thought that there is no prohibition to eat fat of a koy, or a half-measure of forbidden fat, since there is no punishment for those. Therefore, the verse states: “All fat” (Leviticus 7:23), indicating that there is a prohibition to eat any kind of fat, including fat of uncertain status and a half-measure of fat. Therefore, a half-measure of fat is prohibited by Torah law. Reish Lakish rejects this argument: This prohibition is rabbinic, and the verse brought as a proof is a mere support. It cannot be claimed that there is such a prohibition by Torah law.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ד א — Yoma 74a:9</span></div>
+    <div class="orig">הָכִי נָמֵי מִסְתַּבְּרָא, דְּאִי סָלְקָא דַעְתָּךְ דְּאוֹרָיְיתָא, כּוֹי סְפֵיקָא הוּא, אִיצְטְרִיךְ קְרָא לְאֵתוֹיֵי סְפֵיקָא? אִי מִשּׁוּם הָא — לָא אִירְיָא, קָסָבְרִי</div>
+    <div class="trans" data-when="he">סיוע לריש לקיש: כך גם מסתבר שהברייתא הביאה את הפסוק רק כאסמכתא; שאם תאמר שזהו איסור תורה — והרי כוי הוא ספק (חיה או בהמה), וכי צריך פסוק לרבות ספק? תשובת בעלי הדין שכנגד: אם משום טענה זו בלבד — אין זו ראיה, שכן הם סוברים…</div>
+    <div class="trans" data-when="en">The Gemara comments: So too, it is reasonable to say that the baraita cites only the verse as a support and not as a source to prove the prohibition. For if it could enter your mind that this teaching constitutes a prohibition by Torah law, there is uncertainty whether a koy is a wild beast or a domestic animal. Is a verse necessary to include an uncertainty? There is no doubt before God and therefore no purpose in writing a case of doubt in the Torah. Consequently, the baraita cites the verse only as a support. The Gemara answers: If that is the reason, there is no conclusive argument. The Sages of the baraita might have thought</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ד ב — Yoma 74b:1</span></div>
+    <div class="orig">כּוֹי בְּרִיָּה בִּפְנֵי עַצְמָהּ הִיא. דְּאִי לָא תֵּימָא הָכִי, הָא דְּאָמַר רַב אִידִי בַּר אָבִין: אַף ״כׇּל״ לְאֵתוֹיֵי כּוֹי, כּוֹי סְפֵיקָא הוּא, אִיצְטְרִיךְ קְרָא לְרַבּוֹיֵי סְפֵיקָא? אֶלָּא בְּרִיָּה שָׁאנֵי, הָכָא נָמֵי בְּרִיָּה שָׁאנֵי.</div>
+    <div class="trans" data-when="he">…שכוי בריה בפני עצמה היא (לא חיה ולא בהמה), ולכן צריך פסוק לרבותו אף שהוא ״ספק״. שאם לא תאמר כן — מה שאמר רב אידי בר אבין ש״כל״ בא לרבות כוי, והרי כוי ספק, וכי צריך פסוק לרבות ספק? אלא ודאי בריה שאני; וכך גם כאן בחֵלב — בריה (כוי) שאני, ואין מכאן ראיה שחצי שיעור אסור מן התורה.</div>
+    <div class="trans" data-when="en">that a koy is its own species, and the uncertainty pertains not only to whether it is a wild or domestic animal, but also to whether it even can fit into one of those two categories. For if you do not say so and maintain that it might be its own species, how can we understand that which Rav Idi bar Avin said, that also the word “all” stated in the verse: “All blood you may not eat, whether of birds or of beasts” (Leviticus 7:26), comes to include the koy. Now, if you say that the koy is a case of uncertainty, is a verse necessary to include an uncertainty? Rather, the koy is obviously its own species, and therefore it is different and needs a special verse to include it. Here too, in the case of the forbidden fat, we could say that the koy is its own species, and therefore it is different. Consequently, Reish Lakish’s opinion cannot be proven by this baraita.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">מדרשי ״תְּעַנּוּ״ — ריבוי כל מאכל וגזירה־שווה לרעבון</span><span data-when="en">The “afflict” midrashim — including all food, and the analogy to hunger</span>
+      <span class="ref">Yoma 74b:2–13</span></h2>
+  <div class="lead"><span data-when="he">סדרת ברייתות על ״תְּעַנּוּ את נפשותיכם״: עינוי הוא ״שב ואל תעשה״; סולם ריבויים המרחיב את האיסור מפיגול ונותר עד החולין והקודשים; ודבי ר׳ ישמעאל לומד בגזירה־שווה ש״עינוי״ הוא רעבון.</span><span data-when="en">A run of baraitot on “you shall afflict your souls”: affliction is passive; a ladder of inclusions extends the ban from piggul and notar down to non-sacred and sacred food; and the school of R. Yishmael derives by analogy that “affliction” means hunger.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: עינוי — ׳שב ואל תעשה׳ כמלאכה, לא ישיבה בחמה ובצינה"]:::statement
+  Q1{"② ואימא: לא נחלק במצב? · דומיא דמלאכה — לא חילקת"}:::question
+  S2["③ ברייתא אחרת: עינוי בדבר שחייבין עליו במקום אחר — פיגול ונותר"]:::statement
+  P1["④–⑦ סולם ריבויים: ׳תְּעַנּוּ׳, ׳וְעִנִּיתֶם׳ — טבל, נבילה, חולין, תרומה, קדשים"]:::proof
+  P2["⑧ ואם נפשך לומר: ׳והאבדתי׳ — עינוי שהוא אבידת הנפש, אכילה ושתייה"]:::proof
+  Q2{"⑨ מאי ׳ואם נפשך׳? · שמא בעריות — ׳והאבדתי׳: אכילה ושתייה"}:::question
+  S3["⑩ דבי ר׳ ישמעאל: גזירה־שווה ׳עינוי׳—׳עינוי׳, מה להלן רעבון"]:::statement
+  Q3{"⑪ ונילף מ׳אם תְּעַנֶּה בנותי׳? · דרבים מדרבים, לא מיחיד"}:::question
+  Q4{"⑫ ונילף מעינוי מצרים (פרישות)? · בידי שמים מבידי שמים, לא מאדם"}:::question
+  S1 -.->|ואימא ודחייה| Q1
+  Q1 -->|ברייתא אחרת| S2
+  S2 -->|ריבוי| P1
+  P1 -->|ואם נפשך| P2
+  P2 -->|ביאור| Q2
+  Q2 -->|דבי ר׳ ישמעאל| S3
+  S3 -.->|ונילף| Q3
+  Q3 -.->|ונילף| Q4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: affliction is passive, like labor — not sitting in sun or cold"]:::statement
+  Q1{"② Say we not distinguish by case? · Like labor — you drew no distinction"}:::question
+  S2["③ Another baraita: affliction over a food punishable elsewhere — piggul and notar"]:::statement
+  P1["④–⑦ Ladder of inclusions: ׳afflict׳, ׳and afflict׳ — untithed, carcass, non-sacred, teruma, sacred"]:::proof
+  P2["⑧ And if you wish: ׳I will destroy׳ — affliction that destroys the soul, eating and drinking"]:::proof
+  Q2{"⑨ What is ׳and if you wish׳? · Lest it speak of relations — ׳I will destroy׳: eating and drinking"}:::question
+  S3["⑩ School of R. Yishmael: analogy ׳affliction׳—׳affliction׳, there it means hunger"]:::statement
+  Q3{"⑪ Derive from ׳if you afflict my daughters׳? · Public from public, not from an individual"}:::question
+  Q4{"⑫ Derive from Egypt׳s affliction (abstinence)? · By Heaven from by Heaven, not from man"}:::question
+  S1 -.->|say, and rejection| Q1
+  Q1 -->|another baraita| S2
+  S2 -->|inclusion| P1
+  P1 -->|and if you wish| P2
+  P2 -->|clarification| Q2
+  Q2 -->|School of R. Yishmael| S3
+  S3 -.->|derive| Q3
+  Q3 -.->|derive| Q4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן … מָה מְלָאכָה שֵׁב וְאַל תַּעֲשֶׂה, אַף עִנּוּי נֶפֶשׁ שֵׁב וְאַל תַּעֲשֶׂה"]:::statement
+  Q1{"② וְאֵימָא … קוּם תּוּב בְּטוּלָּא … מָה מְלָאכָה לֹא חִלַּקְתָּ בָּהּ, אַף עִנּוּי לֹא תַּחְלוֹק בּוֹ"}:::question
+  S2["③ תַּנְיָא אִידַּךְ … דָּבָר שֶׁחַיָּיבִין עָלָיו בִּמְקוֹם אַחֵר … זֶה פִּגּוּל וְנוֹתָר"]:::statement
+  P1["④–⑦ אָבִיא … תַּלְמוּד לוֹמַר ׳תְּעַנּוּ׳, ׳וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם׳ — רִיבָּה"]:::proof
+  P2["⑧ וְאִם נַפְשְׁךָ לוֹמַר … ׳וְהַאֲבַדְתִּי אֶת הַנֶּפֶשׁ׳ … זֶה אֲכִילָה וּשְׁתִיָּה"]:::proof
+  Q2{"⑨ מַאי ׳וְאִם נַפְשְׁךָ לוֹמַר׳? … בַּעֲרָיוֹת … זֶה אֲכִילָה וּשְׁתִיָּה"}:::question
+  S3["⑩ דְּבֵי רַבִּי יִשְׁמָעֵאל תָּנָא … מָה לְהַלָּן עִנּוּי רְעָבוֹן, אַף כָּאן עִנּוּי רְעָבוֹן"]:::statement
+  Q3{"⑪ וְנֵילַף מֵ׳אִם תְּעַנֶּה אֶת בְּנוֹתַי׳? … דְּרַבִּים מֵעִנּוּי דְּרַבִּים, וְאֵין … מֵעִנּוּי דְּיָחִיד"}:::question
+  Q4{"⑫ וְנֵילַף מֵעִנּוּי דְּמִצְרַיִם … זוֹ פְּרִישׁוּת? … בִּידֵי שָׁמַיִם מֵעִנּוּי בִּידֵי שָׁמַיִם"}:::question
+  S1 -.->|ואימא ודחייה| Q1
+  Q1 -->|ברייתא אחרת| S2
+  S2 -->|ריבוי| P1
+  P1 -->|ואם נפשך| P2
+  P2 -->|ביאור| Q2
+  Q2 -->|דבי ר׳ ישמעאל| S3
+  S3 -.->|ונילף| Q3
+  Q3 -.->|ונילף| Q4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ד ב — Yoma 74b:2</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״תְּעַנּוּ אֶת נַפְשׁוֹתֵיכֶם״, יָכוֹל יֵשֵׁב בַּחַמָּה אוֹ בַּצִּנָּה כְּדֵי שֶׁיִּצְטַעֵר — תַּלְמוּד לוֹמַר: ״וְכׇל מְלָאכָה לֹא תַעֲשׂוּ״. מָה מְלָאכָה שֵׁב וְאַל תַּעֲשֶׂה, אַף עִנּוּי נֶפֶשׁ שֵׁב וְאַל תַּעֲשֶׂה.</div>
+    <div class="trans" data-when="he">שנו חכמים: ״תְּעַנּוּ את נפשותיכם״ — יכול ישב אדם בחמה או בצינה כדי שיצטער (עינוי אקטיבי)? תלמוד לומר ״וכל מלאכה לא תעשו״: מה מלאכה היא ״שב ואל תעשה״ (הימנעות), אף עינוי נפש הוא ״שב ואל תעשה״ — הימנעות מאכילה ושתייה, ולא צער יזום.</div>
+    <div class="trans" data-when="en">§ After clarifying the wording of the mishna, the Gemara brings a halakhic midrash to analyze the mishna’s laws. The Sages taught: The verse states: “And this shall be a statute to you forever: In the seventh month on the tenth day of the month you shall afflict your souls” (Leviticus 16:29). I might have thought that one should sit in the sun or in the cold to suffer and afflict his soul; therefore the continuation of the verse states: “And you shall not do any labor, the home-born, or the stranger that lives among you” (Leviticus 16:29). This teaches that just as prohibited labor is a mitzva that requires one to sit and do nothing, as one is commanded to refrain from action, so too, affliction of one’s soul is also a mitzva requiring one to sit and do nothing. One is not commanded to be proactive in order to afflict his soul. Rather, one must refrain from specified actions such as eating and drinking.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ד ב — Yoma 74b:3</span></div>
+    <div class="orig">וְאֵימָא: הֵיכָא דְּיָתֵיב בְּשִׁימְשָׁא וְחָיֵים לֵיהּ לָא נֵימָא לֵיהּ קוּם תּוּב בְּטוּלָּא, יָתֵיב בְּטוּלָּא וְקָרֵיר לֵיהּ לָא נֵימָא לֵיהּ קוּם תּוּב בְּשִׁימְשָׁא! דּוּמְיָא דִּמְלָאכָה: מָה מְלָאכָה לֹא חִלַּקְתָּ בָּהּ, אַף עִנּוּי לֹא תַּחְלוֹק בּוֹ.</div>
+    <div class="trans" data-when="he">קושיא: ואימא שהעינוי ה״שב ואל תעשה״ הוא — היושב בחמה וחם לו, אין מצווים עליו לקום ולשבת בצל; והיושב בצל וקר לו, אין מצווים עליו לקום ולשבת בחמה (גם זה הימנעות)? דחייה: צריך שיהיה דומה למלאכה — מה במלאכה לא חילקת בין מצב למצב, אף בעינוי לא תחלק.</div>
+    <div class="trans" data-when="en">The Gemara asks: And say that it means that when one sits in the sun and it is too hot for him, we do not say to him: Get up and sit in the shade. Or, if one sits in the shade and it is too cold for him, we do not say to him: Get up and sit in the sun. These are also cases of affliction involving sitting and doing nothing. The Gemara rejects this: It must be similar to the prohibition of labor. Just as with regard to prohibited labor you did not distinguish between situations, since the prohibition is independent of one’s personal circumstance, so too, you do not distinguish with regard to affliction, which is not affected by one’s circumstance.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ד ב — Yoma 74b:4</span></div>
+    <div class="orig">תַּנְיָא אִידַּךְ: ״תְּעַנּוּ אֶת נַפְשׁוֹתֵיכֶם״, יָכוֹל יֵשֵׁב בַּחַמָּה וּבַצִּנָּה וְיִצְטַעֵר — תַּלְמוּד לוֹמַר: ״וְכׇל מְלָאכָה לֹא תַעֲשׂוּ״, מָה מְלָאכָה דָּבָר שֶׁחַיָּיבִין עָלָיו בִּמְקוֹם אַחֵר, אַף עִנּוּי נֶפֶשׁ שֶׁחַיָּיבִין עָלָיו בִּמְקוֹם אַחֵר, וְאִי זֶה זֶה? זֶה פִּגּוּל וְנוֹתָר.</div>
+    <div class="trans" data-when="he">ברייתא אחרת: ״תְּעַנּוּ״ — יכול ישב בחמה ובצינה ויצטער? תלמוד לומר ״וכל מלאכה לא תעשו״: מה מלאכה היא דבר שחייבים עליו (כרת) במקום אחר (שבת), אף עינוי הוא דבר שחייבים עליו במקום אחר. ואיזה זה? פיגול ונותר, שאכילתם בכרת.</div>
+    <div class="trans" data-when="en">It was taught in another baraita that as the verse states: “You shall afflict your souls” (Leviticus 16:29), I might have thought that one must sit in the sun or the cold and be uncomfortable; therefore, the continuation of the verse states: “And you shall not do any labor” (Leviticus 16:29). Just as prohibited labor is something that incurs karet in other circumstances, like Shabbat, so too, affliction relates to acts that in other circumstances incur karet. And what is that circumstance? That is referring to piggul and notar, which lead to karet if eaten, and which therefore may not be eaten on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ד ב — Yoma 74b:5</span></div>
+    <div class="orig">אָבִיא פִּגּוּל וְנוֹתָר שֶׁהֵן בְּכָרֵת, וְלֹא אָבִיא אֶת הַטֶּבֶל שֶׁאֵינוֹ בְּכָרֵת, תַּלְמוּד לוֹמַר: ״תְּעַנּוּ״, ״וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם״ — רִיבָּה.</div>
+    <div class="trans" data-when="he">פתיחת סולם הריבויים: אביא פיגול ונותר שהם בכרת, ולא אביא את הטבל שאינו בכרת? תלמוד לומר ״תְּעַנּוּ״ ושוב ״וְעִנִּיתֶם את נפשותיכם״ — ריבה: כפילות הלשון מרבה עוד מאכל, אף הטבל.</div>
+    <div class="trans" data-when="en">The baraita continues: I will include the categories of piggul and notar, for which one is punished with karet if eaten during the year, but I will not include untithed produce, which does not cause one to incur the punishment of karet if eaten. Therefore, the verse states: “You shall afflict” (Leviticus 16:29), and it also states: “And you shall afflict your souls” (Leviticus 16:31). The Torah comes to include another affliction of a serious eating prohibition, i.e. untithed produce.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ד ב — Yoma 74b:6</span></div>
+    <div class="orig">אָבִיא הַטֶּבֶל שֶׁהוּא בְּמִיתָה וְלֹא אָבִיא אֶת הַנְּבֵילָה שֶׁאֵינָהּ בְּמִיתָה — תַּלְמוּד לוֹמַר: ״תְּעַנּוּ״, ״וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם״ — רִיבָּה.</div>
+    <div class="trans" data-when="he">המשך הסולם: אביא את הטבל שהוא בְּמיתה בידי שמים, ולא אביא את הנבילה שאינה במיתה? תלמוד לומר ״תְּעַנּוּ״, ״וְעִנִּיתֶם״ — ריבה אף את הנבילה.</div>
+    <div class="trans" data-when="en">The baraita continues: I will include untithed produce, for which one receives death at the hand of Heaven; but I will not include an unslaughtered animal carcass, which, although it is prohibited for consumption, one who eats it is not punishable by death at the hands of Heaven. Therefore, the verse states “you shall afflict” and also “and you shall afflict your souls.” The Torah includes foods that are associated with a prohibition even if one who eats them is not punishable by death.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ד ב — Yoma 74b:7</span></div>
+    <div class="orig">אָבִיא אֶת הַנְּבֵילָה שֶׁהוּא בְּלָאו, וְלֹא אָבִיא אֶת הַחוּלִּין שֶׁאֵינָן בְּלָאו? תַּלְמוּד לוֹמַר: ״תְּעַנּוּ״, ״וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם״ — רִיבָּה.</div>
+    <div class="trans" data-when="he">המשך הסולם: אביא את הנבילה שהיא בלאו, ולא אביא את החולין (מאכל רגיל) שאינם בלאו? תלמוד לומר ״תְּעַנּוּ״, ״וְעִנִּיתֶם״ — ריבה אף את החולין.</div>
+    <div class="trans" data-when="en">The baraita continues: I will include an unslaughtered animal carcass, which is prohibited by a negative mitzva, but I will not include non-sacred, regular food, which is not prohibited by a negative mitzva. Therefore, the verse states both “you shall afflict” and “and you shall afflict your souls.” Although non-sacred food is not prohibited in general, the Torah includes it in the prohibition of eating on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ד ב — Yoma 74b:8</span></div>
+    <div class="orig">אָבִיא הַחוּלִּין שֶׁאֵינָן בְּקוּם אֱכוֹל, וְלֹא אָבִיא אֶת הַתְּרוּמָה שֶׁהִיא בְּקוּם אֱכוֹל, תַּלְמוּד לוֹמַר: ״תְּעַנּוּ״, ״וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם״ — רִיבָּה. אָבִיא אֶת הַתְּרוּמָה שֶׁאֵינָהּ בְּבַל תּוֹתִירוּ, וְלֹא אָבִיא אֶת הַקֳּדָשִׁים שֶׁהֵן בְּבַל תּוֹתִירוּ, תַּלְמוּד לוֹמַר: ״תְּעַנּוּ״, ״וְעִנִּיתֶם אֶת נַפְשׁוֹתֵיכֶם״ — רִיבָּה.</div>
+    <div class="trans" data-when="he">המשך הסולם וסיומו: אביא את החולין שאין בהם מצוות ״קום אכול״, ולא אביא את התרומה שיש בה מצווה לכהנים לאכלה? תלמוד לומר ״תְּעַנּוּ״, ״וְעִנִּיתֶם״ — ריבה אף תרומה. אביא את התרומה שאינה ב״בל תותירו״, ולא אביא את הקדשים שהם ב״בל תותירו״? תלמוד לומר ״תְּעַנּוּ״, ״וְעִנִּיתֶם״ — ריבה אף קדשים. נמצא שכל מאכל אסור ביום הכיפורים.</div>
+    <div class="trans" data-when="en">The baraita continues: I will include non-sacred food, which is not associated with any positive mitzva to arise and eat, i.e., there is no obligation to eat non-sacred food; but I will not include teruma, which one is required to arise and eat, as priests are commanded to eat teruma. Therefore, the verse states “you shall afflict” and “and you shall afflict your souls.” The Torah includes teruma as well in the foods one is prohibited to eat on Yom Kippur. I will include teruma, which is not subject to the command: “You shall not leave over” (Leviticus 22:30), since teruma need not be consumed within a specific time, but I will not include sacred food, which is subject to the command “you shall not leave over”; it is prohibited to leave the meat uneaten after a certain amount of time. Therefore, the verse states “you shall afflict” and “and you shall afflict your souls,” to include the category of sacred food in the prohibition of eating on Yom Kippur. Consequently, the Gemara has demonstrated that it is prohibited to eat any type of food on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ד ב — Yoma 74b:9</span></div>
+    <div class="orig">וְאִם נַפְשְׁךָ לוֹמַר, הֲרֵי הוּא אוֹמֵר: ״וְהַאֲבַדְתִּי אֶת הַנֶּפֶשׁ הַהִיא״, עִנּוּי שֶׁהוּא אֲבֵידַת הַנֶּפֶשׁ, וְאֵי זֶה זֶה? זֶה אֲכִילָה וּשְׁתִיָּה.</div>
+    <div class="trans" data-when="he">ראיה נוספת של הברייתא: ואם נפשך לומר (אם תרצה לחלוק על הדרשה הקודמת), הרי הוא אומר ״וְהַאֲבַדְתִּי את הנפש ההיא״ — עינוי שהוא אבידת הנפש (שגורם למוות). ואיזה זה? זה אכילה ושתייה, שמניעתן ממיתה.</div>
+    <div class="trans" data-when="en">And if it is your wish to say something to challenge this reasoning, the Gemara brings an additional proof: Surely, the verse states with regard to one who violates Yom Kippur: “I will destroy that soul from among his people” (Leviticus 23:30). Therefore, affliction is something that destroys a soul. And what is that? That is refraining from eating and drinking, since someone who does not eat and drink at all will die. The Torah is not referring to other afflictions that do not lead to death. These are the words of the baraita.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ד ב — Yoma 74b:10</span></div>
+    <div class="orig">מַאי ״וְאִם נַפְשְׁךָ לוֹמַר״? וְכִי תֵּימָא: בַּעֲרָיוֹת קָא מִישְׁתַּעֵי קְרָא, — הֲרֵי הוּא אוֹמֵר: ״וְהַאֲבַדְתִּי הַנֶּפֶשׁ״, עִנּוּי שֶׁיֵּשׁ בּוֹ אֲבֵידַת נֶפֶשׁ, וְאֵי זֶה זֶה? זֶה אֲכִילָה וּשְׁתִיָּה.</div>
+    <div class="trans" data-when="he">ביאור: מהו ״ואם נפשך לומר״ — מה חסר בדרשה הראשונה? וכי תאמר שהכתוב מדבר בעריות (שאף הן ״עינוי״), ולא באכילה ושתייה — לכך מביא ״וְהַאֲבַדְתִּי הנפש״: עינוי שיש בו אבידת נפש, ואיזה זה? אכילה ושתייה.</div>
+    <div class="trans" data-when="en">The Gemara explains: What is meant by: And if it is your wish to say? What flaw did the first proof have? The Gemara explains: And if you say the verse is discussing relations with those with whom relations are forbidden, avoidance of which is also called affliction, and it is not discussing eating and drinking, the verse states: I will destroy that soul, meaning an affliction that can cause death. And what is that? That is refraining from eating and drinking.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ד ב — Yoma 74b:11</span></div>
+    <div class="orig">דְּבֵי רַבִּי יִשְׁמָעֵאל תָּנָא: נֶאֱמַר כָּאן עִנּוּי, וְנֶאֱמַר לְהַלָּן עִנּוּי. מָה לְהַלָּן עִנּוּי רְעָבוֹן, אַף כָּאן עִנּוּי רְעָבוֹן.</div>
+    <div class="trans" data-when="he">דרשה חלופית: דבי ר׳ ישמעאל שנו בגזירה־שווה — נאמר כאן (ביום הכיפורים) ״עינוי״, ונאמר להלן (במן) ״עינוי״: ״ויענך וירעיבך״. מה להלן ״עינוי״ הוא רעבון, אף כאן ״עינוי״ הוא רעבון — מניעת אכילה.</div>
+    <div class="trans" data-when="en">The school of Rabbi Yishmael taught the following concerning the nature of Yom Kippur: The word affliction is stated here with regard to Yom Kippur, and the word affliction is stated further on in a different place, concerning the Jews in the desert: “And He afflicted you and caused you to hunger” (Deuteronomy 8:3). Just as further on the meaning of affliction is hunger, so too, here, the meaning of the word affliction is hunger.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ד ב — Yoma 74b:12</span></div>
+    <div class="orig">וְנֵילַף מֵ״אִם תְּעַנֶּה אֶת בְּנוֹתַי״? דָּנִין עִנּוּי דְּרַבִּים מֵעִנּוּי דְּרַבִּים, וְאֵין דָּנִין עִנּוּי דְּרַבִּים מֵעִנּוּי דְּיָחִיד.</div>
+    <div class="trans" data-when="he">קושיא על הגזירה־שווה: ונלמד ״עינוי״ דווקא מ״אם תְּעַנֶּה את בנותי״ (לבן ליעקב), שהוא עינוי של תשמיש ולא רעבון? תשובה: דנים עינוי דרבים (יום הכיפורים) מעינוי דרבים (המן במדבר), ואין דנים עינוי דרבים מעינוי דיחיד (נשות יעקב).</div>
+    <div class="trans" data-when="en">The Gemara asks: And let us derive it not from the verse that indicates affliction of hunger but from the verse where Laban warns Jacob: “If you shall afflict my daughters” (Genesis 31:50), which is referring not to hunger but to marital relations. The Gemara answers: We derive affliction commanded to the public on Yom Kippur from affliction relating to the public, i.e., the Jewish people in the desert, and we do not derive affliction of the public from affliction of an individual, as in the case of Jacob’s wives.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ד ב — Yoma 74b:13</span></div>
+    <div class="orig">וְנֵילַף מֵעִנּוּי דְּמִצְרַיִם, דִּכְתִיב: ״וַיַּרְא אֶת עׇנְיֵנוּ״, וְאָמְרִינַן: זוֹ פְּרִישׁוּת דֶּרֶךְ אֶרֶץ! אֶלָּא: דָּנִין עִנּוּי בִּידֵי שָׁמַיִם מֵעִנּוּי בִּידֵי שָׁמַיִם, וְאֵין דָּנִין עִנּוּי בִּידֵי שָׁמַיִם מֵעִנּוּי בִּידֵי אָדָם.</div>
+    <div class="trans" data-when="he">קושיא נוספת: ונלמד מעינוי מצרים (עינוי דרבים), דכתיב ״וירא את עָנְיֵנוּ״, ודרשו: זו פרישות דרך ארץ (מניעת תשמיש)? אלא תיקון הלימוד: דנים עינוי בידי שמים (יום הכיפורים, המן) מעינוי בידי שמים, ואין דנים עינוי בידי שמים מעינוי בידי אדם (שעבוד מצרים).</div>
+    <div class="trans" data-when="en">The Gemara continues to challenge the view of Rabbi Yishmael: And let us derive it from affliction stated with regard to Egypt, as it is written: “And He saw our affliction” (Deuteronomy 26:7). We say that this verse is referring to abstinence from conjugal relations. The Egyptians prevented the Jewish people from having relations. This affliction is an example of public affliction that is not abstention from eating or drinking. Rather, the prohibition to eat or drink on Yom Kippur should not be learned as stated previously, but as follows: We derive affliction by the hand of God from affliction by the hand of God, i.e., affliction caused directly by God or through His mitzvot; and we do not derive affliction by the hand of God from affliction by the hand of man.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">עינוי המן — ״פת בסלו״ ורמז לסומים</span><span data-when="en">The affliction of the manna — “bread in the basket” and the allusion to the blind</span>
+      <span class="ref">Yoma 74b:14–15</span></h2>
+  <div class="lead"><span data-when="he">מה היה ה״עינוי״ באכילת המן? ר׳ אמי ור׳ אסי נחלקו — חוסר ״פת בסלו״ למחר, או חוסר ראייה. רב יוסף לומד רמז לסומים, ואביי ור׳ זירא וריש לקיש על מעלת ראיית העין.</span><span data-when="en">What was the “affliction” in eating the manna? R. Ami and R. Asi dispute — lacking “bread in the basket” for tomorrow, or not seeing the food. Rav Yosef infers an allusion to the blind; Abaye, R. Zeira and Reish Lakish on the value of sight.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① ׳למען עַנּוֹתְךָ׳ — מה עינוי באכילת המן?"}:::question
+  S1["① ר׳ אמי ור׳ אסי: ׳פת בסלו׳ למחר · או רואה ואוכל"]:::statement
+  S2["② רב יוסף: רמז לסומים שאוכלין ואין שבעין; אביי: אכול ביום דווקא"]:::statement
+  S3["② ר׳ זירא: ׳טוב מראה עינים׳; ריש לקיש: מראה אשה — יותר מן המעשה"]:::statement
+  Q1 -->|מחלוקת| S1
+  S1 -->|רב יוסף ואביי| S2
+  S2 -->|קרא| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① ׳in order to afflict you׳ — what affliction in the manna?"}:::question
+  S1["① R. Ami and R. Asi: ׳bread in the basket׳ for tomorrow · or seeing and eating"]:::statement
+  S2["② Rav Yosef: an allusion to the blind, who eat and are not sated; Abaye: eat only by day"]:::statement
+  S3["② R. Zeira: ׳better the sight of the eyes׳; Reish Lakish: a woman seen — more than the act"]:::statement
+  Q1 -->|dispute| S1
+  S1 -->|Rav Yosef and Abaye| S2
+  S2 -->|verse| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① ׳הַמַּאֲכִילְךָ מָן בַּמִּדְבָּר … לְמַעַן עַנּוֹתְךָ׳?"}:::question
+  S1["① חַד אָמַר: מִי שֶׁיֵּשׁ לוֹ פַּת בְּסַלּוֹ … וְחַד אָמַר: מִי שֶׁרוֹאֶה וְאוֹכֵל"]:::statement
+  S2["② אָמַר רַב יוֹסֵף: מִכָּאן רֶמֶז לְסוֹמִין … אָמַר אַבָּיֵי … לָא לֵיכְלַהּ אֶלָּא בִּימָמָא"]:::statement
+  S3["② אֲמַר רַבִּי זֵירָא … ׳טוֹב מַרְאֵה עֵינַיִם׳ … רֵישׁ לָקִישׁ: בְּאִשָּׁה יוֹתֵר מִגּוּפוֹ שֶׁל מַעֲשֶׂה"]:::statement
+  Q1 -->|מחלוקת| S1
+  S1 -->|רב יוסף ואביי| S2
+  S2 -->|קרא| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ד ב — Yoma 74b:14</span></div>
+    <div class="orig">״הַמַּאֲכִילְךָ מָן בַּמִּדְבָּר ... לְמַעַן עַנּוֹתְךָ״? רַבִּי אַמֵּי וְרַבִּי אַסִּי, חַד אָמַר: אֵינוֹ דּוֹמֶה מִי שֶׁיֵּשׁ לוֹ פַּת בְּסַלּוֹ לְמִי שֶׁאֵין לוֹ פַּת בְּסַלּוֹ, וְחַד אָמַר: אֵינוֹ דּוֹמֶה מִי שֶׁרוֹאֶה וְאוֹכֵל לְמִי שֶׁאֵינוֹ רוֹאֶה וְאוֹכֵל.</div>
+    <div class="trans" data-when="he">אגב פסוק המן הגמרא דורשת: ״המאכילך מן במדבר… למען עַנּוֹתְךָ״ — מה העינוי באכילת המן? ר׳ אמי ור׳ אסי: אחד אמר — אינו דומה מי שיש לו פת בסלו (מזון מובטח למחר) למי שאין לו; וחד אמר — אינו דומה מי שרואה את מאכלו ואוכל למי שאינו רואה (שהמן לא נראה כטעמו).</div>
+    <div class="trans" data-when="en">§ Apropos the verse: “And he afflicted you and caused you to hunger, and fed you with manna” (Deuteronomy 8:3), the Gemara expounds related verses. The Torah states: “Who feeds you manna in the desert which your fathers did not know, in order to afflict you” (Deuteronomy 8:16). What affliction was there in eating the manna? Rabbi Ami and Rabbi Asi disagreed on the matter. One said: There is no comparison between one who has bread in his basket and one who does not have bread in his basket. The affliction in eating the manna lay in there being no leftover food for the next day. Each day the people worried that they might not have any food to eat the next day. And one said: There is no comparison between one who sees the food and eats it and one who does not see the food and eats it. Though the manna could taste like anything, it always looked the same and did not look as it tasted. Being unable to see the food that they tasted was an affliction.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ד ב — Yoma 74b:15</span></div>
+    <div class="orig">אָמַר רַב יוֹסֵף: מִכָּאן רֶמֶז לְסוֹמִין, שֶׁאוֹכְלִין וְאֵין שְׂבֵעִין. אָמַר אַבָּיֵי: הִלְכָּךְ, מַאן דְּאִית לֵיהּ סְעוֹדְתָּא לָא לֵיכְלַהּ אֶלָּא בִּימָמָא. אֲמַר רַבִּי זֵירָא, מַאי קְרָא: ״טוֹב מַרְאֵה עֵינַיִם מֵהֲלׇךְ נָפֶשׁ״. אָמַר רֵישׁ לָקִישׁ: טוֹב מַרְאֵה עֵינַיִם בְּאִשָּׁה יוֹתֵר מִגּוּפוֹ שֶׁל מַעֲשֶׂה, שֶׁנֶּאֱמַר: ״טוֹב מַרְאֵה עֵינַיִם מֵהֲלׇךְ נָפֶשׁ״.</div>
+    <div class="trans" data-when="he">רב יוסף: מכאן (שהראייה משביעה) רמז לסומים שאוכלים ואינם שבעים, לפי שאינם רואים את מאכלם. אביי: הלכך, מי שיש לו סעודה לא יאכלנה אלא ביום, באור, שיראה מה הוא אוכל. ר׳ זירא: מה הפסוק לכך? ״טוב מראה עינים מהלך נפש״. ריש לקיש על אותו פסוק: טוב מראה עינים באשה יותר מגופו של מעשה.</div>
+    <div class="trans" data-when="en">Rav Yosef said: From here there is an allusion to the idea that blind people eat but are not fully satisfied when they eat because they cannot see their food. Seeing the food contributes to the enjoyment of eating. Abaye said: Therefore, from what we have just learned, one who has a meal should eat it only during daytime, when there is light to see the food that is being eaten. Rabbi Zeira said: What is the verse that alludes to this? “Better is the seeing of the eyes than the wandering of the desire” (Ecclesiastes 6:9). On the same verse, Reish Lakish said: The sight of a woman is better than the actual act of relations, as it is stated: “Better is the seeing of the eyes than the wandering of the desire.”</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">״נותן עינו בכוסו״ — הכל דומה עליו כמישור</span><span data-when="en">“Casting one’s eye on the cup” — all seems level to him</span>
+      <span class="ref">Yoma 74b:16–75a:1</span></h2>
+  <div class="lead"><span data-when="he">מחלוקת נוספת של ר׳ אמי ור׳ אסי על פסוק היין: הנותן עינו בכוסו (שתיין) — לאחד דומות עליו כל העריות כמישור, ולאחר דומה כל העולם כמישור.</span><span data-when="en">A further dispute of R. Ami and R. Asi on the wine verse: one who casts his eye on his cup — to one, all forbidden relations seem level; to the other, the whole world seems level.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① ׳כי יתן בכוס עינו יתהלך במישרים׳ — מהו?"}:::question
+  S1["① חד: עריות כולן דומות עליו כמישור"]:::statement
+  S2["② וחד: כל העולם כולו דומה עליו כמישור"]:::statement
+  Q1 -->|מחלוקת| S1
+  Q1 -->|מחלוקת| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① ׳when it gives its color in the cup, it glides smoothly׳ — meaning?"}:::question
+  S1["① One: all forbidden relations seem to him like level ground"]:::statement
+  S2["② The other: the whole world seems to him like level ground"]:::statement
+  Q1 -->|dispute| S1
+  Q1 -->|dispute| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  Q1{"① ׳כִּי יִתֵּן בַּכּוֹס עֵינוֹ יִתְהַלֵּךְ בְּמֵישָׁרִים׳ — רַבִּי אַמֵּי וְרַבִּי אַסִּי"}:::question
+  S1["① כׇּל הַנּוֹתֵן עֵינוֹ בְּכוֹסוֹ, עֲרָיוֹת כּוּלָּן דּוֹמוֹת עָלָיו כְּמִישׁוֹר"]:::statement
+  S2["② כָּל הַנּוֹתֵן עֵינוֹ בְּכוֹסוֹ, כָּל הָעוֹלָם כּוּלּוֹ דּוֹמֶה עָלָיו כְּמִישׁוֹר"]:::statement
+  Q1 -->|מחלוקת| S1
+  Q1 -->|מחלוקת| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ד ב — Yoma 74b:16</span></div>
+    <div class="orig">״כִּי יִתֵּן בַּכּוֹס עֵינוֹ יִתְהַלֵּךְ בְּמֵישָׁרִים״, רַבִּי אַמֵּי וְרַבִּי אַסִּי, חַד אָמַר: כׇּל הַנּוֹתֵן</div>
+    <div class="trans" data-when="he">אגב מחלוקת ר׳ אמי ור׳ אסי הקודמת, מובאת מחלוקת נוספת על פסוק היין: ״כי יתן בכוס עינו יתהלך במישרים״ — חד אמר: כל הנותן…</div>
+    <div class="trans" data-when="en">§ Apropos the dispute between Rabbi Ami and Rabbi Asi, the Gemara continues with another dispute they had with regard to the correct interpretation of a verse. It is stated: “Do not look upon the wine when it is red, when it gives its color in the cup, when it glides down smoothly [bemeisharim]” (Proverbs 23:31). Rabbi Ami and Rabbi Asi disagreed. One said: Whoever casts</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ה א — Yoma 75a:1</span></div>
+    <div class="orig">עֵינוֹ בְּכוֹסוֹ, עֲרָיוֹת כּוּלָּן דּוֹמוֹת עָלָיו כְּמִישׁוֹר. וְחַד אָמַר: כָּל הַנּוֹתֵן עֵינוֹ בְּכוֹסוֹ, כָּל הָעוֹלָם כּוּלּוֹ דּוֹמֶה עָלָיו כְּמִישׁוֹר.</div>
+    <div class="trans" data-when="he">…עינו בכוסו (השקוע בשתייה) — לדעה אחת: כל העריות דומות עליו כמישור, שאינו חש באיסורן; ולדעה האחרת: כל העולם כולו דומה עליו כמישור, שאף שאר האיסורים (כגון ממון) נראים לו מותרים.</div>
+    <div class="trans" data-when="en">his eye on his cup, i.e., is habitually drunk, all the prohibitions of those with whom relations are forbidden seem to him like level [mishor] ground. He is unaware of the pitfalls of sin and continues walking along a twisted and dangerous path. And one said: Whoever casts his eye on his cup, the whole world seems to him like level [mishor] ground. Not only is such a person unconcerned by forbidden sexual relations, but all other prohibitions, e.g., monetary prohibitions, also seem permitted in his eyes.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
