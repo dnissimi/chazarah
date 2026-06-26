@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא ע״ז</title>
+<meta name="description" content="מפת הסוגיא של יומא ע״ז: מקורות לכך שרחיצה, נעילת הסנדל ותשמיש המיטה נקראים ׳עינוי׳; ברייתות העינויים — רחיצת מקצת הגוף, סיכה והדחת יד; ההולך להקביל פני רבו או לשמור פירות עובר במים; ושיעורי הנהר העתיד לצאת מקודש הקודשים.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="77">
+<meta name="gemara-map:sefaria-ref" content="Yoma 77">
+<meta name="gemara-map:topic-he" content="מקורות העינויים, מעבר בנהר, ונהר העתיד">
+<meta name="gemara-map:topic-en" content="Sources of affliction, crossing water, the future river">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא ע״ז">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 77">
+<meta name="gemara-map:blurb-he" content="מניין שרחיצה, נעילת הסנדל ותשמיש המיטה נקראים עינוי; ההולך לדבר מצוה עובר במים; ושיעורי הנהר העתיד לצאת מקודש הקודשים.">
+<meta name="gemara-map:blurb-en" content="How bathing, wearing shoes, and conjugal relations are derived as ‘affliction’; one may cross water for a mitzva; and the measures of the future river from the Holy of Holies.">
+<meta name="gemara-map:sugya-count" content="6">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא ע״ז</span><span data-when="en">Sugya map — Yoma 77</span></h1>
+    <div class="subtitle"><span data-when="he">יומא ע״ז א — ע״ח א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 77a–78a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> המשך בירור חמשת עינויי יום הכיפורים מן הכתובים: <b>רחיצה</b> (״מים קרים על נפש עיפה״), <b>נעילת הסנדל</b> (״מנעי רגלך מיחף״) ו<b>תשמיש המיטה</b> (״אם תענה את בנותי״) נקראים עינוי; ברייתות בפרטי האיסור — רחיצת מקצת גוף, סיכה והדחת יד; <b>ההולך להקביל פני רבו או לשמור פירות עובר במים</b> ואינו חושש; ולבסוף שיעורי <b>הנהר העתיד</b> לצאת מקודש הקודשים — עד אפסיים, ברכיים ומתניים.</span>
+    <span data-when="en"><b>Bottom line:</b> Continuing to derive the five Yom Kippur afflictions from Scripture: <b>bathing</b> (“cold water on a weary soul”), <b>wearing shoes</b> (“withhold your foot from being barefoot”), and <b>conjugal relations</b> (“if you afflict my daughters”) are each called affliction; baraitot detail the prohibitions — bathing part of the body, smearing oil, rinsing a hand; <b>one going to greet his teacher or to guard fruit may cross water</b> without concern; and finally the measures of the <b>future river</b> issuing from the Holy of Holies — ankle, knee, and waist deep.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא ע״ז</span><span data-when="en">Overview — Yoma 77</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · רחיצה דאיקרי עינוי — מניין?"]:::statement
+  O2["2 · נעילת הסנדל דאיקרי עינוי — מניין?"]:::statement
+  O3["3 · תשמיש המיטה דאיקרי עינוי — מניין?"]:::statement
+  O4["4 · ברייתות: רחיצת ושיכת מקצת הגוף"]:::statement
+  O5["5 · ההולך לדבר מצוה — עובר במים"]:::statement
+  O6["6 · הנהר העתיד מקודש הקודשים"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · Bathing called affliction — whence?"]:::statement
+  O2["2 · Wearing shoes called affliction — whence?"]:::statement
+  O3["3 · Conjugal relations called affliction — whence?"]:::statement
+  O4["4 · Baraitot: bathing, oiling part of the body"]:::statement
+  O5["5 · Crossing water for a mitzva"]:::statement
+  O6["6 · The future river from the Holy of Holies"]:::statement
+  O1 --> O2 --> O3 --> O4 --> O5 --> O6
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">רחיצה דאיקרי עינוי — מניין?</span><span data-when="en">Bathing called affliction — from where?</span>
+      <span class="ref">Yoma 77a:9–10</span></h2>
+  <div class="lead"><span data-when="he">מניין שרחיצה קרויה עינוי? מ״עיף״ שבדוד — נדחה; ולבסוף ר׳ יצחק: ״מים קרים <b>על</b> נפש עיפה״ — דווקא על, מבחוץ, היינו רחיצה.</span><span data-when="en">Whence that bathing is affliction? From David’s “weary” — rejected; finally R. Yitzḥak: “cold water <b>on</b> a weary soul” — <b>on</b>, externally, i.e. bathing.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① רחיצה דאיקרי עינוי מנא לן? ׳עיף׳ דדוד — לאו מרחיצה?"}:::question
+  P1["① דחייה: ודילמא מנעילת הסנדל?"]:::question
+  A1["② ר׳ יצחק: ׳מים קרים על נפש עיפה׳"]:::answer
+  C1["② ׳על נפש עיפה׳ כתיב — לא מבפנים, היינו רחיצה"]:::conclusion
+  Q1 -.->|דחייה| P1
+  P1 -->|אלא| A1
+  A1 -->|דיוק ומסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Whence bathing is affliction? David׳s ׳weary׳ — is it not from bathing?"}:::question
+  P1["① Rejection: perhaps from lack of shoes?"]:::question
+  A1["② R. Yitzḥak: ׳cold water on a weary soul׳"]:::answer
+  C1["② ׳on a weary soul׳ is written — external, i.e. bathing"]:::conclusion
+  Q1 -.->|rejection| P1
+  P1 -->|rather| A1
+  A1 -->|inference, conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① רְחִיצָה דְּאִיקְּרִי עִנּוּי מְנָא לַן … עָיֵף מִמַּאי — לָאו מֵרְחִיצָה?"}:::question
+  P1["① וְדִילְמָא מִנְּעִילַת הַסַּנְדָּל?"]:::question
+  A1["② אֶלָּא אָמַר רַבִּי יִצְחָק … ׳מַיִם קָרִים עַל נֶפֶשׁ עֲיֵפָה׳"]:::answer
+  C1["② מִי כְּתִיב ׳בְּנֶפֶשׁ עֲיֵפָה׳? ׳עַל נֶפֶשׁ עֲיֵפָה׳ כְּתִיב"]:::conclusion
+  Q1 -.->|דחייה| P1
+  P1 -->|אלא| A1
+  A1 -->|דיוק ומסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ז א — Yoma 77a:9</span></div>
+    <div class="orig">וְאִי בָּעֵית אֵימָא: רְחִיצָה דְּאִיקְּרִי עִנּוּי מְנָא לַן — מֵהָכָא, דִּכְתִיב: ״וּלְאֶבְיָתָר הַכֹּהֵן אָמַר הַמֶּלֶךְ עֲנָתוֹת לֵךְ עַל שָׂדְךָ כִּי אִישׁ מָוֶת אָתָּה וּבַיּוֹם הַזֶּה לֹא אֲמִיתֶךָ כִּי נָשָׂאתָ [אֶת] אֲרוֹן ה׳ לִפְנֵי דָּוִד אָבִי וְכִי הִתְעַנִּיתָ בְּכֹל אֲשֶׁר הִתְעַנָּה אָבִי״. וּכְתִיב בֵּיהּ בְּדָוִד: ״כִּי אָמְרוּ הָעָם רָעֵב וְעָיֵף וְצָמֵא בַּמִּדְבָּר״. רָעֵב מִלֶּחֶם, וְצָמֵא מִמַּיִם, עָיֵף מִמַּאי — לָאו מֵרְחִיצָה? וְדִילְמָא מִנְּעִילַת הַסַּנְדָּל?</div>
+    <div class="trans" data-when="he">הגמרא חוזרת לשאלה אם רחיצה קרויה עינוי. ראיה מן הכתוב: דוד אמר לאביתר ״וכי התענית בכל אשר התענה אבי״, וכתוב בדוד ״רעב ועיף וצמא״ — רעב מלחם, צמא ממים, ועיף ממה? משמע מרחיצה. אך נדחה: שמא ״עיף״ היינו מחוסר נעילת הסנדל.</div>
+    <div class="trans" data-when="en">§ The Gemara returns to the issue of whether refraining from bathing is considered affliction. If you wish, say instead: The fact that bathing is considered affliction, from where do we derive this? As it is written: “And to Ebiathar the priest the king said: Get to Anatoth to your fields, for you are deserving of death. But I will not put you to death today, because you carried the Ark of the Lord God before David my father, and because you have been afflicted in all that my father was afflicted” (I Kings 2:26). And it is written with regard to David: “For they said the people is hungry, and weary, and thirsty in the wilderness” (II Samuel 17:29). Hunger means from lack of bread to eat, and thirst means from lack of water to drink. The word weary means lack from what? Is it not from bathing? The comparison of the verses suggests that that too is affliction. The Gemara challenges: And perhaps “weary” means from lack of wearing shoes? Therefore, this does not teach us that refraining from bathing is considered an affliction.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ז א — Yoma 77a:10</span></div>
+    <div class="orig">אֶלָּא אָמַר רַבִּי יִצְחָק, מֵהָכָא: ״מַיִם קָרִים עַל נֶפֶשׁ עֲיֵפָה״. וְדִילְמָא מִשְּׁתִיָּה? מִי כְּתִיב ״בְּנֶפֶשׁ עֲיֵפָה״? ״עַל נֶפֶשׁ עֲיֵפָה״ כְּתִיב.</div>
+    <div class="trans" data-when="he">אלא ר׳ יצחק מביא ראיה אחרת: ״מים קרים על נפש עיפה״ — ה״עיף״ הוא מי שלא רחץ. ושמא הכוונה לעייפות משתייה? תשובה: לא נאמר ״<b>ב</b>נפש עיפה״ (כמו שתייה הנכנסת לגוף) אלא ״<b>על</b> נפש עיפה״ — מבחוץ, היינו רחיצה.</div>
+    <div class="trans" data-when="en">Rather, another source needs to be found. Rav Yitzḥak said: It can be derived from here: “As cold water on a weary soul, so is good news from a far country” (Proverbs 25:25). This implies that the word weary is used to describe someone who has not bathed. The Gemara asks: But perhaps the verse is referring to weariness from not drinking? The Gemara rejects this: Is it written: As cold water in a weary soul? That would mean that it entered one like a drink. Rather, “on a weary soul” is written, which implies bathing.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">נעילת הסנדל דאיקרי עינוי — מניין?</span><span data-when="en">Wearing shoes called affliction — from where?</span>
+      <span class="ref">Yoma 77a:11–13</span></h2>
+  <div class="lead"><span data-when="he">מניין שנעילת הסנדל קרויה עינוי? שתי ראיות מ״יחף״ נדחות; ולבסוף ״מנעי רגלך מיחף״ — היחף הוא עינוי.</span><span data-when="en">Whence that lacking shoes is affliction? Two proofs from “barefoot” are rejected; finally “withhold your foot from being barefoot.”</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① נעילת הסנדל מנא לן? דוד ׳יחף׳ — לאו מנעילת הסנדל?"}:::question
+  P1["② רנב״י: ׳הלוך ערום ויחף׳ — יחף מנעילת הסנדל"]:::answer
+  Q2{"② דחייה: ואימא במנעלים המטולאים, כ׳ערום׳ בבגדים בלויים"}:::question
+  A1["③ רנב״י: ׳מנעי רגלך מיחף וגרונך מצמאה׳"]:::answer
+  Q1 -.->|דחייה ׳מסוסיא׳| P1
+  P1 -.->|דחייה| Q2
+  Q2 -->|אלא| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Whence lacking shoes? David ׳barefoot׳ — is it not from shoes?"}:::question
+  P1["② R. Naḥman b. Yitzḥak: ׳walking naked and barefoot׳ — from shoes"]:::answer
+  Q2{"② Rejection: perhaps in patched shoes, like ׳naked׳ in ragged garments"}:::question
+  A1["③ R. Naḥman b. Yitzḥak: ׳withhold your foot from being barefoot׳"]:::answer
+  Q1 -.->|rejection ׳from a horse׳| P1
+  P1 -.->|rejection| Q2
+  Q2 -->|rather| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① וּנְעִילַת הַסַּנְדָּל מְנָא לַן … יָחֵף מִמַּאי — לָאו מִנְּעִילַת הַסַּנְדָּל?"}:::question
+  P1["② אֶלָּא אָמַר רַב נַחְמָן בַּר יִצְחָק … ׳הָלוֹךְ עָרוֹם וְיָחֵף׳"]:::answer
+  Q2{"② וְאֵימָא בְּמִנְעָלִים הַמְטוּלָּאִים … ׳עָרוֹם׳ — בִּבְגָדִים בְּלוּיִים"}:::question
+  A1["③ אֶלָּא אָמַר רַב נַחְמָן בַּר יִצְחָק … ׳מִנְעִי רַגְלֵךְ מִיָּחֵף וּגְרוֹנֵךְ מִצִּמְאָה׳"]:::answer
+  Q1 -.->|דחייה ׳מסוסיא׳| P1
+  P1 -.->|דחייה| Q2
+  Q2 -->|אלא| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ז א — Yoma 77a:11</span></div>
+    <div class="orig">וּנְעִילַת הַסַּנְדָּל מְנָא לַן? דִּכְתִיב: ״וְדָוִד עוֹלֶה בְמַעֲלֵה הַזֵּיתִים עוֹלֶה וּבוֹכֶה וְרֹאשׁ לוֹ חָפוּי (וְהוֹלֵךְ) יָחֵף״, יָחֵף מִמַּאי — לָאו מִנְּעִילַת הַסַּנְדָּל? וְדִילְמָא מִסּוּסְיָא וּמַרְטְקָא.</div>
+    <div class="trans" data-when="he">מניין שאיסור נעילת הסנדל קרוי עינוי? ״ודוד עולה במעלה הזיתים… יחף״ — היחף ממה? משמע מנעילת הסנדל. ונדחה: שמא ״יחף״ היינו שהלך בלא סוס ושוט, כדרך מלך אבל ולא מחוסר נעליים.</div>
+    <div class="trans" data-when="en">§ The Gemara clarifies the next point in the mishna: The fact that not wearing shoes is considered an affliction, from where do we derive this? As it is written: “And David went up by the ascent of the Mount of Olives, and wept as he went up, and he had his head covered, and was walking barefoot” (II Samuel 15:30). Barefoot implies a lack of what? Is it not a lack of wearing shoes? All these deprivations are described as affliction. The Gemara rejects this: No, perhaps he was barefoot from a horse and whip. Even if he was wearing shoes, a king without a horse and whip was considered as if he were going barefoot.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ז א — Yoma 77a:12</span></div>
+    <div class="orig">אֶלָּא אָמַר רַב נַחְמָן בַּר יִצְחָק, מֵהָכָא: ״לֵךְ וּפִתַּחְתָּ הַשַּׂק מֵעַל מׇתְנֶיךָ וְנַעַלְךָ תַחֲלוֹץ מֵעַל רַגְלֶךָ״, וּכְתִיב: ״וַיַּעַשׂ כֵּן הָלוֹךְ עָרוֹם וְיָחֵף״. יָחֵף מִמַּאי — לָאו מִנְּעִילַת הַסַּנְדָּל? וְאֵימָא בְּמִנְעָלִים הַמְטוּלָּאִים? דְּאִי לָא תֵּימָא הָכִי, ״עָרוֹם״ — עָרוֹם מַמָּשׁ, אֶלָּא בִּבְגָדִים בְּלוּיִים, הָכָא נָמֵי בְּמִנְעָלִים הַמְטוּלָּאִים.</div>
+    <div class="trans" data-when="he">אלא רב נחמן בר יצחק: מישעיהו ״ונעלך תחלוץ… הלוך ערום ויחף״ — היחף מנעילת הסנדל. ונדחה: שמא ״יחף״ היינו מנעלים מטולאים, כשם ש״ערום״ אינו עירום ממש אלא בבגדים בלויים — אף כאן במנעלים מטולאים.</div>
+    <div class="trans" data-when="en">Rather, Rav Naḥman bar Yitzḥak said: We learn it from here, as it states: “Go and loose the sackcloth from your loins, and remove your shoe from your foot” (Isaiah 20:2). And it is written: “And he did so, walking naked and barefoot” (Isaiah 20:2). Barefoot implies a lack of what? Is it not a lack of wearing shoes? The Gemara challenges: And say that perhaps the meaning of barefoot is that Isaiah walked with patched shoes. Because if you do not say this, but you claim that the verse is to be understood literally, does “naked” mean actually naked? Rather, the meaning is that Isaiah walked in ragged garments. Here too, the meaning is that he walked in patched shoes.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ז א — Yoma 77a:13</span></div>
+    <div class="orig">אֶלָּא אָמַר רַב נַחְמָן בַּר יִצְחָק, מֵהָכָא: ״מִנְעִי רַגְלֵךְ מִיָּחֵף וּגְרוֹנֵךְ מִצִּמְאָה״, מִנְעִי עַצְמְךָ מִן הַחֵטְא כְּדֵי שֶׁלֹּא יָבֹא רַגְלְךָ לִידֵי יִחוּף, מִנְעִי לְשׁוֹנֵךְ מִדְּבָרִים בְּטֵלִים כְּדֵי שֶׁלֹּא יָבֹא גְּרוֹנֵךְ לִידֵי צִמְאָה.</div>
+    <div class="trans" data-when="he">אלא רב נחמן בר יצחק מביא: ״מנעי רגלך מיחף וגרונך מצמאה״ — מנע עצמך מן החטא כדי שלא יבוא רגלך לידי יחֵף, ומנע לשונך מדברים בטלים כדי שלא יבוא גרונך לידי צמאה. נמצא שהיחֵף נחשב עינוי.</div>
+    <div class="trans" data-when="en">Rather, a different source must be found. Rav Naḥman bar Yitzḥak said that we derive it from here: It states: “Withhold your foot from being barefoot, and your throat from thirst” (Jeremiah 2:25), meaning: Keep yourself from sin, so that your feet will not come to be barefoot; keep your tongue from idle talk, so that your throat will not come to be thirsty. Consequently, we learn that being barefoot is considered an affliction.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">תשמיש המיטה דאיקרי עינוי — מניין?</span><span data-when="en">Conjugal relations called affliction — from where?</span>
+      <span class="ref">Yoma 77a:14–77b:3</span></h2>
+  <div class="lead"><span data-when="he">״אם תענה את בנותי״ — מתשמיש; שני ניסיונות לפרש ״תענה״ מצרות נדחים בדיוק לשון; ושאלת רב פפא מ״ויענה״ בדינה.</span><span data-when="en">“If you afflict my daughters” — from conjugal relations; two readings as “rival wives” are rejected by precise wording; and Rav Pappa’s challenge from Dinah.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① תשמיש דאיקרי עינוי: ׳אם תענה את בנותי׳"]:::statement
+  S2["② ׳אם תענה׳ מתשמיש, ׳ואם תקח׳ מצרות"]:::statement
+  Q1{"② דחייה: אימא אידי ואידי מצרות? · ׳ואם תקח׳ כתיב"}:::question
+  Q2{"③ ועוד: חד צרות דידיה וחד דעלמא? · הסדר ׳אם תענה ואם תקח׳"}:::question
+  Q3{"④ רב פפא: והא ׳וישכב אותה ויענה׳ — תשמיש גופיה עינוי!"}:::question
+  A1["④ אביי: התם שעינה מביאות אחרות"]:::answer
+  S1 -->|פירוש| S2
+  S2 -.->|דחייה| Q1
+  Q1 -.->|ועוד| Q2
+  Q2 -.->|קושיא| Q3
+  Q3 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Conjugal relations as affliction: ׳if you afflict my daughters׳"]:::statement
+  S2["② ׳afflict׳ from relations, ׳and take׳ from rival wives"]:::statement
+  Q1{"② Reject: say both mean rival wives? · ׳and if you take׳ is written"}:::question
+  Q2{"③ Further: one his rivals, one from outside? · the order ׳afflict then take׳"}:::question
+  Q3{"④ Rav Pappa: but ׳he lay with her and afflicted her׳ — relations themselves!"}:::question
+  A1["④ Abaye: there he afflicted her by unnatural relations"]:::answer
+  S1 -->|exposition| S2
+  S2 -.->|reject| Q1
+  Q1 -.->|further| Q2
+  Q2 -.->|objection| Q3
+  Q3 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① תַּשְׁמִישׁ הַמִּטָּה דְּאִיקְּרִי עִנּוּי … ׳אִם תְּעַנֶּה אֶת בְּנוֹתַי וְאִם תִּקַּח נָשִׁים׳"]:::statement
+  S2["② ׳אִם תְּעַנֶּה׳ — מִתַּשְׁמִישׁ, ׳וְאִם תִּקַּח׳ — מִצָּרוֹת"]:::statement
+  Q1{"② וְאֵימָא אִידֵּי וְאִידֵּי מִצָּרוֹת? … ׳וְאִם תִּקַּח׳ כְּתִיב"}:::question
+  Q2{"③ חַד לְצָרוֹת דִּידֵיהּ … מִי כְּתִיב ׳אִם תִּקַּח וְאִם תְּעַנֶּה׳?"}:::question
+  Q3{"④ רַב פָּפָּא … ׳וַיִּשְׁכַּב אוֹתָהּ וַיְעַנֶּהָ׳ — תַּשְׁמִישׁ גּוּפֵהּ אִיקְּרִי עִנּוּי!"}:::question
+  A1["④ הָתָם שֶׁעִינָּהּ מִבִּיאוֹת אֲחֵרוֹת"]:::answer
+  S1 -->|פירוש| S2
+  S2 -.->|דחייה| Q1
+  Q1 -.->|ועוד| Q2
+  Q2 -.->|קושיא| Q3
+  Q3 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ז א — Yoma 77a:14</span></div>
+    <div class="orig">תַּשְׁמִישׁ הַמִּטָּה דְּאִיקְּרִי עִנּוּי מְנָא לַן? דִּכְתִיב: ״אִם תְּעַנֶּה אֶת בְּנוֹתַי וְאִם תִּקַּח נָשִׁים״.</div>
+    <div class="trans" data-when="he">מניין שתשמיש המיטה קרוי עינוי, כך שמניעתו ביום הכיפורים היא עינוי? דכתיב (דברי לבן ליעקב): ״אם תענה את בנותי ואם תקח נשים על בנותי״.</div>
+    <div class="trans" data-when="en">§ The Gemara continues to clarify another of the afflictions of Yom Kippur: From where do we derive the halakha that refraining from conjugal relations is called affliction? As it is written, Laban said to Jacob: “If you shall afflict my daughters, and if you shall take other wives beside my daughters” (Genesis 31:50).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ז ב — Yoma 77b:1</span></div>
+    <div class="orig">״אִם תְּעַנֶּה״ — מִתַּשְׁמִישׁ, ״וְאִם תִּקַּח״ — מִצָּרוֹת. וְאֵימָא אִידֵּי וְאִידֵּי מִצָּרוֹת? מִי כְּתִיב ״אִם תִּקַּח״? ״וְאִם תִּקַּח״ כְּתִיב.</div>
+    <div class="trans" data-when="he">הסבר הכתוב: ״אם תענה״ — עינוי מתשמיש המיטה; ״ואם תקח״ — עינוי מצרות (נשים נוספות). דחייה: ואמור ששתי הלשונות עוסקות בצרות? תשובה: לא נאמר ״אם תקח״ סתם אלא ״<b>ו</b>אם תקח״ — וי״ו המפרידה, ומשמע שני סוגי עינוי.</div>
+    <div class="trans" data-when="en">This can be explained as: “If you shall afflict my daughters” by refraining from conjugal relations, “and if you shall take other wives” causing them to suffer from additional rival wives. The Gemara objects: And say that this phrase and that phrase are both referring to taking rival wives. The Gemara rejects this: Is it written: If you take? “And if you shall take” is written. Therefore, the clauses must be referring to two different kinds of affliction.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ז ב — Yoma 77b:2</span></div>
+    <div class="orig">וְאֵימָא אִידֵּי וְאִידֵּי מִצָּרוֹת, חַד לְצָרוֹת דִּידֵיהּ, וְחַד לְצָרוֹת דְּאָתְיָין לֵיהּ מֵעָלְמָא, דּוּמְיָא דְּ״אִם תִּקַּח״! מִי כְּתִיב ״אִם תִּקַּח וְאִם תְּעַנֶּה״? ״אִם תְּעַנֶּה וְאִם תִּקַּח״ כְּתִיב.</div>
+    <div class="trans" data-when="he">קושיא נוספת: ואמור ששתי הלשונות מצרות — אחת לצרות שיביא בעצמו, ואחת לצרות הבאות מן העולם? תשובה: סדר הכתוב מלמד אחרת — לא נאמר ״אם תקח ואם תענה״ (חמור ואחר כך קל), אלא ״אם תענה ואם תקח״; משמע ש״תענה״ הוא עינוי תשמיש, החמור, ואחריו הקל.</div>
+    <div class="trans" data-when="en">The Gemara challenges further: And say that this phrase and that phrase are referring to taking rival wives. One phrase is referring to his wives’ current rivals. “If you shall afflict” means that Jacob should not elevate the position of the two maidservants, Bilhah and Zilpah, to the status of wife, which would make them co-wives with Laban’s daughters. And one phrase is referring to rivals who might come to him from the world at large, which would be similar in meaning to “if you shall take.” The Gemara rejects this: Is it written: If you take and if you afflict? It is logical to first state the more severe warning and then the less severe one. But according to this proposed reading that “take” refers to rivals from the world at large and “afflict” refers to elevating the status of maidservants, the text would have first mentioned the less painful affliction of elevating the maidservants and then followed it with a warning about taking new rival wives, as “if you shall afflict and if you shall take” is written.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ז ב — Yoma 77b:3</span></div>
+    <div class="orig">אֲמַר לֵיהּ רַב פָּפָּא לְאַבָּיֵי: הָא תַּשְׁמִישׁ גּוּפֵהּ אִיקְּרִי עִנּוּי, דִּכְתִיב: ״וַיִּשְׁכַּב אוֹתָהּ וַיְעַנֶּהָ״! אֲמַר לֵיהּ: הָתָם שֶׁעִינָּהּ מִבִּיאוֹת אֲחֵרוֹת.</div>
+    <div class="trans" data-when="he">רב פפא הקשה לאביי: והרי התשמיש עצמו קרוי עינוי, שכתוב בדינה ״וישכב אותה ויענה״ — ואם כן מניעתו אינה עינוי? השיב אביי: שם העינוי היה שעינה אותה בביאות שאינן כדרכן, ולא מן התשמיש הרגיל.</div>
+    <div class="trans" data-when="en">Rav Pappa said to Abaye: But conjugal relations themselves are called affliction, as it is written: “And Shechem the son of Hamor the Hivite, the prince of the land, saw her; and he took her, and he lay with her and afflicted her” (Genesis 34:2). If so, how can it be said that the affliction is in withholding conjugal relations? He said to him: There, Shechem afflicted her from different relations, meaning he slept with her in an unnatural way. That type of relations is clearly an affliction.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">ברייתות: רחיצה וסיכה במקצת הגוף</span><span data-when="en">Baraitot: bathing and oiling part of the body</span>
+      <span class="ref">Yoma 77b:4–6</span></h2>
+  <div class="lead"><span data-when="he">אסור לרחוץ או לסוך מקצת הגוף ככולו, אלא לצורך (טיט, חולי); אשה מדיחה יד אחת ונותנת פת לתינוק; ושמאי הזקן וגזירת ׳שיבתא׳.</span><span data-when="en">One may not bathe or oil part of the body, save for need (dirt, illness); a woman rinses one hand for her child; and Shammai the Elder and the decree of ‘Shivta.’</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① ת״ר: אסור לרחוץ ולסוך מקצת גוף ככולו; ולצורך — מותר"]:::statement
+  S2["② דבי מנשה: אשה מדיחה יד אחת ונותנת פת לתינוק"]:::statement
+  S3["③ שמאי הזקן לא רצה להאכיל ביד אחת — וגזרו עליו בשתיים"]:::statement
+  Q1{"③ מאי טעמא? · אביי: משום שיבתא"}:::question
+  S1 -->|ועוד| S2
+  S2 -->|מעשה| S3
+  S3 -->|טעם| Q1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① Sages: no bathing/oiling part of the body; for need — permitted"]:::statement
+  S2["② School of Menashe: a woman rinses one hand, feeds bread to her child"]:::statement
+  S3["③ Shammai refused to feed with one hand — they decreed two"]:::statement
+  Q1{"③ What is the reason? · Abaye: due to Shivta"}:::question
+  S1 -->|further| S2
+  S2 -->|incident| S3
+  S3 -->|reason| Q1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: אָסוּר לִרְחוֹץ מִקְצָת גּוּפוֹ כְּכׇל גּוּפוֹ … רוֹחֵץ כְּדַרְכּוֹ וְאֵינוֹ חוֹשֵׁשׁ"]:::statement
+  S2["② תְּנָא דְּבֵי מְנַשֶּׁה … מְדִיחָה אִשָּׁה יָדָהּ אַחַת בְּמַיִם, וְנוֹתֶנֶת פַּת לַתִּינוֹק"]:::statement
+  S3["③ עַל שַׁמַּאי הַזָּקֵן שֶׁלֹּא רָצָה לְהַאֲכִיל בְּיָדוֹ אַחַת … לְהַאֲכִיל בִּשְׁתֵּי יָדַיִם"]:::statement
+  Q1{"③ מַאי טַעְמָא? אָמַר אַבָּיֵי: מִשּׁוּם שִׁיבְתָּא"}:::question
+  S1 -->|ועוד| S2
+  S2 -->|מעשה| S3
+  S3 -->|טעם| Q1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ז ב — Yoma 77b:4</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: אָסוּר לִרְחוֹץ מִקְצָת גּוּפוֹ כְּכׇל גּוּפוֹ, וְאִם הָיָה מְלוּכְלָךְ בְּטִיט וּבְצוֹאָה — רוֹחֵץ כְּדַרְכּוֹ וְאֵינוֹ חוֹשֵׁשׁ. אָסוּר לָסוּךְ מִקְצָת גּוּפוֹ כְּכׇל גּוּפוֹ, וְאִם הָיָה חוֹלֶה, אוֹ שֶׁהָיוּ לוֹ חֲטָטִין בְּרֹאשׁוֹ — סָךְ כְּדַרְכּוֹ וְאֵינוֹ חוֹשֵׁשׁ.</div>
+    <div class="trans" data-when="he">תנו רבנן: אסור לרחוץ מקצת גופו כשם שאסור לרחוץ את כולו; אך אם היה מלוכלך בטיט ובצואה — רוחץ כדרכו ואינו חושש, שאין כוונתו לתענוג. וכן אסור לסוך מקצת גופו ככולו; ואם היה חולה או שהיו לו חטטים (פצעים) בראשו — סך כדרכו ואינו חושש.</div>
+    <div class="trans" data-when="en">§ The Gemara clarifies some of the prohibitions relating to Yom Kippur. The Sages taught: It is prohibited to bathe part of the body just as it is prohibited to bathe the whole body. But if one is dirty from mud or excrement, he may bathe in his usual manner, and he need not be concerned about transgressing, since his goal is not pleasure. Similarly, it is prohibited to smear oil on part of the body just as it is prohibited to smear oil on the whole body. But if one was sick and needed to smear oil on his body for medicinal purposes, or if one had scabs on his head that would hurt if he did not smear oil on himself, he may smear oil in his usual manner, and he need not be concerned about transgressing.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ז ב — Yoma 77b:5</span></div>
+    <div class="orig">תְּנָא דְּבֵי מְנַשֶּׁה: רַבָּן שִׁמְעוֹן בֶּן גַּמְלִיאֵל אוֹמֵר: מְדִיחָה אִשָּׁה יָדָהּ אַחַת בְּמַיִם, וְנוֹתֶנֶת פַּת לַתִּינוֹק, וְאֵינָהּ חוֹשֶׁשֶׁת.</div>
+    <div class="trans" data-when="he">תנא דבי מנשה בשם רשב״ג: מותר לאשה להדיח יד אחת במים (כדי שלא תיגע במאכל קודם נטילת ידים שחרית) ולתת פת לתינוק, ואינה חוששת לאיסור רחיצה ביום הכיפורים.</div>
+    <div class="trans" data-when="en">The school of Menashe taught that Rabban Shimon ben Gamliel says: A woman may rinse one hand in water, so that she does not touch food before she has washed her hands in the morning, and give bread to her child, and she need not be concerned about violating the prohibition of bathing on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ז ב — Yoma 77b:6</span></div>
+    <div class="orig">אָמְרוּ עָלָיו עַל שַׁמַּאי הַזָּקֵן שֶׁלֹּא רָצָה לְהַאֲכִיל בְּיָדוֹ אַחַת, וְגָזְרוּ עָלָיו לְהַאֲכִיל בִּשְׁתֵּי יָדַיִם. מַאי טַעְמָא? אָמַר אַבָּיֵי: מִשּׁוּם שִׁיבְתָּא.</div>
+    <div class="trans" data-when="he">אמרו על שמאי הזקן שלא רצה להאכיל את ילדיו ביד אחת (כדי שלא יצטרך להדיחה), ובכך מנע מהם אכילה; גזרו עליו להאכיל בשתי ידים. ומדוע צריך בכלל נטילת ידים? אמר אביי: משום רוח רעה ששמה ׳שיבתא׳ השורה על ידים שלא נוטלו בבוקר.</div>
+    <div class="trans" data-when="en">They said about Shammai the Elder that he did not want to feed his children with one hand, to avoid having to wash it. This prevented the children from eating during all of Yom Kippur. Due to concerns about the health and the suffering of his children, they decreed that he must feed them with two hands, forcing him to wash both hands. What is the reason that they also said in general that one must wash his hands before touching food? Abaye said: Due to an evil spirit named Shivta, who resides on hands that have not been washed in the morning.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">ההולך לדבר מצוה — עובר במים</span><span data-when="en">Crossing water for a mitzva</span>
+      <span class="ref">Yoma 77b:7–14</span></h2>
+  <div class="lead"><span data-when="he">ההולך להקביל פני רבו או לשמור פירות עובר עד צווארו במים; אִיבעיא ברב אצל תלמיד; מעשי אמוראים והיתר לבא לפרק; וקושית רב יוסף משיעורי יחזקאל.</span><span data-when="en">One going to greet his teacher or to guard fruit may cross neck-deep; a dilemma on teacher-to-student; amoraic incidents and permission to attend a lecture; Rav Yosef’s objection from Ezekiel’s measures.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: ההולך להקביל פני רבו עובר עד צווארו במים"]:::statement
+  Q1{"② איבעיא: הרב אצל תלמיד מאי?"}:::question
+  P1["② ת״ש: זעירי אזל לתלמידו? · רב אשי: התלמיד אזל לרבו"]:::proof
+  S2["③ רבא שרא לבני עבר ימינא לעבור לנטור פירי; ת״ר מסייע"]:::statement
+  S3["④ רב יוסף שרא לבא לפרק; ולמיזל — שלא תהא מכשילן"]:::statement
+  S4["⑤ רב ושמואל: עובר, ובלבד שלא יוציא ידו מחפת חלוקו"]:::statement
+  Q2{"⑥ רב יוסף: ובחול מי שרי? יחזקאל — עד אפסיים, ברכיים, מתניים, ולא יותר"}:::question
+  A1["⑧ אביי: שאני נחל דרדיפי מיא"]:::answer
+  S1 -->|איבעיא| Q1
+  Q1 -->|ת״ש| P1
+  P1 -->|מעשה| S2
+  S2 -->|ועוד| S3
+  S3 -->|ועוד| S4
+  S4 -.->|מתקיף| Q2
+  Q2 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Sages: one going to greet his teacher crosses neck-deep in water"]:::statement
+  Q1{"② Dilemma: a teacher going to a student — what?"}:::question
+  P1["② Proof: Ze׳iri went to his student? · Rav Ashi: the student went to him"]:::proof
+  S2["③ Rava permitted crossing to guard fruit; a baraita supports him"]:::statement
+  S3["④ Rav Yosef permitted coming to the lecture; and going back, not to deter them"]:::statement
+  S4["⑤ Rav and Shmuel: he crosses, provided he keeps his hand under his cloak׳s hem"]:::statement
+  Q2{"⑥ Rav Yosef: on a weekday permitted? Ezekiel — ankle, knee, waist, no more"}:::question
+  A1["⑧ Abaye: a fast-flowing river is different"]:::answer
+  S1 -->|dilemma| Q1
+  Q1 -->|proof| P1
+  P1 -->|incident| S2
+  S2 -->|further| S3
+  S3 -->|further| S4
+  S4 -.->|objection| Q2
+  Q2 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תָּנוּ רַבָּנַן: הַהוֹלֵךְ לְהַקְבִּיל פְּנֵי אָבִיו אוֹ פְּנֵי רַבּוֹ … עוֹבֵר עַד צַוָּארוֹ בְּמַיִם וְאֵינוֹ חוֹשֵׁשׁ"]:::statement
+  Q1{"② אִיבַּעְיָא לְהוּ: הָרַב אֵצֶל תַּלְמִיד מַאי?"}:::question
+  P1["② תָּא שְׁמַע … זְעֵירִי דַּאֲזַל לְגַבֵּי רַב חִיָּיא בַּר אָשֵׁי תַּלְמִידֵיהּ … רַב אָשֵׁי אָמַר: הָהוּא … אֲזַל לְגַבֵּיהּ דִּזְעֵירִי רַבֵּיהּ"]:::proof
+  S2["③ רָבָא שְׁרָא … לְמֶעְבַּר בְּמַיָּא לְנַטּוֹרֵי פֵּירֵי … תַּנְיָא דִּמְסַיַּיע לָךְ"]:::statement
+  S3["④ רַב יוֹסֵף שְׁרָא … לְמֵיתֵי לְפִירְקָא … כְּדֵי שֶׁלֹּא תְּהֵא מַכְשִׁילָן לֶעָתִיד לָבֹא"]:::statement
+  S4["⑤ רַב וּשְׁמוּאֵל … עוֹבֵר, וּבִלְבַד שֶׁלֹּא יוֹצִיא יָדוֹ מִתַּחַת חֵפֶת חֲלוּקוֹ"]:::statement
+  Q2{"⑥ מַתְקֵיף רַב יוֹסֵף: וּבְחוֹל … מִי שְׁרֵי? … עַד אׇפְסָיִים … בִּרְכַּיִם … מׇתְנַיִם … נַחַל אֲשֶׁר לֹא אוּכַל לַעֲבוֹר"}:::question
+  A1["⑧ אָמַר אַבָּיֵי: שָׁאנֵי נַחַל דִּרְדִיפִי מַיָּא"]:::answer
+  S1 -->|איבעיא| Q1
+  Q1 -->|ת״ש| P1
+  P1 -->|מעשה| S2
+  S2 -->|ועוד| S3
+  S3 -->|ועוד| S4
+  S4 -.->|מתקיף| Q2
+  Q2 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ז ב — Yoma 77b:7</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: הַהוֹלֵךְ לְהַקְבִּיל פְּנֵי אָבִיו אוֹ פְּנֵי רַבּוֹ, אוֹ פְּנֵי מִי שֶׁגָּדוֹל מִמֶּנּוּ — עוֹבֵר עַד צַוָּארוֹ בְּמַיִם וְאֵינוֹ חוֹשֵׁשׁ.</div>
+    <div class="trans" data-when="he">תנו רבנן: ההולך להקביל פני אביו או פני רבו, או פני מי שגדול ממנו בחכמה, וצריך לעבור נהר בדרכו — עובר עד צווארו במים ואינו חושש לאיסור רחיצה ביום הכיפורים, שאין כוונתו לתענוג.</div>
+    <div class="trans" data-when="en">§ The Sages taught: One who goes to greet his father or his teacher, or to greet one who is greater than him in wisdom, and has to cross a river on the way, may cross the water until his neck is in the water, and he need not be concerned that he is violating the prohibition against bathing on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ז ב — Yoma 77b:8</span></div>
+    <div class="orig">אִיבַּעְיָא לְהוּ: הָרַב אֵצֶל תַּלְמִיד מַאי? תָּא שְׁמַע, דְּאָמַר רַב יִצְחָק בַּר בַּר חָנָה: אֲנָא חֲזֵיתֵיהּ לִזְעֵירִי דַּאֲזַל לְגַבֵּי רַב חִיָּיא בַּר אָשֵׁי תַּלְמִידֵיהּ. רַב אָשֵׁי אָמַר: הָהוּא רַב חִיָּיא בַּר אָשֵׁי הוּא דַּאֲזַל לְגַבֵּיהּ דִּזְעֵירִי רַבֵּיהּ.</div>
+    <div class="trans" data-when="he">איבעיא להו: הרב ההולך אצל תלמיד — האם אף הוא עובר במים? תא שמע: רב יצחק בר בר חנה ראה את זעירי עובר נהר בדרכו אל רב חייא בר אשי תלמידו. דחה רב אשי: לא כך היה, אלא רב חייא בר אשי התלמיד הוא שהלך אל זעירי רבו — ואין מכאן ראיה.</div>
+    <div class="trans" data-when="en">A dilemma was raised before them, i.e., the students discussing this question: What is the law concerning a teacher going to visit his student? May he enter the water in order to teach his student? The Gemara tries to bring a proof: Come and hear from what Rav Yitzḥak bar bar Ḥana said: I saw Ze’iri, who went through a river on his way to Rav Ḥiyya bar Ashi, his student. Rav Ashi said: This was not the case. Rather, in that case, it was the student Rav Ḥiyya bar Ashi who went to Ze’iri, his teacher. Therefore, this incident does not answer the question.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ז ב — Yoma 77b:9</span></div>
+    <div class="orig">רָבָא שְׁרָא לִבְנֵי עֲבַר יַמִּינָא לְמֶעְבַּר בְּמַיָּא לְנַטּוֹרֵי פֵּירֵי. אֲמַר לֵיהּ אַבָּיֵי לְרָבָא, תַּנְיָא דִּמְסַיַּיע לָךְ: שׁוֹמְרֵי פֵּׂירוֹת עוֹבְרִין עַד צַוָּארָן בְּמַיִם וְאֵין חוֹשְׁשִׁין.</div>
+    <div class="trans" data-when="he">רבא התיר לבני עבר הנהר הימני (פרת) לעבור במים כדי לשמור את פירותיהם ביום הכיפורים. אמר לו אביי: ברייתא מסייעת לך — שומרי פירות עוברים עד צווארם במים ואינם חוששים.</div>
+    <div class="trans" data-when="en">Rava permitted those who lived on the right side of the Euphrates to pass through the water to guard the fruit in their fields on Yom Kippur. Abaye said to Rava: A baraita was taught that supports your opinion. We learned: Guards of fruit may cross the river until their necks are in the water, and they need not be concerned that they are violating the prohibition against bathing on Yom Kippur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ז ב — Yoma 77b:10</span></div>
+    <div class="orig">רַב יוֹסֵף שְׁרָא לְהוּ לִבְנֵי בֵּי תַרְבּוּ לְמִיעְבַּר בְּמַיָּא לְמֵיתֵי לְפִירְקָא, לְמֵיזַל לָא שְׁרָא לְהוּ. אֲמַר לֵיהּ אַבָּיֵי: אִם כֵּן אַתָּה מַכְשִׁילָן לֶעָתִיד לָבֹא. אִיכָּא דְּאָמְרִי: שְׁרָא לְהוּ לְמֵיתֵי וּשְׁרָא לְהוּ לְמֵיזַל, אֲמַר לֵיהּ אַבָּיֵי: בִּשְׁלָמָא לְמֵיתֵי — לְחַיֵּי, אֶלָּא לְמֵיזַל מַאי טַעְמָא? כְּדֵי שֶׁלֹּא תְּהֵא מַכְשִׁילָן לֶעָתִיד לָבֹא.</div>
+    <div class="trans" data-when="he">רב יוסף התיר לאנשי בי תרבו לעבור במים כדי לבוא לדרשתו (פרק) ביום הכיפורים, אך לחזור לא התיר. אמר לו אביי: אם כן אתה מכשילם לעתיד — לא יבואו. ואיכא דאמרי: התיר אף לחזור; ושאל אביי על הליכה־חזרה, והשיב: כדי שלא תהא מכשילן לעתיד לבוא.</div>
+    <div class="trans" data-when="en">Rav Yosef permitted the people of the village of Bei Tarbu to cross in the water to come to the lecture he delivered on Yom Kippur. He did not, however, permit them to go back home through the water. Abaye said to him: If so, you are obstructing them from coming in the future. They will not come to the lecture knowing they will be prohibited from returning home. Some say the incident happened differently: Rav Yosef permitted them to come and permitted them to go back through the water. Abaye said to him: Granted, you allow them to come, that is well. But what is the reason you allow them to go back? He said to him: So as not to obstruct them from coming in the future.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ז ב — Yoma 77b:11</span></div>
+    <div class="orig">רַב יְהוּדָה וְרַב שְׁמוּאֵל בַּר רַב יְהוּדָה הֲווֹ קָיְימִי אַגּוּדָּא דִּנְהַר (פָּפָּא) אַמַּבָּרָא דְחַצְדַּד, וַהֲוָה קָאֵי רָמֵי בַּר פָּפָּא מֵהָךְ גִּיסָא. רְמָא לְהוּ קָלָא: מַהוּ לְמִיעְבַּר לְמֵיתֵי לְגַבַּיְיכוּ לְמִשְׁאַל שְׁמַעְתָּא? אֲמַר לֵיהּ רַב יְהוּדָה: רַב וּשְׁמוּאֵל דְּאָמְרִי תַּרְוַיְיהוּ — עוֹבֵר, וּבִלְבַד שֶׁלֹּא יוֹצִיא יָדוֹ מִתַּחַת חֵפֶת חֲלוּקוֹ. אִיכָּא דְּאָמְרִי, אֲמַר לֵיהּ רַב שְׁמוּאֵל בַּר רַב יְהוּדָה, תְּנֵינָא: עוֹבֵר, וּבִלְבַד שֶׁלֹּא יוֹצִיא יָדוֹ מִתַּחַת חֵפֶת חֲלוּקוֹ.</div>
+    <div class="trans" data-when="he">רב יהודה ורב שמואל בנו עמדו על שפת הנהר, ורמי בר פפא עמד בעבר השני ושאל: מהו לעבור במים כדי לבוא אליכם לשאול הלכה? אמר לו רב יהודה: רב ושמואל אמרו שניהם — עובר, ובלבד שלא יוציא ידו מתחת שולי חלוקו (שלא יגביה בגדיו, שזו טלטול). ואיכא דאמרי שרב שמואל בר רב יהודה השיב כן בשם ברייתא.</div>
+    <div class="trans" data-when="en">It is told: Rav Yehuda and Rav Shmuel bar Rav Yehuda were standing on the bank of the Pappa River next to the Ḥatzdad crossing, and Rami bar Pappa was standing on the other side of the river. He raised his voice to them and asked: What is the ruling with regard to crossing over to come to you to ask a halakha? Rav Yehuda said to him: It is Rav and Shmuel who both say: One may cross in the water, provided that he does not remove his hand from under the hem of his cloak. One may not raise the hems of his cloak to his shoulders to keep them dry, since this form of carrying renders one liable to bring a sin-offering. Rather, one should walk normally and get his clothes wet in the water. Some say this is not how the incident happened. Rather, Rav Shmuel bar Rav Yehuda said to him: We learned in a baraita: One may cross over, provided that he does not remove his hand from the hem of his cloak.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ז ב — Yoma 77b:12</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב יוֹסֵף: וּבְחוֹל כִּי הַאי גַּוְנָא מִי שְׁרֵי? וְהָכְתִיב: ״וַיָּמׇד אֶלֶף בָּאַמָּה וַיַּעֲבִירֵנִי בַמַּיִם מֵי אׇפְסָיִם״ — מִכָּאן שֶׁמּוּתָּר לַעֲבוֹר עַד אׇפְסַיִים.</div>
+    <div class="trans" data-when="he">מתקיף רב יוסף: וכי בחול מותר לעבור במים עמוקים כל כך (עד הצוואר), שיש בהם סכנת טביעה? והרי כתוב בנהר העתיד (יחזקאל) ״וימד אלף… מי אפסים״ — מכאן שמותר לעבור רק עד הקרסוליים.</div>
+    <div class="trans" data-when="en">Rav Yosef strongly objects to this: And on a weekday is it permitted to walk in such deep water that it presents a danger of drowning? But isn’t it written with regard to the river that, in the future, will issue forth from the Holy of Holies: “He measured a thousand cubits, and he led me through the water; the water was ankle deep” (Ezekiel 47:3); from here it is derived that one is permitted to pass through water that reaches up to the ankles.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ז ב — Yoma 77b:13</span></div>
+    <div class="orig">״וַיָּמׇד אֶלֶף וַיַּעֲבִירֵנִי בַמַּיִם מַיִם בִּרְכָּיִם״ — מִכָּאן שֶׁמּוּתָּר לַעֲבוֹר עַד בִּרְכַּיִם. ״וַיָּמׇד אֶלֶף וַיַּעֲבִירֵנִי מֵי מׇתְנָיִם״ — מִכָּאן שֶׁמּוּתָּר לַעֲבוֹר עַד מׇתְנַיִם. מִכָּאן וְאֵילָךְ: ״וַיָּמׇד אֶלֶף נַחַל אֲשֶׁר לֹא אוּכַל לַעֲבוֹר״!</div>
+    <div class="trans" data-when="he">המשך דרשת רב יוסף מן הכתוב: ״מים ברכים״ — מותר עד הברכיים; ״מי מתנים״ — עד המותניים; ומכאן ואילך ״נחל אשר לא אוכל לעבור״ — משמע שאסור לעבור במים גבוהים יותר, מפני הסכנה. וקשה אם כן על ההיתר לעבור עד הצוואר.</div>
+    <div class="trans" data-when="en">Rav Yosef continues explaining the verse: “Again he measured a thousand and he led me through the water, the water was knee deep” (Ezekiel 47:4); from here it is derived that one is permitted to pass through water that reaches up to the knees. “He measured a thousand and led me through the water up to the waist” (Ezekiel 47:4); from here it is derived that one is permitted to pass through water that reaches up to the waist. From this point forward: “And he measured a thousand, a river that I could not pass through” (Ezekiel 47:5). This implies that one is never permitted to pass through water that is more than waist high, because it is dangerous.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ז ב — Yoma 77b:14</span></div>
+    <div class="orig">אָמַר אַבָּיֵי: שָׁאנֵי נַחַל דִּרְדִיפִי מַיָּא.</div>
+    <div class="trans" data-when="he">תירוץ אביי: אין מכאן קושיא — שונה נחל שמימיו רצים (זרם חזק), שבו יש סכנה אף במים נמוכים; אבל במים עומדים מותר לעבור אף עמוק יותר.</div>
+    <div class="trans" data-when="en">Abaye said: That is not a proof, because a river with fast flowing water is different. If it is higher than one’s waist, he could drown. However, one is permitted to cross still water even if it is deeper than that.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">הנהר העתיד לצאת מקודש הקודשים</span><span data-when="en">The future river from the Holy of Holies</span>
+      <span class="ref">Yoma 77b:15–78a:2</span></h2>
+  <div class="lead"><span data-when="he">אגב הנהר העתיד: לא יעבור בשחייה ולא בספינה; אף מלאך המוות אינו עובר בו; וגדילתו ממעיין דק כקרני חגבים עד נחל שוטף — ורמז לטבילת נדה.</span><span data-when="en">Apropos the future river: it cannot be crossed by swimming or boat; even the Angel of Death cannot pass; and it grows from a thread-thin spring to a flowing river — a hint for the menstruant’s immersion.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ברייתא: אין עוברים בנהר העתיד בשחייה ולא בספינה קטנה או גדולה"]:::statement
+  S2["② ר׳ יהודה בן פזי: אף מלאך המוות אין לו רשות לעבור בו"]:::statement
+  S3["③ ר׳ פנחס בשם רב הונא: המעיין גדל מקרני חגבים עד נחל שוטף לטהרה"]:::statement
+  S4["④ דתנן ר׳ אליעזר בן יעקב: מים מפכין מתחת מפתן הבית, עד פתח בית דוד"]:::statement
+  C1["⑤ רב יוסף: רמז לנדה שצריכה לישב עד צווארה במים · ולית הילכתא כוותיה"]:::conclusion
+  S1 -->|ועוד| S2
+  S2 -->|ועוד| S3
+  S3 -->|דתנן| S4
+  S4 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: the future river is uncrossable by swimming or by small or large boat"]:::statement
+  S2["② R. Yehuda b. Pazi: even the Angel of Death may not pass through it"]:::statement
+  S3["③ R. Pineḥas (Rav Huna): the spring grows from grasshopper antennae to a flowing river"]:::statement
+  S4["④ As taught, R. Eliezer b. Ya׳akov: water bubbles from the threshold to David׳s house"]:::statement
+  C1["⑤ Rav Yosef: a hint a menstruant must sit neck-deep in water · but the halakha differs"]:::conclusion
+  S1 -->|further| S2
+  S2 -->|further| S3
+  S3 -->|as taught| S4
+  S4 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① יָכוֹל יַעֲבִירֶנּוּ בְּסִיחוּי … בְּבוּרְנִי קְטַנָּה … בְּבוּרְנִי גְּדוֹלָה … ׳וְצִי אַדִּיר לֹא יַעַבְרֶנּוּ׳"]:::statement
+  S2["② אָמַר רַבִּי יְהוּדָה בֶּן פַּזִּי: אַף מַלְאַךְ הַמָּוֶת אֵין לוֹ רְשׁוּת לַעֲבוֹר בְּתוֹכוֹ"]:::statement
+  S3["③ אָמַר רַבִּי פִּנְחָס מִשּׁוּם רַב הוּנָא … בַּתְּחִילָּה דּוֹמֶה לְקַרְנֵי חֲגָבִים … כְּפִי פַּךְ קָטָן"]:::statement
+  S4["④ דִּתְנַן, רַבִּי אֱלִיעֶזֶר בֶּן יַעֲקֹב אוֹמֵר: מַיִם מְפַכִּין … מִתַּחַת מִפְתַּן הַבַּיִת … לְפֶתַח בֵּית דָּוִד"]:::statement
+  C1["⑤ אָמַר רַב יוֹסֵף: רֶמֶז לְנִדָּה שֶׁצְּרִיכָה לֵישֵׁב עַד צַוָּארָהּ בַּמַּיִם. וְלֵית הִילְכְתָא כְּווֹתֵיהּ"]:::conclusion
+  S1 -->|ועוד| S2
+  S2 -->|ועוד| S3
+  S3 -->|דתנן| S4
+  S4 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ז ב — Yoma 77b:15</span></div>
+    <div class="orig">יָכוֹל יַעֲבִירֶנּוּ בְּסִיחוּי — תַּלְמוּד לוֹמַר: ״כִּי גָאוּ הַמַּיִם מֵי שָׂחוּ״. מַאי ״מֵי שָׂחוּ״ — שִׁיּוּטָא, שֶׁכֵּן קוֹרִין לְשַׁיָּיטָא סַיָּיחָא. יָכוֹל יַעֲבִירֶנּוּ בְּבוּרְנִי קְטַנָּה — תַּלְמוּד לוֹמַר: ״בַּל תֵּלֶךְ בּוֹ אֳנִי שַׁיִט״. יָכוֹל יַעֲבִירֶנּוּ בְּבוּרְנִי גְּדוֹלָה — תַּלְמוּד לוֹמַר: ״וְצִי אַדִּיר לֹא יַעַבְרֶנּוּ״. מַאי מַשְׁמַע? כְּדִמְתַרְגֵּם רַב יוֹסֵף: לָא תֵּזִיל בֵּיהּ בִּסְפִינַת צַיָּידִין וּבוּרְנִי רַבְּתִי לֹא תְּגוּזִינֵּהּ.</div>
+    <div class="trans" data-when="he">אגב הנהר העתיד, הברייתא דורשת פסוקים: יכול יעבור בשחייה? תלמוד לומר ״כי גאו המים מי שחו״ — מים שאין עוברים בהם אלא בשיוט. יכול בספינה קטנה? ת״ל ״בל תלך בו אני שיט״. יכול בספינה גדולה? ת״ל ״וצי אדיר לא יעברנו״, כתרגום רב יוסף — לא ספינת ציידים ולא ספינה גדולה.</div>
+    <div class="trans" data-when="en">§ Apropos the river that will flow in the future, the Gemara explains additional verses in Ezekiel. One might think that Ezekiel could cross the river by swimming. The verse states: “For the water had swollen into saḥu waters” (Ezekiel 47:5). What does “saḥu waters” mean? Water that can be traversed only with a boat [shiyuta], as sailing [shayta] is sometimes called swimming [sayḥa]. I might have thought Ezekiel could pass across in a small boat [burni]. Therefore, the verse states: “No galley with oars shall go” (Isaiah 33:21). I might have thought he could pass through in a large boat. Therefore, the verse states: “Neither shall a fishing boat [tzi adir] be able to cross it” (Isaiah 33:21). The Gemara asks: From where can it be inferred that the words tzi adir mean fishing boat? The Gemara explains: This is how Rav Yosef translated this verse: A fishing boat [sfinat tzayyadin] will not travel on it and a large ship will not cross it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ז ב — Yoma 77b:16</span></div>
+    <div class="orig">אָמַר רַבִּי יְהוּדָה בֶּן פַּזִּי: אַף מַלְאַךְ הַמָּוֶת אֵין לוֹ רְשׁוּת לַעֲבוֹר בְּתוֹכוֹ, כְּתִיב הָכָא: ״בַּל תֵּלֶךְ בּוֹ אֳנִי שַׁיִט״, וּכְתִיב הָתָם: ״מִשּׁוּט בָּאָרֶץ״.</div>
+    <div class="trans" data-when="he">ר׳ יהודה בן פזי: אף מלאך המוות אין לו רשות לעבור בנהר זה. גזירה שווה: ״בל תלך בו אני <b>שיט</b>״, ונאמר במלאך (איוב) ״מ<b>שוט</b> בארץ״ — אף השטן, שהוא מלאך המוות, אינו עובר בו.</div>
+    <div class="trans" data-when="en">The Gemara continues its discussion of the river that will in the future come out of the Holy of Holies. Rabbi Yehuda ben Pazi said: Even the Angel of Death does not have permission to pass through it to the other side of this river, and proof of this is in the verse, as it is written here: “No galley with oars [ani shayt] can travel” and as it was written there: “Then Satan answered the Lord and said: From going to and fro [mishut] the earth and from walking up and down in it” (Job 1:7). Even Satan, who is also the Angel of Death, cannot cross through this river.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ז ב — Yoma 77b:17</span></div>
+    <div class="orig">אָמַר רַבִּי פִּנְחָס מִשּׁוּם רַב הוּנָא צִפּוֹרָאָה: מַעְיָן הַיּוֹצֵא מִבֵּית קׇדְשֵׁי הַקֳּדָשִׁים, בַּתְּחִילָּה דּוֹמֶה לְקַרְנֵי חֲגָבִים, כֵּיוָן שֶׁהִגִּיעַ לְפֶתַח הֵיכָל — נַעֲשֶׂה כְּחוּט שֶׁל שֶׁתִי, כֵּיוָן שֶׁהִגִּיעַ לָאוּלָם — נַעֲשֶׂה כְּחוּט שֶׁל עֵרֶב, כֵּיוָן שֶׁהִגִּיעַ אֶל פֶּתַח עֲזָרָה — נַעֲשֶׂה כְּפִי פַּךְ קָטָן, וְהַיְינוּ דִּתְנַן, רַבִּי אֱלִיעֶזֶר בֶּן יַעֲקֹב אוֹמֵר: מַיִם</div>
+    <div class="trans" data-when="he">ר׳ פנחס בשם רב הונא הציפורי: המעיין היוצא מקודש הקודשים — בתחילה דק כקרני חגבים; הגיע לפתח ההיכל — כחוט השתי; לאולם — כחוט הערב; לפתח העזרה — כפי פך קטן. וזהו ששנינו במשנה, ר׳ אליעזר בן יעקב אומר: ״מים…״.</div>
+    <div class="trans" data-when="en">The Gemara cites more midrashim about the river that will flow from the Holy of Holies. Rabbi Pineḥas said in the name of Rav Huna of Tzippori: The spring that comes forth from inside the Holy of Holies is at first very narrow and resembles grasshoppers’ antennae in width. Once it reaches the opening of the Sanctuary it becomes as thick as the thread of the warp; once it reaches the Entrance Hall of the Sanctuary, it becomes as thick as the thread of the woof, which is wider than the warp thread. Once it reaches the opening of the Temple courtyard it becomes like the mouth of a small jug. This is as we learned in a mishna: Rav Eliezer ben Ya’akov says: Water,</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ח א — Yoma 78a:1</span></div>
+    <div class="orig">מְפַכִּין עֲתִידִין לִהְיוֹת יוֹצְאִין מִתַּחַת מִפְתַּן הַבַּיִת. מִכָּאן וְאֵילָךְ הָיָה מִתְגַּבֵּר וְעוֹלֶה עַד שֶׁמַּגִּיעַ לְפֶתַח בֵּית דָּוִד, כֵּיוָן שֶׁמַּגִּיעַ לְפֶתַח בֵּית דָּוִד נַעֲשֶׂה כְּנַחַל שׁוֹטֵף שֶׁבּוֹ רוֹחֲצִין זָבִין וְזָבוֹת נִדּוֹת וְיוֹלְדוֹת, שֶׁנֶּאֱמַר: ״בַּיּוֹם הַהוּא יִהְיֶה מָקוֹר נִפְתָּח לְבֵית דָּוִד וּלְיוֹשְׁבֵי יְרוּשָׁלִָם לְחַטַּאת וּלְנִדָּה״.</div>
+    <div class="trans" data-when="he">המשך המשנה: מים מפכים (נובעים) עתידים לצאת מתחת מפתן הבית; ומשם ואילך מתגבר ועולה עד פתח בית דוד, ושם נעשה כנחל שוטף שבו רוחצים זבים וזבות, נדות ויולדות, שנאמר ״ביום ההוא יהיה מקור נפתח לבית דוד… לחטאת ולנדה״.</div>
+    <div class="trans" data-when="en">in the future, will bubble from under the threshold of the Temple. From this point forward, the spring will grow in strength and rise until it reaches the opening of David’s house, i.e., his grave, which is outside of Jerusalem. When it reaches the opening of David’s house, it will become a flowing river in which zavim and zavot, menstruating women, and women after childbirth will bathe to purify themselves. As it is stated: “On that day there shall be a fountain opened for the house of David and to the inhabitants of Jerusalem for purification and for sprinkling” (Zechariah 13:1).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ח א — Yoma 78a:2</span></div>
+    <div class="orig">אָמַר רַב יוֹסֵף: מִכָּאן רֶמֶז לְנִדָּה שֶׁצְּרִיכָה לֵישֵׁב עַד צַוָּארָהּ בַּמַּיִם. וְלֵית הִילְכְתָא כְּווֹתֵיהּ.</div>
+    <div class="trans" data-when="he">אמר רב יוסף: מכאן רמז לנדה שצריכה לישב עד צווארה במים — שזהו שיעור עומק מי המקווה לטבילה. ומסקנת הגמרא: ולית הילכתא כוותיה — אין הלכה כמותו; אלא די במים המכסים את כל גופה.</div>
+    <div class="trans" data-when="en">Rav Yosef said: From here, there is an allusion that a menstruating woman must be able to sit up to her neck in water, i.e., that this is the appropriate depth for waters of a ritual bath to purify. The Gemara comments: But the halakha is not in accordance with his opinion. Rather, the depth of the water is irrelevant. As long as the water can cover an entire adult body, the ritual bath is kosher.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
