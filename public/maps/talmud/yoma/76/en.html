@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — יומא ע״ו</title>
+<meta name="description" content="מפת הסוגיא של יומא ע״ו: גובה המן ששים אמה — דרשת ר׳ אלעזר המודעי מן המבול; חמשת העינויים כנגד חמש פרשיות, ושתייה בכלל אכילה (תירוש ושכר — יין); ורחיצה וסיכה כעינוי מדניאל, ואגדת גבריאל ודובִיאל.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="yoma">
+<meta name="gemara-map:location" content="76">
+<meta name="gemara-map:sefaria-ref" content="Yoma 76">
+<meta name="gemara-map:topic-he" content="גובה המן, חמשת העינויים, רחיצה וסיכה">
+<meta name="gemara-map:topic-en" content="The manna, the five afflictions, bathing">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — יומא ע״ו">
+<meta name="gemara-map:title-en" content="Sugya map — Yoma 76">
+<meta name="gemara-map:blurb-he" content="גובה המן נדרש מן המבול; מקור חמשת העינויים, ושתייה בכלל אכילה; ורחיצה וסיכה — עינוי הנלמד מדניאל.">
+<meta name="gemara-map:blurb-en" content="The manna’s height is derived from the Flood; the source of the five afflictions, with drinking included in eating; and bathing and anointing as affliction, learned from Daniel.">
+<meta name="gemara-map:sugya-count" content="3">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — יומא ע״ו</span><span data-when="en">Sugya map — Yoma 76</span></h1>
+    <div class="subtitle"><span data-when="he">יומא ע״ו א — ע״ז א · מקור: ספריא (William Davidson)</span><span data-when="en">Yoma 76a–77a · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> שלוש סוגיות: <b>אגדת גובה המן</b> — ר׳ אלעזר המודעי דורש מן המבול ש״מידה טובה מרובה ממידת פורענות״, והמן ירד ששים אמה; מקור <b>חמשת העינויים</b> של יום הכיפורים מחמש פרשיות, ו״שתייה בכלל אכילה״ — ומכאן בירור ש״תירוש״ ו״שכר״ הם יין; ולבסוף <b>רחיצה וסיכה</b> שנלמדות כעינוי מדניאל, ואגב כך אגדת גבריאל ודובִיאל שׂר פרס.</span>
+    <span data-when="en"><b>Bottom line:</b> Three sugyot: the <b>aggada of the manna’s height</b> — R. Elazar HaModa’i derives from the Flood that “the attribute of goodness exceeds that of retribution,” so the manna fell sixty cubits high; the source of the <b>five afflictions</b> of Yom Kippur from five Torah passages, with “drinking included in eating” — leading to a clarification that <i>tirosh</i> and <i>sheikhar</i> mean wine; and finally <b>bathing and anointing</b> as affliction, learned from Daniel, with the aggada of Gabriel and Dubiel, prince of Persia.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מבט־על — יומא ע״ו</span><span data-when="en">Overview — Yoma 76</span></h2>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · גובה המן — ששים אמה, נדרש מן המבול"]:::statement
+  O2["2 · חמשת העינויים, ושתייה בכלל אכילה"]:::statement
+  O3["3 · רחיצה וסיכה כעינוי — מדניאל ואגדת גבריאל"]:::statement
+  O1 --> O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  O1["1 · The manna — sixty cubits, derived from the Flood"]:::statement
+  O2["2 · The five afflictions, and drinking included in eating"]:::statement
+  O3["3 · Bathing and anointing as affliction — from Daniel"]:::statement
+  O1 --> O2 --> O3
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">גובה המן — ששים אמה, נדרש מן המבול</span><span data-when="en">The manna’s height — sixty cubits, derived from the Flood</span>
+      <span class="ref">Yoma 76a:5–10</span></h2>
+  <div class="lead"><span data-when="he">ר׳ אלעזר המודעי אומר שהמן היה גבוה ששים אמה; ר׳ טרפון מקשה, והוא דורש זאת מן המבול — שמידה טובה מרובה ממידת פורענות.</span><span data-when="en">R. Elazar HaModa’i says the manna stood sixty cubits high; R. Tarfon objects, and he derives it from the Flood — that the measure of good exceeds the measure of retribution.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ר׳ אלעזר המודעי: המן ירד גבוה ששים אמה · ר׳ טרפון: עד מתי תגבב דברים?"]:::statement
+  P1["② מקרא אני דורש: ׳חמש עשרה אמה גברו המים׳ — נבקעו מעיינות התהום עד שהשוו למים"]:::proof
+  P2["③ מידה טובה מרובה ממידת פורענות: שם ׳ארובות׳, וכאן ׳דלתי שמים פתח׳"]:::proof
+  P3["④ דלת = ארבע ארובות, שתי דלתות = שמונה — נמצא המן ששים אמה"]:::proof
+  S2["⑤ איסי בן יהודה: המן מתגבר עד שרואין מלכי מזרח ומערב · אביי: כוס דוד מחזיק רכ״א לוג"]:::statement
+  Q1{"⑥ הא לא דמיא! שם במ׳ יום, כאן שעה; שם לכל, כאן לישראל"}:::question
+  A1["⑥ ר׳ אלעזר ׳פתיחה׳ ׳פתיחה׳ גמר — גזירה שווה"]:::answer
+  S1 -->|מקרא אני דורש| P1
+  P1 -->|קל וחומר| P2
+  P2 -->|חשבון| P3
+  P3 -->|כיוצא בו| S2
+  S2 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① R. Elazar HaModa’i: the manna fell sixty cubits high · R. Tarfon: how long will you collect words?"]:::statement
+  P1["② I interpret a verse: ׳fifteen cubits the waters prevailed׳ — the deep broke up till level with the mountains"]:::proof
+  P2["③ Good exceeds retribution: there ׳windows׳, here ׳He opened the doors of heaven׳"]:::proof
+  P3["④ A door = four windows, two doors = eight — so the manna was sixty cubits"]:::proof
+  S2["⑤ Isi b. Yehuda: the manna rose till all kings could see it · Abaye: David’s cup holds 221 log"]:::statement
+  Q1{"⑥ This is not similar! There over 40 days, here one hour; there for all, here for Israel"}:::question
+  A1["⑥ R. Elazar derived ׳opening׳-׳opening׳ — a verbal analogy"]:::answer
+  S1 -->|I interpret a verse| P1
+  P1 -->|a fortiori| P2
+  P2 -->|calculation| P3
+  P3 -->|likewise| S2
+  S2 -.->|objection| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מָן שֶׁיָּרַד לָהֶן לְיִשְׂרָאֵל הָיָה גָּבוֹהַּ שִׁשִּׁים אַמָּה … עַד מָתַי אַתָּה מְגַבֵּב דְּבָרִים"]:::statement
+  P1["② מִקְרָא אֲנִי דּוֹרֵשׁ … נִבְקְעוּ כׇּל מַעְיְנוֹת תְּהוֹם רַבָּה עַד דְּאַשְׁווֹ מַיָּא בַּהֲדֵי טוּרֵי"]:::proof
+  P2["③ מִדָּה טוֹבָה מִמִּדַּת פּוּרְעָנוּת … ׳וַיְצַו שְׁחָקִים מִמָּעַל וְדַלְתֵי שָׁמַיִם פָּתָח׳"]:::proof
+  P3["④ כַּמָּה אֲרוּבּוֹת יֵשׁ בְּדֶלֶת — אַרְבַּע … הֲרֵי כָּאן שְׁמוֹנֶה … גָּבוֹהַּ שִׁשִּׁים אַמָּה"]:::proof
+  S2["⑤ אִיסִי בֶּן יְהוּדָה … מַלְכֵי מִזְרָח וּמַעֲרָב … כָּסָא דְּדָוִד … מָאתַן וְעֶשְׂרִין וְחַד לוּגָּא"]:::statement
+  Q1{"⑥ הָא לָא דָּמְיָא, הָתָם בְּאַרְבְּעִין יוֹמִין הָכָא חֲדָא שַׁעְתָּא … הָכָא לְיִשְׂרָאֵל לְחוֹדֵיהּ"}:::question
+  A1["⑥ ׳פְּתִיחָה׳ ׳פְּתִיחָה׳ גָּמַר"]:::answer
+  S1 -->|מקרא אני דורש| P1
+  P1 -->|קל וחומר| P2
+  P2 -->|חשבון| P3
+  P3 -->|כיוצא בו| S2
+  S2 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ו א — Yoma 76a:5</span></div>
+    <div class="orig">וּכְבָר הָיָה רַבִּי טַרְפוֹן וְרַבִּי יִשְׁמָעֵאל וּזְקֵנִים יוֹשְׁבִין וְעוֹסְקִין בְּפָרָשַׁת הַמָּן, וְהָיָה רַבִּי אֶלְעָזָר הַמּוֹדָעִי יוֹשֵׁב בֵּינֵיהֶן. נַעֲנָה רַבִּי אֶלְעָזָר הַמּוֹדָעִי וְאָמַר: מָן שֶׁיָּרַד לָהֶן לְיִשְׂרָאֵל הָיָה גָּבוֹהַּ שִׁשִּׁים אַמָּה. אָמַר לוֹ רַבִּי טַרְפוֹן: מוֹדָעִי, עַד מָתַי אַתָּה מְגַבֵּב דְּבָרִים וּמֵבִיא עָלֵינוּ!</div>
+    <div class="trans" data-when="he">מעשה: ר׳ טרפון, ר׳ ישמעאל וזקנים עסקו בפרשת המן, ור׳ אלעזר המודעי ישב ביניהם. אמר ר׳ אלעזר: המן שירד לישראל היה גבוה ששים אמה. הקשה לו ר׳ טרפון: מודעי, עד מתי אתה מגבב דברים חסרי יסוד ומביא עלינו?</div>
+    <div class="trans" data-when="en">§ It is told: Rabbi Tarfon, and Rabbi Yishmael, and the Elders were sitting and discussing the passage about the manna and Rabbi Elazar HaModa’i was sitting among them. Rabbi Elazar HaModa’i responded and said: The manna that fell for the Jewish people was sixty cubits high. Rabbi Tarfon said to him: Moda’i, how long will you collect words and bring upon us teachings that have no basis?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ו א — Yoma 76a:6</span></div>
+    <div class="orig">אָמַר לוֹ: רַבִּי, מִקְרָא אֲנִי דּוֹרֵשׁ: ״חֲמֵשׁ עֶשְׂרֵה אַמָּה מִלְמַעְלָה גָּבְרוּ הַמָּיִם וַיְכֻסּוּ הֶהָרִים״, וְכִי חֲמֵשׁ עֶשְׂרֵה אַמָּה בָּעֵמֶק, (חֲמֵשׁ עֶשְׂרֵה בַּשְּׁפֵלָה,) חֲמֵשׁ עֶשְׂרֵה בֶּהָרִים? וְכִי מַיָּא שׁוּרֵי שׁוּרֵי קָיְימִי. וְעוֹד: תֵּיבָה הֵיכִי סַגִּיָא? אֶלָּא, נִבְקְעוּ כׇּל מַעְיְנוֹת תְּהוֹם רַבָּה עַד דְּאַשְׁווֹ מַיָּא בַּהֲדֵי טוּרֵי, וַהֲדַר ״חֲמֵשׁ עֶשְׂרֵה אַמָּה מִלְמַעְלָה גָּבְרוּ הַמָּיִם״.</div>
+    <div class="trans" data-when="he">השיב לו: רבי, מקרא אני דורש. נאמר במבול ״חמש עשרה אמה מלמעלה גברו המים ויכוסו ההרים״. וכי המים עמדו חמש עשרה אמה בעמק, וחמש עשרה בהר, כשורות־שורות? והרי גם התיבה לא הייתה יכולה לעבור. אלא: ״נבקעו כל מעיינות תהום רבה״ עד שהשתוו המים לגובה ההרים, ורק אז ״חמש עשרה אמה מלמעלה גברו המים״.</div>
+    <div class="trans" data-when="en">He said to him: Rabbi, I am interpreting a verse. How so? It states about the Flood: “Fifteen cubits above did the waters prevail; and the mountains were covered” (Genesis 7:20). Is it possible that it would be fifteen cubits high from a valley, fifteen cubits from the plain, and fifteen cubits from the mountains? Did the water stand as though in layers, conforming to the height of the land below it? Furthermore, how could the Ark travel over water that was at different levels? Rather: “On the same day were all the fountains of the great deep broken up” (Genesis 7:11), until the water rose and was level with the mountains. Afterward, the verse states that “fifteen cubits above did the waters prevail.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ו א — Yoma 76a:7</span></div>
+    <div class="orig">וְכִי אֵי זֶה מִדָּה מְרוּבָּה, מִדָּה טוֹבָה אוֹ מִדַּת פּוּרְעָנוּת? הֱוֵי אוֹמֵר: מִדָּה טוֹבָה מִמִּדַּת פּוּרְעָנוּת, בְּמִדַּת פּוּרְעָנוּת הוּא אוֹמֵר: ״וַאֲרוּבּוֹת הַשָּׁמַיִם נִפְתָּחוּ״. בְּמִדָּה טוֹבָה הוּא אוֹמֵר: ״וַיְצַו שְׁחָקִים מִמָּעַל וְדַלְתֵי שָׁמַיִם פָּתָח וַיַּמְטֵר עֲלֵיהֶם מָן לֶאֱכוֹל וּדְגַן שָׁמַיִם נָתַן לָמוֹ״.</div>
+    <div class="trans" data-when="he">ר׳ אלעזר ממשיך: איזו מידה מרובה, מידה טובה או מידת פורענות? הוי אומר: מידה טובה מרובה. במידת פורענות (המבול) נאמר ״וארבות השמים נפתחו״ — ארובות בלבד; ובמידה טובה (המן) נאמר ״ויצו שחקים ממעל ודלתי שמים פתח וימטר עליהם מן לאכֹל ודגן שמים נתן למו״ — דלתות, ולא רק ארובות.</div>
+    <div class="trans" data-when="en">Rabbi Elazar HaModa’i continues: But which attribute is greater, the attribute of goodness or the attribute of retribution? One must say the attribute of goodness is greater than the attribute of retribution. With regard to the attribute of retribution, in the case of the Flood, the verse states: “And the windows of heaven were opened” (Genesis 7:11), which indicates that there were only windows. Whereas, with regard to the attribute of goodness, in the case of the manna, the verse states: “He commanded the skies above, and opened the doors of heaven, and rained down manna upon them to eat and gave them heavenly grain” (Psalms 78:23–24).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ו א — Yoma 76a:8</span></div>
+    <div class="orig">כַּמָּה אֲרוּבּוֹת יֵשׁ בְּדֶלֶת — אַרְבַּע אַרְבַּע, הֲרֵי כָּאן שְׁמוֹנֶה, וְנִמְצָא מָן שֶׁיָּרַד לָהֶם לְיִשְׂרָאֵל גָּבוֹהַּ שִׁשִּׁים אַמָּה.</div>
+    <div class="trans" data-when="he">חשבון: כמה ארובות יש בדלת? ארבע. ושתי דלתות — שמונה ארובות, ואילו במבול נאמרו רק שתי ארובות. נמצא שהמן ירד פי ארבעה מן המבול: המבול חמש עשרה אמה, והמן ששים אמה.</div>
+    <div class="trans" data-when="en">Based on this, the Gemara calculates: The area of how many windows are in a door? Four. A door is equivalent to four windows in size. One adds another four for the second door, as the verse uses the plural “doors,” which implies that there were two doors. This equals the area of eight windows. If the depth of water in the Flood is based on the phrase “windows of heaven,” implying two windows, then the manna fell at a rate four times that of the water of the Flood. Since the water of the Flood reached a depth of fifteen cubits, it turns out that the manna that fell for the Jewish people was sixty cubits high, i.e., four times as high.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ו א — Yoma 76a:9</span></div>
+    <div class="orig">תַּנְיָא, אִיסִי בֶּן יְהוּדָה אוֹמֵר: מָן שֶׁיָּרַד לָהֶם לְיִשְׂרָאֵל הָיָה מִתְגַּבֵּר וְעוֹלֶה עַד שֶׁרוֹאִין אוֹתוֹ כׇּל מַלְכֵי מִזְרָח וּמַעֲרָב, שֶׁנֶּאֱמַר: ״תַּעֲרוֹךְ לְפָנַי שֻׁלְחָן נֶגֶד צוֹרְרָי [וְגוֹ׳ כּוֹסִי רְוָיָה]״, אָמַר אַבָּיֵי: שְׁמַע מִינַּהּ כָּסָא דְּדָוִד לְעָלְמָא דְּאָתֵי, מָאתַן וְעֶשְׂרִין וְחַד לוּגָּא מַחֲזִיק, שֶׁנֶּאֱמַר: ״כּוֹסִי רְוָיָה״, רְוָיָה בְּגִימַטְרִיָּא הָכִי הָוֵי.</div>
+    <div class="trans" data-when="he">כיוצא בזה (ברייתא): איסי בן יהודה אומר — המן היה מתגבר ועולה עד שכל מלכי מזרח ומערב רואים אותו, שנאמר ״תערוך לפני שלחן נגד צוררי… כוסי רויה״. אמר אביי: שמע מינה — כוסו של דוד לעולם הבא מחזיק רכ״א (221) לוג, שכן ״רויה״ בגימטריה כך עולה.</div>
+    <div class="trans" data-when="en">Similarly, it was taught in a baraita that Isi ben Yehuda said: The manna that fell for the Jewish people would accumulate and ascend until all the kings of the East and West could see it, as it is stated: “You prepared a table before me in the presence of my enemies; you anointed my head with oil; my cup runs over” (Psalms 23:5). God prepared food for the Jewish people, so that their enemies would see their greatness over the world. “My cup runs over [revaya]”; Abaye said: We learn from this that the cup of David in the next world holds 221 log, since it is stated: “My cup runs over,” and the word revaya has that numerical value.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ו א — Yoma 76a:10</span></div>
+    <div class="orig">הָא לָא דָּמְיָא. הָתָם בְּאַרְבְּעִין יוֹמִין, הָכָא חֲדָא שַׁעְתָּא. הָתָם לְכוּלֵּי עָלְמָא, הָכָא לְיִשְׂרָאֵל לְחוֹדֵיהּ, וּנְפִישׁ לְהוּ טְפֵי. רַבִּי אֶלְעָזָר הַמּוֹדָעִי ״פְּתִיחָה״ ״פְּתִיחָה״ גָּמַר.</div>
+    <div class="trans" data-when="he">קושיא: השוואת המבול למן אינה מדויקת! שם המים עלו חמש עשרה אמה בארבעים יום, וכאן ירד המן בשעה אחת ביום; ושם המבול לכל העולם, וכאן המן לישראל בלבד — ואם כן היה צריך לרדת הרבה יותר. תירוץ: ר׳ אלעזר המודעי למד בגזירה שווה ״פתיחה״ (המן) מ״פתיחה״ (המבול) — ולכן השיעור שווה.</div>
+    <div class="trans" data-when="en">The Gemara asks how Rabbi Elazar HaModa’i can compare the depth of the Flood waters with the amount of manna that fell in the desert: This is not similar, and the calculation is inaccurate. There, in the case of the Flood, the water rose fifteen cubits in forty days; but here, in the case of the manna, it took only one hour every day to fall. Conversely, there the Flood was for everyone and covered the whole world; whereas here the manna was for the Jewish people alone. And there would be much more manna for them than sixty cubits, which is the measurement put forth by Rabbi Elazar HaModa’i. The Gemara answers: Rabbi Elazar HaModa’i derived “opening” in the verse: “He commanded the skies above, and opened the doors of heaven” (Psalms 78:23), from “opening” in the verse: “And the windows of heaven were opened” (Genesis 7:11). He used a verbal analogy that teaches that the skies opened in both instances in the same way.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">חמשת העינויים, ושתייה בכלל אכילה</span><span data-when="en">The five afflictions, and drinking included in eating</span>
+      <span class="ref">Yoma 76a:11–76b:7</span></h2>
+  <div class="lead"><span data-when="he">חמשת העינויים נדרשים מחמש פרשיות; אך המשנה מנתה שש — ״שתייה בכלל אכילה״. ומכאן בירור ש״תירוש״ ו״שכר״ הם יין.</span><span data-when="en">The five afflictions are derived from five Torah passages; yet the Mishna listed six — “drinking is included in eating.” This leads to a clarification that <i>tirosh</i> and <i>sheikhar</i> mean wine.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① חמשה עינויין כנגד מי? · רב חסדא: כנגד חמש פרשיות שבתורה"}:::question
+  Q2{"② הני חמשה הוו? ואנן שיתא תנן! · שתייה בכלל אכילה"}:::question
+  S1["③ ריש לקיש: מנין? ׳ואכלת… תירוש׳ — תירוש יין, וקרי ׳ואכלת׳"]:::statement
+  Q3{"④ ממאי? דלמא דאכליה ע״י אניגרון (תבשיל)"}:::question
+  S2["⑤ רב אחא בר יעקב: מ׳בשכר׳ — שכר שתייה, וקרי ׳ואכלת׳"]:::statement
+  Q4{"⑥ דלמא אניגרון? · ׳שכר׳ — דמשכר · דלמא דבלה קעילית?"}:::question
+  A1["⑦ יליף ׳שכר׳ ׳שכר׳ מנזיר — מה להלן יין, אף כאן יין"]:::answer
+  Q5{"⑧ ותירוש חמרא? והנודר מתירוש מותר ביין! · ׳ותירוש ינובב בתולות׳ — דבר הבא מן התירוש"}:::question
+  C1["⑨ אלא: דכולי עלמא תירוש חמרא, ובנדרים הלך אחר לשון בני אדם · יין/תירוש — דרשות שמות"]:::conclusion
+  Q1 -->|המשך| Q2
+  Q2 -->|דריש לקיש| S1
+  S1 -.->|דחייה| Q3
+  Q3 -->|אלא| S2
+  S2 -.->|דחייה| Q4
+  Q4 -->|אלא| A1
+  A1 -->|ובירור תירוש| Q5
+  Q5 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Five afflictions — corresponding to what? · Rav Ḥisda: five Torah passages"}:::question
+  Q2{"② Are these five? We learned six! · Drinking is included in eating"}:::question
+  S1["③ Reish Lakish: from where? ׳you shall eat… tirosh׳ — tirosh is wine, called ׳eating׳"]:::statement
+  Q3{"④ From where? Perhaps eaten as anigron (a cooked sauce)"}:::question
+  S2["⑤ Rav Aḥa b. Yaakov: from ׳sheikhar׳ — a drink, yet called ׳you shall eat׳"]:::statement
+  Q4{"⑥ Perhaps anigron? · ׳sheikhar׳ — what intoxicates · perhaps a Keilah fig?"}:::question
+  A1["⑦ Derives ׳sheikhar׳-׳sheikhar׳ from the nazirite — there wine, so here wine"]:::answer
+  Q5{"⑧ Is tirosh wine? One who vows off tirosh may drink wine! · ׳tirosh makes virgins flourish׳ — from tirosh"}:::question
+  C1["⑨ Rather: by all, tirosh is wine; vows follow common speech · ׳wine׳/׳tirosh׳ — homiletic names"]:::conclusion
+  Q1 -->|continues| Q2
+  Q2 -->|Reish Lakish| S1
+  S1 -.->|rejected| Q3
+  Q3 -->|rather| S2
+  S2 -.->|rejected| Q4
+  Q4 -->|rather| A1
+  A1 -->|tirosh clarified| Q5
+  Q5 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① הָנֵי חֲמִשָּׁה עִנּוּיִין כְּנֶגֶד מִי? … כְּנֶגֶד חֲמִשָּׁה עִנּוּיִין שֶׁבַּתּוֹרָה"}:::question
+  Q2{"② הָנֵי חֲמִשָּׁה הָווּ? וַאֲנַן שִׁיתָּא תְּנַן! שְׁתִיָּה בִּכְלַל אֲכִילָה הִיא"}:::question
+  S1["③ מִנַּיִן לִשְׁתִיָּה שֶׁהִיא בִּכְלַל אֲכִילָה … ׳וְאָכַלְתָּ׳ … תִּירוֹשׁ חַמְרָא הוּא, וְקָרֵי לֵיהּ ׳וְאָכַלְתָּ׳"]:::statement
+  Q3{"④ מִמַּאי? וְדִילְמָא דְּאַכְלֵיהּ עַל יְדֵי אֲנִיגְרוֹן"}:::question
+  S2["⑤ אֶלָּא אָמַר רַב אַחָא בַּר יַעֲקֹב … ׳בְּיַיִן וּבַשֵּׁכָר׳ … שֵׁכָר שְׁתִיָּה הוּא, וְקַרְיֵיהּ ׳וְאָכַלְתָּ׳"]:::statement
+  Q4{"⑥ מִמַּאי? … ׳שֵׁכָר׳ כְּתִב, מִידֵּי דִּמְשַׁכַּר · וְדִילְמָא דְּבֵילָה קְעִילִית?"}:::question
+  A1["⑦ אֶלָּא: יָלֵיף ׳שֵׁכָר׳ ׳שֵׁכָר׳ מִנָּזִיר, מָה לְהַלָּן — יַיִן, אַף כָּאן יַיִן"]:::answer
+  Q5{"⑧ וְתִירוֹשׁ חַמְרָא הוּא? … הַנּוֹדֵר מִן הַתִּירוֹשׁ … מוּתָּר בְּיַיִן! … ׳וְתִירוֹשׁ יְנוֹבֵב בְּתוּלוֹת׳"}:::question
+  C1["⑨ אֶלָּא, דְּכוּלֵּי עָלְמָא תִּירוֹשׁ חַמְרָא הוּא, וּבִנְדָרִים הַלֵּךְ אַחַר לְשׁוֹן בְּנֵי אָדָם"]:::conclusion
+  Q1 -->|המשך| Q2
+  Q2 -->|דריש לקיש| S1
+  S1 -.->|דחייה| Q3
+  Q3 -->|אלא| S2
+  S2 -.->|דחייה| Q4
+  Q4 -->|אלא| A1
+  A1 -->|ובירור תירוש| Q5
+  Q5 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ו א — Yoma 76a:11</span></div>
+    <div class="orig">אָסוּר בַּאֲכִילָה. הָנֵי חֲמִשָּׁה עִנּוּיִין כְּנֶגֶד מִי? אָמַר רַב חִסְדָּא: כְּנֶגֶד חֲמִשָּׁה עִנּוּיִין שֶׁבַּתּוֹרָה: ״וּבֶעָשׂוֹר״, וְ״אַךְ בֶּעָשׂוֹר״, ״שַׁבַּת שַׁבָּתוֹן״, וְ״שַׁבַּת שַׁבָּתוֹן״, ״וְהָיְתָה לָכֶם״.</div>
+    <div class="trans" data-when="he">המשנה אסרה אכילה ושתייה ביום הכיפורים. שואלת הגמרא: חמשת העינויים כנגד מי נאמרו? רב חסדא: כנגד חמש פעמים שהוזכר העינוי בתורה — ״ובעשור״, ״אך בעשור״, ״שבת שבתון״ (פעמיים), ו״והיתה לכם״.</div>
+    <div class="trans" data-when="en">§ The mishna taught that as per the five prohibited activities on Yom Kippur it is prohibited to engage in eating and in drinking, and in bathing, and in smearing the body with oil, and in wearing shoes, and in conjugal relations. The Gemara asks: These five afflictions of Yom Kippur, to what do they correspond? Where is the Torah source or allusion to them? Rav Ḥisda said: They are based on the five times that the afflictions of Yom Kippur are mentioned in the Torah. It is stated: (1) “And on the tenth of this seventh month you shall have a holy convocation, and you shall afflict your souls” (Numbers 29:7); (2) “But on the tenth of this seventh month is the day of atonement, it shall be a holy convocation for you and you shall afflict your souls” (Leviticus 23:27); (3) “It shall be for you a Shabbat of solemn rest, and you shall afflict your souls (Leviticus 23:32); (4) “It is a Shabbat of solemn rest [shabbaton] for you, and you shall afflict your souls” (Leviticus 16:31); (5) “And it shall be a statute for you forever, in the seventh month on the tenth of the month, you shall afflict your souls” (Leviticus 16:29).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ו א — Yoma 76a:12</span></div>
+    <div class="orig">הָנֵי חֲמִשָּׁה הָווּ? וַאֲנַן שִׁיתָּא תְּנַן! שְׁתִיָּה בִּכְלַל אֲכִילָה הִיא. דְּאָמַר רֵישׁ לָקִישׁ: מִנַּיִן לִשְׁתִיָּה שֶׁהִיא בִּכְלַל אֲכִילָה, שֶׁנֶּאֱמַר: ״וְאָכַלְתָּ לִפְנֵי ה׳ אֱלֹהֶיךָ מַעְשַׂר דְּגָנְךָ תִּירוֹשְׁךָ וְיִצְהָרֶךָ״, תִּירוֹשׁ חַמְרָא הוּא, וְקָרֵי לֵיהּ ״וְאָכַלְתָּ״.</div>
+    <div class="trans" data-when="he">קושיא: רב חסדא מנה חמישה, ואנו שנינו במשנה שישה עינויים (אכילה, שתייה, רחיצה, סיכה, תשמיש, נעילת הסנדל)! תירוץ: שתייה בכלל אכילה היא, ולכן נחשבות לאחת. שאמר ריש לקיש: מנין ששתייה בכלל אכילה? ״ואכלת לפני ה׳… תירושך״ — ותירוש הוא יין, וקראו הכתוב ״ואכלת״.</div>
+    <div class="trans" data-when="en">The Gemara asks: Are these five the only afflictions? We learn in the mishna that there are six: Eating, drinking, bathing, smearing oil, conjugal relations, and wearing shoes. The Gemara answers: Drinking is included in the prohibition of eating; both together are considered a single affliction. As Reish Lakish said: From where do we derive that drinking is included in the concept of eating? As it is stated: “And you shall eat before the Lord your God, in the place where He shall choose to cause His name to dwell there, the tithe of your grain, of your wine [tirosh], and of your oil” (Deuteronomy 14:23). Tirosh is wine, yet the verse calls the drinking of wine eating with the phrase “and you shall eat,” meaning that eating also refers to drinking.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ו א — Yoma 76a:13</span></div>
+    <div class="orig">מִמַּאי? וְדִילְמָא דְּאַכְלֵיהּ עַל יְדֵי אֲנִיגְרוֹן! דְּאָמַר רַבָּה בַּר שְׁמוּאֵל: אַנִיגְרוֹן מַיָּא דְסִילְקָא, אַכְּסִיגְרוֹן מַיָּא דְּכוּלְּהוּ שִׁלְקֵי.</div>
+    <div class="trans" data-when="he">דחייה: מניין שתירוש כאן נשתה? שמא נאכל בתוך תבשיל ״אניגרון״! שאמר רבה בר שמואל: אניגרון — מי תרד (סלק), אכסיגרון — מי כל הירקות השלוקים. ואם כן אפשר שהיין נאכל ולא נשתה, ואין ראיה.</div>
+    <div class="trans" data-when="en">The Gemara rejects this answer: From where do you draw this conclusion? Perhaps the wine was eaten as anigron, a sauce made of oil, beet juice, and garum mixed with wine. As Rabba bar Shmuel said: Anigron is beet juice and wine mixed together. Akhsigron is water that comes from boiled vegetables that have wine mixed into them. The vegetables are mixed with the wine and eaten. It is possible for wine to literally be eaten. Therefore, the verse does not prove that drinking is included in eating.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ו א — Yoma 76a:14</span></div>
+    <div class="orig">אֶלָּא אָמַר רַב אַחָא בַּר יַעֲקֹב, מֵהָכָא: ״וְנָתַתָּה הַכֶּסֶף בְּכֹל אֲשֶׁר תְּאַוֶּה נַפְשְׁךָ בַּבָּקָר וּבַצֹּאן בְּיַיִן וּבַשֵּׁכָר״. שֵׁכָר שְׁתִיָּה הוּא, וְקַרְיֵיהּ רַחֲמָנָא ״וְאָכַלְתָּ״.</div>
+    <div class="trans" data-when="he">תירוץ: אלא אמר רב אחא בר יעקב — ראיה מכאן: ״ונתתה הכסף בכל אשר תאוה נפשך בבקר ובצאן ביין ובשכר״ (והכתוב מסיים ״ואכלת״). שכר הוא משקה, ובכל זאת קראו הכתוב ״ואכלת״ — הרי ששתייה בכלל אכילה.</div>
+    <div class="trans" data-when="en">Rather, Rav Aḥa bar Ya’akov said: From here there is a proof as the verse states: “And you shall spend that money on all that your soul desires, on oxen, or on sheep, or on wine, or on strong drink [sheikhar] or whatever your soul desires, and you shall eat” (Deuteronomy 14:26). Strong drink is a drink, but the Merciful One calls its consumption eating, in the phrase “and you shall eat.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ו א — Yoma 76a:15</span></div>
+    <div class="orig">מִמַּאי? וְדִילְמָא הָכָא נָמֵי דְּאַכְלֵיהּ עַל יְדֵי אֲנִיגְרוֹן! ״שֵׁכָר״ כְּתִב, מִידֵּי דִּמְשַׁכַּר. וְדִילְמָא דְּבֵילָה קְעִילִית? דְּתַנְיָא: אָכַל דְּבֵילָה קְעִילִית וְשָׁתָה דְּבַשׁ וְחָלָב וְנִכְנַס לַמִּקְדָּשׁ —</div>
+    <div class="trans" data-when="he">דחייה ויישוב: שמא גם כאן השכר נאכל באניגרון? תשובה: ״שכר״ כתיב — דבר המשכר, וביין מהול אין שכרות. ושמא ״שכר״ אינו יין אלא מאכל המשכר, כדבלה קעילית? שנינו בברייתא: כהן שאכל דבלה קעילית או שתה דבש וחלב ונשתכר ונכנס למקדש —</div>
+    <div class="trans" data-when="en">The Gemara rejects this proof: From where do you draw this conclusion? Perhaps here too it was eaten as anigron? The Gemara rejects this: Here that answer is insufficient because the verse writes “strong drink [sheikhar],” meaning something that intoxicates. Beverages that generally intoxicate do not do so when they are in a mixture. The Gemara asks: Perhaps sheikhar does not refer to wine but to a food that causes intoxication, such as a sweet dried fig from Keilah. As it was taught in a baraita: A priest who ate a sweet dried fig from Keilah or drank honey or milk, thereby becoming intoxicated, and entered the Temple to serve</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ו ב — Yoma 76b:1</span></div>
+    <div class="orig">(חַיָּיב).</div>
+    <div class="trans" data-when="he">— חייב, על שום ״יין ושכר אל תשת״. אם כן ״שכר״ עשוי להתפרש כדבלה קעילית, ולא דווקא יין.</div>
+    <div class="trans" data-when="en">is liable for violating the prohibition: “Drink no wine nor strong drink [sheikhar]” (Leviticus 10:9). Consequently, the term sheikhar in the text can be understood here as the sweet dried fig.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ו ב — Yoma 76b:2</span></div>
+    <div class="orig">אֶלָּא: יָלֵיף ״שֵׁכָר״ ״שֵׁכָר״ מִנָּזִיר, מָה לְהַלָּן — יַיִן, אַף כָּאן יַיִן.</div>
+    <div class="trans" data-when="he">תירוץ: אלא לומדים גזירה שווה ״שכר״-״שכר״ מנזיר — כשם ששם ״שכר״ הוא יין, אף כאן ״שכר״ הוא יין (ולא דבלה). וחוזר הדין: שכר הוא משקה, ונקרא ״ואכלת״.</div>
+    <div class="trans" data-when="en">Rather, the Gemara rejects this and states: It is derived through a verbal analogy of “sheikhar” and “sheikhar” stated in the verses of the nazirite (Numbers 6:3). Just as there, in the case of the nazirite, sheikhar means strong wine, so too, here, it means strong wine and not sweet dried figs.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ו ב — Yoma 76b:3</span></div>
+    <div class="orig">וְתִירוֹשׁ חַמְרָא הוּא? וְהָתַנְיָא: הַנּוֹדֵר מִן הַתִּירוֹשׁ — אָסוּר בְּכׇל מִינֵי מְתִיקָה וּמוּתָּר בְּיַיִן! וְלָאו חַמְרָא הוּא? וְהָכְתִיב: ״וְתִירוֹשׁ יְנוֹבֵב בְּתוּלוֹת״, דָּבָר הַבָּא מִן הַתִּירוֹשׁ — יְנוֹבֵב בְּתוּלוֹת.</div>
+    <div class="trans" data-when="he">בירור צדדי: וכי תירוש הוא יין? והרי שנינו: הנודר מן התירוש אסור בכל מיני מתיקה (פירות מתוקים) ומותר ביין — משמע שתירוש אינו יין! ומאידך — וכי אינו יין? והרי כתוב ״ותירוש ינובב בתולות״ (מלשון ניב — דיבור). תשובה: דבר הבא מן התירוש (יין) הוא ש״ינובב בתולות״, אך תירוש עצמו הוא ענבים מתוקים.</div>
+    <div class="trans" data-when="en">The Gemara returns to the meaning of the word tirosh: Is tirosh wine? Isn’t it taught in a baraita: One who vows not to benefit from tirosh is not allowed sweet foods, e.g., sweet fruits, but is allowed wine. Therefore, tirosh is not wine but sweet food. The Gemara rejects this: And is tirosh not wine? But isn’t it written: “Tirosh shall make the young women flourish [yenovev]” (Zechariah 9:17). The word yenovev comes from the word niv, speech. Consequently, tirosh is a food that tempts the heart and mouth of the drinker, even of virgins, who are modest and reticent. Since sweet foods do not have this effect, tirosh must be wine. The Gemara replies: This is not a proof, since we could explain it otherwise: Something that comes from tirosh, such as wine, causes virgins to come forth; tirosh itself means sweet grapes. Perhaps wine is called tirosh only by extension because it is made from tirosh.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ו ב — Yoma 76b:4</span></div>
+    <div class="orig">וְהָכְתִיב: ״וְתִירוֹשׁ יְקָבֶיךָ יִפְרוֹצוּ״! דָּבָר הַבָּא מִן הַתִּירוֹשׁ — יְקָבֶיךָ יִפְרוֹצוּ.</div>
+    <div class="trans" data-when="he">המשך הבירור: והרי כתוב ״ותירוש יקביך יפרצו״ — משמע שהתירוש שבייקב הוא יין! תשובה: גם זו אינה ראיה — דבר הבא מן התירוש (יין) הוא ש״יקביך יפרצו״, אך תירוש עצמו פירות מתוקים.</div>
+    <div class="trans" data-when="en">The Gemara challenges this: But isn’t it written: “And your vats shall overflow with tirosh” (Proverbs 3:10). This description implies that tirosh is wine rather than sweet grapes. The Gemara answers: This too is not a proof that tirosh means wine. We could say that the vats shall overflow with something that comes from tirosh, i.e., wine; yet tirosh itself means sweet fruits.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ו ב — Yoma 76b:5</span></div>
+    <div class="orig">וְהָא כְּתִיב ״זְנוּת וְיַיִן וְתִירוֹשׁ יִקַּח לֵב״! אֶלָּא, דְּכוּלֵּי עָלְמָא תִּירוֹשׁ חַמְרָא הוּא, וּבִנְדָרִים הַלֵּךְ אַחַר לְשׁוֹן בְּנֵי אָדָם.</div>
+    <div class="trans" data-when="he">מסקנה: והרי כתוב ״זנות ויין ותירוש יקח לב״ — שתירוש מסיר את הלב, ובוודאי יין. אלא: לכולי עלמא תירוש שבמקרא הוא יין, ובנדרים הולכים אחר לשון בני אדם — שבזמנם ״תירוש״ פירושו פירות מתוקים.</div>
+    <div class="trans" data-when="en">The Gemara objects: But it is written: “Harlotry, and wine, and tirosh take away the heart” (Hosea 4:11). Since tirosh leads the heart astray, it is clear that it is wine. Therefore, the Gemara accepts that tirosh means wine. Rather, according to everyone, the word tirosh in the Bible refers to wine, but vows follow colloquial language. During the time of the Mishna, tirosh meant sweet fruits; the term included grapes but not wine. When dealing with vows, the intention of the speaker is what must be determined, but no inference can be drawn from colloquial language to the biblical definition of the word.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ו ב — Yoma 76b:6</span></div>
+    <div class="orig">וְאַמַּאי קָרֵי לֵיהּ יַיִן, וְאַמַּאי קָרֵי לֵיהּ תִּירוֹשׁ? יַיִן — שֶׁמֵּבִיא יְלָלָה לְעוֹלָם. תִּירוֹשׁ — שֶׁכׇּל הַמִּתְגָּרֶה בּוֹ נַעֲשָׂה רָשׁ.</div>
+    <div class="trans" data-when="he">דרשת שמות: ולמה נקרא ״יין״ ולמה ״תירוש״? ״יין״ — שמביא יללה (ייסורים) לעולם, שעל ידו רבים החטאים. ״תירוש״ — שכל המתגרה בו (שותהו לשכרון) נעשה רש (עני).</div>
+    <div class="trans" data-when="en">The Gemara asks: And if so, why does the Bible call it wine and why does it call it tirosh? The Gemara explains: “Wine” suggests that it brings lament to the world because drunkenness causes most sins. There is a phonetic resemblance between the yayin, wine, and ta’aniya va’aniya, sorrow and howling, which Rashi (on Job 2:5) explains as lament. “Tirosh” shows that those who indulge in it become poor [rash].</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ו ב — Yoma 76b:7</span></div>
+    <div class="orig">רַב כָּהֲנָא רָמֵי: כְּתִיב ״תִּירָשׁ״, וְקָרֵינַן ״תִּירוֹשׁ״. זָכָה — נַעֲשָׂה רֹאשׁ, לֹא זָכָה — נַעֲשָׂה רָשׁ. (וְהַיְינוּ דְּרָבָא דְּרָבָא) רָמֵי, כְּתִיב: ״יְשַׁמַּח״, וְקָרֵינַן יְשַׂמַּח. זָכָה — מְשַׂמְּחוֹ, לֹא זָכָה — מְשַׁמְּמוֹ. וְהַיְינוּ דְּאָמַר רָבָא: חַמְרָא וְרֵיחָנֵי — פַּקְחֻין.</div>
+    <div class="trans" data-when="he">רב כהנא דורש: כתיב ״תירש״ (חסר) וקורים ״תירוש״ — זכה נעשה ראש, לא זכה נעשה רש. וכן רבא: כתיב ״ישמח״ (בשי״ן) וקורים ״ישמח״ (בסי״ן) — זכה היין משמחו, לא זכה משוממו. והיינו שאמר רבא: ״חמרא וריחני פקחין״ — יין וריח טוב מפקחים את הדעת (למי שראוי).</div>
+    <div class="trans" data-when="en">Rav Kahana raised a contradiction: It is written as tirash but we read it tirosh. This should be understood as follows: If one merits and drinks appropriately, he is made a head [rosh]; if one does not merit and does not drink appropriately, he is made poor [rash]. The Gemara comments: This is the same as what Rava said, as Rava raised a contradiction: It is written: “And wine that makes glad [yishamaḥ] the heart of man” (Psalms 104:15) with a shin, but we read it yisamaḥ with a sin. This teaches: If one merits, wine makes him happy [same’aḥ]; if one does not merit, it makes him confounded [shamem]. This is the same as what Rava said: Wine and good scents make me wise, meaning that wine benefits one who deserves it.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">רחיצה וסיכה כעינוי — מדניאל ואגדת גבריאל</span><span data-when="en">Bathing and anointing as affliction — from Daniel</span>
+      <span class="ref">Yoma 76b:8–77a:8</span></h2>
+  <div class="lead"><span data-when="he">מנין שרחיצה וסיכה הן עינוי? נלמד מדניאל; ואגב פסוקי דניאל — אגדת הקטרת, החטאת גבריאל, ודובִיאל שׂר פרס.</span><span data-when="en">Whence are bathing and anointing afflictions? Derived from Daniel; and from the Daniel verses comes the aggada of the incense, Gabriel’s punishment, and Dubiel the prince of Persia.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① רחיצה וסיכה — מנין שאיקרי עינוי? · דניאל: ׳וסוך לא סכתי׳"}:::question
+  P1["② ומנא לן דחשיב כעינוי? ׳להבין ולהתענות לפני אלהיך׳"]:::proof
+  Q2{"③ אשכחן סיכה, רחיצה מנא לן? · רב זוטרא: ׳ותבא כמים בקרבו׳"}:::question
+  A1["④ רב אשי: רחיצה מגופיה דקרא — ׳וסוך לא סכתי׳"]:::answer
+  S1["⑤ ׳ואני באתי בדבריך׳ — דרשת פסוקי יחזקאל: זקני ישראל והקטורת"]:::statement
+  S2["⑥ הקב״ה למיכאל: סרחה אומתך · ציווי לגבריאל לזרוק גחלים על העיר"]:::statement
+  S3["⑦ ר׳ שמעון חסידא: אלמלא נצטננו הגחלים — לא נשתייר שריד"]:::statement
+  S4["⑧ ר׳ יוחנן: הוציאו גבריאל מאחורי הפרגוד והכוהו שיתין פולסי דנורא"]:::statement
+  S5["⑨ דובִיאל שׂר פרס שימש כ״א יום · ביקש לכתוב כרגא על ישראל ועל רבנן"]:::statement
+  S6["⑩ גבריאל לימד זכות על דניאל — ׳ואני באתי בדבריך׳, הכניסוהו"]:::statement
+  C1["⑪ דובִיאל בלע האיגרת — לכן בפרס יש משלם כרגא ויש שאינו"]:::conclusion
+  Q1 -->|מסיכה| P1
+  P1 -->|רחיצה| Q2
+  Q2 -->|רב אשי| A1
+  A1 -->|דרשת ׳ואני באתי׳| S1
+  S1 -->|אגדה| S2
+  S2 -->|הצלה| S3
+  S3 -->|עונש גבריאל| S4
+  S4 -->|דובִיאל| S5
+  S5 -->|לימוד זכות| S6
+  S6 -->|מסקנה| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Bathing and anointing — whence called affliction? · Daniel: ׳neither did I anoint׳"}:::question
+  P1["② Whence counted as affliction? ׳to understand and to afflict yourself before your God׳"]:::proof
+  Q2{"③ We found anointing; whence bathing? · Rav Zutra: ׳it came into his innards like water׳"}:::question
+  A1["④ Rav Ashi: bathing from the verse itself — ׳neither did I anoint myself׳"]:::answer
+  S1["⑤ ׳and I have come due to your words׳ — expounding Ezekiel: the Elders and the incense"]:::statement
+  S2["⑥ God to Michael: your nation has sinned · the linen-clad told to scatter coals on the city"]:::statement
+  S3["⑦ R. Shimon Ḥasida: had the coals not cooled — no remnant would survive"]:::statement
+  S4["⑧ R. Yoḥanan: Gabriel cast from behind the curtain, struck with sixty fiery blows"]:::statement
+  S5["⑨ Dubiel prince of Persia served 21 days · sought to decree taxes on Israel and the Sages"]:::statement
+  S6["⑩ Gabriel pleaded for Daniel — ׳and I have come due to your words׳, brought back in"]:::statement
+  C1["⑪ Dubiel swallowed the letter — hence in Persia some pay tax and some do not"]:::conclusion
+  Q1 -->|from anointing| P1
+  P1 -->|bathing| Q2
+  Q2 -->|Rav Ashi| A1
+  A1 -->|expounding ׳I have come׳| S1
+  S1 -->|aggada| S2
+  S2 -->|rescue| S3
+  S3 -->|Gabriel punished| S4
+  S4 -->|Dubiel| S5
+  S5 -->|pleading| S6
+  S6 -->|conclusion| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① רְחִיצָה וְסִיכָה, מְנָא לַן דְּאִיקְּרִי עִינּוּי … ׳וְסוֹךְ לֹא סָכְתִּי׳"}:::question
+  P1["② וּמְנָא לַן דַּחֲשִׁיב כְּעִינּוּי … ׳לְהָבִין וּלְהִתְעַנּוֹת לִפְנֵי אֱלֹהֶיךָ׳"]:::proof
+  Q2{"③ אַשְׁכְּחַן סִיכָה, רְחִיצָה מְנָא לַן? … ׳וַתָּבֹא כַמַּיִם בְּקִרְבּוֹ׳"}:::question
+  A1["④ אֶלָּא אָמַר רַב אָשֵׁי: רְחִיצָה מִגּוּפֵיהּ דִּקְרָא … ׳וְסוֹךְ לֹא סָכְתִּי׳"]:::answer
+  S1["⑤ מַאי ׳וַאֲנִי בָּאתִי בִּדְבָרֶיךָ׳? … ׳וְשִׁבְעִים אִישׁ מִזִּקְנֵי בֵית יִשְׂרָאֵל׳"]:::statement
+  S2["⑥ אָמַר לוֹ הַקָּדוֹשׁ בָּרוּךְ הוּא לְמִיכָאֵל: סָרְחָה אוּמָּתֶךָ … ׳וּזְרוֹק עַל הָעִיר׳"]:::statement
+  S3["⑦ אִילְמָלֵא לֹא נִצְטַנְּנוּ גֶּחָלִים … לֹא נִשְׁתַּיְּירוּ … שָׂרִיד וּפָלִיט"]:::statement
+  S4["⑧ הוֹצִיאוּ לְגַבְרִיאֵל מֵאֲחוֹרֵי הַפַּרְגּוֹד, וּמַחְיוּהוּ שִׁיתִּין פּוּלְסֵי דְנוּרָא"]:::statement
+  S5["⑨ אַיְיתוּהּ לְדוּבִּיאֵל שָׂרָא דְפָרְסָאֵי … וְשַׁמֵּשׁ עֶשְׂרִים וְאֶחָד יוֹם … כְּתִיבוּ לִי לְיִשְׂרָאֵל בְּאַכְּרָגָא"]:::statement
+  S6["⑩ מִי הוּא זֶה שֶׁמְּלַמֵּד זְכוּת עַל בָּנַי? … גַּבְרִיאֵל … ׳וַאֲנִי בָאתִי בִּדְבָרֶיךָ׳ … אַעַיְילוּהוּ"]:::statement
+  C1["⑪ בַּלְעַהּ … הַיְינוּ דִּבְמַלְכוּתָא דְפָרַס, אִיכָּא דְּיָהֵיב כְּרָגָא וְאִיכָּא דְּלָא יָהֵיב"]:::conclusion
+  Q1 -->|מסיכה| P1
+  P1 -->|רחיצה| Q2
+  Q2 -->|רב אשי| A1
+  A1 -->|דרשת ׳ואני באתי׳| S1
+  S1 -->|אגדה| S2
+  S2 -->|הצלה| S3
+  S3 -->|עונש גבריאל| S4
+  S4 -->|דובִיאל| S5
+  S5 -->|לימוד זכות| S6
+  S6 -->|מסקנה| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">יומא ע״ו ב — Yoma 76b:8</span></div>
+    <div class="orig">רְחִיצָה וְסִיכָה, מְנָא לַן דְּאִיקְּרִי עִינּוּי. דִּכְתִיב: ״לֶחֶם חֲמוּדוֹת לֹא אָכַלְתִּי וּבָשָׂר וָיַיִן לֹא בָא אֶל פִּי וְסוֹךְ לֹא סָכְתִּי״. מַאי ״לֶחֶם חֲמוּדוֹת לֹא אָכַלְתִּי״? אָמַר רַב יְהוּדָה בְּרֵיהּ דְּרַב שְׁמוּאֵל בַּר שִׁילַת: אֲפִילּוּ נַהֲמָא דְּחִיטֵּי דַּכְיָיתָא, לָא אֲכַל.</div>
+    <div class="trans" data-when="he">שואלת הגמרא: מנין שרחיצה וסיכה נקראות עינוי? שכתוב בדניאל ״לחם חמודות לא אכלתי ובשר ויין לא בא אל פי וסוך לא סכתי״ (התנהג כמתענה). ומהו ״לחם חמודות לא אכלתי״? רב יהודה בריה דרב שמואל בר שילת: אפילו לחם מחיטים נקיות לא אכל, אלא פת קיבר.</div>
+    <div class="trans" data-when="en">§ The Gemara asks: From where do we derive that abstaining from bathing and smearing oil on oneself is called affliction? The Gemara answers: As it is written “I ate no pleasant bread, neither did meat nor wine enter my mouth, neither did I anoint myself at all” (Daniel 10:3). The Gemara explains the verse: What is the meaning of “I ate no pleasant bread”? Rav Yehuda, son of Rav Shmuel bar Sheilat, said: He did not eat even bread made from refined wheat; he ate only wheat mixed with bran.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">יומא ע״ו ב — Yoma 76b:9</span></div>
+    <div class="orig">וּמְנָא לַן דַּחֲשִׁיב כְּעִינּוּי — דִּכְתִיב: ״וַיֹּאמֶר אֵלַי אַל תִּירָא דָנִיֵּאל כִּי מִן הַיּוֹם הָרִאשׁוֹן אֲשֶׁר נָתַתָּ אֶת לִבְּךָ לְהָבִין וּלְהִתְעַנּוֹת לִפְנֵי אֱלֹהֶיךָ נִשְׁמְעוּ דְבָרֶיךָ וַאֲנִי בָאתִי בִּדְבָרֶיךָ״. (״כִּי חֲמוּדוֹת אָתָּה״.)</div>
+    <div class="trans" data-when="he">ומנין שהתנהגות דניאל זו חשובה עינוי? שכתוב ״ויאמר אלי אל תירא דניאל כי מן היום הראשון אשר נתת את לבך להבין ולהתענות לפני אלהיך נשמעו דבריך ואני באתי בדבריך״ — הרי שנקראה ״ולהתענות״.</div>
+    <div class="trans" data-when="en">The Gemara continues to show that abstaining from smearing oil on oneself is considered an affliction: And from where do we derive that abstaining from the activities that Daniel describes is considered affliction? As it is written: “Then he said to me: Fear not, Daniel, for from the first day that you set your heart to understand and to afflict yourself before your God, your words were heard, and I have come due to your words” (Daniel 10:12). “For you are greatly loved” (Daniel 9:23).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">יומא ע״ו ב — Yoma 76b:10</span></div>
+    <div class="orig">אַשְׁכְּחַן סִיכָה, רְחִיצָה מְנָא לַן? אָמַר רַב זוּטְרָא בְּרַבִּי טוֹבִיָּה, אָמַר קְרָא: ״וַתָּבֹא כַמַּיִם בְּקִרְבּוֹ וְכַשֶּׁמֶן בְּעַצְמוֹתָיו״. וְאֵימָא כִּשְׁתִיָּה! דּוּמְיָא דְּשֶׁמֶן: מָה שֶׁמֶן מֵאַבָּרַאי, אַף מַיִם מֵאַבָּרַאי.</div>
+    <div class="trans" data-when="he">מצאנו מקור לסיכה; רחיצה מנין? רב זוטרא בר׳ טוביה: ״ותבא כמים בקרבו וכשמן בעצמותיו״ — כשם שהשמן (סיכה) עינוי, כך המים (רחיצה). דחייה: ואימא שהמים הם שתייה! תשובה: דומיא דשמן — מה שמן מבחוץ, אף מים מבחוץ (רחיצה ולא שתייה).</div>
+    <div class="trans" data-when="en">We have found proof that abstaining from smearing oil on oneself is considered affliction; from where do we derive that abstaining from bathing is also called affliction? Rav Zutra, son of Rabbi Toviya, said: The verse states: “And it came into his innards like water, and like oil into his bones” (Psalms 109:18). This means that the water with which one bathes and the oil with which one smears himself are absorbed into the body. Just as abstaining from smearing oil is considered an affliction, so too, abstaining from bathing is considered an affliction. The Gemara objects: But say that “came into his innards like water” is referring to drinking rather than smearing oil. The Gemara rejects this: It is similar to oil. Just as the oil described in the verse is smeared from outside the body and not drunk, so too, the water mentioned in the verse is used for bathing from the outside. It is not drunk.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">יומא ע״ו ב — Yoma 76b:11</span></div>
+    <div class="orig">וְהָא תַּנָּא אִיפְּכָא קָא נָסֵיב לַהּ, דִּתְנַן: מִנַּיִן לְסִיכָה שֶׁהִיא כִּשְׁתִיָּה בְּיוֹם הַכִּפּוּרִים? אַף עַל פִּי שֶׁאֵין רְאָיָה לַדָּבָר, זֵכֶר לַדָּבָר, שֶׁנֶּאֱמַר: ״וַתָּבֹא כַמַּיִם בְּקִרְבּוֹ וְכַשֶּׁמֶן בְּעַצְמוֹתָיו״! אֶלָּא אָמַר רַב אָשֵׁי: רְחִיצָה מִגּוּפֵיהּ דִּקְרָא שְׁמִיעַ לֵיהּ, דִּכְתִיב: ״וְסוֹךְ לֹא סָכְתִּי״.</div>
+    <div class="trans" data-when="he">קושיא: והרי התנא דרש את הפסוק להפך — ששנינו: מנין שסיכה כשתייה ביום הכיפורים? ״ותבא כמים בקרבו וכשמן בעצמותיו״ (משמע שהמים הם שתייה)! אלא אמר רב אשי: רחיצה נלמדת מגוף הפסוק בדניאל — ״וסוך לא סכתי״, שכולל גם רחיצה.</div>
+    <div class="trans" data-when="en">The Gemara asks: But the tanna took the opposite meaning, as we learned in a mishna: From where do we derive that smearing oil is like drinking on Yom Kippur? Although there is no explicit proof of the matter from the Bible, there is an allusion to the matter from the verse, as it is stated: “And it came into his innards like water, and like oil into his bones” (Psalms 109:18), meaning that oil on the body is like water within it. Therefore, the phrase “and it came into his innards like water” is referring to the act of drinking water. Rather, Rav Ashi said: Bathing is derived from the same verse cited above, as it is written: “Neither did I anoint myself at all” (Daniel 10:3). This teaches that Daniel did not do any anointing, including bathing. Consequently, the same source prohibits both of these activities.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">יומא ע״ו ב — Yoma 76b:12</span></div>
+    <div class="orig">מַאי: ״וַאֲנִי בָּאתִי בִּדְבָרֶיךָ״? הַיְינוּ דִּכְתִיב: ״וְשִׁבְעִים אִישׁ מִזִּקְנֵי [בֵית] יִשְׂרָאֵל וְיַאֲזַנְיָהוּ בֶן שָׁפָן עוֹמֵד בְּתוֹכָם עוֹמְדִים לִפְנֵיהֶם וְאִישׁ מִקְטַרְתּוֹ בְּיָדוֹ וַעֲתַר עֲנַן הַקְּטוֹרֶת עֹלֶה״. ״וַיִּשְׁלַח תַּבְנִית יָד וַיִּקָּחֵנִי בְּצִיצִת רֹאשִׁי וַתִּשָּׂא אוֹתִי רוּחַ בֵּין הָאָרֶץ וּבֵין הַשָּׁמַיִם וַתָּבֵא אוֹתִי יְרוּשָׁלַיְמָה בְּמַרְאוֹת אֱלֹהִים אֶל פֶּתַח שַׁעַר הַפְּנִימִית הַפּוֹנֶה צָפוֹנָה אֲשֶׁר</div>
+    <div class="trans" data-when="he">מהו ״ואני באתי בדבריך״? כתוב ביחזקאל ״ושבעים איש מזקני בית ישראל… ואיש מקטרתו בידו ועתר ענן הקטורת עֹלה״ — שראה יחזקאל את זקני ישראל עובדים עבודה זרה. ״וישלח תבנית יד ויקחני בציצית ראשי… ותבא אותי ירושלימה במראות אלהים אל פתח שער הפנימית הפונה צפונה״.</div>
+    <div class="trans" data-when="en">Apropos the verses from Daniel, the Gemara asks: What did the angel mean when he said to Daniel: “And I have come due to your words” (Daniel 10:12)? From this, it seems that the angel was able to come only because of Daniel. The Gemara answers: This is as it is written: “And there stood before them seventy men of the Elders of the house of Israel, and Jaazaniah, son of Shaphan, standing in the midst of them, each man with his censer in his hand, and a thick cloud of incense went up” (Ezekiel 8:11). Ezekiel saw the Elders of the house of Israel worshipping foreign gods. “And the form of a hand was put forth, and I was taken by a lock of my head; and a spirit lifted me up between the earth and the heaven, and brought me in the visions of God to Jerusalem, to the door of the gate of the inner court that faces northward where</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">יומא ע״ז א — Yoma 77a:1</span></div>
+    <div class="orig">שָׁם מוֹשַׁב סֵמֶל הַקִּנְאָה הַמַּקְנֶה״, ״וַיָּבֵא אוֹתִי אֶל חֲצַר בֵּית ה׳ הַפְּנִימִית וְהִנֵּה פֶתַח הֵיכַל ה׳ בֵּין הָאוּלָם וּבֵין הַמִּזְבֵּחַ כְּעֶשְׂרִים וַחֲמִשָּׁה אִישׁ אֲחוֹרֵיהֶם אֶל הֵיכַל ה׳ וּפְנֵיהֶם קֵדְמָה וְהֵמָּה מִשְׁתַּחֲוִים קֵדְמָה לַשָּׁמֶשׁ״. מִמַּשְׁמַע שֶׁנֶּאֱמַר ״וּפְנֵיהֶם קֵדְמָה״, אֵינִי יוֹדֵעַ שֶׁאֲחוֹרֵיהֶם אֶל הֵיכַל ה׳? אֶלָּא, מָה תַּלְמוּד לוֹמַר ״אֲחוֹרֵיהֶם אֶל הֵיכַל ה׳ — מְלַמֵּד שֶׁהָיוּ פּוֹרְעִין עַצְמָן וְהָיוּ מַתְרִיזִין כְּלַפֵּי מַטָּה.</div>
+    <div class="trans" data-when="he">המשך הפסוק: ״שם מושב סמל הקנאה המקנה״; ״ויבא אותי אל חצר בית ה׳ הפנימית… כעשרים וחמשה איש אחֹריהם אל היכל ה׳ ופניהם קדמה והמה משתחוים קדמה לשמש״. דרשה: ממה שנאמר ״ופניהם קדמה״ ידוע שאחוריהם להיכל; ומה ת״ל ״אחֹריהם אל היכל ה׳״? מלמד שהיו פורעים עצמם ומתריזים (מתפנים) כלפי מטה — כלפי השכינה.</div>
+    <div class="trans" data-when="en">there was the seat of the image of jealousy, which provokes jealousy” (Ezekiel 8:3). “And he brought me into the inner court of the Lord’s House, and behold at the opening of the Entrance Hall of the Sanctuary of God, between the porch and the altar were about twenty-five men with their backs toward the Temple of the Lord, and their faces toward the east, and they worshipped the sun toward the east” (Ezekiel 8:16). The Gemara explains: From the fact that it is stated “and their faces toward the east,” is it not clear that their backs were to the Sanctuary, which is in the west? Rather, what is the meaning when the verse states “their backs toward the Temple of the Lord”? This teaches that they would uncover themselves and defecate downward, toward the Divine Presence. The verse used a euphemism to refrain from vulgar language.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">יומא ע״ז א — Yoma 77a:2</span></div>
+    <div class="orig">אָמַר לוֹ הַקָּדוֹשׁ בָּרוּךְ הוּא לְמִיכָאֵל: מִיכָאֵל! סָרְחָה אוּמָּתֶךָ. אָמַר לְפָנָיו: רִבּוֹנוֹ שֶׁל עוֹלָם, דַּיִּי לַטּוֹבִים שֶׁבָּהֶם! אָמַר לוֹ: אֲנִי שׂוֹרֵף אוֹתָם וְלַטּוֹבִים שֶׁבָּהֶם, מִיָּד: ״וַיֹּאמֶר (לָאִישׁ) לְבוּשׁ הַבַּדִּים וַיֹּאמֶר בּוֹא אֶל בֵּינוֹת לַגַּלְגַּל אֶל תַּחַת לַכְּרוּב וּמַלֵּא חׇפְנֶיךָ גַחֲלֵי אֵשׁ מִבֵּינוֹת לַכְּרוּבִים וּזְרוֹק עַל הָעִיר וַיָּבֹא לְעֵינָי״. מִיָּד: ״וַיִּשְׁלַח הַכְּרוּב אֶת יָדוֹ מִבֵּינוֹת לַכְּרוּבִים אֶל הָאֵשׁ אֲשֶׁר בֵּינוֹת הַכְּרוּבִים וַיִּשָּׂא וַיִּתֵּן אֶל חׇפְנֵי לְבוּשׁ הַבַּדִּים וַיִּקַּח וַיֵּצֵא״.</div>
+    <div class="trans" data-when="he">אמר הקב״ה למיכאל (שׂרם של ישראל): מיכאל, סרחה אומתך! אמר לפניו: ריבונו של עולם, די לטובים שבהם (שיינצלו בזכותם). אמר לו: אשרוף אותם ואת הטובים שבהם (שלא מיחו). מיד נצטווה לבוש הבדים (גבריאל) ״בוא… ומלא חפניך גחלי אש… וזרֹק על העיר״, והכרוב נתן את הגחלים בחפניו.</div>
+    <div class="trans" data-when="en">The Holy One, Blessed be He, said to Michael, the ministering angel of the Jewish people: Michael, your nation has sinned (see Daniel 10:21). He replied: Master of the Universe, may it be enough for the good people among them to save them from destruction. He said to him: I will burn them and the good among them because the good do not rebuke the wicked. Immediately, God spoke to Gabriel: “He spoke to the man clothed in linen and said: Go in between the wheelwork and beneath the cherub, and fill your hands with coals of fire from between the cherubs, and scatter them over the city; and he came before my eyes” (Ezekiel 10:2). Immediately: “And the cherub stretched out his hand from between the cherubs into the fire that was between the cherubs, and took and put it into the hands of him that was clothed in linen, who took it and went out” (Ezekiel 10:7).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">יומא ע״ז א — Yoma 77a:3</span></div>
+    <div class="orig">אָמַר רַב חָנָא בַּר בִּיזְנָא אָמַר רַבִּי שִׁמְעוֹן חֲסִידָא: אִילְמָלֵא לֹא נִצְטַנְּנוּ גֶּחָלִים מִיָּדוֹ שֶׁל כְּרוּב לְיָדוֹ שֶׁל גַּבְרִיאֵל — לֹא נִשְׁתַּיְּירוּ מִשּׂוֹנְאֵיהֶן שֶׁל יִשְׂרָאֵל שָׂרִיד וּפָלִיט.</div>
+    <div class="trans" data-when="he">רב חנא בר ביזנא בשם ר׳ שמעון חסידא: אלמלא נצטננו הגחלים בעת שעברו מיד הכרוב ליד גבריאל (שעיכב מעט) — לא היה נשתייר מישראל (״שונאיהן״ לשון נקייה) שריד ופליט. הצינון מיעט את הפורענות.</div>
+    <div class="trans" data-when="en">Rav Ḥana bar Bizna said that Rabbi Shimon Ḥasida said: If it were not for the fact that the embers cooled as they were passed from the hand of the cherub to the hand of Gabriel, instead of Gabriel taking the embers directly himself as he had been told, not a remnant or a refugee of the enemies of the Jewish people, a euphemism for the Jewish people themselves, would have survived. The cooling of the embers limited the punishment.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">יומא ע״ז א — Yoma 77a:4</span></div>
+    <div class="orig">וּכְתִיב: ״וְהִנֵּה הָאִישׁ לְבוּשׁ הַבַּדִּים אֲשֶׁר הַקֶּסֶת בְּמׇתְנָיו מֵשִׁיב דָּבָר לֵאמֹר עָשִׂיתִי כַּאֲשֶׁר צִוִּיתָנִי״. אָמַר רַבִּי יוֹחָנָן: בְּאוֹתָהּ שָׁעָה הוֹצִיאוּ לְגַבְרִיאֵל מֵאֲחוֹרֵי הַפַּרְגּוֹד, וּמַחְיוּהוּ שִׁיתִּין פּוּלְסֵי דְנוּרָא. אֲמַרוּ לֵיהּ: אִי לָא עֲבַדְתְּ — לָא עֲבַדְתְּ, אִי עֲבַדְתְּ — אַמַּאי לָא עֲבַדְתְּ כִּדְפַקְּדוּךְ? וְעוֹד: דַּעֲבַדְתְּ, לֵית לָךְ אֵין מְשִׁיבִין עַל הַקַּלְקָלָה?</div>
+    <div class="trans" data-when="he">וכתוב ״והנה האיש לבוש הבדים… משיב דבר לאמר עשיתי כאשר צויתני״. אמר ר׳ יוחנן: באותה שעה הוציאו את גבריאל מאחורי הפרגוד והכוהו שישים פולסי דנורא (מכות אש). אמרו לו: אם לא עשית — לא עשית, ואם עשית — מדוע לא כפי שצֻוית? ועוד: אחר שעשית, לא ידעת ש״אין משיבין על הקלקלה״ (אין למסור דין־וחשבון מפורט על שליחות של חורבן)?</div>
+    <div class="trans" data-when="en">The Gemara continues. And it is written: “And behold, the man clothed in linen with the slate by his side, reported the matter saying: I have done as You have commanded me” (Ezekiel 9:11). Rabbi Yoḥanan said: At that moment, they cast out Gabriel from behind the curtain [pargod], where the inner angels reside, and they struck him with sixty blows [pulsei] of fire. They said to him: If you did not do it, you did not do it; if you did do it, why did you not do it according to what you were commanded but deviated from what you were instructed to do? Moreover, after you already did it, do you not have knowledge of the principle: One should not deliver a report about destruction? If one is sent on a mission of destruction, he should not deliver a detailed report of its success but should only hint at it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">יומא ע״ז א — Yoma 77a:5</span></div>
+    <div class="orig">אַיְיתוּהּ לְדוּבִּיאֵל שָׂרָא דְפָרְסָאֵי וְאוֹקְמוּהּ בַּחֲרִיקֵיהּ, וְשַׁמֵּשׁ עֶשְׂרִים וְאֶחָד יוֹם. הַיְינוּ דִּכְתִיב: ״וְשַׂר מַלְכוּת פָּרַס עוֹמֵד לְנֶגְדִּי עֶשְׂרִים וְאֶחָד יוֹם וְהִנֵּה מִיכָאֵל אַחַד הַשָּׂרִים הָרִאשׁוֹנִים בָּא לְעׇזְרֵנִי וַאֲנִי נוֹתַרְתִּי שָׁם אֵצֶל מַלְכֵי פָרָס״, יְהַבוּ לֵיהּ עֶשְׂרִין וְחַד מַלְכֵי וּפַרְווֹתָא דְּמַשְׁהִיג.</div>
+    <div class="trans" data-when="he">הביאו את דובִיאל שׂרם של פרסיים והעמידוהו במקום גבריאל, ושימש עשרים ואחד יום. וזהו ״ושר מלכות פרס עומד לנגדי עשרים ואחד יום… ואני נותרתי שם אצל מלכי פרס״. בשכר אותם ימים נתנו לו עשרים ואחת מלכויות ונמל מַשְׁהִיג.</div>
+    <div class="trans" data-when="en">They then brought Dubiel, the ministering angel of the Persians and put him in the place of [baḥarikei] Gabriel and he served for twenty-one days. As it is written: “But the prince of the kingdom of Persia stood opposed to me for twenty-one days, but, lo, Michael, one of the chief princes, came to help me and I remained there beside the kings of Persia” (Daniel 10:13). Corresponding to those twenty-one days, they gave him, the ministering angel of Persia, twenty-one kings who ruled and the seaport of Mashhig.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">יומא ע״ז א — Yoma 77a:6</span></div>
+    <div class="orig">אֲמַר: כְּתִיבוּ לִי לְיִשְׂרָאֵל בְּאַכְּרָגָא. כְּתַבוּ לֵיהּ. כְּתִיבוּ לִי רַבָּנַן בְּאַכְּרָגָא. כְּתַבוּ לֵיהּ. בְּעִידָּנָא דְּבָעוּ לְמִיחְתַּם, עָמַד גַּבְרִיאֵל מֵאֲחוֹרֵי הַפַּרְגּוֹד וְאָמַר: ״שָׁוְא לָכֶם מַשְׁכִּימֵי קוּם מְאַחֲרֵי שֶׁבֶת אוֹכְלֵי לֶחֶם הָעֲצָבִים כֵּן יִתֵּן לִידִידוֹ שֵׁנָא״, מַאי ״כֵּן יִתֵּן לִידִידוֹ שֵׁנָא״? אָמַר רַבִּי יִצְחָק: אֵלּוּ נְשׁוֹתֵיהֶן שֶׁל תַּלְמִידֵי חֲכָמִים שֶׁמְּנַדְּדוֹת שֵׁינָה בָּעוֹלָם הַזֶּה וְזוֹכוֹת לָעוֹלָם הַבָּא, וְלֹא הִשְׁגִּיחוּ עָלָיו.</div>
+    <div class="trans" data-when="he">אמר דובִיאל: כתבו לי שישראל ישלמו מס (כרגא) לפרס. כתבו לו. כתבו לי שגם החכמים ישלמו מס. כתבו לו. בשעה שביקשו לחתום, עמד גבריאל מאחורי הפרגוד ואמר את הפסוק ״שוא לכם משכימי קום… כן יתן לידידו שנא״ — לימוד זכות על תלמידי חכמים ונשותיהם, ולא השגיחו עליו.</div>
+    <div class="trans" data-when="en">The ministering angel of the Persians said: Write for me that the Jews must pay taxes [akarga] to the Persians. They wrote it for him as he asked. He said: Write for me that the Sages must pay taxes. They wrote this for him. When they wanted to sign the documents, Gabriel stood from behind the curtain and said: “It is vain for you who rise early who sit up late to eat the bread of sorrow, for He gives His beloved sleep” (Psalms 127:2). What does “for He gives His beloved sleep” mean? Rav Yitzḥak said: These are the wives of Torah scholars who disturb their sleep in this world by staying up waiting for their husbands, who rise early and return late from learning Torah, and they thereby merit the World-to-Come. Gabriel asked: Is this the reward they deserve, to pay more taxes? They did not listen to Gabriel.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">יומא ע״ז א — Yoma 77a:7</span></div>
+    <div class="orig">אָמַר לְפָנָיו: רִבּוֹנוֹ שֶׁל עוֹלָם! אִם יִהְיוּ כׇּל חַכְמֵי אוּמּוֹת הָעוֹלָם בְּכַף מֹאזְנַיִם, וְדָנִיֵּאל אִישׁ חֲמוּדוֹת בְּכַף שְׁנִיָּה, לֹא נִמְצָא מַכְרִיעַ אֶת כּוּלָּם?! אָמַר הַקָּדוֹשׁ בָּרוּךְ הוּא: מִי הוּא זֶה שֶׁמְּלַמֵּד זְכוּת עַל בָּנַי? אָמְרוּ לְפָנָיו: רִבּוֹנוֹ שֶׁל עוֹלָם, גַּבְרִיאֵל. אָמַר לָהֶם: יָבֹא. שֶׁנֶּאֱמַר: ״וַאֲנִי בָאתִי בִּדְבָרֶיךָ״. אֲמַר לְהוּ: לֵיעוּל. אַעַיְילוּהוּ.</div>
+    <div class="trans" data-when="he">המשיך גבריאל: ריבונו של עולם! אם כל חכמי אומות העולם בכף מאזניים, ודניאל איש חמודות בכף שנייה — הלא יכריע את כולם! אמר הקב״ה: מי זה שמלמד זכות על בני? אמרו: גבריאל. אמר: יבוא — שנאמר ״ואני באתי בדבריך״ (זכה גבריאל להיכנס בזכות שהזכיר דניאל). אמר: ליעול, והכניסוהו.</div>
+    <div class="trans" data-when="en">He said before Him: Master of the Universe, if all the wise men of other nations were placed on one side of the scale, and Daniel the beloved man were on the other side, would he not outweigh them? The Holy One, Blessed be He, said: Who is the one who teaches the virtue of My children? They said to Him: Master of the Universe, it is Gabriel. He said to them: Let him come from behind the partition, as it is stated: “And I have come due to your words” (Daniel 10:12), meaning that Gabriel was permitted to enter from behind the partition because he mentioned Daniel’s name. God then said to the other angels: Let him ascend. They brought him up.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">יומא ע״ז א — Yoma 77a:8</span></div>
+    <div class="orig">אֲתָא, אַשְׁכְּחֵיהּ לְדוּבִּיאֵל דְּנָקֵט לֵיהּ לְאִיגַּרְתֵּיהּ בִּידֵיהּ, בְּעָא לְמִרְמַא מִינֵּיהּ, בַּלְעַהּ. אִיכָּא דְּאָמְרִי: מִיכְתָּב הֲוָה כְּתִיבָא, מִיחְתָּם לָא הֲוָה חֲתִימָא. אִיכָּא דְּאָמְרִי: אַף מִיחְתָּם נָמֵי הֲוָה חֲתִימָא, כִּדְבַלְעַהּ, מְחֵיק לַהּ מִינֵּיהּ. הַיְינוּ דִּבְמַלְכוּתָא דְפָרַס, אִיכָּא דְּיָהֵיב כְּרָגָא וְאִיכָּא דְּלָא יָהֵיב כְּרָגָא: ״וַאֲנִי יוֹצֵא וְהִנֵּה שַׂר יָוָן בָּא״, עַוִּי עַוִּי וְלֵיכָּא דְּאַשְׁגַּח בֵּיהּ.</div>
+    <div class="trans" data-when="he">בא גבריאל ומצא את דובִיאל אוחז את האיגרת (גזירת המס) בידו. ביקש להוציאה ממנו, ודובִיאל בלעהּ. יש אומרים: כתובה הייתה אך לא חתומה; ויש אומרים: אף חתומה, ובבליעה נמחק החותם. וזהו שבמלכות פרס יש המשלם מס ויש שאינו משלם. ״ואני יוצא והנה שר יון בא״ — צעק גבריאל שלא תמלוך יון על ישראל, ולא השגיחו בו.</div>
+    <div class="trans" data-when="en">He came and found Dubiel the ministering angel of the Persians holding the letter in his hand. Gabriel wanted to take the letter from him, but Dubiel swallowed it. Some say the letter was written, but it was not signed. Some say it was also signed, but when he swallowed it, the signature was erased. The Gemara comments: This is why, in the kingdom of Persia, there are those who pay taxes and there are those who do not pay taxes, as the decree was not finalized. It also states there: “And when I depart from him, the prince of Greece comes” (Daniel 10:20). Gabriel screamed and screamed that the kings of Greece should not rule over the Jews, but no one listened to him.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
