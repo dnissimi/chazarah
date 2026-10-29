@@ -78,6 +78,16 @@ export interface MasechetInfo {
 export const MASECHTOT: readonly MasechetInfo[] = [
   {
     corpus: 'talmud',
+    book: 'berakhot',
+    bounds: { firstDaf: 2, lastDaf: 64 },
+    name: { he: 'ברכות', en: 'Berakhot' },
+    summary: {
+      he: 'כל דפי מסכת ברכות (ב׳ עד ס״ד). אפשר לסקור מה כבר מופה, או לבקש מה שעדיין לא.',
+      en: "All folios of Tractate Berakhot (2 through 64). Browse what's mapped, request what isn't.",
+    },
+  },
+  {
+    corpus: 'talmud',
     book: 'megillah',
     bounds: { firstDaf: 2, lastDaf: 32 },
     name: { he: 'מגילה', en: 'Megillah' },

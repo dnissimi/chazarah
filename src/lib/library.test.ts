@@ -69,7 +69,7 @@ describe('isRegisteredMasechet()', () => {
   });
 
   it('returns false for tractates not yet registered', () => {
-    expect(isRegisteredMasechet('berakhot')).toBe(false);
+    expect(isRegisteredMasechet('sanhedrin')).toBe(false);
     expect(isRegisteredMasechet('bava-batra')).toBe(false);
     expect(isRegisteredMasechet('not-a-real-slug')).toBe(false);
   });

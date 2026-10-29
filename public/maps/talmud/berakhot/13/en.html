@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — ברכות י״ג</title>
+<meta name="description" content="מסיום פרק ׳מאימתי׳ (יציאת מצרים לימות המשיח; אברם–אברהם) אל פתיחת ׳היה קורא׳: קריאת שמע ככתבה (רבי) או בכל לשון (חכמים); עד היכן צריכה כוונה — כל הפרשה (ר׳ עקיבא), הפרק הראשון (ר׳ אחא), או הפסוק הראשון בלבד (ר׳ מאיר — והלכה כמותו); המאריך ב׳אחד׳; עמידה ופרקדן; והפסקה לשאילת שלום — המשנה חסורי מחסרא.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="berakhot">
+<meta name="gemara-map:location" content="13">
+<meta name="gemara-map:sefaria-ref" content="Berakhot 13">
+<meta name="gemara-map:topic-he" content="כוונה בקריאת שמע — ולשונה">
+<meta name="gemara-map:topic-en" content="Intent in Shema — and its language">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — ברכות י״ג">
+<meta name="gemara-map:title-en" content="Sugya map — Berakhot 13">
+<meta name="gemara-map:blurb-he" content="מסיום פרק ׳מאימתי׳ (יציאת מצרים לימות המשיח; אברם–אברהם) אל פתיחת ׳היה קורא׳: קריאת שמע ככתבה (רבי) או בכל לשון (חכמים); עד היכן צריכה כוונה — כל הפרשה (ר׳ עקיבא), הפרק הראשון (ר׳ אחא), או הפסוק הראשון בלבד (ר׳ מאיר — והלכה כמותו); המאריך ב׳אחד׳; עמידה ופרקדן; והפסקה לשאילת שלום — המשנה חסורי מחסרא.">
+<meta name="gemara-map:blurb-en" content="From the close of chapter “Me’eimatai” (the Exodus in Messianic days; Abram→Abraham) to the opening of “Haya Korei”: Shema as written (Rabbi) or in any language (the Rabbis); how far intent extends — the whole paragraph (R. Akiva), the first paragraph (R. Aḥa), or the first verse alone (R. Meir — the accepted ruling); lengthening eḥad; standing, and lying on one’s back; and greeting mid-Shema — the Mishnah is emended.">
+<meta name="gemara-map:sugya-count" content="11">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — ברכות י״ג</span><span data-when="en">Sugya map — Berakhot 13</span></h1>
+    <div class="subtitle"><span data-when="he">ברכות י״ב ב:כ״ו – י״ד א:ב׳ (הורחב לגבולות הסוגיות) · מקור: ספריא (William Davidson)</span><span data-when="en">Berakhot 12b:26–14a:2 (expanded to sugya boundaries) · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> מסיום פרק ׳מאימתי׳ (יציאת מצרים לימות המשיח; אברם–אברהם) אל פתיחת ׳היה קורא׳: קריאת שמע ככתבה (רבי) או בכל לשון (חכמים); עד היכן צריכה כוונה — כל הפרשה (ר׳ עקיבא), הפרק הראשון (ר׳ אחא), או הפסוק הראשון בלבד (ר׳ מאיר — והלכה כמותו); המאריך ב׳אחד׳; עמידה ופרקדן; והפסקה לשאילת שלום — המשנה חסורי מחסרא.</span>
+    <span data-when="en"><b>Bottom line:</b> From the close of chapter “Me’eimatai” (the Exodus in Messianic days; Abram→Abraham) to the opening of “Haya Korei”: Shema as written (Rabbi) or in any language (the Rabbis); how far intent extends — the whole paragraph (R. Akiva), the first paragraph (R. Aḥa), or the first verse alone (R. Meir — the accepted ruling); lengthening eḥad; standing, and lying on one’s back; and greeting mid-Shema — the Mishnah is emended.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מפת־על — סדר הסוגיות</span><span data-when="en">Overview — the sugyot in order</span></h2>
+  <div class="chart">
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · הזכרת יציאת מצרים לימות המשיח — בן זומא וחכמים"]:::statement
+  O2["2 · אברם–אברהם, שרי–שרה; הקורא לאברהם ׳אברם׳ — וסיום הפרק"]:::statement
+  O3(["3 · משנה: היה קורא בתורה — אם כיוון לבו יצא; ושואלת הגמרא: מצוות צריכות כוונה?"]):::mishnah
+  O4["4 · קריאת שמע ככתבה או בכל לשון — רבי וחכמים"]:::statement
+  O5["5 · עד היכן צריכה כוונה — ר׳ אליעזר, ר׳ עקיבא, ופסק ר׳ יוחנן"]:::statement
+  O6["6 · מצוות כוונה ומצוות קריאה — רב זוטרא ור׳ יאשיה"]:::statement
+  O7["7 · כוונת הלב — עד ׳ה׳ אחד׳; והמאריך ב׳אחד׳"]:::statement
+  O8["8 · ׳על לבבך׳ — בעמידה"]:::statement
+  O9["9 · קריאת שמע של רבי — פסוק ראשון; ונאנס בשינה"]:::statement
+  O10["10 · פרקדן — לא יקרא קריאת שמע"]:::statement
+  O11(["11 · ׳בפרקים שואל׳ — משיב מחמת מאי? חסורי מחסרא"]):::mishnah
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  O5 --> O6
+  O6 --> O7
+  O7 --> O8
+  O8 --> O9
+  O9 --> O10
+  O10 --> O11
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+  click O10 "#sugya-10"
+  click O11 "#sugya-11"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · Mentioning the Exodus in the Messianic era — Ben Zoma vs. the Sages"]:::statement
+  O2["2 · Abram→Abraham, Sarai→Sarah; calling Abraham “Abram” — and the chapter’s close"]:::statement
+  O3(["3 · Mishnah: reading the Torah when Shema’s time arrived — if he intended, he fulfilled; Gemara: do mitzvot need intent?"]):::mishnah
+  O4["4 · Shema as written or in any language — Rabbi vs. the Rabbis"]:::statement
+  O5["5 · How far does intent extend — R. Eliezer, R. Akiva, and R. Yoḥanan’s ruling"]:::statement
+  O6["6 · The mitzva of intent vs. the mitzva of recitation — Rav Zutra and R. Yoshiya"]:::statement
+  O7["7 · Intent of the heart — through “the Lord is One”; and lengthening eḥad"]:::statement
+  O8["8 · “Upon your heart” — standing still"]:::statement
+  O9["9 · Rabbi’s Shema — the first verse; and one overcome by sleep"]:::statement
+  O10["10 · Lying on one’s back — one may not recite Shema"]:::statement
+  O11(["11 · “At the breaks one greets” — respond on what grounds? The Mishnah is incomplete"]):::mishnah
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  O4 --> O5
+  O5 --> O6
+  O6 --> O7
+  O7 --> O8
+  O8 --> O9
+  O9 --> O10
+  O10 --> O11
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+  click O5 "#sugya-5"
+  click O6 "#sugya-6"
+  click O7 "#sugya-7"
+  click O8 "#sugya-8"
+  click O9 "#sugya-9"
+  click O10 "#sugya-10"
+  click O11 "#sugya-11"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">הזכרת יציאת מצרים לימות המשיח — בן זומא וחכמים</span><span data-when="en">Mentioning the Exodus in the Messianic era — Ben Zoma vs. the Sages</span>
+      <span class="ref">Berakhot 12b:26-13a:3</span></h2>
+  <div class="lead"><span data-when="he">המשך מחלוקת בן זומא וחכמים שבמשנה (י״ב ב): בן זומא מוכיח מירמיהו שלא יזכירו עוד את יציאת מצרים; חכמים משיבים שהיא לא תיעקר אלא תהיה טפלה — כשם ש׳יעקב׳ נשאר טפל ל׳ישראל׳. רב יוסף: ׳הנני עושה חדשה׳ — מלחמת גוג ומגוג; ומשל הזאב, הארי והנחש.</span><span data-when="en">Continuing the Mishnah’s dispute (12b): Ben Zoma argues from Jeremiah that the Exodus will no longer be mentioned; the Sages answer it will not be uprooted but become secondary — just as “Jacob” stays secondary to “Israel.” Rav Yosef: “I will do a new thing” is the war of Gog and Magog; and the parable of the wolf, the lion and the snake.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① בן זומא לחכמים: וכי מזכירים יציאת מצרים לימות המשיח? הרי נאמר ׳ולא יאמרו עוד׳"}:::question
+  A1["② חכמים: לא שתיעקר יציאת מצרים — אלא שעבוד מלכויות יהיה עיקר, והיא טפלה לו"]:::answer
+  P1["③ ראיה: ׳לא יקרא שמך עוד יעקב כי אם ישראל׳"]:::proof
+  P2["④ — ולא נעקר ׳יעקב׳, אלא ׳ישראל׳ עיקר ו׳יעקב׳ טפל. וכן ׳אל תזכרו ראשונות׳ — שעבוד מלכויות; ׳וקדמוניות׳ — יציאת מצרים"]:::proof
+  S1["⑤ רב יוסף: ׳הנני עושה חדשה עתה תצמח׳ — זו מלחמת גוג ומגוג"]:::statement
+  S2["⑥ משל: ניצל מזאב, מארי ומנחש — מספר רק את מעשה הנחש. כך ישראל: צרות אחרונות משכחות את הראשונות"]:::statement
+  Q1 -->|תשובה| A1
+  A1 -->|כיוצא בו| P1
+  P1 --> P2
+  P2 --> S1
+  S1 -->|משל| S2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Ben Zoma to the Sages: is the Exodus mentioned in the Messianic era? It says “they will no longer say…”"}:::question
+  A1["② The Sages: the Exodus is not uprooted — the subjugation of the kingdoms becomes primary, the Exodus secondary"]:::answer
+  P1["③ Proof: “Your name shall no longer be called Jacob, but Israel”"]:::proof
+  P2["④ — yet “Jacob” was not uprooted; “Israel” is primary, “Jacob” secondary. Likewise “do not remember the former things” = the kingdoms; “things of old” = the Exodus"]:::proof
+  S1["⑤ Rav Yosef: “Behold, I will do a new thing” — this is the war of Gog and Magog"]:::statement
+  S2["⑥ Parable: saved from a wolf, a lion, then a snake — he tells only of the snake. So Israel: later troubles make the earlier ones forgotten"]:::statement
+  Q1 -->|answer| A1
+  A1 -->|likewise| P1
+  P1 --> P2
+  P2 --> S1
+  S1 -->|parable| S2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① אָמַר לָהֶם בֶּן זוֹמָא לַחֲכָמִים: וְכִי מַזְכִּירִין יְצִיאַת מִצְרַיִם לִימוֹת הַמָּשִׁיחַ! … וְלֹא יֹאמְרוּ עוֹד חַי ה׳ אֲשֶׁר הֶעֱלָה אֶת בְּנֵי יִשְׂרָאֵל מֵאֶרֶץ מִצְרַיִם"}:::question
+  A1["② לֹא שֶׁתֵּעָקֵר יְצִיאַת מִצְרַיִם מִמְּקוֹמָהּ, אֶלָּא שֶׁתְּהֵא שִׁעְבּוּד מַלְכֻיוֹת עִיקָּר, וִיצִיאַת מִצְרַיִם טָפֵל לוֹ"]:::answer
+  P1["③ כַּיּוֹצֵא בּוֹ אַתָּה אוֹמֵר: ״לֹא יִקָּרֵא שִׁמְךָ עוֹד יַעֲקֹב כִּי אִם יִשְׂרָאֵל יִהְיֶה שְׁמֶךָ״"]:::proof
+  P2["④ לֹא שֶׁיֵּעָקֵר ״יַעֲקֹב״ מִמְּקוֹמוֹ, אֶלָּא ״יִשְׂרָאֵל״ עִיקָּר וְ״יַעֲקֹב״ טָפֵל לוֹ … אַל תִּזְכְּרוּ רִאשֹׁנוֹת״ — זֶה שִׁעְבּוּד מַלְכֻיוֹת, ״וְקַדְמֹנִיּוֹת אַל תִּתְבֹּנָנוּ״ — זוֹ יְצִיאַת מִצְרַיִם"]:::proof
+  S1["⑤ ״הִנְנִי עֹשֶׂה חֲדָשָׁה עַתָּה תִצְמָח״, תָּנֵי רַב יוֹסֵף: זוֹ מִלְחֶמֶת גּוֹג וּמָגוֹג"]:::statement
+  S2["⑥ מָשָׁל לְמָה הַדָּבָר דּוֹמֶה — לְאָדָם שֶׁהָיָה מְהַלֵּךְ בַּדֶּרֶךְ וּפָגַע בּוֹ זְאֵב … אַף כָּךְ יִשְׂרָאֵל — צָרוֹת אַחֲרוֹנוֹת מְשַׁכְּחוֹת אֶת הָרִאשׁוֹנוֹת"]:::statement
+  Q1 -->|תשובה| A1
+  A1 -->|כיוצא בו| P1
+  P1 --> P2
+  P2 --> S1
+  S1 -->|משל| S2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ב ב — Berakhot 12b:26</span></div>
+    <div class="orig">גְּמָ׳ תַּנְיָא, אָמַר לָהֶם בֶּן זוֹמָא לַחֲכָמִים: וְכִי מַזְכִּירִין יְצִיאַת מִצְרַיִם לִימוֹת הַמָּשִׁיחַ! וַהֲלֹא כְּבָר נֶאֱמַר ״הִנֵּה יָמִים בָּאִים נְאֻם ה׳ וְלֹא יֹאמְרוּ עוֹד חַי ה׳ אֲשֶׁר הֶעֱלָה אֶת בְּנֵי יִשְׂרָאֵל מֵאֶרֶץ מִצְרַיִם כִּי אִם חַי ה׳ אֲשֶׁר הֶעֱלָה וַאֲשֶׁר הֵבִיא אֶת זֶרַע בֵּית יִשְׂרָאֵל מֵאֶרֶץ צָפוֹנָה וּמִכֹּל הָאֲרָצוֹת אֲשֶׁר הִדַּחְתִּים שָׁם״.</div>
+    <div class="trans" data-when="he">גמרא. שנינו בברייתא (המשך המחלוקת שבמשנה): אמר להם בן זומא לחכמים — וכי מזכירים את יציאת מצרים גם לימות המשיח? והרי כבר נאמר בירמיהו: ״הנה ימים באים… ולא יאמרו עוד חי ה׳ אשר העלה את בני ישראל מארץ מצרים, כי אם חי ה׳ אשר העלה ואשר הביא את זרע בית ישראל מארץ צפונה ומכל הארצות״.</div>
+    <div class="trans" data-when="en">GEMARA: The fundamental dispute between Ben Zoma and the Sages appears in the mishna, and the baraita cites its continuation. Disputing the position of the Sages that: All the days of your life, refers to both this world and the days of the Messiah, it was taught in a baraita that Ben Zoma said to the Sages: And is the exodus from Egypt mentioned in the days of the Messiah? Was it not already said that Jeremiah prophesied that in the days of the Messiah: “Behold, days are coming, says the Lord, that they will no longer say: The Lord lives Who brought up the children of Israel out of the Land of Egypt. Rather: As the Lord lives, that brought up and led the seed of the house of Israel up out of the north country and from all the countries where I had driven them” (Jeremiah 23:7–8).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ב ב — Berakhot 12b:27</span></div>
+    <div class="orig">אָמְרוּ לוֹ: לֹא שֶׁתֵּעָקֵר יְצִיאַת מִצְרַיִם מִמְּקוֹמָהּ, אֶלָּא שֶׁתְּהֵא שִׁעְבּוּד מַלְכֻיוֹת עִיקָּר, וִיצִיאַת מִצְרַיִם טָפֵל לוֹ.</div>
+    <div class="trans" data-when="he">אמרו לו חכמים: אין הכוונה שיציאת מצרים תיעקר ממקומה ולא תוזכר עוד, אלא שהגאולה משעבוד המלכויות תהיה העיקר, ויציאת מצרים תהיה טפלה לה.</div>
+    <div class="trans" data-when="en">The Sages rejected this claim and they said to him that these verses do not mean that in the future the exodus from Egypt will be uprooted from its place and will be mentioned no more. Rather, redemption from the subjugation of the kingdoms will be primary and the exodus from Egypt will be secondary.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ב ב — Berakhot 12b:28</span></div>
+    <div class="orig">כַּיּוֹצֵא בּוֹ אַתָּה אוֹמֵר: ״לֹא יִקָּרֵא שִׁמְךָ עוֹד יַעֲקֹב כִּי אִם יִשְׂרָאֵל יִהְיֶה שְׁמֶךָ״,</div>
+    <div class="trans" data-when="he">כיוצא בזה אתה אומר בפסוק ״לא יקרא שמך עוד יעקב כי אם ישראל יהיה שמך״ —</div>
+    <div class="trans" data-when="en">On a similar note, you say: The meaning of the expressions: It will not say, and they will no longer mention, are not absolute, as in the verse: “Your name shall no longer be called Jacob; rather, Israel will be your name” (Genesis 35:10). There, too, the meaning is</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג א — Berakhot 13a:1</span></div>
+    <div class="orig">לֹא שֶׁיֵּעָקֵר ״יַעֲקֹב״ מִמְּקוֹמוֹ, אֶלָּא ״יִשְׂרָאֵל״ עִיקָּר וְ״יַעֲקֹב״ טָפֵל לוֹ. וְכֵן הוּא אוֹמֵר ״אַל תִּזְכְּרוּ רִאשֹׁנוֹת וְקַדְמֹנִיּוֹת אַל תִּתְבֹּנָנוּ״: אַל תִּזְכְּרוּ רִאשֹׁנוֹת״ — זֶה שִׁעְבּוּד מַלְכֻיוֹת, ״וְקַדְמֹנִיּוֹת אַל תִּתְבֹּנָנוּ״ — זוֹ יְצִיאַת מִצְרַיִם.</div>
+    <div class="trans" data-when="he">אין הכוונה שהשם ״יעקב״ ייעקר ממקומו, אלא ש״ישראל״ יהיה השם העיקרי ו״יעקב״ טפל לו. וכן הכתוב אומר: ״אל תזכרו ראשונות וקדמוניות אל תתבוננו״ — ״אל תזכרו ראשונות״ זה שעבוד מלכויות, ״וקדמוניות אל תתבוננו״ זו יציאת מצרים (שקדמה לו).</div>
+    <div class="trans" data-when="en">not that the name Jacob will be entirely uprooted from its place, but that the name Israel will be the primary name to which the name Jacob will be secondary, as the Torah continues to refer to him as Jacob after this event. And it also says that the ultimate redemption will overshadow the previous redemption in the verse: “Do not remember the former events, and do not ponder things of old” (Isaiah 43:18), and the Gemara explains: “Do not remember the former events,” that is the subjugation to the kingdoms, and “do not ponder things of old,” that is the exodus from Egypt, which occurred before the subjugation to the nations.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">ברכות י״ג א — Berakhot 13a:2</span></div>
+    <div class="orig">״הִנְנִי עֹשֶׂה חֲדָשָׁה עַתָּה תִצְמָח״, תָּנֵי רַב יוֹסֵף: זוֹ מִלְחֶמֶת גּוֹג וּמָגוֹג.</div>
+    <div class="trans" data-when="he">על המשך הפסוק ״הנני עושה חדשה עתה תצמח״ שנה רב יוסף בברייתא: זו מלחמת גוג ומגוג (שתשכיח את כל הקודמות).</div>
+    <div class="trans" data-when="en">With regard to the following verse: “Behold, I will do new things, now it will spring forth” (Isaiah 43:19), Rav Yosef taught a baraita: This refers to the future war of Gog and Magog, which will cause all earlier events to be forgotten.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">ברכות י״ג א — Berakhot 13a:3</span></div>
+    <div class="orig">מָשָׁל לְמָה הַדָּבָר דּוֹמֶה — לְאָדָם שֶׁהָיָה מְהַלֵּךְ בַּדֶּרֶךְ וּפָגַע בּוֹ זְאֵב וְנִיצַּל מִמֶּנּוּ, וְהָיָה מְסַפֵּר וְהוֹלֵךְ מַעֲשֵׂה זְאֵב. פָּגַע בּוֹ אֲרִי וְנִיצַּל מִמֶּנּוּ, וְהָיָה מְסַפֵּר וְהוֹלֵךְ מַעֲשֵׂה אֲרִי. פָּגַע בּוֹ נָחָשׁ וְנִיצַּל מִמֶּנּוּ, שָׁכַח מַעֲשֵׂה שְׁנֵיהֶם, וְהָיָה מְסַפֵּר וְהוֹלֵךְ מַעֲשֵׂה נָחָשׁ. אַף כָּךְ יִשְׂרָאֵל — צָרוֹת אַחֲרוֹנוֹת מְשַׁכְּחוֹת אֶת הָרִאשׁוֹנוֹת.</div>
+    <div class="trans" data-when="he">משל למה הדבר דומה: לאדם שהלך בדרך, פגע בו זאב וניצל ממנו — והיה הולך ומספר את מעשה הזאב. פגע בו ארי וניצל — והיה מספר את מעשה הארי. פגע בו נחש וניצל — שכח את שני הראשונים והיה מספר רק את מעשה הנחש. כך גם ישראל: הצרות האחרונות משכיחות את הראשונות.</div>
+    <div class="trans" data-when="en">The Gemara cites a parable: To what is this comparable? To a person who was walking along the way and a wolf accosted him and he survived it, and he continued to relate the story of the wolf. A lion accosted him and he survived it, and he continued to relate the story of the lion. A snake accosted him and he survived it, he forgot both the lion and the wolf, and he continued to relate the story of the snake. Each encounter was more dangerous and each escape more miraculous than the last, so he would continue to relate the most recent story. So too with Israel; more recent troubles cause the earlier troubles to be forgotten.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">אברם–אברהם, שרי–שרה; הקורא לאברהם ׳אברם׳ — וסיום הפרק</span><span data-when="en">Abram→Abraham, Sarai→Sarah; calling Abraham “Abram” — and the chapter’s close</span>
+      <span class="ref">Berakhot 13a:4-13a:15</span></h2>
+  <div class="lead"><span data-when="he">אגב שינוי שמו של יעקב: ׳אברם הוא אברהם׳ — מאב לארם לאב לכל העולם; ׳שרי היא שרה׳ — משרה לאומתה לשרה לכל העולם. בר קפרא: הקורא לאברהם ׳אברם׳ עובר בעשה (ר׳ אליעזר: בלאו). הגמרא מקשה משרה ומיעקב ומנחמיה ומיישבת. כאן מסתיים פרק ׳מאימתי׳.</span><span data-when="en">Apropos Jacob’s renaming: “Abram is Abraham” — from father of Aram to father of the whole world; “Sarai is Sarah” — from princess of her nation to princess of the whole world. Bar Kappara: calling Abraham “Abram” violates a positive command (R. Eliezer: a prohibition). The Gemara challenges from Sarah, from Jacob and from Nehemiah, and resolves each. Here chapter “Me’eimatai” ends.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ׳אברם הוא אברהם׳"]:::statement
+  S2["② בתחילה אב לארם — ולבסוף אב לכל העולם כולו"]:::statement
+  S3["③ ׳שרי היא שרה׳"]:::statement
+  S4["④ בתחילה שרה לאומתה — ולבסוף שרה לכל העולם כולו"]:::statement
+  S5["⑤ בר קפרא: הקורא לאברהם ׳אברם׳ עובר בעשה; ר׳ אליעזר: עובר בלאו"]:::statement
+  Q1{"⑥ קושיא: אם כן, הקורא לשרה ׳שרי׳ גם עובר?"}:::question
+  A1["⑦ תירוץ: שם הציווי נאמר לאברהם בלבד — ׳לא תקרא את שמה שרי׳"]:::answer
+  Q2{"⑧ קושיא: אם כן, הקורא ליעקב ׳יעקב׳ גם עובר?"}:::question
+  A2["⑨ תירוץ: שם הכתוב עצמו חזר וקראו יעקב — ׳ויאמר יעקב יעקב׳"]:::answer
+  Q3{"⑩ מיתיבי ר׳ יוסי בר אבין: ׳אשר בחרת באברם׳!"}:::question
+  A3["⑪ תירוץ: שם הנביא מסדר את שבחו של הקב״ה מתחילתו"]:::answer
+  C1["⑫ הדרן עלך מאימתי — סוף פרק ראשון"]:::conclusion
+  S1 --> S2
+  S3 --> S4
+  S2 --> S5
+  S4 --> S5
+  S5 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+  S5 -.->|מיתיבי| Q3
+  Q3 -->|תירוץ| A3
+  A3 --> C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① “Abram is Abraham”"]:::statement
+  S2["② At first father of Aram — in the end father of the whole world"]:::statement
+  S3["③ “Sarai is Sarah”"]:::statement
+  S4["④ At first princess of her nation — in the end princess of the whole world"]:::statement
+  S5["⑤ Bar Kappara: one who calls Abraham “Abram” violates a positive command; R. Eliezer: a prohibition"]:::statement
+  Q1{"⑥ Question: then one who calls Sarah “Sarai” also transgresses?"}:::question
+  A1["⑦ Answer: there the command was to Abraham alone — “you shall not call her Sarai”"]:::answer
+  Q2{"⑧ Question: then one who calls Jacob “Jacob” also transgresses?"}:::question
+  A2["⑨ Answer: there Scripture itself reverted — “and He said: Jacob, Jacob”"]:::answer
+  Q3{"⑩ Objection (R. Yosei bar Avin): “Who chose Abram”!"}:::question
+  A3["⑪ Answer: there the prophet recounts God’s praises from the beginning"]:::answer
+  C1["⑫ Hadran — end of chapter one"]:::conclusion
+  S1 --> S2
+  S3 --> S4
+  S2 --> S5
+  S4 --> S5
+  S5 -.->|question| Q1
+  Q1 -->|answer| A1
+  A1 -.->|question| Q2
+  Q2 -->|answer| A2
+  S5 -.->|objection| Q3
+  Q3 -->|answer| A3
+  A3 --> C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ״אַבְרָם הוּא אַבְרָהָם״"]:::statement
+  S2["② בַּתְּחִלָּה נַעֲשָׂה אָב לַאֲרָם, וּלְבַסּוֹף נַעֲשָׂה אָב לְכָל הָעוֹלָם כּוּלּוֹ"]:::statement
+  S3["③ ״שָׂרַי הִיא שָׂרָה״"]:::statement
+  S4["④ בַּתְּחִלָּה נַעֲשֵׂית שָׂרַי לְאוּמָּתָהּ, וּלְבַסּוֹף נַעֲשֵׂית שָׂרָה לְכָל הָעוֹלָם כּוּלּוֹ"]:::statement
+  S5["⑤ כָּל הַקּוֹרֵא לְאַבְרָהָם ״אַבְרָם״ — עוֹבֵר בַּעֲשֵׂה … רַבִּי אֱלִיעֶזֶר אוֹמֵר: עוֹבֵר בְּלָאו"]:::statement
+  Q1{"⑥ אֶלָּא מֵעַתָּה הַקּוֹרֵא לְשָׂרָה ״שָׂרַי״ הָכִי נָמֵי?"}:::question
+  A1["⑦ הָתָם, קוּדְשָׁא בְּרִיךְ הוּא אָמַר לְאַבְרָהָם: ״שָׂרַי אִשְׁתְּךָ לֹא תִקְרָא אֶת שְׁמָהּ שָׂרָי"]:::answer
+  Q2{"⑧ אֶלָּא מֵעַתָּה הַקּוֹרֵא לְיַעֲקֹב ״יַעֲקֹב״ הָכִי נָמֵי?!"}:::question
+  A2["⑨ שָׁאנֵי הָתָם דַּהֲדַר אַהְדְּרֵיהּ קְרָא … וַיֹּאמֶר יַעֲקֹב יַעֲקֹב"]:::answer
+  Q3{"⑩ מֵתִיב רַבִּי יוֹסֵי בַּר אָבִין … ״אַתָּה הוּא ה׳ הָאֱלֹהִים אֲשֶׁר בָּחַרְתָּ בְּאַבְרָם״!"}:::question
+  A3["⑪ הָתָם נָבִיא הוּא דְּקָא מְסַדַּר לְשִׁבְחֵיהּ דְּרַחֲמָנָא מַאי דַּהֲוָה מֵעִיקָּרָא"]:::answer
+  C1["⑫ הדרן עלך מאימתי"]:::conclusion
+  S1 --> S2
+  S3 --> S4
+  S2 --> S5
+  S4 --> S5
+  S5 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+  S5 -.->|מיתיבי| Q3
+  Q3 -->|תירוץ| A3
+  A3 --> C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג א — Berakhot 13a:4</span></div>
+    <div class="orig">״אַבְרָם הוּא אַבְרָהָם״:</div>
+    <div class="trans" data-when="he">אגב שינוי שמו של יעקב, דורשת הגמרא את הפסוק ״אברם הוא אברהם״:</div>
+    <div class="trans" data-when="en">Having mentioned the changing of Jacob’s name, the Gemara addresses the changing of the names of Abraham and Sarah. What is the meaning of changing Abram’s name to Abraham? As it is stated: “Abram is Abraham” (I Chronicles 1:27).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג א — Berakhot 13a:5</span></div>
+    <div class="orig">בַּתְּחִלָּה נַעֲשָׂה אָב לַאֲרָם, וּלְבַסּוֹף נַעֲשָׂה אָב לְכָל הָעוֹלָם כּוּלּוֹ.</div>
+    <div class="trans" data-when="he">בתחילה נעשה אב (שר וחשוב) לארם בלבד — ולכן נקרא ״אברם״ (אב־ארם); ולבסוף נעשה אב לכל העולם כולו — ״אברהם״ (אב המון גויים).</div>
+    <div class="trans" data-when="en">The Gemara explains: Initially he became a father, a minister, and prominent person, only to Aram, so he was called Abram, father [av] of Aram, and ultimately with God’s blessing he became the father of the entire world, so he was called Abraham, father of the masses [av hamon], as it is stated: “I have made you the father of a multitude of nations” (Genesis 17:5).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג א — Berakhot 13a:6</span></div>
+    <div class="orig">״שָׂרַי הִיא שָׂרָה״.</div>
+    <div class="trans" data-when="he">וכן ״שרי היא שרה״:</div>
+    <div class="trans" data-when="en">Similarly, what is the meaning of changing Sarai’s name to Sarah? The same concept applies to Sarai as to Abram: Sarai is Sarah.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג א — Berakhot 13a:7</span></div>
+    <div class="orig">בַּתְּחִלָּה נַעֲשֵׂית שָׂרַי לְאוּמָּתָהּ, וּלְבַסּוֹף נַעֲשֵׂית שָׂרָה לְכָל הָעוֹלָם כּוּלּוֹ.</div>
+    <div class="trans" data-when="he">בתחילה היתה ״שרי״ — שרה לאומתה בלבד (שרי = השרה שלי); ולבסוף נעשית ״שרה״ — שרה לכל העולם כולו.</div>
+    <div class="trans" data-when="en">The Gemara explains: Initially she was a princess only to her nation: My princess [Sarai], but ultimately she became Sarah, a general term indicating that she was princess for the entire world.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">ברכות י״ג א — Berakhot 13a:8</span></div>
+    <div class="orig">תָּנֵי בַּר קַפָּרָא: כָּל הַקּוֹרֵא לְאַבְרָהָם ״אַבְרָם״ — עוֹבֵר בַּעֲשֵׂה. שֶׁנֶּאֱמַר: ״וְהָיָה שִׁמְךָ אַבְרָהָם״. רַבִּי אֱלִיעֶזֶר אוֹמֵר: עוֹבֵר בְּלָאו, שֶׁנֶּאֱמַר: ״וְלֹא יִקָּרֵא עוֹד [אֶת] שִׁמְךָ אַבְרָם״.</div>
+    <div class="trans" data-when="he">שנה בר קפרא: כל הקורא לאברהם ״אברם״ עובר על מצוות עשה, שנאמר ״והיה שמך אברהם״. רבי אליעזר אומר: עובר על לאו, שנאמר ״ולא יקרא עוד את שמך אברם״.</div>
+    <div class="trans" data-when="en">Also, with regard to Abraham’s name, bar Kappara taught: Anyone who calls Abraham Abram transgresses a positive mitzva, as it is stated: “And your name will be Abraham” (Genesis 17:5). This is a positive mitzva to refer to him as Abraham. Rabbi Eliezer says: One who calls Abraham Abram transgresses a negative mitzva, as it is stated: “And your name shall no longer be called Abram, and your name will be Abraham, for I have made you the father of a multitude of nations” (Genesis 17:5).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">ברכות י״ג א — Berakhot 13a:9</span></div>
+    <div class="orig">אֶלָּא מֵעַתָּה הַקּוֹרֵא לְשָׂרָה ״שָׂרַי״ הָכִי נָמֵי?</div>
+    <div class="trans" data-when="he">הגמרא מקשה: אם כך, הקורא לשרה ״שרי״ — גם הוא עובר?</div>
+    <div class="trans" data-when="en">The Gemara asks: But if we consider these obligatory statements, then from here we must infer that one who calls Sarah Sarai also transgresses a positive or negative mitzva.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">ברכות י״ג א — Berakhot 13a:10</span></div>
+    <div class="orig">הָתָם, קוּדְשָׁא בְּרִיךְ הוּא אָמַר לְאַבְרָהָם: ״שָׂרַי אִשְׁתְּךָ לֹא תִקְרָא אֶת שְׁמָהּ שָׂרָי כִּי שָׂרָה שְׁמָהּ״.</div>
+    <div class="trans" data-when="he">תירוץ: שם, הקב״ה אמר לאברהם בלבד: ״שרי אשתך לא תקרא את שמה שרי כי שרה שמה״ — הציווי היה לאברהם, לא לכל אדם.</div>
+    <div class="trans" data-when="en">The Gemara answers: There in the case of Sarah, it is not a general mitzva, rather the Holy One, Blessed be He, said to Abraham alone: “And God said to Abraham, your wife Sarai, you shall not call her name Sarai; rather, Sarah is her name” (Genesis 17:15). In contrast, this is stated regarding Abraham in general terms: “Your name shall no longer be called Abram.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">ברכות י״ג א — Berakhot 13a:11</span></div>
+    <div class="orig">אֶלָּא מֵעַתָּה הַקּוֹרֵא לְיַעֲקֹב ״יַעֲקֹב״ הָכִי נָמֵי?!</div>
+    <div class="trans" data-when="he">מקשה שוב: אם כך, הקורא ליעקב ״יעקב״ (שנאמר עליו ״לא יקרא שמך עוד יעקב״) — גם הוא עובר?!</div>
+    <div class="trans" data-when="en">Again, the Gemara asks: But if that is so, one who calls Jacob Jacob, about whom it is written: “Your name shall no longer be Jacob, but Israel” (Genesis 32:29), also transgresses a mitzva.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">ברכות י״ג א — Berakhot 13a:12</span></div>
+    <div class="orig">שָׁאנֵי הָתָם דַּהֲדַר אַהְדְּרֵיהּ קְרָא, דִּכְתִיב: ״וַיֹּאמֶר אֱלֹהִים לְיִשְׂרָאֵל בְּמַרְאוֹת הַלַּיְלָה וַיֹּאמֶר יַעֲקֹב יַעֲקֹב״.</div>
+    <div class="trans" data-when="he">תירוץ: שונה הדבר שם, שהכתוב עצמו חזר וקרא לו ״יעקב״, שנאמר ״ויאמר אלהים לישראל במראות הלילה ויאמר יעקב יעקב״.</div>
+    <div class="trans" data-when="en">The Gemara answers: It is different there, as the verse reverts back and God Himself refers to Jacob as Jacob, as it is written before his descent to Egypt: “And God said to Israel in the visions of the night, and said, Jacob, Jacob, and he said, ‘Here I am’” (Genesis 46:2).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">ברכות י״ג א — Berakhot 13a:13</span></div>
+    <div class="orig">מֵתִיב רַבִּי יוֹסֵי בַּר אָבִין, וְאִיתֵּימָא רַבִּי יוֹסֵי בַּר זְבִידָא: ״אַתָּה הוּא ה׳ הָאֱלֹהִים אֲשֶׁר בָּחַרְתָּ בְּאַבְרָם״!</div>
+    <div class="trans" data-when="he">הקשה רבי יוסי בר אבין, ויש אומרים רבי יוסי בר זבידא, מן הפסוק בנחמיה: ״אתה הוא ה׳ האלהים אשר בחרת באברם״ — הרי הכתוב קוראו ״אברם״!</div>
+    <div class="trans" data-when="en">Rabbi Yosei bar Avin, and some say Rabbi Yosei bar Zevida, raised an objection to the statements of bar Kappara and Rabbi Eliezer based on what is said in the recounting of the history of the Jewish people: “You are the Lord, God, Who chose Abram and took him out of Ur Kasdim and made his name Abraham” (Nehemiah 9:7). Here the Bible refers to him as Abram.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">ברכות י״ג א — Berakhot 13a:14</span></div>
+    <div class="orig">אָמַר לֵיהּ הָתָם נָבִיא הוּא דְּקָא מְסַדַּר לְשִׁבְחֵיהּ דְּרַחֲמָנָא מַאי דַּהֲוָה מֵעִיקָּרָא.</div>
+    <div class="trans" data-when="he">השיב לו: שם, הנביא מסדר את שבחו של הקב״ה, ומספר כיצד היה הדבר מתחילתו (לפני שינוי השם: ״ושמת שמו אברהם״).</div>
+    <div class="trans" data-when="en">The Gemara responds: There, the prophet is recounting God’s praises, including that which was the situation originally, before his name was changed to Abraham. Indeed, the verse continues: “You took him out of Ur Kasdim and made his name Abraham, and found his heart faithful before You and made a covenant with him to give him the land of Canaan…to give to his descendants, and You fulfilled Your words for You are righteous” (Nehemiah 9:7–8).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">ברכות י״ג א — Berakhot 13a:15</span></div>
+    <div class="orig">הדרן עלך מאימתי</div>
+    <div class="trans" data-when="he">כאן מסתיים הפרק הראשון של מסכת ברכות — פרק ״מאימתי״.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">משנה: היה קורא בתורה — אם כיוון לבו יצא; ושואלת הגמרא: מצוות צריכות כוונה?</span><span data-when="en">Mishnah: reading the Torah when Shema’s time arrived — if he intended, he fulfilled; Gemara: do mitzvot need intent?</span>
+      <span class="ref">Berakhot 13a:16-13a:24</span></h2>
+  <div class="lead"><span data-when="he">המשנה הפותחת את פרק ׳היה קורא׳: קריאה בתורה בכוונה מוציאה ידי חובה; דיני הפסקה לשאילת שלום בפרקים ובאמצע (ר׳ מאיר ור׳ יהודה); מהם ׳בין הפרקים׳; ומדוע ׳שמע׳ קודמת ל׳והיה׳ ו׳והיה׳ ל׳ויאמר׳. הגמרא מבקשת להוכיח ש׳מצוות צריכות כוונה׳ — ודוחה: ׳כיוון לבו׳ היינו לקרות, בקורא להגיה.</span><span data-when="en">The Mishnah opening chapter “Haya Korei”: reading Torah with intent fulfills the obligation; rules for greeting during Shema at paragraph breaks vs. mid-paragraph (R. Meir, R. Yehuda); what counts as a break; and why Shema precedes VeHaya and VeHaya precedes VaYomer. The Gemara tries to infer that mitzvot require intent — and deflects: “intended” means intended to read, as with one proofreading.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: היה קורא בתורה והגיע זמן קריאת שמע — אם כיוון לבו, יצא"]):::mishnah
+  M2(["② בפרקים: שואל מפני הכבוד ומשיב; באמצע: שואל מפני היראה ומשיב — ר׳ מאיר"]):::mishnah
+  M3(["③ ר׳ יהודה: באמצע — שואל מפני היראה ומשיב מפני הכבוד; בפרקים — שואל מפני הכבוד ומשיב שלום לכל אדם"]):::mishnah
+  M4(["④ אלו הן בין הפרקים: בין ברכה לברכה, בין ברכה ל׳שמע׳, בין פרשה לפרשה, בין ׳ויאמר׳ ל׳אמת ויציב׳"]):::mishnah
+  M5(["⑤ ר׳ יהודה: בין ׳ויאמר׳ ל׳אמת ויציב׳ — לא יפסיק"]):::mishnah
+  M6(["⑥ ר׳ יהושע בן קרחה: ׳שמע׳ קודם — לקבל עול מלכות שמים תחילה ואחר כך עול מצוות; ׳והיה׳ קודם ל׳ויאמר׳ — שנוהג ביום ובלילה"]):::mishnah
+  P1["⑦ גמרא: שמע מינה — מצוות צריכות כוונה"]:::proof
+  D1["⑧ דחייה: מהו ׳כיוון לבו׳ — לקרות"]:::answer
+  Q1{"⑧ לקרות?! והרי הוא קורא ממילא!"}:::question
+  A1["⑨ תירוץ: בקורא להגיה — ואם כיוון לקרוא, יצא"]:::answer
+  M1 --> M2
+  M2 --> M3
+  M3 --> M4
+  M4 --> M5
+  M5 --> M6
+  M1 -->|דיוק| P1
+  P1 -.->|דחייה| D1
+  D1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishnah: reading Torah when Shema’s time arrived — if he focused his heart, he fulfilled it"]):::mishnah
+  M2(["② At breaks: greet out of respect and respond; mid-paragraph: greet out of fear and respond — R. Meir"]):::mishnah
+  M3(["③ R. Yehuda: mid-paragraph — greet out of fear, respond out of respect; at breaks — greet out of respect, respond to anyone"]):::mishnah
+  M4(["④ The breaks: between the blessings, between the second blessing and Shema, between the paragraphs, between VaYomer and Emet VeYatziv"]):::mishnah
+  M5(["⑤ R. Yehuda: between VaYomer and Emet VeYatziv — one may not interrupt"]):::mishnah
+  M6(["⑥ R. Yehoshua b. Korḥa: Shema first — accept the yoke of Heaven, then the yoke of mitzvot; VeHaya before VaYomer — it applies by day and by night"]):::mishnah
+  P1["⑦ Gemara: learn from this — mitzvot require intent"]:::proof
+  D1["⑧ Deflection: “focused his heart” means — intent to read"]:::answer
+  Q1{"⑧ To read?! But he is already reading!"}:::question
+  A1["⑨ Answer: one reading to proofread — if he intended to read the words, he fulfilled it"]:::answer
+  M1 --> M2
+  M2 --> M3
+  M3 --> M4
+  M4 --> M5
+  M5 --> M6
+  M1 -->|inference| P1
+  P1 -.->|rejection| D1
+  D1 -.->|question| Q1
+  Q1 -->|answer| A1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① הָיָה קוֹרֵא בַּתּוֹרָה וְהִגִּיעַ זְמַן הַמִּקְרָא, אִם כִּוֵּון לִבּוֹ — יָצָא"]):::mishnah
+  M2(["② בַּפְּרָקִים, שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וּמֵשִׁיב. וּבְאֶמְצַע, שׁוֹאֵל מִפְּנֵי הַיִּרְאָה וּמֵשִׁיב, דִּבְרֵי רַבִּי מֵאִיר"]):::mishnah
+  M3(["③ רַבִּי יְהוּדָה אוֹמֵר: בָּאֶמְצַע, שׁוֹאֵל מִפְּנֵי הַיִּרְאָה וּמֵשִׁיב מִפְּנֵי הַכָּבוֹד. וּבַפְּרָקִים, שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וּמֵשִׁיב שָׁלוֹם לְכָל אָדָם"]):::mishnah
+  M4(["④ אֵלּוּ הֵן בֵּין הַפְּרָקִים: בֵּין בְּרָכָה רִאשׁוֹנָה לַשְּׁנִיָּה, בֵּין שְׁנִיָּה לִ״שְׁמַע״ … בֵּין ״וַיֹּאמֶר״ לֶ״אֱמֶת וְיַצִּיב״"]):::mishnah
+  M5(["⑤ רַבִּי יְהוּדָה אוֹמֵר: בֵּין ״וַיֹּאמֶר״ לֶ״אֱמֶת וְיַצִּיב״ — לֹא יַפְסִיק"]):::mishnah
+  M6(["⑥ לָמָּה קָדְמָה פָּרָשַׁת ״שְׁמַע״ לְ״וְהָיָה אִם שָׁמוֹעַ״ — כְּדֵי שֶׁיְּקַבֵּל עָלָיו עוֹל מַלְכוּת שָׁמַיִם תְּחִלָּה, וְאַחַר כָּךְ מְקַבֵּל עָלָיו עוֹל מִצְוֹת … ״וַיֹּאמֶר״ אֵינוֹ נוֹהֵג אֶלָּא בַּיּוֹם בִּלְבַד"]):::mishnah
+  P1["⑦ שְׁמַע מִינַּהּ מִצְוֹת צְרִיכוֹת כַּוָּונָה"]:::proof
+  D1["⑧ מַאי ״אִם כִּוֵּון לִבּוֹ״ — לִקְרוֹת"]:::answer
+  Q1{"⑧ לִקְרוֹת?! וְהָא קָא קָרֵי!"}:::question
+  A1["⑨ בְּקוֹרֵא לְהַגִּיהַּ"]:::answer
+  M1 --> M2
+  M2 --> M3
+  M3 --> M4
+  M4 --> M5
+  M5 --> M6
+  M1 -->|דיוק| P1
+  P1 -.->|דחייה| D1
+  D1 -.->|קושיא| Q1
+  Q1 -->|תירוץ| A1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג א — Berakhot 13a:16</span></div>
+    <div class="orig">מַתְנִי׳ הָיָה קוֹרֵא בַּתּוֹרָה וְהִגִּיעַ זְמַן הַמִּקְרָא, אִם כִּוֵּון לִבּוֹ — יָצָא.</div>
+    <div class="trans" data-when="he">משנה. מי שהיה קורא בתורה (בפרשיות של שמע) והגיע זמן קריאת שמע — אם כיוון לבו, יצא ידי חובתו.</div>
+    <div class="trans" data-when="en">MISHNA: The first question discussed in the mishna is the question of intent. One who was reading the sections of the Torah which comprise Shema, and the time for the recitation of the morning or evening Shema arrived, if he focused his heart, he fulfilled his obligation and need not repeat Shema in order to fulfill his obligation. This is true even if he failed to recite the requisite blessings (Rabbeinu Ḥananel).</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג א — Berakhot 13a:17</span></div>
+    <div class="orig">בַּפְּרָקִים, שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וּמֵשִׁיב. וּבְאֶמְצַע, שׁוֹאֵל מִפְּנֵי הַיִּרְאָה וּמֵשִׁיב, דִּבְרֵי רַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">בין הפרקים (של קריאת שמע) — שואל בשלום אדם מפני כבודו ומשיב לו; ובאמצע הפרק — שואל מפני היראה (מאדם שיש לחשוש ממנו) ומשיב. אלו דברי רבי מאיר.</div>
+    <div class="trans" data-when="en">Ab initio, one may not interrupt the recitation of Shema. The tanna’im, however, disagree over how strict one must be in this regard. They distinguish between interruptions between paragraphs and interruptions within each paragraph. At the breaks between paragraphs, one may greet an individual due to the respect that he is obligated to show him, and one may respond to another’s greeting due to respect. And in the middle of each paragraph one may greet an individual due to the fear that the individual may harm him if he fails do so (Me’iri) and one may respond to another’s greeting due to fear. This is the statement of Rabbi Meir.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג א — Berakhot 13a:18</span></div>
+    <div class="orig">רַבִּי יְהוּדָה אוֹמֵר: בָּאֶמְצַע, שׁוֹאֵל מִפְּנֵי הַיִּרְאָה וּמֵשִׁיב מִפְּנֵי הַכָּבוֹד. וּבַפְּרָקִים, שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וּמֵשִׁיב שָׁלוֹם לְכָל אָדָם.</div>
+    <div class="trans" data-when="he">רבי יהודה אומר: באמצע הפרק — שואל מפני היראה ומשיב מפני הכבוד; ובין הפרקים — שואל מפני הכבוד ומשיב שלום לכל אדם.</div>
+    <div class="trans" data-when="en">Rabbi Yehuda says: There is a distinction between greeting someone and responding to his greeting. In the middle of each paragraph, one may greet another due to fear and respond due to respect. In the breaks between paragraphs, one may greet another due to respect and respond with a greeting to any person who greets him, whether or not he is obligated to show him respect.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג א — Berakhot 13a:19</span></div>
+    <div class="orig">אֵלּוּ הֵן בֵּין הַפְּרָקִים: בֵּין בְּרָכָה רִאשׁוֹנָה לַשְּׁנִיָּה, בֵּין שְׁנִיָּה לִ״שְׁמַע״, בֵּין ״שְׁמַע״ לִ״וְהָיָה אִם שָׁמוֹעַ״, בֵּין ״וְהָיָה אִם שָׁמוֹעַ״ לְ״וַיֹּאמֶר״, בֵּין ״וַיֹּאמֶר״ לֶ״אֱמֶת וְיַצִּיב״.</div>
+    <div class="trans" data-when="he">אלו הם ״בין הפרקים״: בין הברכה הראשונה לשנייה, בין השנייה ל״שמע״, בין ״שמע״ ל״והיה אם שמוע״, בין ״והיה אם שמוע״ ל״ויאמר״, ובין ״ויאמר״ ל״אמת ויציב״.</div>
+    <div class="trans" data-when="en">As for what constitutes a paragraph, these are the breaks between the paragraphs: Between the first blessing and the second, between the second and Shema, between Shema and the second paragraph: If you indeed heed My commandments [VeHaya im Shamoa], between VeHaya im Shamoa and the third paragraph: And the Lord spoke [VaYomer] and between VaYomer and True and Firm [emet veyatziv], the blessing that follows Shema.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">ברכות י״ג א — Berakhot 13a:20</span></div>
+    <div class="orig">רַבִּי יְהוּדָה אוֹמֵר: בֵּין ״וַיֹּאמֶר״ לֶ״אֱמֶת וְיַצִּיב״ — לֹא יַפְסִיק.</div>
+    <div class="trans" data-when="he">רבי יהודה אומר: בין ״ויאמר״ ל״אמת ויציב״ — לא יפסיק (צריך לסמוך גאולה לתפילה, ו״אמת״ הוא המשך של ״ה׳ אלהיכם״).</div>
+    <div class="trans" data-when="en">The Rabbis held that each blessing and each paragraph of Shema constitutes its own entity, and treat interruptions between them as between the paragraphs. Rabbi Yehuda, however, says: Between VaYomer and emet veyatziv, which begins the blessing that follows Shema, one may not interrupt at all. According to Rabbi Yehuda, these must be recited consecutively.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">ברכות י״ג א — Berakhot 13a:21</span></div>
+    <div class="orig">אָמַר רַבִּי יְהוֹשֻׁעַ בֶּן קָרְחָה: לָמָּה קָדְמָה פָּרָשַׁת ״שְׁמַע״ לְ״וְהָיָה אִם שָׁמוֹעַ״ — כְּדֵי שֶׁיְּקַבֵּל עָלָיו עוֹל מַלְכוּת שָׁמַיִם תְּחִלָּה, וְאַחַר כָּךְ מְקַבֵּל עָלָיו עוֹל מִצְוֹת. ״וְהָיָה אִם שָׁמוֹעַ״ לְ״וַיֹּאמֶר״ — שֶׁ״וְהָיָה אִם שָׁמוֹעַ״ נוֹהֵג בֵּין בַּיּוֹם וּבֵין בַּלַּיְלָה, ״וַיֹּאמֶר״ אֵינוֹ נוֹהֵג אֶלָּא בַּיּוֹם בִּלְבַד.</div>
+    <div class="trans" data-when="he">אמר רבי יהושע בן קרחה: למה קדמה פרשת ״שמע״ ל״והיה אם שמוע״? כדי שיקבל על עצמו תחילה עול מלכות שמים, ואחר כך עול מצוות. ולמה ״והיה אם שמוע״ קודמת ל״ויאמר״? ש״והיה אם שמוע״ נוהגת בין ביום ובין בלילה, ואילו ״ויאמר״ (פרשת ציצית) נוהגת ביום בלבד.</div>
+    <div class="trans" data-when="en">Since the paragraphs of Shema are not adjacent to one another in the Torah, and they are not recited in the order in which they appear, the mishna explains their placement. Rabbi Yehoshua ben Korḥa said: Why, in the mitzva of the recitation of Shema, did the portion of Shema precede that of VeHaya im Shamoa? This is so that one will first accept upon himself the yoke of the kingdom of Heaven, the awareness of God and God’s unity, and only then accept upon himself the yoke of the mitzvot, which appears in the paragraph of VeHaya im Shamoa. Why did VeHaya im Shamoa precede VaYomer? Because the paragraph of VeHaya im Shamoa is practiced both by day and by night, while VaYomer, which discusses the mitzva of ritual fringes, is only practiced during the day.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">ברכות י״ג א — Berakhot 13a:22</span></div>
+    <div class="orig">גְּמָ׳ שְׁמַע מִינַּהּ מִצְוֹת צְרִיכוֹת כַּוָּונָה.</div>
+    <div class="trans" data-when="he">גמרא. מן המשנה (״אם כיוון לבו — יצא״) נלמד: מצוות צריכות כוונה — אי אפשר לצאת ידי חובה בלא כוונה לקיים את המצווה.</div>
+    <div class="trans" data-when="en">GEMARA: We learned in the mishna that one must focus his heart while reading the portion of Shema in the Torah in order to fulfill his obligation. From here, the Gemara seeks to conclude: Learn from this that mitzvot require intent, when one performs a mitzva, he must intend to fulfill his obligation. If he lacks that intention, he does not fulfill his obligation. With that statement, this Gemara hopes to resolve an issue that is raised several times throughout the Talmud.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">ברכות י״ג א — Berakhot 13a:23</span></div>
+    <div class="orig">מַאי ״אִם כִּוֵּון לִבּוֹ״ — לִקְרוֹת. לִקְרוֹת?! וְהָא קָא קָרֵי!</div>
+    <div class="trans" data-when="he">דחייה: מהו ״אם כיוון לבו״? — שכיוון לקרוא (ולא כוונה לצאת ידי חובה). הגמרא תמהה: לקרוא?! והרי הוא קורא ממילא (אם כן מה החידוש בכוונה לקרוא)?</div>
+    <div class="trans" data-when="en">The Gemara rejects this conclusion: What is the meaning of: If one focused his heart? It means that one had the intention to read. The Gemara attacks this explanation: How can you say that it means that one must have intention to read? Isn’t he already reading? The case in the mishna refers to a person who is reading from the Torah. Therefore, focused his heart must refer to intention to perform a mitzva.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">ברכות י״ג א — Berakhot 13a:24</span></div>
+    <div class="orig">בְּקוֹרֵא לְהַגִּיהַּ.</div>
+    <div class="trans" data-when="he">תירוץ: מדובר במי שקורא כדי להגיה (לבדוק את הכתיב בספר) — ולא היה קורא את המילים כקריאה כלל; ואם כיוון לקרוא את המילים, יצא.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: Perhaps the mishna speaks of one who is reading the Torah not for the purpose of reciting the words, but in order to emend mistakes in the text. Therefore, if he focused his heart and intended to read the words and not merely emend the text, he fulfills his obligation. He need not have the intention to fulfill his obligation.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">קריאת שמע ככתבה או בכל לשון — רבי וחכמים</span><span data-when="en">Shema as written or in any language — Rabbi vs. the Rabbis</span>
+      <span class="ref">Berakhot 13a:25-13a:35</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: רבי — קריאת שמע ככתבה (בלשון הקודש); חכמים — בכל לשון. הגמרא מבררת את מקור כל שיטה (׳והיו׳ / ׳שמע׳), כיצד כל צד דורש את הפסוק של חברו, ומנסה להסיק מכאן על כל התורה כולה — ודוחה לשני הכיוונים.</span><span data-when="en">Baraita: Rabbi — Shema must be recited as written (in Hebrew); the Rabbis — in any language. The Gemara traces each source (“and they shall be” / “hear”), how each side reads the other’s verse, and tries to infer each view’s position on the whole Torah — deflecting in both directions.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: קריאת שמע ככתבה — דברי רבי; וחכמים אומרים: בכל לשון"]:::statement
+  P1["② טעם רבי: ׳והיו׳ — בהווייתן יהו"]:::proof
+  P2["③ טעם חכמים: ׳שמע׳ — בכל לשון שאתה שומע"]:::proof
+  Q1{"④ ולרבי — הרי כתוב ׳שמע׳?"}:::question
+  A1["④ נצרך ל: השמע לאוזניך מה שאתה מוציא מפיך"]:::answer
+  Q2{"⑤ וחכמים — מניין להשמיע לאוזנו?"}:::question
+  A2["⑤ סוברים כמאן דאמר: לא השמיע לאוזנו — יצא"]:::answer
+  Q3{"⑥ ולחכמים — הרי כתוב ׳והיו׳?"}:::question
+  A3["⑥ נצרך ל: שלא יקרא למפרע"]:::answer
+  Q4{"⑦ ורבי — שלא יקרא למפרע מניין?"}:::question
+  A4["⑦ מ׳דברים׳ – ׳הדברים׳; וחכמים אינם דורשים ה״א יתרה"]:::answer
+  Q5{"⑧ לומר שרבי סובר: כל התורה בכל לשון נאמרה? — שאם לא כן, ׳והיו׳ למה לי"}:::question
+  A5["⑨ דחייה: ׳והיו׳ נצרך משום שכתוב ׳שמע׳"]:::answer
+  Q6{"⑩ לומר שחכמים סוברים: כל התורה בלשון הקודש נאמרה? — שאם לא כן, ׳שמע׳ למה לי"}:::question
+  A6["⑪ דחייה: ׳שמע׳ נצרך משום שכתוב ׳והיו׳"]:::answer
+  S1 -->|טעם רבי| P1
+  S1 -->|טעם חכמים| P2
+  P1 -.-> Q1
+  Q1 -->|תירוץ| A1
+  P2 -.-> Q2
+  Q2 -->|תירוץ| A2
+  P2 -.-> Q3
+  Q3 -->|תירוץ| A3
+  P1 -.-> Q4
+  Q4 -->|תירוץ| A4
+  P1 -.->|ניסיון להסיק| Q5
+  Q5 -->|דחייה| A5
+  P2 -.->|ניסיון להסיק| Q6
+  Q6 -->|דחייה| A6
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: Shema as written — Rabbi; the Rabbis: in any language"]:::statement
+  P1["② Rabbi’s reason: “and they shall be” — as they are, so they shall remain"]:::proof
+  P2["③ The Rabbis’ reason: “hear” — in any language you understand"]:::proof
+  Q1{"④ And for Rabbi — isn’t “hear” written?"}:::question
+  A1["④ Needed for: let your ears hear what your mouth utters"]:::answer
+  Q2{"⑤ And the Rabbis — audibility?"}:::question
+  A2["⑤ They hold like the one who says: if inaudible to himself — he fulfilled it"]:::answer
+  Q3{"⑥ And for the Rabbis — isn’t “and they shall be” written?"}:::question
+  A3["⑥ Needed for: not reciting out of order"]:::answer
+  Q4{"⑦ And Rabbi — whence “not out of order”?"}:::question
+  A4["⑦ From “words” vs. “the words”; the Rabbis don’t expound the extra letter"]:::answer
+  Q5{"⑧ Does Rabbi then hold the whole Torah may be read in any language? Otherwise why “and they shall be”?"}:::question
+  A5["⑨ Deflection: “and they shall be” is needed because “hear” is written"]:::answer
+  Q6{"⑩ Do the Rabbis then hold the whole Torah must be in Hebrew? Otherwise why “hear”?"}:::question
+  A6["⑪ Deflection: “hear” is needed because “and they shall be” is written"]:::answer
+  S1 -->|Rabbi’s reason| P1
+  S1 -->|Rabbis’ reason| P2
+  P1 -.-> Q1
+  Q1 -->|answer| A1
+  P2 -.-> Q2
+  Q2 -->|answer| A2
+  P2 -.-> Q3
+  Q3 -->|answer| A3
+  P1 -.-> Q4
+  Q4 -->|answer| A4
+  P1 -.->|attempted inference| Q5
+  Q5 -->|rejected| A5
+  P2 -.->|attempted inference| Q6
+  Q6 -->|rejected| A6
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① קְרִיאַת שְׁמַע כִּכְתָבָהּ, דִּבְרֵי רַבִּי. וַחֲכָמִים אוֹמְרִים: בְּכָל לָשׁוֹן"]:::statement
+  P1["② מַאי טַעְמָא דְּרַבִּי? אָמַר קְרָא ״וְהָיוּ״ בַּהֲוָיָיתָן יְהוּ"]:::proof
+  P2["③ אָמַר קְרָא: ״שְׁמַע״ — בְּכָל לָשׁוֹן שֶׁאַתָּה שׁוֹמֵעַ"]:::proof
+  Q1{"④ וּלְרַבִּי נָמֵי, הָא כְּתִיב ״שְׁמַע״!"}:::question
+  A1["④ הַשְׁמַע לְאָזְנֶיךָ מַה שֶּׁאַתָּה מוֹצִיא מִפִּיךָ"]:::answer
+  Q2{"⑤ וְרַבָּנַן?"}:::question
+  A2["⑤ סָבְרִי לַהּ כְּמַאן דְּאָמַר לֹא הִשְׁמִיעַ לְאָזְנוֹ — יָצָא"]:::answer
+  Q3{"⑥ וּלְרַבָּנַן נָמֵי הָא כְּתִיב ״וְהָיוּ״?"}:::question
+  A3["⑥ הַהוּא מִבְּעֵי לְהוּ שֶׁלֹּא יִקְרָא לְמַפְרֵעַ"]:::answer
+  Q4{"⑦ וְרַבִּי, שֶׁלֹּא יִקְרָא לְמַפְרֵעַ מְנָא לֵיהּ?"}:::question
+  A4["⑦ נָפְקָא לֵיהּ מִ״דְּבָרִים״ ״הַדְּבָרִים״. וְרַבָּנַן, ״דְּבָרִים״ ״הַדְּבָרִים״ — לָא דָּרְשִׁי"]:::answer
+  Q5{"⑧ לְמֵימְרָא דְּסָבַר רַבִּי דְּכָל הַתּוֹרָה כּוּלָּהּ בְּכָל לָשׁוֹן נֶאֶמְרָה … ״וְהָיוּ״ דִּכְתַב רַחֲמָנָא לְמָה לִי?"}:::question
+  A5["⑨ אִיצְטְרִיךְ מִשּׁוּם דִּכְתִיב ״שְׁמַע״"]:::answer
+  Q6{"⑩ לְמֵימְרָא דְּסָבְרִי רַבָּנַן דְּכָל הַתּוֹרָה כּוּלָּהּ בִּלְשׁוֹן הַקּוֹדֶשׁ נֶאֶמְרָה … ״שְׁמַע״ דִּכְתַב רַחֲמָנָא לְמָה לִי?!"}:::question
+  A6["⑪ אִיצְטְרִיךְ מִשּׁוּם דִּכְתִיב ״וְהָיוּ״"]:::answer
+  S1 -->|טעם רבי| P1
+  S1 -->|טעם חכמים| P2
+  P1 -.-> Q1
+  Q1 -->|תירוץ| A1
+  P2 -.-> Q2
+  Q2 -->|תירוץ| A2
+  P2 -.-> Q3
+  Q3 -->|תירוץ| A3
+  P1 -.-> Q4
+  Q4 -->|תירוץ| A4
+  P1 -.->|ניסיון להסיק| Q5
+  Q5 -->|דחייה| A5
+  P2 -.->|ניסיון להסיק| Q6
+  Q6 -->|דחייה| A6
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג א — Berakhot 13a:25</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: קְרִיאַת שְׁמַע כִּכְתָבָהּ, דִּבְרֵי רַבִּי. וַחֲכָמִים אוֹמְרִים: בְּכָל לָשׁוֹן.</div>
+    <div class="trans" data-when="he">שנו חכמים בברייתא: קריאת שמע — ככתבה, בלשון הקודש; אלו דברי רבי. וחכמים אומרים: בכל לשון.</div>
+    <div class="trans" data-when="en">The Sages taught in a baraita that Rabbi Yehuda HaNasi and the Rabbis disagreed with regard to the language in which Shema must be recited. This dispute serves as an introduction to a broader analysis of the question of intent: Shema must be recited as it is written, in Hebrew, this is the statement of Rabbi Yehuda HaNasi. And the Rabbis say: Shema may be recited in any language.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג א — Berakhot 13a:26</span></div>
+    <div class="orig">מַאי טַעְמָא דְּרַבִּי? אָמַר קְרָא ״וְהָיוּ״ בַּהֲוָיָיתָן יְהוּ.</div>
+    <div class="trans" data-when="he">מה טעמו של רבי? אמר הכתוב ״והיו (הדברים האלה)״ — בהווייתן יהיו, כפי שהם, בלשונם.</div>
+    <div class="trans" data-when="en">The Gemara seeks to clarify: What is the reason for Rabbi Yehuda HaNasi’s opinion? The Gemara answers: The source for his halakha lies in the emphasis on the word: “And these words, which I command you this day, will be upon your heart” (Deuteronomy 6:6). “Will be” means as they are, so shall they be; they should remain unchanged, in their original language.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג א — Berakhot 13a:27</span></div>
+    <div class="orig">וְרַבָּנַן, מַאי טַעְמַיְיהוּ? אָמַר קְרָא: ״שְׁמַע״ — בְּכָל לָשׁוֹן שֶׁאַתָּה שׁוֹמֵעַ.</div>
+    <div class="trans" data-when="he">וחכמים — מה טעמם? אמר הכתוב ״שמע״ — בכל לשון שאתה שומע (מבין).</div>
+    <div class="trans" data-when="en">The Gemara seeks to clarify further: And what is the reason for the Rabbis’ opinion? The Gemara answers: The source upon which the Rabbis base their opinion is, as it is stated: “Hear, Israel” (Deuteronomy 6:4), which they understand to mean that Shema must be understood. Therefore, one may recite Shema in any language that you can hear and understand.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג א — Berakhot 13a:28</span></div>
+    <div class="orig">וּלְרַבִּי נָמֵי, הָא כְּתִיב ״שְׁמַע״! הַהוּא מִבְּעֵי לֵיהּ: הַשְׁמַע לְאָזְנֶיךָ מַה שֶּׁאַתָּה מוֹצִיא מִפִּיךָ.</div>
+    <div class="trans" data-when="he">ולרבי — הרי גם כתוב ״שמע״ (ומה הוא דורש ממנו)? אותו פסוק נצרך לו ללמד: השמע לאוזניך מה שאתה מוציא מפיך — שצריך לקרוא בקול שישמע.</div>
+    <div class="trans" data-when="en">The Gemara explains how Rabbi Yehuda HaNasi and the Rabbis each contend with the source cited by the other. And according to Rabbi Yehuda HaNasi, isn’t it also stated: “Hear, Israel”? How does he explain this verse? The Gemara responds: He requires this verse in order to derive a different halakha: Make your ears hear what your mouth utters, i.e., one must recite Shema audibly so he hears it while reciting it.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">ברכות י״ג א — Berakhot 13a:29</span></div>
+    <div class="orig">וְרַבָּנַן? סָבְרִי לַהּ כְּמַאן דְּאָמַר לֹא הִשְׁמִיעַ לְאָזְנוֹ — יָצָא.</div>
+    <div class="trans" data-when="he">וחכמים (מניין להם דין זה)? הם סוברים כדעת האומר: מי שלא השמיע לאוזנו — יצא ידי חובה (ולכן אינם צריכים את ״שמע״ לכך).</div>
+    <div class="trans" data-when="en">And from where do the Rabbis derive that one must recite Shema audibly? The Rabbis do not accept the literal interpretation of the word Shema; rather, they hold in accordance with the one who said: One who recited Shema in a manner inaudible to his own ears, fulfilled his obligation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">ברכות י״ג א — Berakhot 13a:30</span></div>
+    <div class="orig">וּלְרַבָּנַן נָמֵי הָא כְּתִיב ״וְהָיוּ״? הַהוּא מִבְּעֵי לְהוּ שֶׁלֹּא יִקְרָא לְמַפְרֵעַ.</div>
+    <div class="trans" data-when="he">ולחכמים — הרי גם כתוב ״והיו״? אותו פסוק נצרך להם ללמד שלא יקרא למפרע (בסדר הפוך).</div>
+    <div class="trans" data-when="en">The Gemara asks: And according to the Rabbis, isn’t it also written: “And they will be”? How do the Sages explain that emphasis in the verse? The Gemara answers: They, too, require this expression to derive that one may not recite Shema out of order. One may not begin reciting Shema from the end, but only in the order in which it is written.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">ברכות י״ג א — Berakhot 13a:31</span></div>
+    <div class="orig">וְרַבִּי, שֶׁלֹּא יִקְרָא לְמַפְרֵעַ מְנָא לֵיהּ? נָפְקָא לֵיהּ מִ״דְּבָרִים״ ״הַדְּבָרִים״. וְרַבָּנַן, ״דְּבָרִים״ ״הַדְּבָרִים״ — לָא דָּרְשִׁי.</div>
+    <div class="trans" data-when="he">ורבי — מניין לו שלא יקרא למפרע? לומד זאת מן הייתור ״דברים״ – ״הדברים״ (ה״א היידוע מורה: הדברים כסדרם). וחכמים — את ״דברים״ ״הדברים״ אינם דורשים.</div>
+    <div class="trans" data-when="en">And from where does Rabbi Yehuda HaNasi derive the halakha that one may not recite Shema out of order? The Gemara answers: Rabbi Yehuda HaNasi derives it from an additional emphasis in the verse: “And the words [hadevarim], which I command you this day, will be upon your heart.” The verse could have conveyed the same idea had it written: Words [devarim], without the definite article. However, it says the words [hadevarim], employing the definite article, emphasizing that it must be recited in the specific order in which it is written. The Rabbis, however, do not derive anything from the fact that the words, with the definite article, was written in place of words, without the definite article.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">ברכות י״ג א — Berakhot 13a:32</span></div>
+    <div class="orig">לְמֵימְרָא דְּסָבַר רַבִּי דְּכָל הַתּוֹרָה כּוּלָּהּ בְּכָל לָשׁוֹן נֶאֶמְרָה. דְּאִי סָלְקָא דַּעְתָּךְ בִּלְשׁוֹן הַקּוֹדֶשׁ נֶאֶמְרָה, ״וְהָיוּ״ דִּכְתַב רַחֲמָנָא לְמָה לִי?</div>
+    <div class="trans" data-when="he">האם נאמר שרבי סובר שכל התורה כולה נאמרה (מותר לקרותה) בכל לשון? שאם יעלה על דעתך שנאמרה דווקא בלשון הקודש — ״והיו״ שכתבה התורה (לגבי שמע), למה לי?</div>
+    <div class="trans" data-when="en">The Gemara seeks to link this debate to another: Is that to say that Rabbi Yehuda HaNasi holds that the entire Torah, i.e., any portion of the Torah which must be read publicly (Tosafot), or if one studies or reads the Torah in general (Me’iri), may be recited in any language? As if it should enter your mind to say that the entire Torah may only be recited in the holy tongue and not in any other, then why do I need that which the Torah wrote: “And they will be”? Prohibiting recitation of Shema in a language other than Hebrew is superfluous, if indeed one is prohibited from reciting any portion of the Torah in a language other than Hebrew. Since the Torah saw the need to specifically require Shema to be recited in Hebrew, it must be because the rest of the Torah may be recited in any language.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">ברכות י״ג א — Berakhot 13a:33</span></div>
+    <div class="orig">אִיצְטְרִיךְ מִשּׁוּם דִּכְתִיב ״שְׁמַע״.</div>
+    <div class="trans" data-when="he">דחייה: ״והיו״ הוצרך משום שכתוב ״שמע״ — שבלעדיו הייתי לומד מ״שמע״ שקוראים בכל לשון.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: This is not necessarily so, as the phrase: And they will be is necessary in this case because Shema, hear, is also written. Had it not been for the phrase: And they will be, I would have understood hear, to allow Shema to be recited in any language, in accordance with the opinion of the Rabbis. Therefore, and they will be, was necessary.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">ברכות י״ג א — Berakhot 13a:34</span></div>
+    <div class="orig">לְמֵימְרָא דְּסָבְרִי רַבָּנַן דְּכָל הַתּוֹרָה כּוּלָּהּ בִּלְשׁוֹן הַקּוֹדֶשׁ נֶאֶמְרָה. דְּאִי סָלְקָא דַּעְתָּךְ בְּכָל לָשׁוֹן נֶאֶמְרָה, ״שְׁמַע״ דִּכְתַב רַחֲמָנָא לְמָה לִי?!</div>
+    <div class="trans" data-when="he">ומנגד: האם נאמר שחכמים סוברים שכל התורה כולה נאמרה בלשון הקודש? שאם יעלה על דעתך שנאמרה בכל לשון — ״שמע״ שכתבה התורה, למה לי?!</div>
+    <div class="trans" data-when="en">The Gemara attempts to clarify: Is that to say that the Rabbis hold that the entire Torah may only be recited in the holy tongue and not in any other? As if it should enter your mind to say that the Torah may be recited in any language, then why do I require that which the Torah wrote: Shema, hear? One is permitted to recite the entire Torah in any language, rendering a specific requirement regarding Shema superfluous.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">ברכות י״ג א — Berakhot 13a:35</span></div>
+    <div class="orig">אִיצְטְרִיךְ מִשּׁוּם דִּכְתִיב ״וְהָיוּ״.</div>
+    <div class="trans" data-when="he">דחייה: ״שמע״ הוצרך משום שכתוב ״והיו״ — שבלעדיו הייתי לומד מ״והיו״ שקוראים דווקא בלשון הקודש.</div>
+    <div class="trans" data-when="en">The Gemara rejects this: Shema is necessary in any case, because and they will be, is also written. Had it not been for Shema, I would have understood this in accordance with the opinion of Rabbi Yehuda HaNasi, that one is prohibited from reciting Shema in any other language. Therefore, Shema, is necessary.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-5">
+  <h2><span class="badge"><span data-when="he">סוגיה 5</span><span data-when="en">Sugya 5</span></span>
+      <span data-when="he">עד היכן צריכה כוונה — ר׳ אליעזר, ר׳ עקיבא, ופסק ר׳ יוחנן</span><span data-when="en">How far does intent extend — R. Eliezer, R. Akiva, and R. Yoḥanan’s ruling</span>
+      <span class="ref">Berakhot 13a:36-13b:3</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: ׳והיו׳ — שלא יקרא למפרע; ׳הדברים… על לבבך׳ — ר׳ אליעזר: עד ׳האלה׳ צריכה כוונה ומכאן ואילך לא; ר׳ עקיבא: ׳אשר אנכי מצוך היום על לבבך׳ — כל הפרשה צריכה כוונה. ר׳ יוחנן: הלכה כר׳ עקיבא. ויש השונים את פסק ר׳ יוחנן על ברייתא אחרת — הלכה כר׳ אחא משום ר׳ יהודה: כיוון בפרק ראשון, שוב אינו צריך.</span><span data-when="en">Baraita: “and they shall be” — not out of order; “these words… upon your heart” — R. Eliezer: intent is required up to “these,” not beyond; R. Akiva: “which I command you this day, upon your heart” — the whole paragraph requires intent. R. Yoḥanan: the halakha follows R. Akiva. Some attach R. Yoḥanan’s ruling to a different baraita — the halakha follows R. Aḥa in R. Yehuda’s name: intent for the first paragraph suffices.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: ׳והיו׳ — שלא יקרא למפרע; ׳הדברים… על לבבך׳ — ר׳ אליעזר: עד ׳האלה׳ צריכה כוונה, מכאן ואילך לא"]:::statement
+  Q1{"② ר׳ עקיבא: הרי הוא אומר —"}:::question
+  S2["③ ׳אשר אנכי מצוך היום על לבבך׳ — כל הפרשה כולה צריכה כוונה"]:::statement
+  C1["④ רבה בר בר חנה אמר ר׳ יוחנן: הלכה כר׳ עקיבא"]:::conclusion
+  S3["⑤ איכא דמתני לה על ברייתא אחרת: ת״ק — צריך שיכוון לבו; ר׳ אחא משום ר׳ יהודה — כיוון בפרק ראשון, שוב אינו צריך"]:::statement
+  C2["⑤ ר׳ יוחנן: הלכה כר׳ אחא שאמר משום ר׳ יהודה"]:::conclusion
+  S1 -.->|מחלוקת| Q1
+  Q1 --> S2
+  S2 -->|פסק| C1
+  C1 -.->|לישנא אחרינא| S3
+  S3 -->|פסק| C2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: “and they shall be” — not out of order; “these words… upon your heart” — R. Eliezer: intent up to “these,” not beyond"]:::statement
+  Q1{"② R. Akiva: but the verse says —"}:::question
+  S2["③ “which I command you this day, upon your heart” — the entire paragraph requires intent"]:::statement
+  C1["④ Rabba b. b. Ḥana in R. Yoḥanan’s name: the halakha follows R. Akiva"]:::conclusion
+  S3["⑤ Some attach it to another baraita: first tanna — one must focus his heart; R. Aḥa in R. Yehuda’s name — once he focused for the first paragraph, no more is needed"]:::statement
+  C2["⑤ R. Yoḥanan: the halakha follows R. Aḥa in R. Yehuda’s name"]:::conclusion
+  S1 -.->|dispute| Q1
+  Q1 --> S2
+  S2 -->|ruling| C1
+  C1 -.->|alternate version| S3
+  S3 -->|ruling| C2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ״וְהָיוּ״ שֶׁלֹּא יִקְרָא לְמַפְרֵעַ … עַד כָּאן צְרִיכָה כַּוָּונָה, מִכָּאן וְאֵילָךְ אֵין צְרִיכָה כַּוָּונָה. דִּבְרֵי רַבִּי אֱלִיעֶזֶר"]:::statement
+  Q1{"② אָמַר לוֹ רַבִּי עֲקִיבָא: הֲרֵי הוּא אוֹמֵר:"}:::question
+  S2["③ ״אֲשֶׁר אָנֹכִי מְצַוְּךָ הַיּוֹם עַל לְבָבֶךָ״. מִכָּאן אַתָּה לָמֵד שֶׁכָּל הַפָּרָשָׁה כּוּלָּהּ צְרִיכָה כַּוָּונָה"]:::statement
+  C1["④ אָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: הֲלָכָה כְּרַבִּי עֲקִיבָא"]:::conclusion
+  S3["⑤ אִיכָּא דְּמַתְנֵי לַהּ אַהָא דְתַנְיָא … כֵּיוָן שֶׁכִּוֵּון לִבּוֹ בְּפֶרֶק רִאשׁוֹן שׁוּב אֵינוֹ צָרִיךְ"]:::statement
+  C2["⑤ הֲלָכָה כְּרַבִּי אַחָא שֶׁאָמַר מִשּׁוּם רַבִּי יְהוּדָה"]:::conclusion
+  S1 -.->|מחלוקת| Q1
+  Q1 --> S2
+  S2 -->|פסק| C1
+  C1 -.->|לישנא אחרינא| S3
+  S3 -->|פסק| C2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג א — Berakhot 13a:36</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״וְהָיוּ״ שֶׁלֹּא יִקְרָא לְמַפְרֵעַ. ״הַדְּבָרִים … עַל לְבָבֶךָ״ — יָכוֹל תְּהֵא כָּל הַפָּרָשָׁה צְרִיכָה כַּוָּונָה? — תַּלְמוּד לוֹמַר ״הָאֵלֶּה״. עַד כָּאן צְרִיכָה כַּוָּונָה, מִכָּאן וְאֵילָךְ אֵין צְרִיכָה כַּוָּונָה. דִּבְרֵי רַבִּי אֱלִיעֶזֶר.</div>
+    <div class="trans" data-when="he">שנו חכמים: ״והיו״ — שלא יקרא למפרע. ״הדברים… על לבבך״ — יכול תהא כל הפרשה צריכה כוונה? תלמוד לומר ״האלה״ — עד כאן (עד המילה ״האלה״) צריכה כוונה, מכאן ואילך אינה צריכה כוונה. אלו דברי רבי אליעזר.</div>
+    <div class="trans" data-when="en">The interpretation of these verses is the source of a fundamental dispute concerning the obligation to recite Shema and the required intent during its recitation. The Rabbis taught: From: And they will be, it is derived that one may not recite Shema out of order. From: These words…upon your heart, it is derived that they must be recited with intent. I might have thought that the entire paragraph requires intent? Therefore the verse teaches: These, to indicate that to this point, one must have intent, but from here on one need not have intent, and even if he recites the rest of Shema without intent he fulfills his obligation. This is the statement of Rabbi Eliezer.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג א — Berakhot 13a:37</span></div>
+    <div class="orig">אָמַר לוֹ רַבִּי עֲקִיבָא: הֲרֵי הוּא אוֹמֵר:</div>
+    <div class="trans" data-when="he">אמר לו רבי עקיבא: הרי הוא אומר —</div>
+    <div class="trans" data-when="en">Rabbi Akiva said to him: But the verse states:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:1</span></div>
+    <div class="orig">״אֲשֶׁר אָנֹכִי מְצַוְּךָ הַיּוֹם עַל לְבָבֶךָ״. מִכָּאן אַתָּה לָמֵד שֶׁכָּל הַפָּרָשָׁה כּוּלָּהּ צְרִיכָה כַּוָּונָה.</div>
+    <div class="trans" data-when="he">״אשר אנכי מצוך היום על לבבך״ — מכאן אתה למד שכל הפרשה כולה צריכה כוונה (שהרי ״על לבבך״ נאמר על כל ״אשר אנכי מצוך״).</div>
+    <div class="trans" data-when="en">“Which I command you this day, will be upon your heart.” Surely the word these, does not come to limit the mitzva of intent. On the contrary, from here you derive that the entire portion requires intent.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:2</span></div>
+    <div class="orig">אָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: הֲלָכָה כְּרַבִּי עֲקִיבָא.</div>
+    <div class="trans" data-when="he">אמר רבה בר בר חנה אמר רבי יוחנן: הלכה כרבי עקיבא.</div>
+    <div class="trans" data-when="en">Rabba bar bar Ḥana said that Rabbi Yoḥanan said: The halakha is in accordance with the opinion of Rabbi Akiva; the entire portion requires intent.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:3</span></div>
+    <div class="orig">אִיכָּא דְּמַתְנֵי לַהּ אַהָא דְתַנְיָא. הַקּוֹרֵא אֶת שְׁמַע צָרִיךְ שֶׁיְּכַוֵּין אֶת לִבּוֹ, רַבִּי אַחָא מִשּׁוּם רַבִּי יְהוּדָה אוֹמֵר: כֵּיוָן שֶׁכִּוֵּון לִבּוֹ בְּפֶרֶק רִאשׁוֹן שׁוּב אֵינוֹ צָרִיךְ. אָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: הֲלָכָה כְּרַבִּי אַחָא שֶׁאָמַר מִשּׁוּם רַבִּי יְהוּדָה.</div>
+    <div class="trans" data-when="he">יש השונים את דברי רבי יוחנן על ברייתא אחרת (תוספתא): הקורא את שמע צריך שיכוון את לבו; רבי אחא משום רבי יהודה אומר: כיוון שכיוון לבו בפרק ראשון — שוב אינו צריך. ועל זה אמר רבה בר בר חנה אמר רבי יוחנן: הלכה כרבי אחא שאמר משום רבי יהודה.</div>
+    <div class="trans" data-when="en">Some teach this halakha stated by Rabbi Yoḥanan with regard to that which was taught in a Tosefta, where there is a tannaitic dispute. The first tanna holds: One who recites Shema must focus his heart for the entire Shema. Rabbi Aḥa says in the name of Rabbi Yehuda: Once he focused his heart for the first paragraph alone, he no longer requires intent. With regard to this Tosefta, Rabba bar bar Ḥana said that Rabbi Yoḥanan said: The halakha is in accordance with Rabbi Aḥa who said in the name of Rabbi Yehuda. While this differs from the previous version in form, it arrives at the same conclusion.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-6">
+  <h2><span class="badge"><span data-when="he">סוגיה 6</span><span data-when="en">Sugya 6</span></span>
+      <span data-when="he">מצוות כוונה ומצוות קריאה — רב זוטרא ור׳ יאשיה</span><span data-when="en">The mitzva of intent vs. the mitzva of recitation — Rav Zutra and R. Yoshiya</span>
+      <span class="ref">Berakhot 13b:4-13b:12</span></h2>
+  <div class="lead"><span data-when="he">ברייתא אחרת: ׳על לבבך׳ — רב זוטרא: עד כאן מצוות כוונה, מכאן ואילך מצוות קריאה; ר׳ יאשיה: להפך. על כל אחד מהם הגמרא מקשה פעמיים מן הפסוקים המקבילים בשתי הפרשיות (׳ודברת בם׳ / ׳לדבר בם׳, ׳על לבבך׳ / ׳על לבבכם׳), מתקנת את ניסוח הברייתא ומיישבת את הפסוק הנותר.</span><span data-when="en">Another baraita: “upon your heart” — Rav Zutra: to here the mitzva of intent, from here on the mitzva of recitation; R. Yoshiya: the reverse. For each view the Gemara objects twice from the parallel verses in the two paragraphs (“speak of them,” “upon your heart”), reformulates the baraita, and accounts for the leftover verse.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① תניא אידך: ׳על לבבך׳ — רב זוטרא: עד כאן מצוות כוונה, מכאן ואילך מצוות קריאה; ר׳ יאשיה: עד כאן קריאה, מכאן ואילך כוונה"]:::statement
+  Q1{"② מאי שנא מכאן ואילך קריאה — דכתיב ׳לדבר בם׳? הרי גם כאן כתוב ׳ודברת בם׳!"}:::question
+  A1["③ הכי קאמר: עד כאן כוונה וקריאה, מכאן ואילך — קריאה בלא כוונה"]:::answer
+  Q2{"④ ומאי שנא עד כאן כוונה — דכתיב ׳על לבבך׳? הרי גם שם כתוב ׳על לבבכם׳!"}:::question
+  A2["⑤ ההוא לכדרבי יצחק: ׳ושמתם׳ — שתהא שימה (תפילין) כנגד הלב"]:::answer
+  S2["⑥ אמר מר — ר׳ יאשיה: עד כאן קריאה, מכאן ואילך כוונה"]:::statement
+  Q3{"⑥ מאי שנא מכאן ואילך כוונה — דכתיב ׳על לבבכם׳? הרי גם כאן כתוב ׳על לבבך׳!"}:::question
+  A3["⑦ הכי קאמר: עד כאן קריאה וכוונה, מכאן ואילך — כוונה בלא קריאה"]:::answer
+  Q4{"⑧ ומאי שנא עד כאן קריאה — דכתיב ׳ודברת בם׳? הרי גם שם כתוב ׳לדבר בם׳!"}:::question
+  A4["⑨ ההוא בדברי תורה כתיב: למדו את בניכם תורה שיהיו שגורים בה"]:::answer
+  S1 -.->|רב זוטרא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.-> Q2
+  Q2 -->|תירוץ| A2
+  S1 -->|ר׳ יאשיה| S2
+  S2 -.-> Q3
+  Q3 -->|תירוץ| A3
+  A3 -.-> Q4
+  Q4 -->|תירוץ| A4
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Another baraita: “upon your heart” — Rav Zutra: to here intent, beyond recitation; R. Yoshiya: to here recitation, beyond intent"]:::statement
+  Q1{"② Why recitation only from here on — because of “to speak of them”? Here too it says “you shall speak of them”!"}:::question
+  A1["③ He means: to here intent and recitation; from here on — recitation without intent"]:::answer
+  Q2{"④ Why intent only to here — “upon your heart”? There too it says “upon your hearts”!"}:::question
+  A2["⑤ That verse serves R. Yitzḥak’s teaching: “and you shall place” — placing (tefillin) opposite the heart"]:::answer
+  S2["⑥ The Master said — R. Yoshiya: to here recitation, from here on intent"]:::statement
+  Q3{"⑥ Why intent only from here on — “upon your hearts”? Here too it says “upon your heart”!"}:::question
+  A3["⑦ He means: to here recitation and intent; from here on — intent without recitation"]:::answer
+  Q4{"⑧ Why recitation only to here — “you shall speak of them”? There too it says “to speak of them”!"}:::question
+  A4["⑨ That verse speaks of Torah study: teach your children Torah so they are fluent in it"]:::answer
+  S1 -.->|Rav Zutra| Q1
+  Q1 -->|answer| A1
+  A1 -.-> Q2
+  Q2 -->|answer| A2
+  S1 -->|R. Yoshiya| S2
+  S2 -.-> Q3
+  Q3 -->|answer| A3
+  A3 -.-> Q4
+  Q4 -->|answer| A4
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רַב זוּטְרָא אוֹמֵר עַד כָּאן מִצְוַת כַּוָּונָה, מִכָּאן וְאֵילָךְ מִצְוַת קְרִיאָה. רַבִּי יֹאשִׁיָּה אוֹמֵר: עַד כָּאן מִצְוַת קְרִיאָה, מִכָּאן וְאֵילָךְ מִצְוַת כַּוָּונָה"]:::statement
+  Q1{"② מַאי שְׁנָא מִכָּאן וְאֵילָךְ מִצְוַת קְרִיאָה — דִּכְתִיב: ״לְדַבֵּר בָּם״? הָכָא נָמֵי הָא כְתִיב ״וְדִבַּרְתָּ בָּם״!"}:::question
+  A1["③ עַד כָּאן מִצְוַת כַּוָּונָה וּקְרִיאָה, מִכָּאן וְאֵילָךְ — קְרִיאָה בְּלֹא כַּוָּונָה"]:::answer
+  Q2{"④ הָתָם נָמֵי הָא כְּתִיב ״עַל לְבַבְכֶם … לְדַבֵּר בָּם״"}:::question
+  A2["⑤ הַהוּא מִבְּעֵי לֵיהּ לְכִדְרַבִּי יִצְחָק … צְרִיכָה שֶׁתְּהֵא שִׂימָה כְּנֶגֶד הַלֵּב"]:::answer
+  S2["⑥ רַבִּי יֹאשִׁיָּה אוֹמֵר: עַד כָּאן מִצְוַת קְרִיאָה, מִכָּאן וְאֵילָךְ — מִצְוַת כַּוָּונָה"]:::statement
+  Q3{"⑥ מַאי שְׁנָא מִכָּאן וְאֵילָךְ מִצְוַת כַּוָּונָה — מִשּׁוּם דִּכְתִיב ״עַל לְבַבְכֶם״, הָכָא נָמֵי הָא כְּתִיב ״עַל לְבָבֶךָ״!"}:::question
+  A3["⑦ עַד כָּאן, מִצְוַת קְרִיאָה וְכַוָּונָה, מִכָּאן וְאֵילָךְ — כַּוָּונָה בְּלֹא קְרִיאָה"]:::answer
+  Q4{"⑧ הָתָם נָמֵי הָא כְּתִיב ״עַל לְבַבְכֶם … לְדַבֵּר בָּם״!"}:::question
+  A4["⑨ הַהוּא בְּדִבְרֵי תוֹרָה כְּתִיב … אַגְמִירוּ בְּנַיְיכוּ תּוֹרָה, כִּי הֵיכִי דְּלִיגְרְסוּ בְּהוּ"]:::answer
+  S1 -.->|רב זוטרא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.-> Q2
+  Q2 -->|תירוץ| A2
+  S1 -->|ר׳ יאשיה| S2
+  S2 -.-> Q3
+  Q3 -->|תירוץ| A3
+  A3 -.-> Q4
+  Q4 -->|תירוץ| A4
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:4</span></div>
+    <div class="orig">תַּנְיָא אִידָךְ. ״וְהָיוּ״ — שֶׁלֹּא יִקְרָא לְמַפְרֵעַ. ״עַל לְבָבֶךָ״ — רַב זוּטְרָא אוֹמֵר עַד כָּאן מִצְוַת כַּוָּונָה, מִכָּאן וְאֵילָךְ מִצְוַת קְרִיאָה. רַבִּי יֹאשִׁיָּה אוֹמֵר: עַד כָּאן מִצְוַת קְרִיאָה, מִכָּאן וְאֵילָךְ מִצְוַת כַּוָּונָה.</div>
+    <div class="trans" data-when="he">שנויה ברייתא אחרת: ״והיו״ — שלא יקרא למפרע. ״על לבבך״ — רב זוטרא אומר: עד כאן מצוות כוונה, מכאן ואילך מצוות קריאה. רבי יאשיה אומר: עד כאן מצוות קריאה, מכאן ואילך מצוות כוונה.</div>
+    <div class="trans" data-when="en">It was taught in another baraita on this subject, which cited different opinions. From: And they will be, recited in Shema, it is derived that it may not be recited out of order. From: Upon your heart, Rav Zutra says: To this point, there is the mitzva of intent; from here on, beginning with the second paragraph, there is only the mitzva of recitation. Rabbi Yoshiya says that it means the opposite: To this point, there is the mitzva of recitation; from here on there is only the mitzva of intent.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:5</span></div>
+    <div class="orig">מַאי שְׁנָא מִכָּאן וְאֵילָךְ מִצְוַת קְרִיאָה — דִּכְתִיב: ״לְדַבֵּר בָּם״? הָכָא נָמֵי הָא כְתִיב ״וְדִבַּרְתָּ בָּם״!</div>
+    <div class="trans" data-when="he">מה שונה ״מכאן ואילך״ (הפרשה השנייה) שיש בה מצוות קריאה — משום שכתוב בה ״לדבר בם״? הרי גם כאן (בפרשה הראשונה) כתוב ״ודברת בם״!</div>
+    <div class="trans" data-when="en">At first the Gemara understands that Rav Zutra required recitation only in the second paragraph, while in the first paragraph only intent was required. Therefore, the Gemara asks: What is different, that from here on, beginning with the second paragraph, there is the mitzva of recitation? Is it because it is written: “And you shall teach them to your children, to speak of them” (Deuteronomy 11:19)? This is no proof, as here too, in the first paragraph it is written: “And you shall speak of them.” The mitzva of recitation applies to the first paragraph as well.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:6</span></div>
+    <div class="orig">הָכִי קָאָמַר: עַד כָּאן מִצְוַת כַּוָּונָה וּקְרִיאָה, מִכָּאן וְאֵילָךְ — קְרִיאָה בְּלֹא כַּוָּונָה.</div>
+    <div class="trans" data-when="he">כך הוא אומר: עד כאן — מצוות כוונה וקריאה; מכאן ואילך — קריאה בלא כוונה.</div>
+    <div class="trans" data-when="en">Rather, he is saying as follows: To this point there is the mitzva of both intent and recitation, but from here on, there is only the mitzva of recitation without intent.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:7</span></div>
+    <div class="orig">וּמַאי שְׁנָא עַד כָּאן מִצְוַת כַּוָּונָה וּקְרִיאָה דִּכְתִיב ״עַל לְבָבֶךָ … וְדִבַּרְתָּ בָּם״. הָתָם נָמֵי הָא כְּתִיב ״עַל לְבַבְכֶם … לְדַבֵּר בָּם״.</div>
+    <div class="trans" data-when="he">ומה שונה ״עד כאן״ שיש בו מצוות כוונה וקריאה — משום שכתוב ״על לבבך… ודברת בם״? הרי גם שם (בפרשה השנייה) כתוב ״על לבבכם… לדבר בם״!</div>
+    <div class="trans" data-when="en">Again the Gemara asks: According to Rav Zutra, what is different, that to this point, in the first paragraph, there is the mitzva of both intent and recitation because there are two requirements in the first paragraph, as it is written: “Upon your heart…and you shall speak of them”? There, too, in the second paragraph it is also written: “And you shall place these words upon your heart…to speak of them,” indicating that intent is also required in that paragraph.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:8</span></div>
+    <div class="orig">הַהוּא מִבְּעֵי לֵיהּ לְכִדְרַבִּי יִצְחָק דְּאָמַר: ״וְשַׂמְתֶּם אֶת דְּבָרַי אֵלֶּה״ — צְרִיכָה שֶׁתְּהֵא שִׂימָה כְּנֶגֶד הַלֵּב.</div>
+    <div class="trans" data-when="he">אותו פסוק (״ושמתם… על לבבכם״) נצרך לדרשת רבי יצחק, שאמר: ״ושמתם את דברי אלה״ — צריכה (תפילין של יד) שתהא שימה כנגד הלב.</div>
+    <div class="trans" data-when="en">The Gemara responds: That verse is necessary to derive that which was taught by Rabbi Yitzḥak, who said: “And you shall place these words” refers literally to the paragraphs of Shema found in the phylacteries. The verse teaches that the placement of the phylacteries of the arm must be opposite the heart.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:9</span></div>
+    <div class="orig">אָמַר מָר, רַבִּי יֹאשִׁיָּה אוֹמֵר: עַד כָּאן מִצְוַת קְרִיאָה, מִכָּאן וְאֵילָךְ — מִצְוַת כַּוָּונָה. מַאי שְׁנָא מִכָּאן וְאֵילָךְ מִצְוַת כַּוָּונָה — מִשּׁוּם דִּכְתִיב ״עַל לְבַבְכֶם״, הָכָא נָמֵי הָא כְּתִיב ״עַל לְבָבֶךָ״!</div>
+    <div class="trans" data-when="he">אמר מר (בברייתא): רבי יאשיה אומר — עד כאן מצוות קריאה, מכאן ואילך מצוות כוונה. מה שונה ״מכאן ואילך״ שיש בו מצוות כוונה — משום שכתוב ״על לבבכם״? הרי גם כאן כתוב ״על לבבך״!</div>
+    <div class="trans" data-when="en">The Gemara now attempts to clarify the second opinion in the baraita. The Master said, Rabbi Yoshiya says: To this point at the end of the first paragraph, there is the mitzva of recitation; from here on there is the mitzva of intent. The Gemara asks: What is different, that from here on, beginning with the second paragraph, there is the mitzva of intent? Is it because it is written in the second paragraph: “And you shall place these words upon your heart”? That is no proof, as here too, in the first paragraph it is written: “Upon your heart.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:10</span></div>
+    <div class="orig">הָכִי קָאָמַר: עַד כָּאן, מִצְוַת קְרִיאָה וְכַוָּונָה, מִכָּאן וְאֵילָךְ — כַּוָּונָה בְּלֹא קְרִיאָה.</div>
+    <div class="trans" data-when="he">כך הוא אומר: עד כאן — מצוות קריאה וכוונה; מכאן ואילך — כוונה בלא קריאה.</div>
+    <div class="trans" data-when="en">The Gemara responds that he is saying as follows: To this point, there is the mitzva of both recitation and intent, but from here on, there is only the mitzva of intent without recitation.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:11</span></div>
+    <div class="orig">וּמַאי שְׁנָא עַד כָּאן מִצְוַת קְרִיאָה וְכַוָּונָה — דִּכְתִיב ״עַל לְבָבֶךָ״ ״וְדִבַּרְתָּ בָּם״, הָתָם נָמֵי הָא כְּתִיב ״עַל לְבַבְכֶם … לְדַבֵּר בָּם״!</div>
+    <div class="trans" data-when="he">ומה שונה ״עד כאן״ שיש בו מצוות קריאה וכוונה — משום שכתוב ״על לבבך״ ו״ודברת בם״? הרי גם שם כתוב ״על לבבכם… לדבר בם״!</div>
+    <div class="trans" data-when="en">The Gemara continues: And what is different, that to this point, in the first paragraph, there is the mitzva of recitation and intent because there are two requirements, as it is written: Upon your heart as well as: And you shall speak of them? There, too, with regard to the second paragraph isn’t it written: And you shall place these words upon your heart…and you shall teach them to your children, to speak of them?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:12</span></div>
+    <div class="orig">הַהוּא בְּדִבְרֵי תוֹרָה כְּתִיב. וְהָכִי קָאָמַר רַחֲמָנָא: אַגְמִירוּ בְּנַיְיכוּ תּוֹרָה, כִּי הֵיכִי דְּלִיגְרְסוּ בְּהוּ.</div>
+    <div class="trans" data-when="he">אותו פסוק (״ולמדתם אותם את בניכם לדבר בם״) בדברי תורה כתוב, וכך אומרת התורה: למדו את בניכם תורה, כדי שיהיו שגורים (בקיאים) בה — ואינו עוסק בקריאת שמע.</div>
+    <div class="trans" data-when="en">Rabbi Yoshiya responded: That verse refers to Torah study in general, not to the recitation of Shema in particular. And the Torah says the following: Teach your children Torah, that they will be well-versed in them.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-7">
+  <h2><span class="badge"><span data-when="he">סוגיה 7</span><span data-when="en">Sugya 7</span></span>
+      <span data-when="he">כוונת הלב — עד ׳ה׳ אחד׳; והמאריך ב׳אחד׳</span><span data-when="en">Intent of the heart — through “the Lord is One”; and lengthening eḥad</span>
+      <span class="ref">Berakhot 13b:13-13b:15</span></h2>
+  <div class="lead"><span data-when="he">ר׳ מאיר: ׳שמע ישראל ה׳ אלהינו ה׳ אחד׳ — עד כאן צריכה כוונת הלב; רבא: הלכה כר׳ מאיר. סומכוס: כל המאריך ב׳אחד׳ מאריכים לו ימיו — ובדל״ת, ובלבד שלא יחטוף בחי״ת. ר׳ חייא בר אבא לר׳ ירמיה: משהמלכתו למעלה ולמטה ולארבע רוחות — די.</span><span data-when="en">R. Meir: “Hear, Israel, the Lord our God, the Lord is One” — intent of the heart is required through here; Rava: the halakha follows R. Meir. Sumakhos: whoever lengthens eḥad has his days lengthened — in the dalet, and without rushing the ḥet. R. Ḥiyya bar Abba to R. Yirmeya: once you have crowned Him above, below and in the four directions, that is enough.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: ׳שמע ישראל ה׳ אלהינו ה׳ אחד׳ — עד כאן צריכה כוונת הלב, דברי ר׳ מאיר"]:::statement
+  C1["① רבא: הלכה כר׳ מאיר"]:::conclusion
+  S2["② סומכוס: המאריך ב׳אחד׳ — מאריכים לו ימיו; רב אחא בר יעקב: ובדל״ת; רב אשי: ובלבד שלא יחטוף בחי״ת"]:::statement
+  S3["③ ר׳ ירמיה האריך הרבה; ר׳ חייא בר אבא: משהמלכתו למעלה ולמטה ולארבע רוחות — שוב אינך צריך"]:::statement
+  S1 -->|פסק| C1
+  C1 --> S2
+  S2 -->|מעשה| S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: “Hear, Israel… the Lord is One” — intent of the heart is required through here — R. Meir"]:::statement
+  C1["① Rava: the halakha follows R. Meir"]:::conclusion
+  S2["② Sumakhos: lengthen eḥad — your days are lengthened; Rav Aḥa b. Yaakov: in the dalet; Rav Ashi: without rushing the ḥet"]:::statement
+  S3["③ R. Yirmeya lengthened greatly; R. Ḥiyya b. Abba: once you have crowned Him above, below and to the four winds — no more is needed"]:::statement
+  S1 -->|ruling| C1
+  C1 --> S2
+  S2 -->|story| S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① עַד כָּאן צְרִיכָה כַּוָּונַת הַלֵּב, דִּבְרֵי רַבִּי מֵאִיר"]:::statement
+  C1["① אָמַר רָבָא: הֲלָכָה כְּרַבִּי מֵאִיר"]:::conclusion
+  S2["② כָּל הַמַּאֲרִיךְ בְּ״אֶחָד״, מַאֲרִיכִין לוֹ יָמָיו וּשְׁנוֹתָיו … וּבַדָּלֵית … וּבִלְבַד שֶׁלֹּא יַחֲטוֹף בַּחֵית"]:::statement
+  S3["③ חַזְיֵיהּ דַּהֲוָה מַאֲרֵיךְ טוּבָא … כֵּיוָן דְּאַמְלֵיכְתֵּיהּ לְמַעְלָה וּלְמַטָּה וּלְאַרְבַּע רוּחוֹת הַשָּׁמַיִם — תּוּ לָא צְרִיכַתְּ"]:::statement
+  S1 -->|פסק| C1
+  C1 --> S2
+  S2 -->|מעשה| S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:13</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״שְׁמַע יִשְׂרָאֵל ה׳ אֱלֹהֵינוּ ה׳ אֶחָד״ — עַד כָּאן צְרִיכָה כַּוָּונַת הַלֵּב, דִּבְרֵי רַבִּי מֵאִיר. אָמַר רָבָא: הֲלָכָה כְּרַבִּי מֵאִיר.</div>
+    <div class="trans" data-when="he">שנו חכמים: ״שמע ישראל ה׳ אלהינו ה׳ אחד״ — עד כאן צריכה כוונת הלב; אלו דברי רבי מאיר. אמר רבא: הלכה כרבי מאיר.</div>
+    <div class="trans" data-when="en">The Sages taught in another baraita with regard to one who recites Shema and utters the verse, “Hear, Israel, the Lord is our God, the Lord is One.” Intent of the heart is only required to this point. This is the statement of Rabbi Meir. Rava said: In this matter, the halakha is in accordance with the opinion of Rabbi Meir.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:14</span></div>
+    <div class="orig">תַּנְיָא סוֹמְכוֹס אוֹמֵר: כָּל הַמַּאֲרִיךְ בְּ״אֶחָד״, מַאֲרִיכִין לוֹ יָמָיו וּשְׁנוֹתָיו. אָמַר רַב אַחָא בַּר יַעֲקֹב: וּבַדָּלֵית. אָמַר רַב אָשֵׁי: וּבִלְבַד שֶׁלֹּא יַחֲטוֹף בַּחֵית.</div>
+    <div class="trans" data-when="he">שנויה ברייתא: סומכוס אומר — כל המאריך (בהגיית) ״אחד״, מאריכים לו ימיו ושנותיו. אמר רב אחא בר יעקב: ובאות דל״ת (שם יש להאריך). אמר רב אשי: ובלבד שלא יחטוף (ימהר) באות חי״ת.</div>
+    <div class="trans" data-when="en">It was taught in a baraita, Sumakhos says: One who extends his intonation of the word One [eḥad] while reciting Shema, is rewarded that his days and years are extended. Rav Aḥa bar Ya’akov said: This is only true if he extends the letter dalet, so the word eḥad is sounded in its entirety. Rav Ashi said: This is only so long as one does not pronounce the letter ḥet hurriedly.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:15</span></div>
+    <div class="orig">רַבִּי יִרְמְיָה הֲוָה יָתֵיב קַמֵּיהּ דְּרַבִּי [חִיָּיא בַּר אַבָּא], חַזְיֵיהּ דַּהֲוָה מַאֲרֵיךְ טוּבָא, אֲמַר לֵיהּ: כֵּיוָן דְּאַמְלֵיכְתֵּיהּ לְמַעְלָה וּלְמַטָּה וּלְאַרְבַּע רוּחוֹת הַשָּׁמַיִם — תּוּ לָא צְרִיכַתְּ.</div>
+    <div class="trans" data-when="he">רבי ירמיה היה יושב לפני רבי חייא בר אבא; ראה אותו שהוא מאריך מאוד (ב״אחד״). אמר לו: כיוון שהמלכת אותו (במחשבתך) למעלה ולמטה ולארבע רוחות השמים — שוב אינך צריך (להאריך).</div>
+    <div class="trans" data-when="en">The Gemara relates that Rabbi Yirmeya was seated before Rabbi Ḥiyya bar Abba. He saw that he was greatly extending his pronunciation of eḥad. He said to him: Once you have crowned Him in your thoughts over everything above, in Heaven, below, on earth, and in the four corners of the heavens, you need not extend any further.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-8">
+  <h2><span class="badge"><span data-when="he">סוגיה 8</span><span data-when="en">Sugya 8</span></span>
+      <span data-when="he">׳על לבבך׳ — בעמידה</span><span data-when="en">“Upon your heart” — standing still</span>
+      <span class="ref">Berakhot 13b:16-13b:17</span></h2>
+  <div class="lead"><span data-when="he">רב יהודה: ׳על לבבך׳ — בעמידה. הגמרא תמהה: רק המילים ׳על לבבך׳? אלא — עד ׳על לבבך׳ בעמידה, מכאן ואילך לא. ר׳ יוחנן: כל הפרשה כולה בעמידה — ולשיטתו, שפסק כר׳ אחא משום ר׳ יהודה.</span><span data-when="en">Rav Yehuda: “upon your heart” — while standing still. The Gemara wonders: only those words? Rather — up to “upon your heart” standing still, not beyond. R. Yoḥanan: the entire first paragraph standing still — consistent with his ruling like R. Aḥa in R. Yehuda’s name.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב יהודה: ׳על לבבך׳ — בעמידה"]:::statement
+  Q1{"① ׳על לבבך׳ בלבד — סלקא דעתך?!"}:::question
+  A1["① אלא אימא: עד ׳על לבבך׳ בעמידה; מכאן ואילך — לא"]:::answer
+  S2["① ר׳ יוחנן: כל הפרשה כולה בעמידה"]:::statement
+  P1["② ואזדא ר׳ יוחנן לטעמיה: הלכה כר׳ אחא משום ר׳ יהודה"]:::proof
+  S1 -.->|תמיהה| Q1
+  Q1 -->|אלא| A1
+  A1 -.->|דעה חולקת| S2
+  S2 -->|לטעמיה| P1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Yehuda: “upon your heart” — standing still"]:::statement
+  Q1{"① Only “upon your heart” — can that be?!"}:::question
+  A1["① Rather: up to “upon your heart” standing still; from there on — not required"]:::answer
+  S2["① R. Yoḥanan: the whole paragraph standing still"]:::statement
+  P1["② R. Yoḥanan is consistent: the halakha follows R. Aḥa in R. Yehuda’s name"]:::proof
+  S1 -.->|puzzlement| Q1
+  Q1 -->|rather| A1
+  A1 -.->|dissenting view| S2
+  S2 -->|consistently| P1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ״עַל לְבָבֶךָ״ בַּעֲמִידָה"]:::statement
+  Q1{"① ״עַל לְבָבֶךָ״ סָלְקָא דַּעְתָּךְ?!"}:::question
+  A1["① אֶלָּא אֵימָא עַד ״עַל לְבָבֶךָ״ בַּעֲמִידָה. מִכָּאן וְאֵילָךְ — לֹא"]:::answer
+  S2["① וְרַבִּי יוֹחָנָן אָמַר כָּל הַפָּרָשָׁה כּוּלָּהּ בַּעֲמִידָה"]:::statement
+  P1["② וְאַזְדָּא רַבִּי יוֹחָנָן לְטַעְמֵיהּ … הֲלָכָה כְּרַבִּי אַחָא שֶׁאָמַר מִשּׁוּם רַבִּי יְהוּדָה"]:::proof
+  S1 -.->|תמיהה| Q1
+  Q1 -->|אלא| A1
+  A1 -.->|דעה חולקת| S2
+  S2 -->|לטעמיה| P1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:16</span></div>
+    <div class="orig">אָמַר רַב נָתָן בַּר מָר עוּקְבָא אָמַר רַב יְהוּדָה: ״עַל לְבָבֶךָ״ בַּעֲמִידָה. ״עַל לְבָבֶךָ״ סָלְקָא דַּעְתָּךְ?! אֶלָּא אֵימָא עַד ״עַל לְבָבֶךָ״ בַּעֲמִידָה. מִכָּאן וְאֵילָךְ — לֹא. וְרַבִּי יוֹחָנָן אָמַר כָּל הַפָּרָשָׁה כּוּלָּהּ בַּעֲמִידָה.</div>
+    <div class="trans" data-when="he">אמר רב נתן בר מר עוקבא אמר רב יהודה: ״על לבבך״ — בעמידה (עמידה במקום אחד, בלי להלך). הגמרא תמהה: וכי עולה על דעתך שרק המילים ״על לבבך״ נאמרות בעמידה? אלא אמור: עד ״על לבבך״ — בעמידה; מכאן ואילך — לא. ורבי יוחנן אמר: כל הפרשה (הראשונה) כולה בעמידה.</div>
+    <div class="trans" data-when="en">Rav Natan bar Mar Ukva said that Rav Yehuda said: One must recite upon your heart, while standing in one place. The Gemara is perplexed: Does it enter your mind that upon your heart alone must be recited while standing in one place? What distinguishes that phrase from the rest of Shema? Rather, say: One must recite until upon your heart while standing in one place. From here on, one need not stand in one place. Rabbi Yoḥanan said: One must recite the entire first portion while standing in one place.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:17</span></div>
+    <div class="orig">וְאַזְדָּא רַבִּי יוֹחָנָן לְטַעְמֵיהּ, דְּאָמַר רַבָּה בַּר בַּר חָנָה אָמַר רַבִּי יוֹחָנָן: הֲלָכָה כְּרַבִּי אַחָא שֶׁאָמַר מִשּׁוּם רַבִּי יְהוּדָה.</div>
+    <div class="trans" data-when="he">ורבי יוחנן הולך לשיטתו, שאמר רבה בר בר חנה אמר רבי יוחנן: הלכה כרבי אחא שאמר משום רבי יהודה (שכל הפרק הראשון צריך כוונה).</div>
+    <div class="trans" data-when="en">The Gemara notes: Rabbi Yoḥanan is consistent and follows his reasoning expressed elsewhere, as Rabba bar bar Ḥana said that Rabbi Yoḥanan said: The halakha is in accordance with the opinion of Rabbi Aḥa who said in the name of Rabbi Yehuda; one is required to recite the entire first paragraph of Shema with intent.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-9">
+  <h2><span class="badge"><span data-when="he">סוגיה 9</span><span data-when="en">Sugya 9</span></span>
+      <span data-when="he">קריאת שמע של רבי — פסוק ראשון; ונאנס בשינה</span><span data-when="en">Rabbi’s Shema — the first verse; and one overcome by sleep</span>
+      <span class="ref">Berakhot 13b:18-13b:21</span></h2>
+  <div class="lead"><span data-when="he">ברייתא: ׳שמע ישראל… ה׳ אחד׳ — זו קריאת שמע של רבי יהודה הנשיא; רב לא ראהו מקבל עול מלכות שמים — ר׳ חייא: בשעה שמעביר ידיו על פניו. האם רבי חוזר וגומרה? בר קפרא: לא (ולכן מחזר אחר שמועה שיש בה יציאת מצרים); ר׳ שמעון ברבי: כן — כדי להזכיר יציאת מצרים בזמנה. ובהמשך: אמר פסוק ראשון ונאנס בשינה — יצא.</span><span data-when="en">Baraita: “Hear, Israel… the Lord is One” — that was Rabbi Yehuda HaNasi’s Shema; Rav never saw him accept the yoke of Heaven — R. Ḥiyya: when he passes his hands over his face. Does Rabbi later complete it? Bar Kappara: no (hence he seeks a teaching mentioning the Exodus); R. Shimon b. Rabbi: yes — to mention the Exodus at its proper time. And: one who said the first verse and was overcome by sleep has fulfilled it.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① ת״ר: ׳שמע ישראל… ה׳ אחד׳ — זו קריאת שמע של רבי"]:::statement
+  S2["① רב לר׳ חייא: לא ראיתי את רבי מקבל עליו מלכות שמים — ר׳ חייא: בשעה שמעביר ידיו על פניו"]:::statement
+  Q1{"② חוזר וגומרה? בר קפרא: אינו חוזר; ר׳ שמעון ברבי: חוזר"}:::question
+  Q2{"② בר קפרא: לדידך — למה מחזר רבי אחר שמועה שיש בה יציאת מצרים?"}:::question
+  A1["③ כדי להזכיר יציאת מצרים בזמנה"]:::answer
+  S3["④ רב: אמר ׳שמע ישראל… ה׳ אחד׳ ונאנס בשינה — יצא; רב נחמן ורבה: בפסוק ראשון צערני, יותר — לא"]:::statement
+  S1 --> S2
+  S2 -.->|בעיא| Q1
+  Q1 -.-> Q2
+  Q2 -->|תשובה| A1
+  A1 --> S3
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Baraita: “Hear, Israel… the Lord is One” — that is Rabbi’s Shema"]:::statement
+  S2["① Rav to R. Ḥiyya: I never saw Rabbi accept the yoke of Heaven — R. Ḥiyya: when he passes his hands over his face"]:::statement
+  Q1{"② Does he later complete it? Bar Kappara: no; R. Shimon b. Rabbi: yes"}:::question
+  Q2{"② Bar Kappara: on your view — why does Rabbi seek out a teaching mentioning the Exodus?"}:::question
+  A1["③ To mention the Exodus at its proper time"]:::answer
+  S3["④ Rav: said “Hear, Israel… One” and was overcome by sleep — fulfilled; Rav Naḥman and Rabba: trouble me for the first verse, no more"]:::statement
+  S1 --> S2
+  S2 -.->|question| Q1
+  Q1 -.-> Q2
+  Q2 -->|answer| A1
+  A1 --> S3
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① זוֹ קְרִיאַת שְׁמַע שֶׁל רַבִּי יְהוּדָה הַנָּשִׂיא"]:::statement
+  S2["① לָא חֲזֵינָא לֵיהּ לְרַבִּי דִּמְקַבֵּל עֲלֵיהּ מַלְכוּת שָׁמַיִם … בְּשָׁעָה שֶׁמַּעֲבִיר יָדָיו עַל פָּנָיו, מְקַבֵּל עָלָיו עוֹל מַלְכוּת שָׁמַיִם"]:::statement
+  Q1{"② חוֹזֵר וְגוֹמְרָהּ, אוֹ אֵינוֹ חוֹזֵר וְגוֹמְרָהּ? בַּר קַפָּרָא אוֹמֵר: אֵינוֹ חוֹזֵר וְגוֹמְרָהּ. רַבִּי שִׁמְעוֹן בְּרַבִּי אוֹמֵר: חוֹזֵר וְגוֹמְרָהּ"}:::question
+  Q2{"② אֶלָּא לְדִידָךְ דְּאָמְרַתְּ חוֹזֵר וְגוֹמְרָהּ, לְמָה לֵיהּ לְאַהְדּוֹרֵי?"}:::question
+  A1["③ כְּדֵי לְהַזְכִּיר יְצִיאַת מִצְרַיִם בִּזְמַנָּהּ"]:::answer
+  S3["④ אָמַר ״שְׁמַע יִשְׂרָאֵל ה׳ אֱלֹהֵינוּ ה׳ אֶחָד״ וְנֶאֱנַס בְּשֵׁינָה — יָצָא … בִּפְסוּקָא קַמָּא — צַעֲרַן, טְפֵי — לָא תְּצַעֲרַן"]:::statement
+  S1 --> S2
+  S2 -.->|בעיא| Q1
+  Q1 -.-> Q2
+  Q2 -->|תשובה| A1
+  A1 --> S3
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:18</span></div>
+    <div class="orig">תָּנוּ רַבָּנַן: ״שְׁמַע יִשְׂרָאֵל ה׳ אֱלֹהֵינוּ ה׳ אֶחָד״ זוֹ קְרִיאַת שְׁמַע שֶׁל רַבִּי יְהוּדָה הַנָּשִׂיא. אֲמַר לֵיהּ רַב לְרַבִּי חִיָּיא: לָא חֲזֵינָא לֵיהּ לְרַבִּי דִּמְקַבֵּל עֲלֵיהּ מַלְכוּת שָׁמַיִם. אֲמַר לֵיהּ: בַּר פַּחֲתֵי, בְּשָׁעָה שֶׁמַּעֲבִיר יָדָיו עַל פָּנָיו, מְקַבֵּל עָלָיו עוֹל מַלְכוּת שָׁמַיִם.</div>
+    <div class="trans" data-when="he">שנו חכמים: הפסוק ״שמע ישראל ה׳ אלהינו ה׳ אחד״ — זו קריאת שמע של רבי יהודה הנשיא. אמר לו רב לרבי חייא: לא ראיתי את רבי מקבל עליו מלכות שמים (קורא שמע). אמר לו: בן אצילים! בשעה שהוא מעביר ידיו על פניו (באמצע שיעורו) — מקבל עליו עול מלכות שמים.</div>
+    <div class="trans" data-when="en">The Sages taught in a baraita: The single verse, “Hear, Israel, the Lord is our God, the Lord is One”; this is Rabbi Yehuda HaNasi’s recitation of Shema. The Gemara relates: Rav said to his uncle, Rabbi Ḥiyya: I did not see Rabbi Yehuda HaNasi accept the kingship of Heaven upon himself, meaning that he did not see him recite Shema. Rabbi Ḥiyya said to him: Son of noblemen [bar paḥtei], when Rabbi Yehuda HaNasi passed his hands over his face in the study hall in the middle of his lesson, he accepted the yoke of the kingdom of Heaven upon himself, as his Shema was comprised of a single verse.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:19</span></div>
+    <div class="orig">חוֹזֵר וְגוֹמְרָהּ, אוֹ אֵינוֹ חוֹזֵר וְגוֹמְרָהּ? בַּר קַפָּרָא אוֹמֵר: אֵינוֹ חוֹזֵר וְגוֹמְרָהּ. רַבִּי שִׁמְעוֹן בְּרַבִּי אוֹמֵר: חוֹזֵר וְגוֹמְרָהּ. אֲמַר לֵיהּ בַּר קַפָּרָא לְרַבִּי שִׁמְעוֹן בְּרַבִּי: בִּשְׁלָמָא לְדִידִי דְּאָמֵינָא ״אֵינוֹ חוֹזֵר וְגוֹמְרָהּ״, הַיְינוּ דִּמְהַדַּר רַבִּי אַשְּׁמַעְתָּא דְּאִית בַּהּ יְצִיאַת מִצְרַיִם. אֶלָּא לְדִידָךְ דְּאָמְרַתְּ חוֹזֵר וְגוֹמְרָהּ, לְמָה לֵיהּ לְאַהְדּוֹרֵי?</div>
+    <div class="trans" data-when="he">האם רבי חוזר וגומר את קריאת שמע (אחר כך), או אינו חוזר וגומרה? בר קפרא אומר: אינו חוזר וגומרה. רבי שמעון ברבי אומר: חוזר וגומרה. אמר לו בר קפרא לרבי שמעון ברבי: מובן לשיטתי, שאני אומר שאינו חוזר וגומרה — לכן רבי מחזר (בשיעורו) אחר שמועה שיש בה יציאת מצרים (כדי לצאת ידי חובת זכירת יציאת מצרים). אלא לשיטתך, שאתה אומר שחוזר וגומרה — למה לו לחזר אחריה?</div>
+    <div class="trans" data-when="en">Rabbi Yehuda HaNasi’s students and members of his household disputed: Does he complete Shema later or does he not complete it later? Bar Kappara says: He does not complete it later. Rabbi Shimon, son of Rabbi Yehuda HaNasi, says: He completes it later. Bar Kappara said to Rabbi Shimon, son of Rabbi Yehuda HaNasi: Granted, according to my position, that I say that Rabbi Yehuda HaNasi does not complete Shema later, that is why when he taught, Rabbi Yehuda HaNasi would specifically seek a topic that included the exodus from Egypt, as by so doing he fulfills the mitzva to remember the Exodus; a mitzva that others fulfill in their recitation of the last paragraph of Shema. But according to you, who says that he completes his recitation of Shema later, why, when he teaches, would he specifically seek a topic that included the exodus from Egypt?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:20</span></div>
+    <div class="orig">כְּדֵי לְהַזְכִּיר יְצִיאַת מִצְרַיִם בִּזְמַנָּהּ.</div>
+    <div class="trans" data-when="he">כדי להזכיר את יציאת מצרים בזמנה (בזמן קריאת שמע).</div>
+    <div class="trans" data-when="en">Rabbi Shimon responded: Rabbi Yehuda HaNasi did so in order to mention the exodus from Egypt at its appointed time, during the time of the recitation of Shema.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:21</span></div>
+    <div class="orig">אָמַר רַבִּי אִילָא בְּרֵיהּ דְרַב שְׁמוּאֵל בַּר מָרְתָּא מִשְּׁמֵיהּ דְרַב: אָמַר ״שְׁמַע יִשְׂרָאֵל ה׳ אֱלֹהֵינוּ ה׳ אֶחָד״ וְנֶאֱנַס בְּשֵׁינָה — יָצָא. אֲמַר לֵיהּ רַב נַחְמָן לְדָרוּ עַבְדֵּיהּ: בִּפְסוּקָא קַמָּא — צַעֲרַן, טְפֵי — לָא תְּצַעֲרַן. אֲמַר לֵיהּ רַב יוֹסֵף לְרַב יוֹסֵף בְּרֵיהּ דְּרַבָּה: אֲבוּךְ הֵיכִי הֲוָה עָבֵיד? אֲמַר לֵיהּ: בִּפְסוּקָא קַמָּא הֲוָה קָא מְצַעַר נַפְשֵׁיהּ, טְפֵי — לָא הֲוָה מְצַעַר נַפְשֵׁיהּ.</div>
+    <div class="trans" data-when="he">אמר רבי אילא בנו של רב שמואל בר מרתא משמו של רב: אמר ״שמע ישראל ה׳ אלהינו ה׳ אחד״ ונאנס בשינה — יצא. אמר לו רב נחמן לדרו עבדו: בפסוק הראשון — צער אותי (העירני אם נרדמתי); יותר מכך — אל תצערני. אמר לו רב יוסף לרב יוסף בנו של רבה: אביך כיצד היה נוהג? אמר לו: בפסוק הראשון היה מצער את עצמו (להישאר ער), יותר מכך — לא היה מצער את עצמו.</div>
+    <div class="trans" data-when="en">Based on this halakha, Rabbi Ila, son of Rav Shmuel bar Marta, said in the name of Rav: One who recited the verse, “Hear, Israel, the Lord is our God, the Lord is One,” and was immediately overcome by sleep, fulfilled his obligation to recite Shema. Similarly, Rav Naḥman said to his slave, Daru: If you see that I have fallen asleep, bother me to recite the first verse, do not bother me to recite any more than that. Similarly, Rav Yosef said to Rav Yosef, son of Rabba: What would your father do? Rav Yosef, son of Rabba, said to him: He would exert himself not to fall asleep in order to recite the first verse, he would not exert himself to recite any more than that.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-10">
+  <h2><span class="badge"><span data-when="he">סוגיה 10</span><span data-when="en">Sugya 10</span></span>
+      <span data-when="he">פרקדן — לא יקרא קריאת שמע</span><span data-when="en">Lying on one’s back — one may not recite Shema</span>
+      <span class="ref">Berakhot 13b:22-13b:25</span></h2>
+  <div class="lead"><span data-when="he">רב יוסף: פרקדן לא יקרא קריאת שמע. הגמרא: רק לקרוא אסור, אבל לישון כך מותר? והרי ריב״ל קילל מי שישן פרקדן! תירוץ: לישון כשהוא מוטה לצד — מותר; לקרוא אפילו מוטה — אסור. והרי ר׳ יוחנן היה מוטה וקורא! — שאני ר׳ יוחנן שבעל בשר היה.</span><span data-when="en">Rav Yosef: one lying on his back may not recite Shema. The Gemara: only reciting is forbidden, but sleeping so is fine? But R. Yehoshua b. Levi cursed one who sleeps on his back! Answer: sleeping while tilted to the side — permitted; reciting even tilted — forbidden. But R. Yoḥanan tilted and recited! — R. Yoḥanan was different, being corpulent.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב יוסף: פרקדן — לא יקרא קריאת שמע"]:::statement
+  Q1{"① לקרוא אסור — אבל לישון כך מותר? והרי ריב״ל קילל את הישן פרקדן!"}:::question
+  A1["② לישון כשמוטה לצד — מותר; לקרוא אפילו מוטה — אסור"]:::answer
+  Q2{"③ והרי ר׳ יוחנן היה מוטה וקורא!"}:::question
+  A2["④ שאני ר׳ יוחנן — בעל בשר היה"]:::answer
+  S1 -.->|דיוק וקושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Yosef: lying on one’s back — do not recite Shema"]:::statement
+  Q1{"① Reciting is forbidden — but sleeping so is permitted? R. Yehoshua b. Levi cursed one who sleeps on his back!"}:::question
+  A1["② Sleeping while tilted — permitted; reciting even tilted — forbidden"]:::answer
+  Q2{"③ But R. Yoḥanan would tilt and recite!"}:::question
+  A2["④ R. Yoḥanan was different — he was corpulent"]:::answer
+  S1 -.->|inference & objection| Q1
+  Q1 -->|answer| A1
+  A1 -.->|objection| Q2
+  Q2 -->|answer| A2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① פְּרַקְדָּן, לֹא יִקְרָא קְרִיאַת שְׁמַע"]:::statement
+  Q1{"① מִקְרָא הוּא דְּלָא לִיקְרֵי, הָא מִיגְנָא שַׁפִּיר דָּמֵי? … לָיֵיט אַמַּאן דְּגָנֵי אַפַּרְקִיד!"}:::question
+  A1["② מִיגְנָא כִּי מַצְלֵי — שַׁפִּיר דָּמֵי, מִקְרָא אַף עַל גַּב דְּמַצְלֵי נָמֵי — אָסוּר"]:::answer
+  Q2{"③ וְהָא רַבִּי יוֹחָנָן מַצְלֵי וְקָרֵי!"}:::question
+  A2["④ שָׁאנֵי רַבִּי יוֹחָנָן דְּבַעַל בָּשָׂר הֲוָה"]:::answer
+  S1 -.->|דיוק וקושיא| Q1
+  Q1 -->|תירוץ| A1
+  A1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:22</span></div>
+    <div class="orig">אָמַר רַב יוֹסֵף: פְּרַקְדָּן, לֹא יִקְרָא קְרִיאַת שְׁמַע. מִקְרָא הוּא דְּלָא לִיקְרֵי, הָא מִיגְנָא שַׁפִּיר דָּמֵי? וְהָא רַבִּי יְהוֹשֻׁעַ בֶּן לֵוִי לָיֵיט אַמַּאן דְּגָנֵי אַפַּרְקִיד!</div>
+    <div class="trans" data-when="he">אמר רב יוסף: השוכב פרקדן (על גבו) — לא יקרא קריאת שמע. הגמרא מדייקת: לקרוא הוא שלא יקרא, אבל לישון כך — מותר? והרי רבי יהושע בן לוי קילל את מי שישן פרקדן!</div>
+    <div class="trans" data-when="en">Rav Yosef said: One who is lying [perakdan] on his back may not recite Shema, for lying that way is unbecoming. The Gemara asks: Is that to say that one may not recite Shema in this position, but to sleep lying in that position is permissible? Didn’t Rabbi Yehoshua ben Levi curse one who sleeps lying on his back?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:23</span></div>
+    <div class="orig">אָמְרִי, מִיגְנָא כִּי מַצְלֵי — שַׁפִּיר דָּמֵי, מִקְרָא אַף עַל גַּב דְּמַצְלֵי נָמֵי — אָסוּר.</div>
+    <div class="trans" data-when="he">אמרו (תירוץ): לישון כשהוא מוטה מעט לצדו — מותר; אבל לקרוא קריאת שמע, אף על פי שהוא מוטה — אסור.</div>
+    <div class="trans" data-when="en">The Gemara answers: If one lies on his back while leaning slightly to the side, it is permissible. Nonetheless, to recite Shema in this position, even though he is leaning, is prohibited.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:24</span></div>
+    <div class="orig">וְהָא רַבִּי יוֹחָנָן מַצְלֵי וְקָרֵי!</div>
+    <div class="trans" data-when="he">והרי רבי יוחנן היה מוטה (על צדו) וקורא!</div>
+    <div class="trans" data-when="en">The Gemara asks: Wouldn’t Rabbi Yoḥanan lie on his back, lean slightly and recite Shema?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:25</span></div>
+    <div class="orig">שָׁאנֵי רַבִּי יוֹחָנָן דְּבַעַל בָּשָׂר הֲוָה.</div>
+    <div class="trans" data-when="he">שונה רבי יוחנן, שבעל בשר (שמן) היה, וקשה היה לו לקרוא בדרך אחרת.</div>
+    <div class="trans" data-when="en">The Gemara responds: The case of Rabbi Yoḥanan is different, because he was corpulent and it was difficult for him to read any other way.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-11">
+  <h2><span class="badge"><span data-when="he">סוגיה 11</span><span data-when="en">Sugya 11</span></span>
+      <span data-when="he">׳בפרקים שואל׳ — משיב מחמת מאי? חסורי מחסרא</span><span data-when="en">“At the breaks one greets” — respond on what grounds? The Mishnah is incomplete</span>
+      <span class="ref">Berakhot 13b:26-14a:2</span></h2>
+  <div class="lead"><span data-when="he">חוזרים למשנה: ׳משיב׳ מחמת מה? אם מפני הכבוד — אם שואל, כל שכן שמשיב! אלא: שואל מפני הכבוד ומשיב לכל אדם. אבל הסיפא (׳באמצע שואל מפני היראה ומשיב׳) — באותו היגיון יוצא ׳משיב מפני הכבוד׳, וזו בדיוק דעת ר׳ יהודה! תירוץ: המשנה חסרה וכך יש לשנותה: ׳ואין צריך לומר שהוא משיב׳ — ר׳ מאיר; ר׳ יהודה כנוסח המשנה. וכן שנויה ברייתא.</span><span data-when="en">Back to the Mishnah: “responds” — on what grounds? If out of respect — if he may greet, surely he may respond! Rather: greet out of respect, respond to anyone. But the latter clause (“mid-paragraph greet out of fear and respond”) by the same logic yields “respond out of respect” — exactly R. Yehuda’s view! Answer: the Mishnah is incomplete and should read: “and needless to say he responds” — R. Meir; R. Yehuda as stated. A baraita teaches likewise.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① משנה: בפרקים שואל וכו׳"]):::mishnah
+  Q1{"② משיב מחמת מאי? אם מפני הכבוד — השתא שואל, משיב מבעיא?!"}:::question
+  A1["② אלא: שואל מפני הכבוד, ומשיב שלום לכל אדם"]:::answer
+  Q2{"② אימא סיפא: באמצע שואל מפני היראה ומשיב —"}:::question
+  Q3{"③ משיב מחמת מאי? אם מפני היראה — כל שכן! אלא מפני הכבוד — היינו ר׳ יהודה!"}:::question
+  A2["④ חסורי מחסרא והכי קתני: בפרקים שואל מפני הכבוד ואין צריך לומר שמשיב; באמצע שואל מפני היראה ואין צריך לומר שמשיב — ר׳ מאיר; ר׳ יהודה: באמצע שואל מפני היראה ומשיב מפני הכבוד"]:::answer
+  A3["⑤ ובפרקים — שואל מפני הכבוד ומשיב שלום לכל אדם"]:::answer
+  P1["⑥ תניא נמי הכי: הקורא את שמע ופגע בו רבו או גדול הימנו — בפרקים… ואין צריך לומר שמשיב"]:::proof
+  M1 -.->|קושיא| Q1
+  Q1 -->|אלא| A1
+  A1 -.->|אימא סיפא| Q2
+  Q2 -.-> Q3
+  Q3 -->|תירוץ| A2
+  A2 --> A3
+  A3 -->|תניא נמי הכי| P1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① Mishnah: at the breaks one greets, etc."]):::mishnah
+  Q1{"② Responds on what grounds? If out of respect — he may greet, need it say he may respond?!"}:::question
+  A1["② Rather: greet out of respect, and respond to anyone"]:::answer
+  Q2{"② Then the latter clause: mid-paragraph greet out of fear and respond —"}:::question
+  Q3{"③ Responds on what grounds? If out of fear — obvious! Rather out of respect — that is R. Yehuda!"}:::question
+  A2["④ The Mishnah is incomplete and reads: at breaks greet out of respect, needless to say respond; mid-paragraph greet out of fear, needless to say respond — R. Meir; R. Yehuda: mid-paragraph greet out of fear, respond out of respect"]:::answer
+  A3["⑤ And at the breaks — greet out of respect and respond to anyone"]:::answer
+  P1["⑥ A baraita teaches likewise: reciting Shema and meeting his teacher or a greater person — at breaks… needless to say he responds"]:::proof
+  M1 -.->|question| Q1
+  Q1 -->|rather| A1
+  A1 -.->|latter clause| Q2
+  Q2 -.-> Q3
+  Q3 -->|answer| A2
+  A2 --> A3
+  A3 -->|baraita likewise| P1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  M1(["① בַּפְּרָקִים שׁוֹאֵל וְכוּ׳"]):::mishnah
+  Q1{"② מֵשִׁיב מֵחֲמַת מַאי? אִילֵּימָא מִפְּנֵי הַכָּבוֹד, הַשְׁתָּא מִשְׁאָל שָׁאֵיל, אַהְדּוֹרֵי מִבַּעְיָא?!"}:::question
+  A1["② אֶלָּא: שׁוֹאֵל — מִפְּנֵי הַכָּבוֹד, וּמֵשִׁיב שָׁלוֹם — לְכָל אָדָם"]:::answer
+  Q2{"② אֵימָא סֵיפָא: ״וּבָאֶמְצַע שׁוֹאֵל מִפְּנֵי הַיִּרְאָה, וּמֵשִׁיב״"}:::question
+  Q3{"③ אֶלָּא — מִפְּנֵי הַכָּבוֹד. הַיְינוּ דְּרַבִּי יְהוּדָה!"}:::question
+  A2["④ חַסּוֹרֵי מְחַסְּרָא, וְהָכִי קָתָנֵי: בַּפְּרָקִים — שׁוֹאֵל מִפְּנֵי הַכָּבוֹד, וְאֵין צָרִיךְ לוֹמַר שֶׁהוּא מֵשִׁיב … דִּבְרֵי רַבִּי מֵאִיר"]:::answer
+  A3["⑤ וּבַפְּרָקִים — שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וּמֵשִׁיב שָׁלוֹם לְכׇל אָדָם"]:::answer
+  P1["⑥ תַּנְיָא נָמֵי הָכִי: הַקּוֹרֵא אֶת שְׁמַע וּפָגַע בּוֹ רַבּוֹ אוֹ גָּדוֹל הֵימֶנּוּ … וְאֵין צָרִיךְ לוֹמַר שֶׁהוּא מֵשִׁיב"]:::proof
+  M1 -.->|קושיא| Q1
+  Q1 -->|אלא| A1
+  A1 -.->|אימא סיפא| Q2
+  Q2 -.-> Q3
+  Q3 -->|תירוץ| A2
+  A2 --> A3
+  A3 -->|תניא נמי הכי| P1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:26</span></div>
+    <div class="orig">בַּפְּרָקִים שׁוֹאֵל וְכוּ׳.</div>
+    <div class="trans" data-when="he">שנינו במשנה: ״בפרקים שואל (מפני הכבוד ומשיב)״ וכו׳.</div>
+    <div class="trans" data-when="en">The mishna cited Rabbi Meir’s statement: At the breaks between paragraphs, one may greet an individual due to the respect that he is obligated to show him, and may respond. And in the middle of each paragraph, one may greet an individual due to the fear that the individual may harm him if he fails do so, and may respond.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:27</span></div>
+    <div class="orig">מֵשִׁיב מֵחֲמַת מַאי? אִילֵּימָא מִפְּנֵי הַכָּבוֹד, הַשְׁתָּא מִשְׁאָל שָׁאֵיל, אַהְדּוֹרֵי מִבַּעְיָא?! אֶלָּא: שׁוֹאֵל — מִפְּנֵי הַכָּבוֹד, וּמֵשִׁיב שָׁלוֹם — לְכָל אָדָם. אֵימָא סֵיפָא: ״וּבָאֶמְצַע שׁוֹאֵל מִפְּנֵי הַיִּרְאָה, וּמֵשִׁיב״.</div>
+    <div class="trans" data-when="he">הגמרא שואלת: ״משיב״ — מחמת מה? אם תאמר מפני הכבוד — עכשיו ששואל (פותח בשלום) מפני הכבוד, האם צריך לומר שמשיב? אלא כך יש לפרש: שואל — מפני הכבוד, ומשיב שלום — לכל אדם. אמור עתה את הסיפא: ״ובאמצע שואל מפני היראה ומשיב״ —</div>
+    <div class="trans" data-when="en">About this, the Gemara asks: He may respond due to what circumstance? If you say that one may respond due to respect; now that we learned that one may greet another due to respect, is it necessary to say that one may respond due to respect? Rather, it must be explained as follows: One may greet due to respect and respond with a greeting to any person. But if that is the case, say the latter clause of the mishna: In the middle of each paragraph one may greet due to fear and return another’s greeting due to fear.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:28</span></div>
+    <div class="orig">מֵשִׁיב מֵחֲמַת מַאי? אִילֵּימָא מִפְּנֵי הַיִּרְאָה — הַשְׁתָּא מִשְׁאַל שָׁאֵיל, אַהְדּוֹרֵי מִבַּעְיָא? אֶלָּא — מִפְּנֵי הַכָּבוֹד. הַיְינוּ דְּרַבִּי יְהוּדָה! — דִּתְנַן, רַבִּי יְהוּדָה אוֹמֵר: בָּאֶמְצַע — שׁוֹאֵל מִפְּנֵי הַיִּרְאָה וּמֵשִׁיב מִפְּנֵי הַכָּבוֹד, וּבַפְּרָקִים — שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וּמֵשִׁיב שָׁלוֹם לְכָל אָדָם?</div>
+    <div class="trans" data-when="he">״משיב״ — מחמת מה? אם תאמר מפני היראה — עכשיו ששואל מפני היראה, האם צריך לומר שמשיב? אלא על כורחך — משיב מפני הכבוד. אם כן, זו בדיוק דעת רבי יהודה! שהרי שנינו: רבי יהודה אומר — באמצע שואל מפני היראה ומשיב מפני הכבוד, ובפרקים שואל מפני הכבוד ומשיב שלום לכל אדם; ומה ביניהם?</div>
+    <div class="trans" data-when="en">Here too, it must be clarified: He may respond due to what circumstance? If you say that one may respond due to fear; now that we have learned that one may greet another due to fear, is it necessary to say that one may respond due to fear? Rather, it must mean that one may respond to another’s greeting even due to honor. If so, that is identical to the opinion of Rabbi Yehuda, as we learned in the mishna: In the middle of each paragraph, one may greet another due to fear and respond due to respect. At the breaks between paragraphs, one may greet another due to respect and respond with a greeting to any person. If so, what is the dispute between them?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">ברכות י״ג ב — Berakhot 13b:29</span></div>
+    <div class="orig">חַסּוֹרֵי מְחַסְּרָא, וְהָכִי קָתָנֵי: בַּפְּרָקִים — שׁוֹאֵל מִפְּנֵי הַכָּבוֹד, וְאֵין צָרִיךְ לוֹמַר שֶׁהוּא מֵשִׁיב. וּבָאֶמְצַע — שׁוֹאֵל מִפְּנֵי הַיִּרְאָה, וְאֵין צָרִיךְ לוֹמַר שֶׁהוּא מֵשִׁיב, דִּבְרֵי רַבִּי מֵאִיר. רַבִּי יְהוּדָה אוֹמֵר: בָּאֶמְצַע — שׁוֹאֵל מִפְּנֵי הַיִּרְאָה וּמֵשִׁיב מִפְּנֵי הַכָּבוֹד,</div>
+    <div class="trans" data-when="he">תירוץ: המשנה חסרה, וכך יש לשנותה: בפרקים — שואל מפני הכבוד, ואין צריך לומר שהוא משיב; ובאמצע — שואל מפני היראה, ואין צריך לומר שהוא משיב; אלו דברי רבי מאיר. רבי יהודה אומר: באמצע — שואל מפני היראה ומשיב מפני הכבוד,</div>
+    <div class="trans" data-when="en">The Gemara says: The mishna is incomplete; it is missing an important element, and it teaches the following: At the breaks between the paragraphs, one may greet due to respect, and, needless to say, he may respond due to respect. In the middle of each paragraph one may greet due to fear, and, needless to say, he may respond due to fear. This is the statement of Rabbi Meir. Rabbi Yehuda says: In the middle of each paragraph one may greet due to fear and respond due to respect.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">ברכות י״ד א — Berakhot 14a:1</span></div>
+    <div class="orig">וּבַפְּרָקִים — שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וּמֵשִׁיב שָׁלוֹם לְכׇל אָדָם.</div>
+    <div class="trans" data-when="he">ובפרקים — שואל מפני הכבוד ומשיב שלום לכל אדם.</div>
+    <div class="trans" data-when="en">And at the breaks between the paragraphs one may greet due to respect and respond with a greeting to any person. And if that is the case, the mishna is no longer difficult.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">ברכות י״ד א — Berakhot 14a:2</span></div>
+    <div class="orig">תַּנְיָא נָמֵי הָכִי: הַקּוֹרֵא אֶת שְׁמַע וּפָגַע בּוֹ רַבּוֹ אוֹ גָּדוֹל הֵימֶנּוּ, בַּפְּרָקִים — שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וְאֵין צָרִיךְ לוֹמַר שֶׁהוּא מֵשִׁיב, וּבָאֶמְצַע — שׁוֹאֵל מִפְּנֵי הַיִּרְאָה וְאֵין צָרִיךְ לוֹמַר שֶׁהוּא מֵשִׁיב. דִּבְרֵי רַבִּי מֵאִיר. רַבִּי יְהוּדָה אוֹמֵר: בָּאֶמְצַע — שׁוֹאֵל מִפְּנֵי הַיִּרְאָה וּמֵשִׁיב מִפְּנֵי הַכָּבוֹד, וּבַפְּרָקִים — שׁוֹאֵל מִפְּנֵי הַכָּבוֹד וּמֵשִׁיב שָׁלוֹם לְכׇל אָדָם.</div>
+    <div class="trans" data-when="he">וכך גם שנויה ברייתא: הקורא את שמע ופגע בו רבו או מי שגדול ממנו — בפרקים שואל מפני הכבוד ואין צריך לומר שהוא משיב, ובאמצע שואל מפני היראה ואין צריך לומר שהוא משיב; אלו דברי רבי מאיר. רבי יהודה אומר: באמצע שואל מפני היראה ומשיב מפני הכבוד, ובפרקים שואל מפני הכבוד ומשיב שלום לכל אדם.</div>
+    <div class="trans" data-when="en">The Gemara remarks: This version of the dispute was also taught in a baraita: One who is reciting Shema and happens upon his teacher or one who is greater than he, at the breaks between the paragraphs he may greet him due to respect and, needless to say, he may respond. And in the middle of each paragraph, he may greet another due to fear and, needless to say, he may respond. This is the statement of Rabbi Meir. Rabbi Yehuda says: In the middle of each paragraph one may greet due to fear and respond due to respect. And in the breaks between the paragraphs one may greet due to respect and respond with a greeting to any person. The proposed additions to the mishna appear in the version of the dispute cited in the baraita.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
