@@ -128,6 +128,16 @@ export const MASECHTOT: readonly MasechetInfo[] = [
   },
   {
     corpus: 'talmud',
+    book: 'bekhorot',
+    bounds: { firstDaf: 2, lastDaf: 61 },
+    name: { he: 'בכורות', en: 'Bekhorot' },
+    summary: {
+      he: 'כל דפי מסכת בכורות (ב׳ עד ס״א). אפשר לסקור מה כבר מופה, או לבקש מה שעדיין לא.',
+      en: "All folios of Tractate Bekhorot (2 through 61). Browse what's mapped, request what isn't.",
+    },
+  },
+  {
+    corpus: 'talmud',
     book: 'bava-kamma',
     bounds: { firstDaf: 2, lastDaf: 119 },
     name: { he: 'בבא קמא', en: 'Bava Kamma' },

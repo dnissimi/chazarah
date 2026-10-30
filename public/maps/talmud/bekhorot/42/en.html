@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<!--
+  gemara-map template — bilingual (HE⇄EN), site-aligned, self-describing.
+  Fill the placeholders and write the result as one self-contained .html file
+  that serves both /he and /en (ADR 0006: client JS defaults from the URL leaf).
+
+  TWO orthogonal toggles:
+   - page HE⇄EN (whole page): the authored layer — node "meaning" labels, the
+     citation translation column, and all chrome. Default from the URL's trailing
+     /he|/en (fallback he); also flips <html lang>/dir.
+   - per-chart meaning⇄original: flips that chart's node labels to the VERBATIM
+     Aramaic original (available on both language pages).
+  ⇒ each sugya chart carries THREE graph sources: src-he, src-en, src-ar.
+
+  Placeholders:
+    META          -> the gemara-map: <meta> block + <meta name="description"> (he blurb).
+    TITLE         -> structural <title> (Hebrew).
+    TITLE_HE / TITLE_EN, SUBTITLE_HE / SUBTITLE_EN, TAKEAWAY_HE / TAKEAWAY_EN.
+    OVERVIEW      -> overview <section> (src-he + src-en, no toggle) or "" for a single sugya.
+    SECTIONS      -> one sugya section per sugya (see SKILL.md for the shape).
+    FEEDBACK      -> the report-a-correction pill+modal markup, or "" when no feedback_path.
+  (All written WITHOUT the double-brace tokens in this comment on purpose, so a
+  global string-replace won't match here. The live tokens appear once below.)
+-->
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מפת הסוגיא — בכורות מ״ב</title>
+<meta name="description" content="רב חסדא: המחלוקת במשנה באנדרוגינוס, אבל טומטום ספק לכולם וקדוש מספק; הגמרא מוחקת ׳טומטום׳ מברייתא אחר ברייתא. הדיון מתמקד בטומטום המטיל מים במקום נקבות — האם חוששים ׳שמא נהפכה זכרותו׳ (׳הואיל ואישתני, אישתני׳) — ומסתעף לברייתות על חליצה וייבום של טומטום, עד הבדלי ר׳ יהודה ור׳ יוסי בר׳ יהודה.">
+<meta name="gemara-map:corpus" content="talmud">
+<meta name="gemara-map:book" content="bekhorot">
+<meta name="gemara-map:location" content="42">
+<meta name="gemara-map:sefaria-ref" content="Bekhorot 42">
+<meta name="gemara-map:topic-he" content="טומטום — ספק או בריה?">
+<meta name="gemara-map:topic-en" content="A tumtum — doubt or distinct entity?">
+<meta name="gemara-map:title-he" content="מפת הסוגיא — בכורות מ״ב">
+<meta name="gemara-map:title-en" content="Sugya map — Bekhorot 42">
+<meta name="gemara-map:blurb-he" content="רב חסדא: המחלוקת במשנה באנדרוגינוס, אבל טומטום ספק לכולם וקדוש מספק; הגמרא מוחקת ׳טומטום׳ מברייתא אחר ברייתא. הדיון מתמקד בטומטום המטיל מים במקום נקבות — האם חוששים ׳שמא נהפכה זכרותו׳ (׳הואיל ואישתני, אישתני׳) — ומסתעף לברייתות על חליצה וייבום של טומטום, עד הבדלי ר׳ יהודה ור׳ יוסי בר׳ יהודה.">
+<meta name="gemara-map:blurb-en" content="Rav Ḥisda: the Mishnah’s dispute concerns a hermaphrodite; a tumtum is a doubt for all and sacred out of doubt — so the Gemara strikes “tumtum” from baraita after baraita. The discussion turns on a tumtum urinating from the female place — do we fear its organ inverted (“since it changed, it changed”)? — and branches into the ḥalitza and levirate baraitot about a tumtum, down to the difference between R. Yehuda and R. Yosei b. R. Yehuda.">
+<meta name="gemara-map:sugya-count" content="4">
+<meta name="gemara-map:languages" content="he,en">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* bone palette — aligned to the Chazarah site (src/styles/global.css) */
+    --bg:#f1ece2; --ink:#1c1815; --ink-2:#574f48; --muted:#8a8278;
+    --card:#f8f3e8; --border:#e3dccd;
+    --accent:#2a3a6b; --accent-soft:#3d4f7e;   /* structural chrome only */
+    /* functional node colors — carry meaning, match the legend; do NOT site-align */
+    --mishnah:#fde68a;  --mishnah-line:#b45309;
+    --statement:#e0e7ff;--statement-line:#3730a3;
+    --question:#fecaca; --question-line:#b91c1c;
+    --answer:#bbf7d0;   --answer-line:#15803d;
+    --proof:#ddd6fe;    --proof-line:#6d28d9;
+    --conclusion:#fef08a;--conclusion-line:#a16207;
+    --font-display:'David Libre',Georgia,serif;       /* h1 only (dominant header) */
+    --font-serif:'Frank Ruhl Libre',Georgia,serif;    /* reading content + h2/h3 */
+    --font-body:'Heebo','Segoe UI',Arial,sans-serif;  /* UI/body */
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); line-height:1.7}
+  body[data-lang="he"]{direction:rtl} body[data-lang="en"]{direction:ltr}
+  /* bilingual chrome: show only the active language */
+  [data-when]{display:none}
+  body[data-lang="he"] [data-when="he"]{display:revert}
+  body[data-lang="en"] [data-when="en"]{display:revert}
+
+  .wrap{max-width:1040px; margin:0 auto; padding:28px 20px 110px}
+  header{text-align:center; margin-bottom:18px}
+  h1{font-family:var(--font-display); font-size:2rem; margin:0 0 6px; color:var(--ink)}
+  .subtitle{color:var(--muted); font-size:.95rem}
+  .takeaway{background:#fffdf6; border:1px solid var(--accent-soft); border-radius:12px; padding:14px 18px; margin:18px 0; font-size:1.05rem}
+  .takeaway b{font-family:var(--font-serif)}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:16px 0 24px; font-size:.85rem}
+  .legend span.chip{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; border:1px solid var(--border); background:var(--card)}
+  .swatch{width:13px; height:13px; border-radius:3px; display:inline-block}
+  .chart{position:relative; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; overflow-x:auto; box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .mermaid-target{display:flex; justify-content:center; min-height:40px}
+  .chart .nodeLabel,.chart .edgeLabel{font-family:var(--font-serif) !important}
+  /* per-chart Aramaic toggle — low-contrast until hover, like .report-pill */
+  .lang-toggle{position:absolute; top:10px; inset-inline-start:10px; z-index:2; cursor:pointer; font-family:var(--font-body); font-size:.72rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:3px 10px; opacity:.4; transition:opacity .15s ease, color .15s ease, border-color .15s ease}
+  .lang-toggle:hover, .lang-toggle:focus-visible{opacity:1; color:var(--accent); border-color:var(--accent); outline:none}
+  .overview h2{text-align:center}
+  section.sugya{margin-top:34px; padding-top:6px}
+  section.sugya h2{font-family:var(--font-serif); margin:0 0 4px; border-bottom:2px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .badge{background:var(--accent); color:#fff; font-size:.8rem; font-weight:700; border-radius:999px; padding:2px 12px}
+  section.sugya h2 .ref{margin-inline-start:auto; color:var(--muted); font-size:.8rem; font-weight:400}
+  .lead{color:var(--ink-2); margin:8px 0 14px}
+  h2,h3{font-family:var(--font-serif)}
+  h3{color:var(--muted); margin:18px 0 10px; font-size:1rem}
+  .quote{background:var(--card); border:1px solid var(--border); border-inline-start:5px solid var(--accent); border-radius:10px; padding:12px 16px; margin:0 0 12px}
+  .quote .num{display:inline-block; min-width:1.7em; height:1.7em; line-height:1.7em; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-weight:700; font-size:.85rem; margin-inline-end:8px}
+  .quote .ref{color:var(--muted); font-size:.8rem}
+  .quote .orig{font-family:var(--font-serif); font-size:1.15rem; margin:6px 0 6px; direction:rtl; text-align:right}
+  .quote .trans{color:var(--ink-2)}
+  .quote .trans[data-when="he"]{direction:rtl; text-align:right}
+  .quote .trans[data-when="en"]{direction:ltr; text-align:left}
+  .quote .trans[data-when="he"]:before{content:"תרגום: "; color:var(--muted); font-weight:500}
+  .quote .trans[data-when="en"]:before{content:"Davidson (Sefaria): "; color:var(--muted); font-weight:500}
+  footer{text-align:center; color:var(--muted); font-size:.8rem; margin-top:44px}
+
+  /* report-a-correction affordance */
+  .report-pill{position:fixed; bottom:16px; inset-inline-end:16px; z-index:20; cursor:pointer; font-family:var(--font-body); font-size:.82rem; color:var(--ink-2); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:8px 16px; box-shadow:0 2px 6px rgba(0,0,0,.08); opacity:.55; transition:opacity .15s}
+  .report-pill:hover{opacity:1; border-color:var(--accent)}
+  .report-modal{position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background:rgba(28,24,21,.45)}
+  .report-modal.open{display:flex}
+  .report-dialog{position:relative; width:min(680px,94vw); height:min(720px,90vh); background:var(--card); border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.3); overflow:hidden}
+  .report-dialog iframe{width:100%; height:100%; border:0}
+  .report-close{position:absolute; top:8px; inset-inline-end:10px; z-index:2; cursor:pointer; font-size:1.4rem; line-height:1; border:0; background:transparent; color:var(--ink-2)}
+</style>
+</head>
+<body data-lang="he">
+
+<div class="wrap">
+  <header>
+    <h1><span data-when="he">מפת הסוגיא — בכורות מ״ב</span><span data-when="en">Sugya map — Bekhorot 42</span></h1>
+    <div class="subtitle"><span data-when="he">בכורות מ״א ב:ט׳ – מ״ג א:ב׳ (הורחב לגבולות הסוגיא) · מקור: ספריא (William Davidson)</span><span data-when="en">Bekhorot 41b:9–43a:2 (expanded to sugya boundaries) · Source: Sefaria (William Davidson)</span></div>
+  </header>
+
+  <div class="takeaway">
+    <span data-when="he"><b>שורה תחתונה:</b> רב חסדא: המחלוקת במשנה באנדרוגינוס, אבל טומטום ספק לכולם וקדוש מספק; הגמרא מוחקת ׳טומטום׳ מברייתא אחר ברייתא. הדיון מתמקד בטומטום המטיל מים במקום נקבות — האם חוששים ׳שמא נהפכה זכרותו׳ (׳הואיל ואישתני, אישתני׳) — ומסתעף לברייתות על חליצה וייבום של טומטום, עד הבדלי ר׳ יהודה ור׳ יוסי בר׳ יהודה.</span>
+    <span data-when="en"><b>Bottom line:</b> Rav Ḥisda: the Mishnah’s dispute concerns a hermaphrodite; a tumtum is a doubt for all and sacred out of doubt — so the Gemara strikes “tumtum” from baraita after baraita. The discussion turns on a tumtum urinating from the female place — do we fear its organ inverted (“since it changed, it changed”)? — and branches into the ḥalitza and levirate baraitot about a tumtum, down to the difference between R. Yehuda and R. Yosei b. R. Yehuda.</span>
+  </div>
+
+  <div class="legend">
+    <span class="chip"><i class="swatch" style="background:var(--mishnah)"></i><span data-when="he">משנה</span><span data-when="en">Mishnah</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--statement)"></i><span data-when="he">מימרא / דעה</span><span data-when="en">Statement</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--question)"></i><span data-when="he">קושיא / מיתיבי</span><span data-when="en">Question / objection</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--answer)"></i><span data-when="he">תירוץ / יישוב</span><span data-when="en">Answer</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--proof)"></i><span data-when="he">ראיה / תא שמע</span><span data-when="en">Proof</span></span>
+    <span class="chip"><i class="swatch" style="background:var(--conclusion)"></i><span data-when="he">מסקנה</span><span data-when="en">Conclusion</span></span>
+  </div>
+
+  <section class="overview">
+  <h2><span data-when="he">מפת־על — סדר הסוגיות</span><span data-when="en">Overview — the sugyot in order</span></h2>
+  <div class="chart">
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · רב חסדא: טומטום — ספק לדברי הכול; רבא מקשה, והגמרא מוחקת ׳טומטום׳ מברייתא אחר ברייתא"]:::statement
+  O2["2 · לימא כתנאי? — ר׳ שמעון בן יהודה וחכמים; הספק הוא במטיל מים במקום נקבות"]:::statement
+  O3["3 · תמיהת ר׳ יוחנן על ר׳ אלעזר; ריש לקיש: ספק טומטום — באדם בלבד; ׳הואיל ואישתני, אישתני׳"]:::statement
+  O4["4 · ׳אישתני׳ כתנאי? ברייתות טומטום בחליצה וייבום — ר׳ אליעזר ור׳ עקיבא; ר׳ יהודה ור׳ יוסי בר׳ יהודה; מאי בינייהו"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef mishnah fill:#fde68a,stroke:#b45309,color:#1f2937;
+  O1["1 · Rav Ḥisda: a tumtum is a doubt for all; Rava objects, and the Gemara strikes “tumtum” from baraita after baraita"]:::statement
+  O2["2 · Is this a tannaitic dispute? — R. Shimon b. Yehuda vs. the Rabbis; the doubt is a tumtum urinating from the female place"]:::statement
+  O3["3 · R. Yoḥanan wonders at R. Elazar; Reish Lakish: a tumtum is a doubt only in humans; “since it changed, it changed”"]:::statement
+  O4["4 · Is “it changed” a tannaitic dispute? The tumtum ḥalitza baraitot — R. Eliezer vs. R. Akiva; R. Yehuda vs. R. Yosei b. R. Yehuda; the practical difference"]:::statement
+  O1 --> O2
+  O2 --> O3
+  O3 --> O4
+  click O1 "#sugya-1"
+  click O2 "#sugya-2"
+  click O3 "#sugya-3"
+  click O4 "#sugya-4"
+    </script>
+  </div>
+</section>
+
+  <section class="sugya" id="sugya-1">
+  <h2><span class="badge"><span data-when="he">סוגיה 1</span><span data-when="en">Sugya 1</span></span>
+      <span data-when="he">רב חסדא: טומטום — ספק לדברי הכול; רבא מקשה, והגמרא מוחקת ׳טומטום׳ מברייתא אחר ברייתא</span><span data-when="en">Rav Ḥisda: a tumtum is a doubt for all; Rava objects, and the Gemara strikes “tumtum” from baraita after baraita</span>
+      <span class="ref">Bekhorot 41b:9-42a:10</span></h2>
+  <div class="lead"><span data-when="he">על המשנה ׳וחכמים אומרים אינו בכור׳ מעמיד רב חסדא: המחלוקת באנדרוגינוס, אבל טומטום — ספק לכולם וקדוש מספק. רבא מקשה: אם כן ייערך בערכין! וכנגד כל ברייתא שמונה ׳טומטום ואנדרוגינוס׳ יחד כנפסלים — ערכין, שלמים, עולה, מליקת עוף, תמורה — עונה הגמרא: ׳סמי מיכן טומטום׳. בברייתא שמונה ׳חמישה׳ אי אפשר למחוק — מחליפים טומטום ביתום.</span><span data-when="en">On the Mishnah “and the Rabbis say it is not a firstborn,” Rav Ḥisda limits the dispute to a hermaphrodite; a tumtum is a doubt for all and sacred out of doubt. Rava objects: then it should be valuated! Against each baraita listing “tumtum and hermaphrodite” together as excluded — valuations, peace offerings, burnt offerings, bird pinching, substitution — the Gemara answers: “omit tumtum from here.” Where a baraita counts “five,” it cannot be omitted — so tumtum is swapped for an orphan.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① רב חסדא: המחלוקת באנדרוגינוס; אבל טומטום — לדברי הכול ספק, וקדוש מספק"]:::statement
+  Q1{"② רבא: אם כן, בערכין ייערך!"}:::question
+  Q2{"③ והרי שנינו: ׳הזכר׳ — ולא טומטום ואנדרוגינוס!"}:::question
+  A1["③ סמי מיכן טומטום — מחק ׳טומטום׳ מן הברייתא"]:::answer
+  Q3{"④ תא שמע: ׳הזכר… אם נקבה׳ — ולא טומטום ואנדרוגינוס, אף לא בערך אשה!"}:::question
+  A2["④ סמי מיכן טומטום"]:::answer
+  Q4{"⑤ תא שמע: שלמים ׳אם זכר אם נקבה׳ — זכר ודאי ונקבה ודאית, ולא טומטום ואנדרוגינוס!"}:::question
+  A3["⑤ סמי מיכן טומטום"]:::answer
+  Q5{"⑥ תא שמע: ׳זכר׳ הנוסף בעולה — להוציא טומטום ואנדרוגינוס!"}:::question
+  A4["⑥ סמי מיכן טומטום"]:::answer
+  S2["⑦ תא שמע: הנעבד, המוקצה, האתנן, המחיר, וטומטום ואנדרוגינוס — כולם מטמאים בגדים בבית הבליעה"]:::statement
+  S3["⑧ ר׳ אליעזר: טומטום ואנדרוגינוס אינם מטמאים — כל מקום שנאמר ׳זכר ונקבה׳ אתה מוציאם"]:::statement
+  Q6{"⑨ ובעוף שלא נאמר בו ׳זכר ונקבה׳ — אין מוציאים. ומדוע לת״ק טומטום פסול?!"}:::question
+  A5["⑨ סמי מיכן טומטום"]:::answer
+  S4["⑩ תא שמע: ר׳ אלעזר — הטריפה, הכלאים, יוצא דופן, טומטום ואנדרוגינוס: לא קדושים ולא מקדישים"]:::statement
+  Q7{"⑪ ושמואל: לא קדושים בתמורה ולא מקדישים לעשות תמורה — ולמה טומטום?!"}:::question
+  A6["⑪ סמי מיכן טומטום"]:::answer
+  Q8{"⑫ תא שמע: ר׳ אלעזר — ׳חמישה׳ לא קדושים… אם תמחק טומטום, יישארו ארבעה!"}:::question
+  A7["⑫ הוצא טומטום והכנס יתום"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 --> Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|תא שמע| Q3
+  Q3 --> A2
+  A2 -.->|תא שמע| Q4
+  Q4 --> A3
+  A3 -.->|תא שמע| Q5
+  Q5 --> A4
+  A4 -.->|תא שמע| S2
+  S2 -->|מחלוקת| S3
+  S3 --> Q6
+  Q6 --> A5
+  A5 -.->|תא שמע| S4
+  S4 -->|שמואל| Q7
+  Q7 --> A6
+  A6 -.->|תא שמע| Q8
+  Q8 -->|תירוץ| A7
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① Rav Ḥisda: the dispute is about a hermaphrodite; a tumtum is a doubt for all, and sacred out of doubt"]:::statement
+  Q1{"② Rava: if so, for valuations it should be valuated!"}:::question
+  Q2{"③ But a baraita teaches: “the male” — not a tumtum or a hermaphrodite!"}:::question
+  A1["③ “Omit tumtum from here” — strike it from the baraita"]:::answer
+  Q3{"④ Come and hear: “the male… if a female” — not a tumtum or hermaphrodite, even at a woman’s valuation!"}:::question
+  A2["④ “Omit tumtum from here”"]:::answer
+  Q4{"⑤ Come and hear: peace offering “whether male or female” — a definite male or female, not a tumtum or hermaphrodite!"}:::question
+  A3["⑤ “Omit tumtum from here”"]:::answer
+  Q5{"⑥ Come and hear: the repeated “male” in the burnt offering — to exclude a tumtum and hermaphrodite!"}:::question
+  A4["⑥ “Omit tumtum from here”"]:::answer
+  S2["⑦ Come and hear: the worshipped, the set-aside, the harlot’s fee, the dog’s price, and a tumtum or hermaphrodite — all impart impurity in the throat"]:::statement
+  S3["⑧ R. Eliezer: a tumtum and hermaphrodite do not impart impurity — wherever “male and female” is stated, you exclude them"]:::statement
+  Q6{"⑨ But for birds, where “male and female” is not stated — they are not excluded. So why does the first tanna disqualify a tumtum?!"}:::question
+  A5["⑨ “Omit tumtum from here”"]:::answer
+  S4["⑩ Come and hear: R. Elazar — a tereifa, diverse kinds, caesarean-born, a tumtum and hermaphrodite: not consecrated and do not consecrate"]:::statement
+  Q7{"⑪ And Shmuel: not consecrated by substitution nor making a substitute — so why a tumtum?!"}:::question
+  A6["⑪ “Omit tumtum from here”"]:::answer
+  Q8{"⑫ Come and hear: R. Elazar — “five” are not consecrated… if you omit tumtum, only four remain!"}:::question
+  A7["⑫ Remove tumtum and insert an orphan"]:::answer
+  S1 -.->|objection| Q1
+  Q1 --> Q2
+  Q2 -->|answer| A1
+  A1 -.->|come and hear| Q3
+  Q3 --> A2
+  A2 -.->|come and hear| Q4
+  Q4 --> A3
+  A3 -.->|come and hear| Q5
+  Q5 --> A4
+  A4 -.->|come and hear| S2
+  S2 -->|dispute| S3
+  S3 --> Q6
+  Q6 --> A5
+  A5 -.->|come and hear| S4
+  S4 -->|Shmuel| Q7
+  Q7 --> A6
+  A6 -.->|come and hear| Q8
+  Q8 -->|answer| A7
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  S1["① מַחְלוֹקֶת בְּאַנְדְּרוֹגִינוֹס, אֲבָל בְּטוּמְטוּם — דִּבְרֵי הַכֹּל סְפֵיקָא הוּא, וְקָדוֹשׁ מִסְּפֵיקָא"]:::statement
+  Q1{"② אֲמַר לֵיהּ רָבָא: אֶלָּא מֵעַתָּה, בַּעֲרָכִין יֵעָרֵךְ?"}:::question
+  Q2{"③ אַלְּמָה תַּנְיָא: ״הַזָּכָר״ — וְלֹא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס!"}:::question
+  A1["③ סְמִי מִיכָּן טוּמְטוּם"]:::answer
+  Q3{"④ יָכוֹל לֹא יְהֵא בְּעֵרֶךְ אִישׁ, אֲבָל יְהֵא בְּעֵרֶךְ אִשָּׁה? … וְלֹא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס!"}:::question
+  A2["④ סְמִי מִיכָּן טוּמְטוּם"]:::answer
+  Q4{"⑤ ״אִם זָכָר אִם נְקֵבָה״ — זָכָר וַדַּאי נְקֵבָה וַדָּאִית, וְלֹא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס"}:::question
+  A3["⑤ סְמִי מִיכָּן טוּמְטוּם"]:::answer
+  Q5{"⑥ כְּשֶׁהוּא אוֹמֵר לְמַטָּהּ ״זָכָר״, שֶׁאֵין תַּלְמוּד לוֹמַר … לְהוֹצִיא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס"}:::question
+  A4["⑥ סְמִי מִיכָּן טוּמְטוּם"]:::answer
+  S2["⑦ הַנֶּעֱבָד, וְהַמּוּקְצֶה, וְהָאֶתְנַן, וְהַמְּחִיר, וְטוּמְטוּם וְאַנְדְּרוֹגִינוֹס — כּוּלָּן מְטַמְּאִין בְּגָדִים אַבֵּית הַבְּלִיעָה"]:::statement
+  S3["⑧ טוּמְטוּם וְאַנְדְּרוֹגִינוֹס אֵין מְטַמְּאִין בְּגָדִים אַבֵּית הַבְּלִיעָה … כׇּל מָקוֹם שֶׁנֶּאֱמַר ״זָכָר וּנְקֵבָה״ אַתָּה מוֹצִיא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס מִבֵּינֵיהֶם"]:::statement
+  Q6{"⑨ וְעוֹף, הוֹאִיל וְלֹא נֶאֱמַר בּוֹ ״זָכָר וּנְקֵבָה״, אֵין אַתָּה מוֹצִיא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס מִבֵּינֵיהֶם!"}:::question
+  A5["⑨ סְמִי מִיכָּן טוּמְטוּם"]:::answer
+  S4["⑩ הַטְּרֵיפָה, וְהַכִּלְאַיִם, וְיוֹצֵא דּוֹפֶן, טוּמְטוּם וְאַנְדְּרוֹגִינוֹס — לֹא קְדוֹשִׁים וְלֹא מַקְדִּישִׁין"]:::statement
+  Q7{"⑪ לֹא קְדוֹשִׁים בִּתְמוּרָה, וְלֹא מַקְדִּישִׁין לַעֲשׂוֹת תְּמוּרָה!"}:::question
+  A6["⑪ סְמִי מִיכָּן טוּמְטוּם"]:::answer
+  Q8{"⑫ חֲמִשָּׁה לֹא קְדוֹשִׁים וְלֹא מַקְדִּישִׁין … וְכִי תֵּימָא הָכָא נָמֵי סְמִי מִיכָּן טוּמְטוּם — הָווּ לְהוּ אַרְבָּעָה!"}:::question
+  A7["⑫ אַפֵּיק טוּמְטוּם, וְעָיֵיל יָתוֹם"]:::answer
+  S1 -.->|קושיא| Q1
+  Q1 --> Q2
+  Q2 -->|תירוץ| A1
+  A1 -.->|תא שמע| Q3
+  Q3 --> A2
+  A2 -.->|תא שמע| Q4
+  Q4 --> A3
+  A3 -.->|תא שמע| Q5
+  Q5 --> A4
+  A4 -.->|תא שמע| S2
+  S2 -->|מחלוקת| S3
+  S3 --> Q6
+  Q6 --> A5
+  A5 -.->|תא שמע| S4
+  S4 -->|שמואל| Q7
+  Q7 --> A6
+  A6 -.->|תא שמע| Q8
+  Q8 -->|תירוץ| A7
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">בכורות מ״א ב — Bekhorot 41b:9</span></div>
+    <div class="orig">וַחֲכָמִים אוֹמְרִים: אֵינוֹ בְּכוֹר כּוּ׳. אָמַר רַב חִסְדָּא: מַחְלוֹקֶת בְּאַנְדְּרוֹגִינוֹס, אֲבָל בְּטוּמְטוּם — דִּבְרֵי הַכֹּל סְפֵיקָא הוּא, וְקָדוֹשׁ מִסְּפֵיקָא.</div>
+    <div class="trans" data-when="he">שנינו במשנה: ״וחכמים אומרים: אינו בכור״ וכו׳. אמר רב חסדא: המחלוקת (בין ר׳ ישמעאל לחכמים) היא באנדרוגינוס (שיש לו סימני זכר ונקבה); אבל בטומטום (שאיבריו מכוסים) — לדברי הכול ספק הוא (זכר או נקבה), וקדוש מספק.</div>
+    <div class="trans" data-when="en">§ The mishna teaches: And the Rabbis say: A hermaphrodite does not have firstborn status; rather, its status is that of a non-sacred animal that may be shorn and utilized for labor. Rav Ḥisda says: This dispute applies to a hermaphrodite, which the Rabbis maintain is a distinct entity, as it has both male and female sex organs, and therefore it does not have firstborn status. But with regard to a tumtum, whose genitalia is covered by skin, everyone agrees that it is an uncertain case, as it is definitely either a male or a female, but there is uncertainty as to which it is. And consequently, it is consecrated due to uncertainty, and it may not be slaughtered either in the Temple or in the rest of the country.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">בכורות מ״א ב — Bekhorot 41b:10</span></div>
+    <div class="orig">אֲמַר לֵיהּ רָבָא: אֶלָּא מֵעַתָּה, בַּעֲרָכִין יֵעָרֵךְ?</div>
+    <div class="trans" data-when="he">אמר לו רבא: אם כן (שטומטום הוא ודאי זכר או ודאי נקבה), בערכין — מי שנדר ״ערך טומטום עליי״ — ייערך (כערך איש או כערך אישה)?</div>
+    <div class="trans" data-when="en">Rava said to Rav Ḥisda: If that is so, that a tumtum is certainly either a male or a female, with regard to valuations, when someone vows to give the valuation of a tumtum, it should be valuated, either in accordance with the valuation of a man or a woman.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:1</span></div>
+    <div class="orig">אַלְּמָה תַּנְיָא: ״הַזָּכָר״ — וְלֹא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס! סְמִי מִיכָּן טוּמְטוּם.</div>
+    <div class="trans" data-when="he">ומדוע שנינו בברייתא: ״הזכר״ — ולא טומטום ואנדרוגינוס (שאינם נערכים)! תירוץ: מחק מכאן ״טומטום״ — הברייתא עוסקת באנדרוגינוס בלבד.</div>
+    <div class="trans" data-when="en">Why, then, is it taught in a baraita that the verse: “Then your valuation shall be for the male” (Leviticus 27:3), includes one whose status as a male is certain but not a tumtum or a hermaphrodite? The Gemara answers: Omit from this baraita the mention of a tumtum, as it is referring only to a hermaphrodite, which is a distinct entity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:2</span></div>
+    <div class="orig">תָּא שְׁמַע: יָכוֹל לֹא יְהֵא בְּעֵרֶךְ אִישׁ, אֲבָל יְהֵא בְּעֵרֶךְ אִשָּׁה? תַּלְמוּד לוֹמַר: ״הַזָּכָר... אִם נְקֵבָה״, וְלֹא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס! סְמִי מִיכָּן טוּמְטוּם.</div>
+    <div class="trans" data-when="he">בוא ושמע (מהמשך הברייתא): יכול לא יהיה בערך איש, אבל יהיה בערך אישה? תלמוד לומר ״הזכר… אם נקבה״ — זכר ודאי ונקבה ודאית, ולא טומטום ואנדרוגינוס! תירוץ: מחק מכאן ״טומטום״.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear the continuation of that baraita: One might have thought that these shall not be valuated according to the valuation of a man, but they shall be valuated according to the valuation of a woman. Therefore, the verse states: “The male,” and in the following verse it states: “And if she is a female, then your valuation shall be thirty shekels” (Leviticus 27:4), indicating only one whose status as a male or female is certain, but not a tumtum or a hermaphrodite, which are categorized as neither male nor female. The Gemara again answers: Omit from this baraita the mention of a tumtum, as it is referring only to a hermaphrodite.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:3</span></div>
+    <div class="orig">תָּא שְׁמַע: ״אִם זָכָר אִם נְקֵבָה״ — זָכָר וַדַּאי נְקֵבָה וַדָּאִית, וְלֹא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס. סְמִי מִיכָּן טוּמְטוּם.</div>
+    <div class="trans" data-when="he">בוא ושמע (בשלמים): ״אם זכר אם נקבה״ — זכר ודאי, נקבה ודאית, ולא טומטום ואנדרוגינוס! תירוץ: מחק מכאן ״טומטום״.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a baraita discussing the peace offering, with regard to which it states: “Whether male or female” (Leviticus 3:1). This indicates: Only a definite male or a definite female, but not a tumtum or a hermaphrodite. Yet again the Gemara responds: Omit from this baraita the mention of a tumtum.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:4</span></div>
+    <div class="orig">תָּא שְׁמַע: ״הַזָּכָר״ — וְלֹא נְקֵבָה. כְּשֶׁהוּא אוֹמֵר לְמַטָּהּ ״זָכָר״, שֶׁאֵין תַּלְמוּד לוֹמַר; מָה תַּלְמוּד לוֹמַר? לְהוֹצִיא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס. סְמִי מִיכָּן טוּמְטוּם.</div>
+    <div class="trans" data-when="he">בוא ושמע (בעולה): ״הזכר״ — ולא נקבה. כשהוא אומר למטה (בעולת הצאן) שוב ״זכר״, שאין צורך לומר — מה תלמוד לומר? להוציא טומטום ואנדרוגינוס! תירוץ: מחק מכאן ״טומטום״.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a baraita: It states with regard to a burnt offering from cattle: “A male” (Leviticus 1:3), from which it can be inferred: But not a female. When it says below, with regard to a burnt offering from sheep: “A male” (Leviticus 1:10), a second time, it is difficult to understand, as there is no need for the verse to state this. Why must the verse state “a male” again? This serves to exclude a tumtum and a hermaphrodite, which are disqualified as burnt offerings. The Gemara answers: Omit from this baraita the mention of a tumtum.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:5</span></div>
+    <div class="orig">תָּא שְׁמַע: הַנֶּעֱבָד, וְהַמּוּקְצֶה, וְהָאֶתְנַן, וְהַמְּחִיר, וְטוּמְטוּם וְאַנְדְּרוֹגִינוֹס — כּוּלָּן מְטַמְּאִין בְּגָדִים אַבֵּית הַבְּלִיעָה.</div>
+    <div class="trans" data-when="he">בוא ושמע: עוף שנעבד לעבודה זרה, או שהוקצה לה, או שניתן באתנן זונה או במחיר כלב, וכן טומטום ואנדרוגינוס — כולם (אם נמלקו) מטמאים את הבגדים בבית הבליעה (כנבלת עוף טהור, שהמליקה אינה מועילה להם כיוון שפסולים לקרבן).</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a baraita discussing the halakhot of ritual impurity imparted by a bird in the throat: Any bird that was not slaughtered in the proper manner, i.e., in its neck with a knife, has the status of a carcass. This carcass renders the one who eats it impure when it is in his throat. Bird offerings, which are killed by pinching the nape of the neck with a fingernail, are the exception to this principle, and they do not impart impurity. With regard to a bird that is worshipped as a deity, or one set aside for idol worship, or one given as payment to a prostitute, or one that was given as the price of a dog (see Deuteronomy 23:19), and similarly with regard to a bird that is a tumtum or a hermaphrodite, if one killed any of them by pinching, they are ritually impure, as they are disqualified as offerings, and the pinching does not purify them. Therefore, they all render a person and the garments he is wearing ritually impure if an olive-bulk of them comes into contact with the throat while eating.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:6</span></div>
+    <div class="orig">רַבִּי אֱלִיעֶזֶר אוֹמֵר: טוּמְטוּם וְאַנְדְּרוֹגִינוֹס אֵין מְטַמְּאִין בְּגָדִים אַבֵּית הַבְּלִיעָה, שֶׁהָיָה רַבִּי אֱלִיעֶזֶר אוֹמֵר: כׇּל מָקוֹם שֶׁנֶּאֱמַר ״זָכָר וּנְקֵבָה״ אַתָּה מוֹצִיא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס מִבֵּינֵיהֶם.</div>
+    <div class="trans" data-when="he">רבי אליעזר אומר: טומטום ואנדרוגינוס אינם מטמאים בגדים בבית הבליעה (שכשרים הם לקרבן עוף), שהיה רבי אליעזר אומר: כל מקום שנאמר ״זכר ונקבה״ — אתה מוציא טומטום ואנדרוגינוס מביניהם;</div>
+    <div class="trans" data-when="en">Rabbi Eliezer says: If one pinched the neck of a tumtum or a hermaphrodite, it does not render the person and the garments he is wearing ritually impure when they are in the throat, as they are in fact fit to be sacrificed. As Rabbi Eliezer would say: Wherever it is stated explicitly in the Torah: “Male,” and: “Female,” you should exclude a tumtum and a hermaphrodite from among them, as their status is uncertain. This applies to animal offerings, with regard to which the Torah states “male” and “female.”</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:7</span></div>
+    <div class="orig">וְעוֹף, הוֹאִיל וְלֹא נֶאֱמַר בּוֹ ״זָכָר וּנְקֵבָה״, אֵין אַתָּה מוֹצִיא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס מִבֵּינֵיהֶם! סְמִי מִיכָּן טוּמְטוּם.</div>
+    <div class="trans" data-when="he">ובעוף, הואיל ולא נאמר בו ״זכר ונקבה״ — אין אתה מוציא טומטום ואנדרוגינוס מביניהם! (ואם טומטום הוא ודאי זכר או נקבה, מדוע לתנא קמא הוא פסול?) תירוץ: מחק מכאן ״טומטום״.</div>
+    <div class="trans" data-when="en">But in the case of a bird offering, since “male” and “female” are not stated with regard to it, but simply doves and pigeons are stated with regard to it, you do not exclude a tumtum and a hermaphrodite from among them, as they are fit for the altar. Now if a tumtum is considered either definitely a male or a female, then why does the first tanna disqualify it from being sacrificed? The Gemara again replies: Omit from this baraita the mention of a tumtum.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:8</span></div>
+    <div class="orig">תָּא שְׁמַע: רַבִּי אֶלְעָזָר אוֹמֵר: הַטְּרֵיפָה, וְהַכִּלְאַיִם, וְיוֹצֵא דּוֹפֶן, טוּמְטוּם וְאַנְדְּרוֹגִינוֹס — לֹא קְדוֹשִׁים וְלֹא מַקְדִּישִׁין.</div>
+    <div class="trans" data-when="he">בוא ושמע: רבי אלעזר אומר — הטריפה, והכלאיים, ויוצא דופן, טומטום ואנדרוגינוס — לא קדושים ולא מקדישים.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear that Rabbi Elazar says: An animal with a condition that will cause it to die within twelve months [tereifa], and prohibited diverse kinds of livestock, and an animal born by caesarean section, and an animal that is a tumtum or a hermaphrodite do not become consecrated and do not render another animal consecrated in their place.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:9</span></div>
+    <div class="orig">וְאָמַר שְׁמוּאֵל: לֹא קְדוֹשִׁים בִּתְמוּרָה, וְלֹא מַקְדִּישִׁין לַעֲשׂוֹת תְּמוּרָה! סְמִי מִיכָּן טוּמְטוּם.</div>
+    <div class="trans" data-when="he">ואמר שמואל (בפירוש): לא קדושים בתמורה (אם המירם בבהמת קודש), ולא מקדישים לעשות תמורה (אם נולדו לבהמת קודש והמירו בהם)! (ומדוע טומטום?) תירוץ: מחק מכאן ״טומטום״.</div>
+    <div class="trans" data-when="en">And Shmuel says in explanation: They do not become consecrated by substitution, i.e., if one sought to substitute one of these animals for a sacrificial animal, it does not become sacred. And if one of these was born to a sacrificial animal, they do not render a non-sacred animal consecrated in a case where one wanted to render it a substitute for them. And if a tumtum is either a male or female, why would it not become consecrated and render another animal consecrated? The Gemara answers: Omit from this baraita the mention of a tumtum.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:10</span></div>
+    <div class="orig">תָּא שְׁמַע: רַבִּי אֶלְעָזָר אוֹמֵר: חֲמִשָּׁה לֹא קְדוֹשִׁים וְלֹא מַקְדִּישִׁין, וְאֵלּוּ הֵן: הַטְּרֵיפָה, וְהַכִּלְאַיִם, וְיוֹצֵא דּוֹפֶן, וְטוּמְטוּם, וְאַנְדְּרוֹגִינוֹס. וְכִי תֵּימָא הָכָא נָמֵי סְמִי מִיכָּן טוּמְטוּם — הָווּ לְהוּ אַרְבָּעָה! אַפֵּיק טוּמְטוּם, וְעָיֵיל יָתוֹם.</div>
+    <div class="trans" data-when="he">בוא ושמע: רבי אלעזר אומר — חמישה לא קדושים ולא מקדישים, ואלו הם: הטריפה, והכלאיים, ויוצא דופן, וטומטום, ואנדרוגינוס. ואם תאמר גם כאן ״מחק מכאן טומטום״ — הרי יהיו רק ארבעה! תירוץ: הוצא ״טומטום״ והכנס ״יתום״ (בהמה שמתה אמה בלידתה, שאף היא פסולה לקרבן).</div>
+    <div class="trans" data-when="en">The Gemara suggests: Come and hear a slightly different version of that baraita. Rabbi Elazar says: There are five types of animals that do not become consecrated and do not render another animal consecrated, and they are: A tereifa, and prohibited diverse kinds of livestock, and an animal born by caesarean section, and an animal that is a tumtum, and a hermaphrodite. And if you would say: Here too, omit from this baraita a tumtum, then there are only four types of animals listed in the baraita. The Gemara answers: Remove the mention of a tumtum and in its place insert an orphan, i.e., an animal born after the death of its mother, which is also disqualified as a sacrifice.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-2">
+  <h2><span class="badge"><span data-when="he">סוגיה 2</span><span data-when="en">Sugya 2</span></span>
+      <span data-when="he">לימא כתנאי? — ר׳ שמעון בן יהודה וחכמים; הספק הוא במטיל מים במקום נקבות</span><span data-when="en">Is this a tannaitic dispute? — R. Shimon b. Yehuda vs. the Rabbis; the doubt is a tumtum urinating from the female place</span>
+      <span class="ref">Bekhorot 42a:11-42b:2</span></h2>
+  <div class="lead"><span data-when="he">הגמרא מציעה שהשאלה אם טומטום הוא ׳בריה׳ או ספק שנויה במחלוקת תנאים: ר׳ שמעון בן יהודה דורש ׳הזכר׳ להוציא טומטום ואנדרוגינוס — ואם נמחק ׳טומטום׳, דבריו הם דברי חכמים. הדחייה: לכולם טומטום אינו בריה, והספק הוא זכר או נקבה; המטיל במקום זכרות — זכר לכולם; נחלקו במטיל במקום נקבות — האם חוששים שנהפכה זכרותו. וכך הורה ר׳ אלעזר: בהמה המטילה במקום נקבות — חולין.</span><span data-when="en">The Gemara proposes that whether a tumtum is a “distinct entity” or a doubt is a tannaitic dispute: R. Shimon b. Yehuda expounds “the male” to exclude a tumtum and hermaphrodite — and if “tumtum” were omitted, his view would be identical to the Rabbis’. The rejection: all agree a tumtum is not a distinct entity; the doubt is male or female. Urinating from the male place — a male for all; they dispute one urinating from the female place — do we fear its male organ was inverted? So R. Elazar ruled: such an animal is non-sacred.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① לימא כתנאי?"}:::question
+  S1["① ר׳ אילעאי משום ר׳ ישמעאל: אנדרוגינוס בכור ומומו עמו; חכמים: אין קדושה חלה עליו; ר׳ שמעון בן יהודה: ׳הזכר׳ — להוציא טומטום ואנדרוגינוס"]:::statement
+  Q2{"② אם תמחק ׳טומטום׳ — ר׳ שמעון בן יהודה היינו רבנן! אלא טומטום ביניהם: לת״ק ספק וקדוש מספק"}:::question
+  S2["③ ור׳ שמעון בן יהודה בא לומר: טומטום בריה הוא ולא קדוש"]:::statement
+  A1["③ דחייה: לכולי עלמא טומטום אינו בריה; הספק — זכר או נקבה"]:::answer
+  A2["④ מטיל מים במקום זכרות — זכר לכולם; נחלקו במטיל במקום נקבות: חוששים שנהפכה זכרותו — או לא"]:::answer
+  C1["④ כהוראת ר׳ אלעזר: בהמה המטילה מים במקום נקבות — חולין"]:::conclusion
+  Q1 -->|דתניא| S1
+  S1 -->|דיוק| Q2
+  Q2 --> S2
+  S2 -.->|דחייה| A1
+  A1 --> A2
+  A2 -->|כי הא| C1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Shall we say this is a tannaitic dispute?"}:::question
+  S1["① R. Ilai in R. Yishmael’s name: a hermaphrodite is a firstborn with its blemish; the Rabbis: no sanctity; R. Shimon b. Yehuda: “the male” excludes a tumtum and hermaphrodite"]:::statement
+  Q2{"② If you omit “tumtum” — R. Shimon b. Yehuda is the Rabbis! Rather, tumtum is the difference: for the first tanna a doubt, sacred out of doubt"}:::question
+  S2["③ And R. Shimon b. Yehuda comes to say: a tumtum is a distinct entity and not sacred"]:::statement
+  A1["③ Rejection: all agree a tumtum is not a distinct entity; the doubt is male or female"]:::answer
+  A2["④ Urinating from the male place — a male for all; the dispute: urinating from the female place — fear the male organ inverted, or not"]:::answer
+  C1["④ As R. Elazar ruled: an animal urinating from the female place — non-sacred"]:::conclusion
+  Q1 -->|as taught| S1
+  S1 -->|inference| Q2
+  Q2 --> S2
+  S2 -.->|rejection| A1
+  A1 --> A2
+  A2 -->|as in| C1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① לֵימָא כְּתַנָּאֵי?"}:::question
+  S1["① אַנְדְּרוֹגִינוֹס בְּכוֹר הוּא וּמוּמוֹ עִמּוֹ, וַחֲכָמִים אוֹמְרִים: אֵין קְדוּשָּׁה חָלָה עָלָיו … וְכׇל מָקוֹם שֶׁנֶּאֱמַר ״זָכָר״ אֵינוֹ אֶלָּא לְהוֹצִיא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס"]:::statement
+  Q2{"② וְכִי תֵּימָא: סְמִי מִיכָּן טוּמְטוּם, רַבִּי שִׁמְעוֹן בֶּן יְהוּדָה הַיְינוּ רַבָּנַן! … אֶלָּא לָאו טוּמְטוּם אִיכָּא בֵּינַיְיהוּ"}:::question
+  S2["③ טוּמְטוּם בְּרִיָּה הוּא וְלֹא קָדוֹשׁ!"]:::statement
+  A1["③ לָא, דְּכוּלֵּי עָלְמָא טוּמְטוּם בִּבְרִיָּה לָא מְסַפְּקָא, זָכָר וּנְקֵבָה הוּא דִּמְסַפְּקָא"]:::answer
+  A2["④ כִּי פְּלִיגִי בְּמֵטִיל מַיִם בְּמָקוֹם נַקְבוּת: מָר סָבַר חָיְישִׁינַן שֶׁמָּא נֶהֶפְכָה זַכְרוּתוֹ לְנַקְבוּתוֹ, וּמַר סָבַר לָא חָיְישִׁינַן"]:::answer
+  C1["④ הוֹרָה רַבִּי אֶלְעָזָר: בִּבְהֵמָה מֵטִיל מַיִם בְּמָקוֹם נַקְבוּת — חוּלִּין"]:::conclusion
+  Q1 -->|דתניא| S1
+  S1 -->|דיוק| Q2
+  Q2 --> S2
+  S2 -.->|דחייה| A1
+  A1 --> A2
+  A2 -->|כי הא| C1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:11</span></div>
+    <div class="orig">לֵימָא כְּתַנָּאֵי? רַבִּי אִילְעַאי אוֹמֵר מִשּׁוּם רַבִּי יִשְׁמָעֵאל: אַנְדְּרוֹגִינוֹס בְּכוֹר הוּא וּמוּמוֹ עִמּוֹ, וַחֲכָמִים אוֹמְרִים: אֵין קְדוּשָּׁה חָלָה עָלָיו. רַבִּי שִׁמְעוֹן בֶּן יְהוּדָה אוֹמֵר מִשּׁוּם רַבִּי שִׁמְעוֹן: הֲרֵי הוּא אוֹמֵר ״הַזָּכָר״, וְכׇל מָקוֹם שֶׁנֶּאֱמַר ״זָכָר״ אֵינוֹ אֶלָּא לְהוֹצִיא טוּמְטוּם וְאַנְדְּרוֹגִינוֹס.</div>
+    <div class="trans" data-when="he">האם נאמר שהדבר שנוי במחלוקת תנאים? ששנינו: רבי אילעאי אומר משום רבי ישמעאל — אנדרוגינוס בכור הוא ומומו עמו (קדוש, ונשחט במומו); וחכמים אומרים: אין קדושה חלה עליו. רבי שמעון בן יהודה אומר משום רבי שמעון: הרי הוא אומר ״הזכר״, וכל מקום שנאמר ״זכר״ אינו אלא להוציא טומטום ואנדרוגינוס.</div>
+    <div class="trans" data-when="en">The Gemara suggests: Let us say that this question of whether a tumtum is a distinct entity or is definitely either a male or female is the subject of a dispute between tanna’im. As it is taught in a baraita that Rabbi Ilai says in the name of Rabbi Yishmael: A hermaphrodite is a firstborn, and it comes with its blemish; and the Rabbis say: It is not imbued with sanctity. Rabbi Shimon ben Yehuda says in the name of Rabbi Shimon: The verse states: “Males” (Deuteronomy 15:19), and wherever it is stated: Male,” this serves to exclude only a tumtum and a hermaphrodite. Since according to Rabbi Shimon ben Yehuda it is necessary for a verse to exclude a tumtum, like a hermaphrodite, from the category of a male, evidently in his opinion a tumtum is not considered to be one whose status as a male is uncertain but a distinct entity.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">בכורות מ״ב א — Bekhorot 42a:12</span></div>
+    <div class="orig">וְכִי תֵּימָא: סְמִי מִיכָּן טוּמְטוּם, רַבִּי שִׁמְעוֹן בֶּן יְהוּדָה הַיְינוּ רַבָּנַן! אֶלָּא לָאו טוּמְטוּם אִיכָּא בֵּינַיְיהוּ, דְּתַנָּא קַמָּא סָבַר: אֵין קְדוּשָּׁה חָלָה עָלָיו אַאַנְדְּרוֹגִינוֹס, אֲבָל טוּמְטוּם סְפֵיקָא הוּא וְקָדוֹשׁ מִסְּפֵיקָא, וַאֲתָא רַבִּי שִׁמְעוֹן</div>
+    <div class="trans" data-when="he">ואם תאמר: גם כאן מחק ״טומטום״ — הרי רבי שמעון בן יהודה הוא בדיוק חכמים (ששניהם מוציאים אנדרוגינוס בלבד)! אלא ודאי טומטום הוא ההבדל ביניהם: תנא קמא (חכמים) סובר — ״אין קדושה חלה עליו״ נאמר על אנדרוגינוס, אבל טומטום ספק הוא וקדוש מספק; ובא רבי שמעון</div>
+    <div class="trans" data-when="en">The Gemara analyzes this baraita: And if you would say: Here too, omit from this baraita a tumtum, then the opinion of Rabbi Shimon ben Yehuda is the same as that of the Rabbis, as they too maintain that a hermaphrodite is not sacred. Rather, is it not that the difference between them is with regard to the status of a tumtum, as the first tanna, i.e., the Rabbis, holds: It is not imbued with sanctity, and they are referring specifically to a hermaphrodite, which was the subject of Rabbi Ilai’s statement, but a tumtum is an uncertain case, and therefore it is sacred due to uncertainty. And Rabbi Shimon</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:1</span></div>
+    <div class="orig">בֶּן יְהוּדָה לְמֵימַר: טוּמְטוּם בְּרִיָּה הוּא וְלֹא קָדוֹשׁ! לָא, דְּכוּלֵּי עָלְמָא טוּמְטוּם בִּבְרִיָּה לָא מְסַפְּקָא, זָכָר וּנְקֵבָה הוּא דִּמְסַפְּקָא.</div>
+    <div class="trans" data-when="he">בן יהודה לומר: טומטום בריה (יצור) בפני עצמו הוא ואינו קדוש כלל! דחייה: לא — לדעת הכול אין ספק שטומטום אינו בריה בפני עצמו; הספק הוא אם זכר הוא או נקבה.</div>
+    <div class="trans" data-when="en">ben Yehuda comes to say: A tumtum is not of uncertain status, but a distinct entity, and it is not sacred at all. The Gemara responds: No, everyone agrees with regard to the statement that a tumtum is a distinct entity that there is no doubt that this is incorrect. Where there is doubt is with regard to whether it is a male or a female.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:2</span></div>
+    <div class="orig">מֵטִיל מַיִם בִּמְקוֹם זַכְרוּת — דְּכוּלֵּי עָלְמָא לָא פְּלִיגִי דְּזָכָר הוּא, כִּי פְּלִיגִי בְּמֵטִיל מַיִם בְּמָקוֹם נַקְבוּת: מָר סָבַר חָיְישִׁינַן שֶׁמָּא נֶהֶפְכָה זַכְרוּתוֹ לְנַקְבוּתוֹ, וּמַר סָבַר לָא חָיְישִׁינַן. כִּי הָא דְּהוֹרָה רַבִּי אֶלְעָזָר: בִּבְהֵמָה מֵטִיל מַיִם בְּמָקוֹם נַקְבוּת — חוּלִּין.</div>
+    <div class="trans" data-when="he">וטומטום המטיל מים במקום זכרות — לדעת הכול זכר הוא; נחלקו במטיל מים במקום נקבות: זה (חכמים) סובר — חוששים שמא נהפכה זכרותו לנקבותו (ולכן ספק), וזה (ר׳ שמעון בן יהודה) סובר — אין חוששים (ונקבה ודאית היא). וכמו שהורה רבי אלעזר: בבהמה המטילה מים במקום נקבות — חולין היא.</div>
+    <div class="trans" data-when="en">In addition, in a case where the tumtum urinates from the place of the male sex organ, then everyone agrees that it is a male. When they disagree is in the case of a tumtum that urinates from the place of the female sex organ. One Sage, the Rabbis, holds that we are concerned that perhaps its male sex organ was inverted toward its female sex organ; therefore, it is of uncertain status. And one Sage, Rabbi Shimon ben Yehuda, holds that we are not concerned about this possibility; rather, it is definitely a female. And Rabbi Shimon ben Yehuda maintains in accordance with that which Rabbi Elazar ruled: With regard to a firstborn animal that urinates from the place where the female sex organ is found, it is non-sacred, as it is certainly a female.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-3">
+  <h2><span class="badge"><span data-when="he">סוגיה 3</span><span data-when="en">Sugya 3</span></span>
+      <span data-when="he">תמיהת ר׳ יוחנן על ר׳ אלעזר; ריש לקיש: ספק טומטום — באדם בלבד; ׳הואיל ואישתני, אישתני׳</span><span data-when="en">R. Yoḥanan wonders at R. Elazar; Reish Lakish: a tumtum is a doubt only in humans; “since it changed, it changed”</span>
+      <span class="ref">Bekhorot 42b:3-42b:7</span></h2>
+  <div class="lead"><span data-when="he">ר׳ יוחנן תמה: מי לא חשש לת״ק ולר׳ ישמעאל (שטומטום ספק)? ומדוע לא תמה גם על רבנן בתראי, שלרב חסדא גם להם טומטום ספק? — ר׳ יוחנן אינו סובר כרב חסדא; ותמיהתו: מי מניח שניים ועושה כאחד. ר׳ אלעזר עצמו סובר כריש לקיש: ספק טומטום נאמר רק באדם, שזכרותו ונקבותו במקום אחד; בבהמה הולכים אחר מקום הטלת המים. רב אושעיא: וניחוש שמא נהפכה! — כר׳ מאיר שחושש למיעוט? אביי בר אבין: אפילו לרבנן — הואיל ואישתני אישתני; ויש חולקים.</span><span data-when="en">R. Yoḥanan wondered: who disregards the first tanna and R. Yishmael (that a tumtum is a doubt)? Why not also wonder about the latter Rabbis, since per Rav Ḥisda they too hold it a doubt? — R. Yoḥanan does not accept Rav Ḥisda; his point: who sets aside two and follows one. R. Elazar himself follows Reish Lakish: the tumtum-doubt applies only to humans, whose organs share one place; in animals, follow the place of urination. Rav Oshaya: fear it inverted! — like R. Meir, who fears a minority? Abaye bar Avin: even per the Rabbis — since it changed, it changed; others disagree.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① ר׳ יוחנן תהה: מי לא חשש לתנא קמא ולר׳ ישמעאל?"}:::question
+  Q2{"① ושיאמר גם: מי לא חשש לרבנן בתראי? שהרי לרב חסדא אף להם טומטום ספק!"}:::question
+  A1["② ר׳ יוחנן אינו סובר כרב חסדא"]:::answer
+  Q3{"② אם כן — יאמר שר׳ אלעזר סובר כרבנן בתראי?"}:::question
+  A2["② זו כוונתו: מי מניח שניים ועושה כאחד!"]:::answer
+  Q4{"③ ור׳ אלעזר — כמי סובר?"}:::question
+  A3["③ כריש לקיש: ספק טומטום רק באדם, שזכרותו ונקבותו במקום אחד; בבהמה — לפי מקום הטלת המים"]:::answer
+  Q5{"④ רב אושעיא: וניחוש שמא נהפכה זכרותו לנקבותו!"}:::question
+  A4["④ כמי? כר׳ מאיר שחושש למיעוט?!"]:::answer
+  S1["⑤ אביי בר אבין ורב חנניא בר אבין: אפילו לרבנן — הואיל ואישתני, אישתני; ויש אומרים לא אישתני"]:::statement
+  Q1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.-> Q3
+  Q3 -->|תירוץ| A2
+  A2 --> Q4
+  Q4 -->|כי הא| A3
+  A3 -.->|מתקיף| Q5
+  Q5 -->|תשובה| A4
+  A4 -->|אפילו תימא| S1
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① R. Yoḥanan wondered: who disregards the first tanna and R. Yishmael?"}:::question
+  Q2{"① Let him also say: who disregards the latter Rabbis? Per Rav Ḥisda they too hold a tumtum a doubt!"}:::question
+  A1["② R. Yoḥanan does not hold like Rav Ḥisda"]:::answer
+  Q3{"② Then let him say R. Elazar follows the latter Rabbis?"}:::question
+  A2["② That is his point: who sets aside two and acts like one!"]:::answer
+  Q4{"③ And R. Elazar — whom does he follow?"}:::question
+  A3["③ Like Reish Lakish: the doubt is only in humans, whose organs share one place; in animals — by the place of urination"]:::answer
+  Q5{"④ Rav Oshaya: let us fear its male organ was inverted!"}:::question
+  A4["④ Like whom? Like R. Meir, who fears a minority?!"]:::answer
+  S1["⑤ Abaye b. Avin and Rav Ḥananya b. Avin: even per the Rabbis — since it changed, it changed; some say it did not"]:::statement
+  Q1 -.->|question| Q2
+  Q2 -->|answer| A1
+  A1 -.-> Q3
+  Q3 -->|answer| A2
+  A2 --> Q4
+  Q4 -->|as| A3
+  A3 -.->|objects| Q5
+  Q5 -->|reply| A4
+  A4 -->|even so| S1
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① תָּהֵי בַּהּ רַבִּי יוֹחָנָן: מַאן דְּלָא חָשׁ לְתַנָּא קַמָּא וּלְרַבִּי יִשְׁמָעֵאל?"}:::question
+  Q2{"① וְלֵימָא רַבִּי יוֹחָנָן נָמֵי: מַאן דְּלָא חָשׁ לְרַבָּנַן בָּתְרָאֵי?"}:::question
+  A1["② רַבִּי יוֹחָנָן לָא סְבִירָא לֵיהּ דְּרַב חִסְדָּא"]:::answer
+  Q3{"② לֵימָא הוּא דְּאָמַר כְּרַבָּנַן בָּתְרָאֵי?"}:::question
+  A2["② מַאן שָׁבֵיק תְּרֵי וְעָבֵיד כְּחַד!"]:::answer
+  Q4{"③ וְרַבִּי אֶלְעָזָר כְּמַאן סָבְרַהּ?"}:::question
+  A3["③ לֹא אָמְרוּ טוּמְטוּם סָפֵק אֶלָּא בְּאָדָם, הוֹאִיל וְזַכְרוּתוֹ וְנַקְבוּתוֹ בְּמָקוֹם אֶחָד … מֵטִיל מַיִם בְּמָקוֹם זַכְרוּת זָכָר, מֵטִיל מַיִם בְּמָקוֹם נַקְבוּת נְקֵבָה"]:::answer
+  Q5{"④ וְלֵיחוּשׁ שֶׁמָּא נֶהֶפְכָה זַכְרוּתוֹ לְנַקְבוּתוֹ!"}:::question
+  A4["④ כְּמַאן? כְּרַבִּי מֵאִיר דְּחָיֵישׁ לְמִיעוּטָא?!"]:::answer
+  S1["⑤ אֲפִילּוּ תֵּימָא רַבָּנַן, הוֹאִיל וְאִישְׁתַּנִּי אִישְׁתַּנִּי … אִית דְּאָמַר אִישְׁתַּנִּי, וְאִית דְּאָמַר לָא אִישְׁתַּנִּי"]:::statement
+  Q1 -.->|קושיא| Q2
+  Q2 -->|תירוץ| A1
+  A1 -.-> Q3
+  Q3 -->|תירוץ| A2
+  A2 --> Q4
+  Q4 -->|כי הא| A3
+  A3 -.->|מתקיף| Q5
+  Q5 -->|תשובה| A4
+  A4 -->|אפילו תימא| S1
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:3</span></div>
+    <div class="orig">תָּהֵי בַּהּ רַבִּי יוֹחָנָן: מַאן דְּלָא חָשׁ לְתַנָּא קַמָּא וּלְרַבִּי יִשְׁמָעֵאל? וְלֵימָא רַבִּי יוֹחָנָן נָמֵי: מַאן דְּלָא חָשׁ לְרַבָּנַן בָּתְרָאֵי? דְּאָמַר רַב חִסְדָּא: מַחֲלוֹקֶת בְּאַנְדְּרוֹגִינוֹס, אֲבָל בְּטוּמְטוּם — דִּבְרֵי הַכֹּל סְפֵיקָא!</div>
+    <div class="trans" data-when="he">תהה בה רבי יוחנן (על הוראת ר׳ אלעזר): מי הוא שלא חשש לדברי תנא קמא ולדברי רבי ישמעאל (שלדעתם טומטום ספק)? ושואלת הגמרא: ויאמר רבי יוחנן גם — מי לא חשש לרבנן בתראי (חכמים שבברייתא)? שהרי אמר רב חסדא: המחלוקת באנדרוגינוס, אבל בטומטום — לדברי הכול ספק!</div>
+    <div class="trans" data-when="en">Rabbi Yoḥanan wondered about this ruling of Rabbi Elazar: Who is the Sage who is not concerned about the opinion of the first tanna in the mishna and about the opinion of Rabbi Yishmael, who maintain that a tumtum is a case of uncertainty? The Gemara asks: And let Rabbi Yoḥanan also say: Who is this who is not concerned about the opinion of the latter Rabbis in the mishna, as Rav Ḥisda says: This dispute refers to a hermaphrodite; but with regard to a tumtum, everyone agrees that it is an uncertain case.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:4</span></div>
+    <div class="orig">רַבִּי יוֹחָנָן לָא סְבִירָא לֵיהּ דְּרַב חִסְדָּא, אִי לָא סְבִירָא לֵיהּ, לֵימָא הוּא דְּאָמַר כְּרַבָּנַן בָּתְרָאֵי? הָכִי נָמֵי קָאָמַר: מַאן שָׁבֵיק תְּרֵי וְעָבֵיד כְּחַד!</div>
+    <div class="trans" data-when="he">רבי יוחנן אינו סובר כרב חסדא (אלא לדעתו רבנן בתראי סוברים שטומטום בריה). אם אינו סובר כרב חסדא — שיאמר שר׳ אלעזר אמר דבריו כרבנן בתראי (ולמה תמה)? כך אכן אמר: מי מניח שניים (ת״ק ור׳ ישמעאל) ועושה כאחד (רבנן בתראי)!</div>
+    <div class="trans" data-when="en">The Gemara explains that Rabbi Yoḥanan does not hold in accordance with that statement of Rav Ḥisda; rather, he maintains that according to the latter Rabbis a tumtum is a distinct entity. The Gemara asks: If Rabbi Yoḥanan does not hold in accordance with Rav Ḥisda, why did he wonder about Rabbi Elazar’s ruling? Let him say that Rabbi Elazar said his opinion in accordance with the opinion of the latter Rabbis. The Gemara answers: That is indeed what he is saying: Who is the Sage who leaves aside the opinion of two Sages, the first tanna and Rabbi Yishmael, and acts in accordance with one opinion, the latter Rabbis?</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:5</span></div>
+    <div class="orig">וְרַבִּי אֶלְעָזָר כְּמַאן סָבְרַהּ? כִּי הָא דְּאָמַר רֵישׁ לָקִישׁ: לֹא אָמְרוּ טוּמְטוּם סָפֵק אֶלָּא בְּאָדָם, הוֹאִיל וְזַכְרוּתוֹ וְנַקְבוּתוֹ בְּמָקוֹם אֶחָד, אֲבָל בְּהֵמָה — מֵטִיל מַיִם בְּמָקוֹם זַכְרוּת זָכָר, מֵטִיל מַיִם בְּמָקוֹם נַקְבוּת נְקֵבָה.</div>
+    <div class="trans" data-when="he">ורבי אלעזר — כמי הוא סובר? כמו שאמר ריש לקיש: לא אמרו שטומטום ספק אלא באדם, הואיל וזכרותו ונקבותו במקום אחד; אבל בהמה — המטילה מים במקום זכרות, זכר היא; המטילה מים במקום נקבות, נקבה היא.</div>
+    <div class="trans" data-when="en">The Gemara asks: And Rabbi Elazar, in accordance with whose opinion does he hold? The Gemara answers that he holds in accordance with that which Reish Lakish says: The Sages said that the halakhic status of a tumtum is an uncertain case only with regard to a person, since the male sex organ and the female sex organ are in one place, i.e., a man and a woman urinate from the same area of the body. Since that area is concealed in the case of a tumtum, its status is uncertain. But with regard to a tumtum animal, there is no uncertainty whether it is a male or a female, as the genitals of a male and a female are not found in the same place. Rather, if it urinates from the place of the male sex organ, it is a male; if it urinates from the place of the female sex organ, it is a female.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:6</span></div>
+    <div class="orig">מַתְקֵיף לַהּ רַב אוֹשַׁעְיָא: וְלֵיחוּשׁ שֶׁמָּא נֶהֶפְכָה זַכְרוּתוֹ לְנַקְבוּתוֹ! אֲמַר לֵיהּ: כְּמַאן? כְּרַבִּי מֵאִיר דְּחָיֵישׁ לְמִיעוּטָא?!</div>
+    <div class="trans" data-when="he">מקשה רב אושעיא: ונחשוש שמא נהפכה זכרותו לנקבותו (ומטיל במקום נקבות אף שהוא זכר)! אמר לו: כדעת מי? כרבי מאיר שחושש למיעוט?! (הלכה כחכמים שהולכים אחר הרוב.)</div>
+    <div class="trans" data-when="en">Rav Oshaya objects to this: And let us be concerned that perhaps its male sex organ was turned round to the place of its female sex organ. Abaye said to him: In accordance with whose opinion do you raise this objection? Is it in accordance with the opinion of Rabbi Meir, who is concerned about the minority of cases? The halakha is not in accordance with the opinion of Rabbi Meir, and therefore one should follow the majority of animals, to whom this does not occur.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:7</span></div>
+    <div class="orig">אַבָּיֵי בַּר אָבִין וְרַב חֲנַנְיָא בַּר אָבִין דְאָמְרִי תַּרְוַיְיהוּ: אֲפִילּוּ תֵּימָא רַבָּנַן, הוֹאִיל וְאִישְׁתַּנִּי אִישְׁתַּנִּי. אִית דְּאָמַר אִישְׁתַּנִּי, וְאִית דְּאָמַר לָא אִישְׁתַּנִּי.</div>
+    <div class="trans" data-when="he">אביי בר אבין ורב חנניא בר אבין אמרו שניהם: אפילו תאמר שהקושיה כרבנן (שאינם חוששים למיעוט) — כאן, הואיל ונשתנה (שהוא טומטום), נשתנה (שמא גם איבריו נהפכו). ובזה נחלקו: יש אומרים ״אישתני״ (נשתנה), ויש אומרים ״לא אישתני״.</div>
+    <div class="trans" data-when="en">Abaye bar Avin and Rav Ḥananya bar Avin both say: You may even say that Rav Oshaya’s objection is in accordance with the opinion of the Rabbis, who are not concerned about a minority. The reason is that since in this case, the animal has changed in that it is different from typical animals, as it is a tumtum, perhaps it is also changed with regard to its male sex organ being inverted toward the female sex organ. If so, the Sages disagree with regard to this principle: There are those who say that since it has changed, it has changed, and there are those who say that the claim that since it has changed, it has changed is not accepted.</div>
+  </div>
+</section>
+
+<section class="sugya" id="sugya-4">
+  <h2><span class="badge"><span data-when="he">סוגיה 4</span><span data-when="en">Sugya 4</span></span>
+      <span data-when="he">׳אישתני׳ כתנאי? ברייתות טומטום בחליצה וייבום — ר׳ אליעזר ור׳ עקיבא; ר׳ יהודה ור׳ יוסי בר׳ יהודה; מאי בינייהו</span><span data-when="en">Is “it changed” a tannaitic dispute? The tumtum ḥalitza baraitot — R. Eliezer vs. R. Akiva; R. Yehuda vs. R. Yosei b. R. Yehuda; the practical difference</span>
+      <span class="ref">Bekhorot 42b:8-43a:2</span></h2>
+  <div class="lead"><span data-when="he">ברייתא אחת: טומטום שקידש — קידושין; חולץ, וחולצים ומייבמים לאשתו. ברייתא אחרת: אשת טומטום חולצת ולא מתייבמת. סברו שהכול כר׳ עקיבא (סריס חמה אינו חולץ ואינו מייבם) ונחלקו ב׳אישתני׳. דחייה: הכול אומרים ׳אישתני׳; זו ר׳ אליעזר וזו ר׳ עקיבא. ומי התנא אליבא דר׳ עקיבא? לא ר׳ יהודה (שמשווה טומטום שנקרע לסריס ודאי), אלא ר׳ יוסי בר׳ יהודה: ׳שמא ייקרע ויימצא סריס חמה׳ — ומבררים את לשון ׳שמא׳. ההבדל ביניהם, לרבא: לפסול במקום אחים, ולחלוץ שלא במקום אחים.</span><span data-when="en">One baraita: a tumtum who betrothed — a betrothal; he performs ḥalitza, and his wife receives ḥalitza or levirate marriage. Another: a tumtum’s wife performs ḥalitza but not levirate marriage. The assumption: all follow R. Akiva (a natural eunuch neither performs ḥalitza nor levirate marriage) and dispute “it changed.” Rejected: all say “it changed”; one is R. Eliezer, the other R. Akiva. Who is the tanna per R. Akiva? Not R. Yehuda (a torn-open tumtum is a definite eunuch) but R. Yosei b. R. Yehuda: “perhaps he will be torn open and found a natural eunuch” — and the “perhaps” is clarified. The difference, per Rava: disqualifying where there are brothers, and ḥalitza where there are none.</span></div>
+  <div class="chart">
+    <button class="lang-toggle" type="button"></button>
+    <div class="mermaid-target"></div>
+    <script type="text/plain" class="src-he">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① לימא ׳אישתני׳ תנאי? ברייתא: טומטום שקידש — קידושיו קידושין; נתקדש — קידושין"}:::question
+  S1["② וחולץ, וחולצים לאשתו ומייבמים לאשתו. וברייתא אחרת: אשת טומטום חולצת ולא מתייבמת"]:::statement
+  S2["③ סברו: הכול כר׳ עקיבא — סריס חמה לא חולץ ולא מייבם"]:::statement
+  Q2{"④ מאי לאו בזה נחלקו: המתיר ייבום — לא אמרינן ׳הואיל ואישתני אישתני׳"}:::question
+  Q3{"⑤ והאומר ׳חולצת ולא מתייבמת׳ — אמרינן ׳הואיל ואישתני אישתני׳?"}:::question
+  A1["⑥ לא — לכולי עלמא אמרינן ׳אישתני׳; זו ר׳ אליעזר וזו ר׳ עקיבא"]:::answer
+  Q4{"⑦ ומי התנא אליבא דר׳ עקיבא? אם ר׳ יהודה — הרי סריס ודאי משווה אותו!"}:::question
+  P1["⑧ דתנן, ר׳ יהודה: טומטום שנקרע ונמצא זכר — לא יחלוץ, מפני שהוא כסריס"]:::proof
+  A2["⑨ אלא ר׳ יוסי בר׳ יהודה: טומטום לא חולץ — שמא ייקרע ויימצא סריס חמה"]:::answer
+  Q5{"⑩ וכי כל שנקרע נמצא זכר, ולא נקבה?"}:::question
+  A3["⑩ ׳שמא׳ אמר — שמא ייקרע ויימצא נקבה"]:::answer
+  A4["⑪ ואף אם זכר — שמא יימצא סריס חמה"]:::answer
+  Q6{"⑪ מאי בינייהו — בין ר׳ יהודה לר׳ יוסי בר׳ יהודה? אמר רבא:"}:::question
+  C1["⑫ לפסול במקום אחים —"]:::conclusion
+  C2["⑬ ולחלוץ שלא במקום אחים — זה ההבדל ביניהם"]:::conclusion
+  Q1 -->|דתניא| S1
+  S1 -->|סברוה| S2
+  S2 --> Q2
+  Q2 --> Q3
+  Q3 -.->|דחייה| A1
+  A1 -.->|קושיא| Q4
+  Q4 -->|דתנן| P1
+  P1 -->|אלא| A2
+  A2 -.->|קושיא| Q5
+  Q5 -->|תירוץ| A3
+  A3 -->|אי נמי| A4
+  A4 --> Q6
+  Q6 -->|רבא| C1
+  C1 --> C2
+    </script>
+    <script type="text/plain" class="src-en">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① Is “it changed” a tannaitic dispute? Baraita: a tumtum who betrothed — a valid betrothal; was betrothed — valid"}:::question
+  S1["② He performs ḥalitza; his wife receives ḥalitza or levirate marriage. Another baraita: a tumtum’s wife performs ḥalitza, not levirate marriage"]:::statement
+  S2["③ They assumed: all follow R. Akiva — a natural eunuch neither performs ḥalitza nor levirate marriage"]:::statement
+  Q2{"④ Is this not their dispute: the one permitting levirate marriage — does not say “since it changed, it changed”"}:::question
+  Q3{"⑤ And the one saying “ḥalitza, not levirate marriage” — says “since it changed, it changed”?"}:::question
+  A1["⑥ No — all say “it changed”; this one is R. Eliezer, that one R. Akiva"]:::answer
+  Q4{"⑦ Who is the tanna per R. Akiva? If R. Yehuda — he deems him a definite eunuch!"}:::question
+  P1["⑧ As the Mishnah says, R. Yehuda: a tumtum torn open and found male — does not perform ḥalitza, being like a eunuch"]:::proof
+  A2["⑨ Rather, R. Yosei b. R. Yehuda: a tumtum does not perform ḥalitza — perhaps he will be torn open and found a natural eunuch"]:::answer
+  Q5{"⑩ Is everyone torn open found male, never female?"}:::question
+  A3["⑩ He spoke in “perhaps” — perhaps he will be torn open and found female"]:::answer
+  A4["⑪ And even if male — perhaps he will be found a natural eunuch"]:::answer
+  Q6{"⑪ What is the practical difference between R. Yehuda and R. Yosei b. R. Yehuda? Rava said:"}:::question
+  C1["⑫ To disqualify the widow where there are other brothers —"]:::conclusion
+  C2["⑬ and to perform ḥalitza where there are no other brothers — that is the difference"]:::conclusion
+  Q1 -->|as taught| S1
+  S1 -->|assumption| S2
+  S2 --> Q2
+  Q2 --> Q3
+  Q3 -.->|rejection| A1
+  A1 -.->|question| Q4
+  Q4 -->|Mishnah| P1
+  P1 -->|rather| A2
+  A2 -.->|question| Q5
+  Q5 -->|answer| A3
+  A3 -->|alternatively| A4
+  A4 --> Q6
+  Q6 -->|Rava| C1
+  C1 --> C2
+    </script>
+    <script type="text/plain" class="src-ar">
+graph TD
+  classDef mishnah fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#1f2937;
+  classDef statement fill:#e0e7ff,stroke:#3730a3,color:#1f2937;
+  classDef question fill:#fecaca,stroke:#b91c1c,color:#1f2937;
+  classDef answer fill:#bbf7d0,stroke:#15803d,color:#1f2937;
+  classDef proof fill:#ddd6fe,stroke:#6d28d9,color:#1f2937;
+  classDef conclusion fill:#fef08a,stroke:#a16207,stroke-width:3px,color:#1f2937;
+  Q1{"① לֵימָא אִישְׁתַּנִּי וְלָא אִישְׁתַּנִּי תַּנָּאֵי? … טוּמְטוּם שֶׁקִּידֵּשׁ — קִדּוּשָׁיו קִדּוּשִׁין, נִתְקַדֵּשׁ — קִדּוּשָׁיו קִדּוּשִׁין"}:::question
+  S1["② וְחוֹלֵץ, וְחוֹלְצִין לְאִשְׁתּוֹ, וּמְיַבְּמִים לְאִשְׁתּוֹ … אֵשֶׁת טוּמְטוּם חוֹלֶצֶת וְלֹא מִתְיַיבֶּמֶת"]:::statement
+  S2["③ סַבְרוּהָ, דְּכוּלֵּי עָלְמָא כְּרַבִּי עֲקִיבָא, דְּאָמַר: סְרִיס חַמָּה לֹא חוֹלֵץ וְלֹא מְיַיבֵּם"]:::statement
+  Q2{"④ מַאי לָאו בְּהָא קָמִיפַּלְגִי … לָא אָמְרִינַן הוֹאִיל וְאִישְׁתַּנִּי אִישְׁתַּנִּי"}:::question
+  Q3{"⑤ וּמַאן דְּאָמַר חוֹלֶצֶת וְלֹא מִתְיַיבֶּמֶת, אָמְרִינַן הוֹאִיל וְאִישְׁתַּנִּי אִישְׁתַּנִּי?"}:::question
+  A1["⑥ לָא, דְּכוּלֵּי עָלְמָא אָמְרִינַן הוֹאִיל וְאִישְׁתַּנִּי אִישְׁתַּנִּי, הָא רַבִּי אֱלִיעֶזֶר, וְהָא רַבִּי עֲקִיבָא"]:::answer
+  Q4{"⑦ וּמַאן תַּנָּא אַלִּיבָּא דְּרַבִּי עֲקִיבָא? אִילֵימָא רַבִּי יְהוּדָה — הָא וַדַּאי סָרִיס מְשַׁוֵּי לֵיהּ!"}:::question
+  P1["⑧ טוּמְטוּם שֶׁנִּקְרַע וְנִמְצָא זָכָר — הֲרֵי זֶה לֹא יַחְלוֹץ, מִפְּנֵי שֶׁהוּא כְּסָרִיס!"]:::proof
+  A2["⑨ אֶלָּא רַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה הִיא … טוּמְטוּם לֹא חוֹלֵץ, שֶׁמָּא יִקָּרַע וְיִמָּצֵא סָרִיס חַמָּה"]:::answer
+  Q5{"⑩ אַטּוּ כֹּל דְּמִיקְּרַע זָכָר מִשְׁתְּכַח, נְקֵבָה לָא מִשְׁתְּכַח?"}:::question
+  A3["⑩ שֶׁמָּא קָאָמַר, שֶׁמָּא יִקָּרַע וְיִמָּצֵא נְקֵבָה"]:::answer
+  A4["⑪ אִי נָמֵי זָכָר נָמֵי, שֶׁמָּא יִמָּצֵא סָרִיס חַמָּה"]:::answer
+  Q6{"⑪ מַאי בֵּינַיְיהוּ? אָמַר רָבָא:"}:::question
+  C1["⑫ לִפְסוֹל בִּמְקוֹם אַחִים"]:::conclusion
+  C2["⑬ וְלַחְלוֹץ שֶׁלֹּא בִּמְקוֹם אַחִים, אִיכָּא בֵּינַיְיהוּ"]:::conclusion
+  Q1 -->|דתניא| S1
+  S1 -->|סברוה| S2
+  S2 --> Q2
+  Q2 --> Q3
+  Q3 -.->|דחייה| A1
+  A1 -.->|קושיא| Q4
+  Q4 -->|דתנן| P1
+  P1 -->|אלא| A2
+  A2 -.->|קושיא| Q5
+  Q5 -->|תירוץ| A3
+  A3 -->|אי נמי| A4
+  A4 --> Q6
+  Q6 -->|רבא| C1
+  C1 --> C2
+    </script>
+  </div>
+  <h3><span data-when="he">מקורות ותרגום</span><span data-when="en">Sources &amp; translation</span></h3>
+  <div class="quote">
+    <div><span class="num">1</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:8</span></div>
+    <div class="orig">לֵימָא אִישְׁתַּנִּי וְלָא אִישְׁתַּנִּי תַּנָּאֵי? דְּתַנְיָא: טוּמְטוּם שֶׁקִּידֵּשׁ — קִדּוּשָׁיו קִדּוּשִׁין, נִתְקַדֵּשׁ — קִדּוּשָׁיו קִדּוּשִׁין.</div>
+    <div class="trans" data-when="he">האם נאמר שהמחלוקת ״אישתני / לא אישתני״ היא מחלוקת תנאים? ששנינו בברייתא: טומטום שקידש אישה — קידושיו קידושין (מספק, שמא זכר הוא); נתקדש (לאיש) — קידושיו קידושין (שמא נקבה היא).</div>
+    <div class="trans" data-when="en">The Gemara suggests: Let us say that the question of whether an animal that has changed in one respect has changed in a different respect, or whether it has not changed, is the subject of a dispute between tanna’im. As it is taught in a baraita: With regard to a tumtum who betrothed a woman, the betrothal is considered a betrothal, due to uncertainty, as the tumtum might be a male; and similarly, if the tumtum was betrothed by a man, the betrothal is deemed a betrothal due to uncertainty, as the tumtum might be a female.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">2</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:9</span></div>
+    <div class="orig">וְחוֹלֵץ, וְחוֹלְצִין לְאִשְׁתּוֹ, וּמְיַבְּמִים לְאִשְׁתּוֹ. וְתַנְיָא אִידַּךְ: אֵשֶׁת טוּמְטוּם חוֹלֶצֶת וְלֹא מִתְיַיבֶּמֶת.</div>
+    <div class="trans" data-when="he">וחולץ (לאשת אחיו, שמא זכר הוא), וחולצים לאשתו ומייבמים את אשתו (אם מת בלא בנים). ובברייתא אחרת שנינו: אשת טומטום — חולצת ולא מתייבמת.</div>
+    <div class="trans" data-when="en">The baraita continues: And if the brother of the tumtum died childless, and there is no other brother who can perform levirate marriage with the widow, the tumtum performs ḥalitza, i.e., his brother’s widow removes his shoe, as the tumtum might be a male, and she would require ḥalitza to release her from the levirate bond. And if the tumtum died, one of the brothers of the tumtum performs ḥalitza with the wife of the tumtum, or enters into levirate marriage with the wife of the tumtum, in case the tumtum was a male. And it is taught in another baraita: The wife of a tumtum performs ḥalitza and does not enter into levirate marriage.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">3</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:10</span></div>
+    <div class="orig">סַבְרוּהָ, דְּכוּלֵּי עָלְמָא כְּרַבִּי עֲקִיבָא, דְּאָמַר: סְרִיס חַמָּה לֹא חוֹלֵץ וְלֹא מְיַיבֵּם.</div>
+    <div class="trans" data-when="he">סברו (הלומדים): לדעת הכול הברייתות כרבי עקיבא, שאמר — סריס חמה (סריס מלידה) לא חולץ ולא מייבם (ואף אשתו פטורה).</div>
+    <div class="trans" data-when="en">With regard to these two baraitot, the Sages assumed that everyone holds in accordance with the opinion of Rabbi Akiva, who says: A eunuch whose condition is caused naturally, i.e., one who was entirely lacking in sexual capacity from birth, does not perform ḥalitza and does not enter into levirate marriage with his sister-in-law, as he is not included in the mitzva of levirate marriage. Likewise, if he died his brothers do not perform ḥalitza with his wife, and they may not enter into levirate marriage with her, as she is forbidden to them as a brother’s wife who does not require levirate marriage.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">4</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:11</span></div>
+    <div class="orig">מַאי לָאו בְּהָא קָמִיפַּלְגִי, דְּמַאן דְּאָמַר חוֹלֵץ, וְחוֹלְצִין לְאִשְׁתּוֹ וּמְיַבְּמִים אֶת אִשְׁתּוֹ, לָא אָמְרִינַן הוֹאִיל וְאִישְׁתַּנִּי אִישְׁתַּנִּי;</div>
+    <div class="trans" data-when="he">האם לא בזה נחלקו: האומר ״חולץ, וחולצים לאשתו ומייבמים את אשתו״ — אינו אומר ״הואיל ונשתנה, נשתנה״ (ולא חוששים שמא גם סריס חמה הוא);</div>
+    <div class="trans" data-when="en">Based on this assumption, the Gemara suggests: What, is it not that the two baraitot disagree about this, that the one who says that a tumtum performs ḥalitza and one of the brothers performs ḥalitza with the wife of the tumtum or enters into levirate marriage with the wife of the tumtum holds that we do not say that since this tumtum has changed from an average person, he might also have changed in that he is a eunuch whose condition is caused naturally, and therefore the brothers would be prohibited from entering into levirate marriage with the wife? Rather, if the tumtum is a male, it is assumed that he is capable of fathering children, and consequently his wife requires levirate marriage.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">5</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:12</span></div>
+    <div class="orig">וּמַאן דְּאָמַר חוֹלֶצֶת וְלֹא מִתְיַיבֶּמֶת, אָמְרִינַן הוֹאִיל וְאִישְׁתַּנִּי אִישְׁתַּנִּי?</div>
+    <div class="trans" data-when="he">והאומר ״חולצת ולא מתייבמת״ — אומר ״הואיל ונשתנה, נשתנה״ (וחוששים שמא סריס חמה הוא, ואשתו אסורה בייבום)?</div>
+    <div class="trans" data-when="en">And the one who says that the wife of a tumtum performs ḥalitza and does not enter into levirate marriage maintains that we say that since this person has changed, he has changed, i.e., the possibility that he might be a eunuch whose condition is caused naturally is considered, and therefore his wife may not enter into levirate marriage.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">6</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:13</span></div>
+    <div class="orig">לָא, דְּכוּלֵּי עָלְמָא אָמְרִינַן הוֹאִיל וְאִישְׁתַּנִּי אִישְׁתַּנִּי, הָא רַבִּי אֱלִיעֶזֶר, וְהָא רַבִּי עֲקִיבָא.</div>
+    <div class="trans" data-when="he">דחייה: לא — לדעת הכול אומרים ״הואיל ונשתנה, נשתנה״; אלא זו (המתירה ייבום) כרבי אליעזר (שאשת סריס חמה מתייבמת), וזו (האוסרת) כרבי עקיבא.</div>
+    <div class="trans" data-when="en">The Gemara responds: No; everyone agrees that we say that since this person has changed, he has changed, and there is a concern that he might be a eunuch whose condition is caused naturally. Rather, the difference between the rulings is that this baraita, which permits the wife of the tumtum to enter levirate marriage, is in accordance with the opinion of Rabbi Eliezer, who disagrees with Rabbi Akiva and maintains that levirate marriage may be performed with the wife of a eunuch whose condition is caused naturally, and that baraita, which prohibits levirate marriage, is in accordance with the opinion of Rabbi Akiva, that the brothers of a eunuch whose condition is caused naturally do not enter into levirate marriage with the wife of the tumtum.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">7</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:14</span></div>
+    <div class="orig">וּמַאן תַּנָּא אַלִּיבָּא דְּרַבִּי עֲקִיבָא? אִילֵימָא רַבִּי יְהוּדָה — הָא וַדַּאי סָרִיס מְשַׁוֵּי לֵיהּ!</div>
+    <div class="trans" data-when="he">ומיהו התנא שסובר כרבי עקיבא ובכל זאת מצריך חליצה לאשת טומטום? אם תאמר רבי יהודה — הרי הוא עושה אותו לסריס ודאי (ואם כן אשתו פטורה אף מחליצה)!</div>
+    <div class="trans" data-when="en">The Gemara asks: And who is the tanna who holds in accordance with the opinion of Rabbi Akiva that the wife of a eunuch whose condition is caused naturally does not require levirate marriage, and yet he maintains that the wife of a tumtum must perform ḥalitza? If we say it is Rabbi Yehuda, this cannot be, as in his opinion even if the genitals of a tumtum were revealed and he was found to be a male, he deems him like a definite eunuch whose condition is caused naturally, and therefore his wife does not require ḥalitza at all.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">8</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:15</span></div>
+    <div class="orig">דִּתְנַן, רַבִּי יְהוּדָה אוֹמֵר: טוּמְטוּם שֶׁנִּקְרַע וְנִמְצָא זָכָר — הֲרֵי זֶה לֹא יַחְלוֹץ, מִפְּנֵי שֶׁהוּא כְּסָרִיס!</div>
+    <div class="trans" data-when="he">ששנינו במשנה (יבמות): רבי יהודה אומר — טומטום שנקרע (עורו) ונמצא זכר, הרי זה לא יחלוץ, מפני שהוא כסריס!</div>
+    <div class="trans" data-when="en">As we learned in a mishna (Yevamot 81a) that Rabbi Yehuda says: With regard to a tumtum who was torn open so that his genitals were exposed, and he was found to be a male, he must not perform ḥalitza, because he is treated like a eunuch whose condition is caused naturally. Just as this tumtum does not perform ḥalitza, so too, his widow does not require ḥalitza.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">9</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:16</span></div>
+    <div class="orig">אֶלָּא רַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה הִיא, דְּתַנְיָא: רַבִּי יוֹסֵי בְּרַבִּי יְהוּדָה אוֹמֵר: טוּמְטוּם לֹא חוֹלֵץ, שֶׁמָּא יִקָּרַע וְיִמָּצֵא סָרִיס חַמָּה.</div>
+    <div class="trans" data-when="he">אלא רבי יוסי ברבי יהודה היא, ששנינו: רבי יוסי ברבי יהודה אומר — טומטום לא חולץ (כשיש אחים אחרים), שמא ייקרע ויימצא סריס חמה (שחליצתו אינה חליצה).</div>
+    <div class="trans" data-when="en">Rather, it is the opinion of Rabbi Yosei, son of Rabbi Yehuda, who maintains that if a tumtum was torn open and he was found to be a male, he is considered as a matter of uncertainty to be a eunuch whose condition is caused naturally, and consequently his wife requires ḥalitza. As it is taught in a baraita that Rabbi Yosei, son of Rabbi Yehuda, says: A tumtum does not perform ḥalitza with the wife of his late, childless brother if there are other brothers to perform ḥalitza, as perhaps the skin covering his genitals will be torn open and he will be found to be a eunuch whose condition is caused naturally, and the widow would not be released from the levirate bond by his ḥalitza. According to this opinion, it is not certain that a tumtum would be found to be a eunuch whose condition is caused naturally.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">10</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:17</span></div>
+    <div class="orig">אַטּוּ כֹּל דְּמִיקְּרַע זָכָר מִשְׁתְּכַח, נְקֵבָה לָא מִשְׁתְּכַח? שֶׁמָּא קָאָמַר, שֶׁמָּא יִקָּרַע וְיִמָּצֵא נְקֵבָה.</div>
+    <div class="trans" data-when="he">וכי כל טומטום שנקרע נמצא זכר, ואינו נמצא נקבה (שבוודאי אינה חולצת)? תירוץ: בלשון ״שמא״ אמר — שמא ייקרע ויימצא נקבה;</div>
+    <div class="trans" data-when="en">With regard to the opinion of Rabbi Yosei, son of Rabbi Yehuda, the Gemara asks: Why does this individual not perform ḥalitza due only to the possibility that he will be found to be a eunuch whose condition is caused naturally? Is that to say that every tumtum whose skin was torn is found to be a male and is not found to be a female? The Gemara explains that Rabbi Yosei, son of Rabbi Yehuda, said his opinion in the formulation of: Perhaps, which includes multiple uncertainties: A tumtum must not perform ḥalitza, as perhaps he will be torn open and found to be a female, who can certainly not perform ḥalitza.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">11</span> <span class="ref">בכורות מ״ב ב — Bekhorot 42b:18</span></div>
+    <div class="orig">אִי נָמֵי זָכָר נָמֵי, שֶׁמָּא יִמָּצֵא סָרִיס חַמָּה. מַאי בֵּינַיְיהוּ? אָמַר רָבָא:</div>
+    <div class="trans" data-when="he">או גם: אם זכר הוא — שמא יימצא סריס חמה. מה ההבדל בין רבי יהודה לרבי יוסי ברבי יהודה (ששניהם אומרים שטומטום לא יחלוץ)? אמר רבא:</div>
+    <div class="trans" data-when="en">Alternatively, if he is found to be a male, he may also not perform ḥalitza, since perhaps he will be found to be a eunuch whose condition is caused naturally. The Gemara asks: Since both Rabbi Yehuda and Rabbi Yosei, son of Rabbi Yehuda, agree that a tumtum may not perform ḥalitza for his brother’s wife, what is the practical difference between their opinions? Rava said:</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">12</span> <span class="ref">בכורות מ״ג א — Bekhorot 43a:1</span></div>
+    <div class="orig">לִפְסוֹל בִּמְקוֹם אַחִים,</div>
+    <div class="trans" data-when="he">לפסול במקום אחים — (לר׳ יהודה, שהוא סריס ודאי, חליצתו אינה כלום והיבמה מתייבמת לאח אחר; לר׳ יוסי בר׳ יהודה, שמא אינו סריס וחליצתו חליצה, ונפסלה לאחים),</div>
+    <div class="trans" data-when="en">There is a practical difference with regard to disqualifying the widow, through his ḥalitza, from entering into levirate marriage in a case where there are other brothers. According to Rabbi Yehuda, who maintains that this individual is certainly a eunuch whose condition is caused naturally, his ḥalitza is of no effect whatsoever, and therefore she may enter into levirate marriage with one of the other brothers. Conversely, according to Rabbi Yosei, son of Rabbi Yehuda, since it is possible that he is not a eunuch and his ḥalitza is valid, she is forbidden to the other brothers as their brother’s wife.</div>
+  </div>
+  <div class="quote">
+    <div><span class="num">13</span> <span class="ref">בכורות מ״ג א — Bekhorot 43a:2</span></div>
+    <div class="orig">וְלַחְלוֹץ שֶׁלֹּא בִּמְקוֹם אַחִים, אִיכָּא בֵּינַיְיהוּ.</div>
+    <div class="trans" data-when="he">ולחלוץ שלא במקום אחים (כשאין אח אחר) — (לר׳ יהודה אינה צריכה חליצה כלל; לר׳ יוסי בר׳ יהודה חולץ לה מספק) — זה ההבדל ביניהם.</div>
+    <div class="trans" data-when="en">And there is also a practical difference between their opinions with regard to performing ḥalitza with the widow in a case where there are no brothers other than this tumtum. According to Rabbi Yehuda, ḥalitza is not necessary in this case, as she requires ḥalitza only if her late husband had brothers who are obligated to perform levirate marriage, and this individual is definitely a eunuch whose condition is caused naturally. By contrast, Rabbi Yosei, son of Rabbi Yehuda, maintains that he must perform ḥalitza with her, in case he is a male and not a eunuch.</div>
+  </div>
+</section>
+
+  <footer>
+    <span data-when="he">נבנה ממקור ספריא (Sefaria) · מהדורת William Davidson · המפה היא סיכום לימודי ואינה תחליף ללימוד המקור</span>
+    <span data-when="en">Built from Sefaria · William Davidson Edition · this map is a study aid, not a substitute for the source</span>
+  </footer>
+</div>
+
+<button class="report-pill" type="button" data-feedback-path="/feedback"></button>
+<div class="report-modal" role="dialog" aria-modal="true">
+  <div class="report-dialog">
+    <button class="report-close" type="button" aria-label="close">×</button>
+    <iframe title="report a correction" src="about:blank"></iframe>
+  </div>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad:false, securityLevel:'loose', theme:'base',
+    themeVariables:{ fontFamily:'Frank Ruhl Libre, Heebo, serif', fontSize:'15px' },
+    flowchart:{ htmlLabels:true, useMaxWidth:true, curve:'basis', nodeSpacing:45, rankSpacing:55 }
+  });
+
+  const meta = (n) => document.querySelector('meta[name="' + n + '"]')?.content || '';
+  // page language defaults from the URL's trailing /he|/en leaf (ADR 0006), else he.
+  let pageLang = ((location.pathname.match(/\/(he|en)\/?$/i) || [])[1] || 'he').toLowerCase();
+
+  const LABELS = {
+    he:{ showOrig:'הצג ארמית (מקור) ⇄', showMeaning:'הצג עברית ⇄', report:'דווחו על טעות' },
+    en:{ showOrig:'Show Aramaic (source) ⇄', showMeaning:'Show English ⇄', report:'Report a correction' }
+  };
+
+  let _seq = 0;
+  async function renderChart(chart){
+    const view = chart.dataset.view || 'meaning';            // 'meaning' | 'original'
+    const lang = view === 'original' ? 'ar' : pageLang;
+    const holder = chart.querySelector('.src-' + lang) || chart.querySelector('.src-he');
+    const target = chart.querySelector('.mermaid-target');
+    if(!holder || !target) return;
+    try{
+      const { svg, bindFunctions } = await mermaid.render('mm' + (_seq++), holder.textContent.trim());
+      target.innerHTML = svg;
+      if(bindFunctions) bindFunctions(target);              // overview click→section links
+    }catch(e){
+      target.innerHTML = '<pre style="color:#b91c1c;direction:ltr;text-align:left">Mermaid error: ' + (e && e.message || e) + '</pre>';
+    }
+    target.style.direction = (lang === 'en') ? 'ltr' : 'rtl';
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn) btn.textContent = (view === 'original') ? LABELS[pageLang].showMeaning : LABELS[pageLang].showOrig;
+  }
+
+  function applyPageLang(){
+    // page language is path-driven (/he|/en) at load — no on-page switch.
+    document.documentElement.lang = pageLang;
+    document.documentElement.dir = (pageLang === 'he') ? 'rtl' : 'ltr';
+    document.body.dataset.lang = pageLang;
+    const rp = document.querySelector('.report-pill');
+    if(rp) rp.textContent = LABELS[pageLang].report;
+    for(const chart of document.querySelectorAll('.chart')) renderChart(chart);
+  }
+
+  // wire per-chart toggles (only charts that actually carry an Aramaic source)
+  for(const chart of document.querySelectorAll('.chart')){
+    const btn = chart.querySelector('.lang-toggle');
+    if(btn && chart.querySelector('.src-ar')){
+      btn.addEventListener('click', () => {
+        chart.dataset.view = (chart.dataset.view === 'original') ? 'meaning' : 'original';
+        renderChart(chart);
+      });
+    } else if(btn){ btn.remove(); }   // e.g. the overview has no Aramaic original
+  }
+
+  // report-a-correction modal (iframe lazy-loaded; ref from metadata, lang = page lang;
+  // embed=1 signals the site to render /feedback in chrome-free embed mode for the modal)
+  const pill = document.querySelector('.report-pill');
+  const modal = document.querySelector('.report-modal');
+  if(pill && modal){
+    const frame = modal.querySelector('iframe');
+    const base = pill.dataset.feedbackPath || '/feedback';
+    const open = () => {
+      const ref = encodeURIComponent(meta('gemara-map:sefaria-ref'));
+      frame.src = base + '?ref=' + ref + '&lang=' + pageLang + '&embed=1';
+      modal.classList.add('open');
+    };
+    const close = () => { modal.classList.remove('open'); frame.src = 'about:blank'; };
+    pill.addEventListener('click', open);
+    modal.addEventListener('click', (e) => { if(e.target === modal) close(); });
+    modal.querySelector('.report-close')?.addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') close(); });
+  }
+
+  applyPageLang();
+</script>
+
+
+<style id="xref-crosslink-style">
+  /* Cross-link: shapes <-> their reference entries + mobile toggle visibility.
+     Behavior layered on the existing circled-numeral (①) <-> .num correspondence;
+     no authored-content change. */
+  section.sugya .chart .node,
+  section.sugya .chart .node * { cursor: pointer; }
+  section.sugya .quote > div:first-child { cursor: pointer; }
+  section.sugya .quote > div:first-child:hover .ref { text-decoration: underline; }
+  /* On touch devices the meaning<->original toggle should stay faint/translucent
+     (like the "report a correction" pill), not solid. The template bumps it to
+     full opacity on :hover/:focus — which a tap latches on mobile, leaving it
+     stuck opaque — so pin it transparent and neutralize that bump here. */
+  @media (hover: none) {
+    .chart .lang-toggle,
+    .chart .lang-toggle:hover,
+    .chart .lang-toggle:focus,
+    .chart .lang-toggle:focus-visible {
+      opacity: .55;
+      color: var(--ink-2);
+      border-color: var(--border);
+    }
+  }
+  @keyframes xref-cite-flash {
+    0%   { background: #fde68a; }
+    100% { background: transparent; }
+  }
+  .xref-flash-cite { animation: xref-cite-flash 1.3s ease-out; border-radius: 4px; }
+  @keyframes xref-node-flash {
+    0%, 100% { filter: none; }
+    35%      { filter: drop-shadow(0 0 0.5rem #d97706); }
+  }
+  .xref-flash-node { animation: xref-node-flash 1.2s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .xref-flash-cite, .xref-flash-node { animation: none; }
+  }
+</style>
+<script id="xref-crosslink">
+(function () {
+  // Circled numerals ①..⑳ (U+2460..U+2473) -> 1..20
+  var CIRCLED = {};
+  for (var i = 0; i < 20; i++) CIRCLED[String.fromCharCode(0x2460 + i)] = i + 1;
+
+  function numFromText(t) {
+    if (!t) return null;
+    for (var i = 0; i < t.length; i++) {
+      if (CIRCLED[t.charAt(i)] != null) return CIRCLED[t.charAt(i)];
+    }
+    return null;
+  }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function scrollToEl(el) {
+    if (el) el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+  }
+  function flash(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.getBoundingClientRect();   // restart the animation
+    el.classList.add(cls);
+    setTimeout(function () { el.classList.remove(cls); }, 1400);
+  }
+  function nodeAncestor(chart, target) {
+    var el = target;
+    while (el && el !== chart) {
+      if (el.classList && el.classList.contains('node')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  function findNode(chart, n) {
+    var ns = chart.querySelectorAll('.node');
+    for (var i = 0; i < ns.length; i++) {
+      if (numFromText(ns[i].textContent) === n) return ns[i];
+    }
+    return null;
+  }
+  function findQuote(sec, n) {
+    var qs = sec.querySelectorAll('.quote');
+    for (var i = 0; i < qs.length; i++) {
+      var b = qs[i].querySelector('.num');
+      if (b && parseInt(b.textContent, 10) === n) return qs[i];
+    }
+    return null;
+  }
+  function selectionInside(el) {
+    var s = window.getSelection && window.getSelection();
+    return !!(s && !s.isCollapsed && s.anchorNode && el.contains(s.anchorNode));
+  }
+  function isToggle(t) { return !!(t && t.closest && t.closest('.lang-toggle')); }
+
+  function wire(sec) {
+    var chart = sec.querySelector('.chart');
+    if (!chart || chart.getAttribute('data-xref') === '1') return;
+    chart.setAttribute('data-xref', '1');
+
+    // Shape -> citation. Delegated on the stable .chart container, so it
+    // survives the meaning<->original re-render with no re-binding. Pointer
+    // events + a tap test (ignore drags/scrolls) make it work for touch as
+    // well as mouse — plain `click` does not fire on SVG nodes in iOS Safari.
+    function go(node) {
+      if (!node) return;
+      var n = numFromText(node.textContent);
+      if (n == null) return;
+      var q = findQuote(sec, n);
+      if (q) { scrollToEl(q); flash(q, 'xref-flash-cite'); }
+    }
+    if (window.PointerEvent) {
+      var sx = 0, sy = 0, moved = false, downNode = null;
+      chart.addEventListener('pointerdown', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        downNode = nodeAncestor(chart, e.target);
+        sx = e.clientX; sy = e.clientY; moved = false;
+      }, true);
+      chart.addEventListener('pointermove', function (e) {
+        if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) moved = true;
+      }, true);
+      chart.addEventListener('pointerup', function (e) {
+        if (isToggle(e.target)) { downNode = null; return; }
+        var up = nodeAncestor(chart, e.target);
+        if (!moved && up && up === downNode) go(up);
+        downNode = null;
+      }, true);
+      chart.addEventListener('pointercancel', function () { downNode = null; });
+    } else {
+      chart.addEventListener('click', function (e) {
+        if (isToggle(e.target)) return;
+        go(nodeAncestor(chart, e.target));
+      });
+    }
+
+    // Citation head line (number badge + ref) -> its shape. Delegated on the
+    // section; body text (orig/translation) stays selectable. `click` is fine
+    // here — the head line is ordinary HTML, which taps fine on mobile.
+    sec.addEventListener('click', function (e) {
+      var quote = e.target.closest && e.target.closest('.quote');
+      if (!quote) return;
+      var head = quote.firstElementChild;
+      if (!head || !head.contains(e.target)) return;   // clicked the body text
+      if (selectionInside(head)) return;
+      var b = head.querySelector('.num');
+      if (!b) return;
+      var n = parseInt(b.textContent, 10);
+      if (isNaN(n)) return;
+      var node = findNode(chart, n);
+      if (node) { scrollToEl(node); flash(node, 'xref-flash-node'); }
+    });
+  }
+
+  function start() {
+    var secs = document.querySelectorAll('section.sugya');
+    for (var i = 0; i < secs.length; i++) wire(secs[i]);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+</script>
+
+</body>
+</html>
